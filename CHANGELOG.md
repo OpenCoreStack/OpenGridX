@@ -5,6 +5,13 @@
 
 ---
 
+## [0.1.2] — March 6, 2026 🐛
+
+### Fixed
+- Cell editing state now correctly pushes to internal state (`baseRows`) instead of being overridden by rigid `props.rows` bindings, preventing data loss on successive edits.
+
+---
+
 ## [0.1.1] — March 6, 2026 🔧
 
 ### Fixed
