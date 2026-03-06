@@ -1,0 +1,99 @@
+# OpenGridX - High-Performance React DataGrid
+
+OpenGridX is a next-generation, open-source React DataGrid library engineered for extreme performance and deep enterprise requirements. It handles massive datasets (1,000,000+ rows) with constant 60fps scrolling via built-in virtualization, and provides a developer-first API based on the Slots pattern.
+
+## Package
+```bash
+npm install @opencorestack/opengridx
+```
+
+## Core Capabilities
+- **Extreme Performance**: Row and column virtualization with constant-time rendering for any dataset size.
+- **Server-Side Native**: `useGridDataSource` for remote filtering, sorting, lazy-loading, and infinite scroll.
+- **Hierarchical Data**: Tree Data, Row Grouping, Master-Detail, and pivot table mode.
+- **Enterprise Features**: Styled Excel exports (ExcelJS), pivot mode, column/row spanning, aggregations.
+- **Headless UI**: Full Slots API — replace any internal part of the grid with your own components.
+- **A11Y**: ARIA roles (`grid`, `row`, `gridcell`, `columnheader`), keyboard navigation, aria-sort, aria-selected.
+- **Theming**: CSS variable API (`--ogx-*`) with built-in light, dark, and compact presets.
+- **State Persistence**: `initialState` + `onStateChange` for serializable grid state (filters, sort, page, column widths).
+- **Clipboard**: Ctrl+C / Cmd+C exports selected cell range as TSV for Excel/Google Sheets.
+
+## Technical Details
+- **Bundle Size**: ~52 KB Gzipped (core ES module, ExcelJS lazy-loaded separately).
+- **React**: 18+ required (Concurrent Mode compatible, strict mode safe).
+- **Architecture**: Hook-based internal state, zero external dependencies in the core.
+- **Styling**: BEM CSS with `--ogx-*` CSS variables and `ogx__` class prefix.
+- **Version**: 0.1.0.
+
+## Quick Start
+```tsx
+import { DataGrid } from '@opencorestack/opengridx';
+import '@opencorestack/opengridx/styles';
+
+const columns = [
+  { field: 'id', headerName: 'ID', width: 70 },
+  { field: 'name', headerName: 'Name', width: 200 },
+  {
+    field: 'score',
+    headerName: 'Score',
+    type: 'number',
+    // Dynamic cell class based on value
+    cellClassName: ({ value }) => value >= 90 ? 'cell--high' : 'cell--low',
+  }
+];
+const rows = [{ id: 1, name: 'OpenGridX', score: 95 }];
+
+export default function App() {
+  return (
+    <div style={{ height: 400 }}>
+      <DataGrid rows={rows} columns={columns} />
+    </div>
+  );
+}
+```
+
+## Key <DataGrid /> Props
+- `rows` — `GridRowModel[]` — Data array.
+- `columns` — `GridColDef[]` — Column definitions.
+- `height` — `number` — Fixed height in pixels.
+- `loading` — `boolean` — Show skeleton overlay.
+- `checkboxSelection` — `boolean` — Multi-row selection.
+- `pagination` / `paginationMode` — Client, server, or infinite.
+- `sortModel` / `filterModel` — Controlled sort and filter state.
+- `pinnedColumns` — Pin columns left or right.
+- `rowGroupingModel` — Group rows by field.
+- `treeData` + `getTreeDataPath` — Hierarchical tree mode.
+- `aggregationModel` — Sum, avg, min, max, count per column.
+- `pivotMode` + `pivotModel` — Cross-tabulation pivot view.
+- `processRowUpdate` — Intercept and commit cell edits.
+- `dataSource` — Server-side data provider interface.
+- `slots` — Override internal components.
+- `initialState` / `onStateChange` — Persist and restore grid state.
+- `listView` + `listViewColumn` — Card/list rendering mode.
+
+## Key GridColDef Properties
+- `field` — Row object key.
+- `headerName` — Column label.
+- `width` / `flex` / `minWidth` / `maxWidth` — Sizing.
+- `type` — `'string' | 'number' | 'boolean' | 'date' | 'singleSelect' | 'image'`.
+- `renderCell` — Custom cell renderer `(params) => ReactNode`.
+- `renderHeader` — Custom header renderer.
+- `renderEditCell` — Custom editor shown on double-click.
+- `cellClassName` — Static string OR `(params) => string` for dynamic per-row classes.
+- `headerClassName` — CSS class added to the header cell.
+- `valueGetter` — Derive a computed value from the row.
+- `valueFormatter` — Format display value without affecting sort/filter.
+- `editable` — Enable cell editing.
+- `colSpan` / `rowSpan` — Cell spanning (static or function).
+- `sortable` / `filterable` / `resizable` / `hideable` / `pinnable` / `disableColumnMenu`.
+
+## GridApi Methods (via useGridApiRef)
+- `getRow(id)` / `getAllRows()` / `getVisibleRows()`
+- `getColumn(field)` / `getVisibleColumns()`
+- `selectRow(id, isSelected)` / `getSelectedRows()`
+- `sortColumn(field, dir)` / `setFilterModel(model)` / `setPage(page)`
+- `exportToCSV()` / `exportToExcel()` / `exportToExcelAdvanced(options)`
+
+## License
+MIT License. Free for open-source and commercial use.
+Web: https://opengridx.dev (coming soon)
