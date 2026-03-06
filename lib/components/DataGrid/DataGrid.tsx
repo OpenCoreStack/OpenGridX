@@ -315,8 +315,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     });
 
     const editingHandlers = useGridEditing({
-        rows,
-        getRowId: (row) => row.id,
+        rows: effectiveRows,
+        getRowId: effectiveGetRowId,
         processRowUpdate,
         onProcessRowUpdateError,
         onRowChange: (updatedRow) => {
@@ -604,11 +604,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     ]);
 
     const baseRows = useMemo(() => {
-        if (dataSource) {
-            return Array.from(state.rows.idRowsLookup.values()) as R[];
-        }
-        return activeRows;
-    }, [dataSource, state.rows.idRowsLookup, activeRows]);
+        return effectiveRows;
+    }, [effectiveRows]);
 
     const filteredRows = useMemo(() => {
         if (activeHierarchyHandlers) {
