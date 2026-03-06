@@ -1,0 +1,28 @@
+/* LoadingStatesDemo Example Styles */
+.loading-demo-container {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.loading-demo-section h3 {
+    margin-bottom: 12px;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.loading-demo-section p {
+    margin-bottom: 16px;
+    color: #64748b;
+}
+
+.loading-grid-frame {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.loading-grid-wrapper-full {
+    width: 100%;
+}

@@ -1,0 +1,36 @@
+/* ServerSideAggregationDemo Example Styles */
+.ss-agg-container {
+    width: 100%;
+    padding: 24px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    font-family: Inter, system-ui, sans-serif;
+}
+
+.ss-agg-header h2 {
+    margin: 0 0 6px 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.ss-agg-header p {
+    margin: 0;
+    color: var(--ogx-grid-header-text, #555);
+    font-size: 0.9rem;
+}
+
+.ss-agg-grid-wrapper {
+    flex: 1;
+    min-height: 0;
+}
+
+.ss-agg-info-box {
+    background: var(--ogx-color-primary-light, #eff6ff);
+    border: 1px solid var(--ogx-color-primary, #bfdbfe);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: var(--ogx-color-primary, #1e40af);
+}

@@ -1,0 +1,19 @@
+.ogx-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: var(--ogx-grid-header-text);
+    padding: 0 4px;
+    opacity: 0.5;
+    transition: opacity 0.2s, color 0.2s;
+}
+.ogx-drag-handle:hover {
+    opacity: 1;
+    color: var(--ogx-grid-row-text);
+}
+.ogx-drag-handle:active {
+    cursor: grabbing;
+    color: var(--ogx-color-primary);
+    opacity: 1;
+}

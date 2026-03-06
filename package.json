@@ -1,0 +1,94 @@
+{
+  "name": "@opencorestack/opengridx",
+  "version": "0.1.1",
+  "description": "OpenGridX: High-performance React data infrastructure. Unlock advanced Row Grouping, Excel Export, and Column Pinning without the usual \"Pro\" gatekeeping. Built for speed, scale, and complete architectural freedom. Fully open, virtualization-ready, and feature-complete.",
+  "type": "module",
+  "main": "./dist/opengridx.umd.js",
+  "module": "./dist/opengridx.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/opengridx.es.js",
+      "require": "./dist/opengridx.umd.js"
+    },
+    "./styles": "./dist/opengridx.css"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": [
+    "**/*.css",
+    "**/*.scss"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --project tsconfig.build.json && vite build",
+    "build:lib": "tsc --project tsconfig.build.json && vite build --config vite.config.lib.js",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build:lib"
+  },
+  "keywords": [
+    "react",
+    "datagrid",
+    "opengridx",
+    "table",
+    "data-table",
+    "virtualization",
+    "row-grouping",
+    "excel-export",
+    "pivot-table",
+    "typescript",
+    "free-datagrid",
+    "enterprise-grid",
+    "mui-datagrid-alternative",
+    "ag-grid-alternative",
+    "row-spanning",
+    "column-pinning",
+    "react-table",
+    "high-performance-table"
+  ],
+  "author": "Asif Ansari <asif.ansari7774@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://opencorestack.github.io/OpenGridX/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OpenCoreStack/OpenGridX.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OpenCoreStack/OpenGridX/issues"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "exceljs": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "exceljs": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^25.0.8",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,36 @@
+.ogx__detail-panel {
+  display: flex;
+  background: var(--ogx-color-gray-50);
+  border-top: 1px solid var(--ogx-border-color);
+  border-bottom: 1px solid var(--ogx-border-color);
+  transition: height 0.2s ease-in-out;
+  position: relative;
+  min-width: fit-content; 
+  width: 100%;
+  box-sizing: border-box;
+}
+.ogx__detail-panel-content {
+  padding: var(--ogx-spacing-md);
+  width: 100%;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+@keyframes detailPanelExpand {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.ogx__detail-panel {
+  animation: detailPanelExpand 0.2s ease-out;
+}
+@media (prefers-color-scheme: dark) {
+  .ogx__detail-panel {
+    background: var(--ogx-color-gray-800);
+    border-color: var(--ogx-color-gray-700);
+  }
+}

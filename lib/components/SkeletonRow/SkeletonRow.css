@@ -1,0 +1,43 @@
+.ogx__skeleton-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--grid-border-color, #e0e0e0);
+  background-color: var(--grid-background-color, #ffffff);
+}
+.ogx__skeleton-cell {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.ogx-skeleton-box {
+  background: linear-gradient(
+    90deg,
+    var(--ogx-skeleton-base, #f0f0f0) 0%,
+    var(--ogx-skeleton-highlight, #f8f8f8) 50%,
+    var(--ogx-skeleton-base, #f0f0f0) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  .ogx-skeleton-box {
+    background: linear-gradient(
+      90deg,
+      var(--ogx-skeleton-dark-base, #2a2a2a) 0%,
+      var(--ogx-skeleton-dark-highlight, #333333) 50%,
+      var(--ogx-skeleton-dark-base, #2a2a2a) 100%
+    );
+    background-size: 200% 100%;
+  }
+}

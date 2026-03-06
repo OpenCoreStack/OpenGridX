@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Demo app
+demo/
+
+# Tests
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__/
+
+# Config files
+tsconfig.json
+tsconfig.build.json
+vite.config.js
+eslint.config.js
+.gitignore
+
+# Development
+.vscode/
+.idea/
+*.log
+.DS_Store
+
+# Source files (only dist should be published)
+lib/
+src/

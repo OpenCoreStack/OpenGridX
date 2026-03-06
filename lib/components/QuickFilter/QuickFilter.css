@@ -1,0 +1,23 @@
+.ogx-quick-filter {
+  width: 100%;
+  max-width: 400px;
+}
+.ogx-quick-filter__clear {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ogx-color-gray-500);
+  transition: color var(--ogx-transition-duration-fast) var(--ogx-transition-easing);
+  border-radius: var(--ogx-border-radius-sm);
+}
+.ogx-quick-filter__clear:hover {
+  color: var(--ogx-color-gray-700);
+  background: var(--ogx-color-gray-100);
+}
+.ogx-quick-filter__clear:active {
+  color: var(--ogx-color-gray-900);
+}

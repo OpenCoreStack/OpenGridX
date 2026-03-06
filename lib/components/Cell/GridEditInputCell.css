@@ -1,0 +1,62 @@
+/* ── Edit cell wrapper ───────────────────────────────────────────────── */
+.ogx__edit-cell {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0;
+}
+
+/* ── Shared input base ───────────────────────────────────────────────── */
+.ogx__edit-input,
+.ogx__edit-select {
+    width: 100%;
+    height: 100%;
+    padding: 0 10px;
+    border: none;
+    border-radius: 0;
+    font-family: var(--ogx-font-family, inherit);
+    font-size: var(--ogx-grid-cell-font-size, 14px);
+    color: var(--ogx-grid-row-text, #1e293b);
+    background: var(--ogx-grid-background, #fff);
+    box-sizing: border-box;
+    outline: none;
+}
+
+.ogx__edit-input:focus,
+.ogx__edit-select:focus {
+    outline: none;
+}
+
+/* ── Number input — hide spinners ────────────────────────────────────── */
+.ogx__edit-input--number::-webkit-inner-spin-button,
+.ogx__edit-input--number::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.ogx__edit-input--number { -moz-appearance: textfield; appearance: textfield; }
+
+/* ── Select ─────────────────────────────────────────────────────────── */
+.ogx__edit-select {
+    padding: 0 6px;
+    cursor: pointer;
+    -webkit-appearance: auto;
+    appearance: auto;
+}
+
+/* ── Boolean checkbox ────────────────────────────────────────────────── */
+.ogx__edit-boolean {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: 2px solid var(--ogx-color-primary, #2563eb);
+    outline-offset: -2px;
+}
+.ogx__edit-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--ogx-color-primary, #2563eb);
+}

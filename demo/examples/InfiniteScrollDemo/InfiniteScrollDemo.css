@@ -1,0 +1,17 @@
+/* InfiniteScrollDemo Example Styles */
+.infinite-scroll-container {
+    padding: 20px;
+}
+
+.infinite-scroll-container h2 {
+    margin-bottom: 8px;
+}
+
+.infinite-scroll-description {
+    margin-bottom: 16px;
+    color: #64748b;
+}
+
+.infinite-scroll-grid-wrapper {
+    width: 100%;
+}

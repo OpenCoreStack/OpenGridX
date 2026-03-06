@@ -1,0 +1,212 @@
+.ogx-pivot-panel {
+  position: fixed;
+  width: 440px;
+  max-width: calc(100vw - 24px);
+  background: var(--ogx-grid-background);
+  border: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+  border-radius: var(--ogx-border-radius-lg);
+  box-shadow: var(--ogx-shadow-lg);
+  z-index: 9999;
+  overflow: hidden;
+  animation: ogx-panel-in 0.15s ease-out;
+  font-family: var(--ogx-font-family);
+}
+@keyframes ogx-panel-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.ogx-pivot-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+  background: var(--ogx-grid-header-background);
+}
+.ogx-pivot-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--ogx-font-size-sm);
+  font-weight: 600;
+  color: var(--ogx-grid-header-text);
+}
+.ogx-pivot-panel__reset-btn {
+  padding: 2px 8px;
+  border: var(--ogx-border-width-thin) solid var(--ogx-border-color);
+  border-radius: var(--ogx-border-radius-sm);
+  background: transparent;
+  color: var(--ogx-color-error, #ef4444);
+  font-family: var(--ogx-font-family);
+  font-size: var(--ogx-font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ogx-pivot-panel__reset-btn:hover {
+  background: var(--ogx-toolbar-btn-danger-bg, rgba(239, 68, 68, 0.08));
+  color: var(--ogx-toolbar-btn-danger-text, #ef4444);
+  border-color: var(--ogx-color-error, #ef4444);
+}
+.ogx-pivot-panel__body {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.ogx-pivot-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ogx-pivot-zone__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ogx-color-gray-400, #94a3b8);
+}
+.ogx-pivot-zone__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ogx-pivot-zone__dot--row    { background: var(--ogx-color-primary, #3b82f6); }
+.ogx-pivot-zone__dot--col    { background: var(--ogx-color-secondary, #8b5cf6); }
+.ogx-pivot-zone__dot--value  { background: var(--ogx-color-success, #10b981); }
+.ogx-pivot-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+  border-radius: var(--ogx-border-radius-md);
+  background: var(--ogx-grid-header-background);
+}
+.ogx-pivot-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.ogx-pivot-chip--row   { background: rgba(59,130,246,0.12); color: var(--ogx-color-primary-dark, #2563eb); }
+.ogx-pivot-chip--col   { background: rgba(139,92,246,0.12); color: var(--ogx-color-secondary-dark, #7c3aed); }
+.ogx-pivot-chip--value { background: var(--ogx-toolbar-chip-active-bg, rgba(16,185,129,0.12)); color: var(--ogx-toolbar-chip-active-text, #047857); }
+.ogx-pivot-chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  color: inherit;
+  transition: opacity 0.1s;
+}
+.ogx-pivot-chip__remove:hover { opacity: 1; }
+.ogx-pivot-chip__fn-select {
+  border: none;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 2px;
+  margin-left: 2px;
+  font-family: var(--ogx-font-family-mono, monospace);
+}
+.ogx-pivot-chips--empty::after {
+  content: attr(data-placeholder);
+  font-size: 11px;
+  color: var(--ogx-color-gray-400, #94a3b8);
+  align-self: center;
+  pointer-events: none;
+}
+.ogx-pivot-panel__fields-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ogx-color-gray-400, #94a3b8);
+  margin-bottom: 4px;
+}
+.ogx-pivot-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.ogx-pivot-field-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: var(--ogx-border-width-thin) solid var(--ogx-border-color);
+  border-radius: 999px;
+  background: var(--ogx-grid-header-background);
+  color: var(--ogx-grid-row-text);
+  font-family: var(--ogx-font-family);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.ogx-pivot-field-btn:hover {
+  background: var(--ogx-color-primary-light, #eff6ff);
+  border-color: var(--ogx-color-primary, #3b82f6);
+  color: var(--ogx-color-primary, #3b82f6);
+}
+.ogx-pivot-field-btn--numeric::before {
+  content: '#';
+  font-family: var(--ogx-font-family-mono, monospace);
+  font-size: 10px;
+  opacity: 0.5;
+}
+.ogx-pivot-field-actions {
+  display: flex;
+  gap: 3px;
+}
+.ogx-pivot-add-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border: var(--ogx-border-width-thin) solid var(--ogx-border-color);
+  border-radius: var(--ogx-border-radius-sm);
+  background: transparent;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+.ogx-pivot-add-btn--row    { color: var(--ogx-color-primary, #3b82f6); }
+.ogx-pivot-add-btn--col    { color: var(--ogx-color-secondary, #8b5cf6); }
+.ogx-pivot-add-btn--value  { color: var(--ogx-toolbar-chip-active-text, #047857); }
+.ogx-pivot-add-btn:hover {
+  background: var(--ogx-grid-header-hover-background);
+  border-color: currentColor;
+}
+.ogx-pivot-panel__divider {
+  border: none;
+  border-top: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+  margin: 0;
+}

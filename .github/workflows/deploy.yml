@@ -1,0 +1,37 @@
+name: Deploy OpenGridX Demo
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Setup Node ⚙️
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies 📦
+        run: npm ci
+
+      - name: Build Demo 🚀
+        run: npm run build
+
+      - name: Prepare Deployment Directory 📂
+        run: |
+          mkdir -p deploy-out
+          cp -r demo/dist/* deploy-out/
+          touch deploy-out/.nojekyll
+
+      - name: Deploy to GitHub Pages 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: deploy-out
+          branch: gh-pages

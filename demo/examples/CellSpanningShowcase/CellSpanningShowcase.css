@@ -1,0 +1,100 @@
+/* CellSpanningShowcase Styles */
+.spanning-showcase-container {
+    padding: 20px;
+}
+
+.spanning-showcase-header h2 {
+    margin: 0;
+}
+
+.spanning-showcase-header p {
+    margin-bottom: 24px;
+    color: #666;
+}
+
+/* Common Section Styles */
+.spanning-section {
+    margin-bottom: 40px;
+}
+
+.spanning-section h3 {
+    margin-top: 0;
+}
+
+.spanning-section p {
+    color: #666;
+    margin-bottom: 12px;
+    font-size: 0.9em;
+}
+
+.spanning-grid-wrapper {
+    width: 100%;
+}
+
+/* Example 1: Simple Column Span */
+.self-employed-cell {
+    color: #6366f1;
+    font-style: italic;
+    font-weight: 600;
+}
+
+/* Example 2: Invoice */
+.invoice-item-cell {
+    display: flex;
+    align-items: center;
+}
+
+.invoice-summary-cell {
+    text-align: right;
+    width: 100%;
+}
+
+.invoice-tax-rate {
+    color: #64748b;
+}
+
+/* Example 4: Row Spanning */
+.row-span-category-cell {
+    font-weight: 700;
+    color: #475569;
+    background: #f8fafc;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border-right: 1px solid #e2e8f0;
+}
+
+.priority-high { color: #ef4444; }
+.priority-medium { color: #f59e0b; }
+.priority-low { color: #10b981; }
+
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    font-size: 0.85em;
+    display: inline-block;
+}
+
+/* Warning Box */
+.spanning-warning-box {
+    margin-top: 24px;
+    padding: 16px;
+    background: #fff3cd;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.spanning-warning-box ul {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+.spanning-warning-box p {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}

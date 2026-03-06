@@ -1,0 +1,118 @@
+.docs-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px;
+    background: #fff;
+    min-height: 100vh;
+}
+.docs-header {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 16px;
+    margin-bottom: 8px;
+}
+.docs-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 16px 0;
+    color: #111827;
+    letter-spacing: -0.025em;
+}
+.docs-description {
+    font-size: 1.1rem;
+    color: #4b5563;
+    line-height: 1.6;
+    max-width: 800px;
+}
+.docs-preview-container {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+.docs-toolbar {
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.docs-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.docs-canvas {
+    padding: 20px;
+    background: #fff;
+}
+.docs-source-container {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #1e1e1e; 
+    color: #d4d4d4;
+    transition: all 0.2s ease;
+}
+.docs-source-header {
+    padding: 8px 16px;
+    background: #333;
+    color: #fff;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+}
+.docs-source-header:hover {
+    background: #444;
+}
+.docs-btn {
+    background: none;
+    border: 1px solid #666;
+    color: #fff;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-right: 8px;
+}
+.docs-btn:hover {
+    background: #555;
+    border-color: #888;
+}
+.docs-source-content {
+    padding: 16px;
+    overflow-x: auto;
+    font-family: 'Fira Code', 'Roboto Mono', 'Consolas', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+.docs-code-block {
+    margin: 0;
+    width: 100%;
+    white-space: pre-wrap; 
+}
+.docs-source-content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.docs-source-content::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+.docs-source-content::-webkit-scrollbar-track {
+    background: #222;
+}
+.docs-btn-text {
+    border: none;
+    padding: 0 8px;
+    font-weight: 500;
+}

@@ -1,0 +1,71 @@
+.ogx-checkbox-wrapper {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--ogx-font-family);
+}
+.ogx-checkbox-wrapper--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.ogx-checkbox__input {
+  appearance: none;
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.ogx-checkbox__box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--ogx-checkbox-border, var(--ogx-color-gray-400));
+  border-radius: 4px;
+  background: var(--ogx-checkbox-bg, var(--ogx-color-white));
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: white; 
+  flex-shrink: 0;
+}
+.ogx-checkbox__icon {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+  transform: scale(0);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ogx-checkbox__label {
+  margin-left: var(--ogx-spacing-sm);
+  font-size: var(--ogx-font-size-sm);
+  color: var(--ogx-grid-row-text, var(--ogx-color-gray-700));
+  line-height: 1;
+}
+.ogx-checkbox__input:checked + .ogx-checkbox__box {
+  background: var(--ogx-color-primary);
+  border-color: var(--ogx-color-primary);
+}
+.ogx-checkbox__input:checked + .ogx-checkbox__box .ogx-checkbox__icon {
+  transform: scale(1);
+}
+.ogx-checkbox__input:indeterminate + .ogx-checkbox__box {
+  background: var(--ogx-color-primary);
+  border-color: var(--ogx-color-primary);
+}
+.ogx-checkbox__input:indeterminate + .ogx-checkbox__box .ogx-checkbox__icon {
+  transform: scale(1);
+}
+.ogx-checkbox-wrapper:hover:not(.ogx-checkbox-wrapper--disabled) .ogx-checkbox__box {
+  border-color: var(--ogx-color-primary);
+  box-shadow: 0 0 0 4px var(--ogx-color-primary-light); 
+}
+.ogx-checkbox__input:focus-visible + .ogx-checkbox__box {
+  border-color: var(--ogx-color-primary);
+  box-shadow: 0 0 0 4px var(--ogx-color-primary-focus);
+}
+.ogx-checkbox-wrapper--disabled .ogx-checkbox__box {
+  background: var(--ogx-color-gray-100);
+  border-color: var(--ogx-color-gray-300);
+  color: var(--ogx-color-gray-400);
+}

@@ -1,0 +1,31 @@
+.ogx-column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+.ogx-column-resize-handle:hover .ogx-column-resize-handle__line,
+.ogx-column-resize-handle--dragging .ogx-column-resize-handle__line {
+  background: var(--ogx-color-primary);
+  opacity: 1;
+}
+.ogx-column-resize-handle__line {
+  width: 2px;
+  height: 100%;
+  background: var(--ogx-color-gray-300);
+  opacity: 0;
+  transition: opacity var(--ogx-transition-duration-fast) var(--ogx-transition-easing);
+}
+.ogx-column-resize-handle--dragging {
+  cursor: col-resize;
+}
+.ogx__header-cell:hover .ogx-column-resize-handle__line {
+  opacity: 0.5;
+}

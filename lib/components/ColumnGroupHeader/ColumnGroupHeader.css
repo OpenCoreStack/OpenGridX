@@ -1,0 +1,67 @@
+/* ─── Group header row ───────────────────────────────────────────────────────
+   These rows live INSIDE .ogx__header-wrap, which is the single sticky block,
+   so they scroll horizontally together with the column header row below them.
+   Widths are computed dynamically from the live columnWidths state, so they
+   stay in sync with column resizing.
+────────────────────────────────────────────────────────────────────────────── */
+.ogx-col-group-row {
+    display: flex;
+    align-items: stretch;
+    background: var(--ogx-grid-header-background);
+    border-bottom: 1px solid var(--ogx-grid-border-color);
+    overflow: hidden;
+    flex-shrink: 0;
+    min-height: var(--ogx-header-height, 48px);
+}
+
+/* ─── Individual group cell ──────────────────────────────────────────────────*/
+.ogx-col-group-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    /* Same border UI as primary header cells: half-height right divider */
+}
+.ogx-col-group-cell:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 25%;
+    height: 50%;
+    width: 1px;
+    background-color: var(--ogx-color-gray-300, #cbd5e1);
+    opacity: 0.5;
+}
+
+/* ─── Group cell (has a label) ───────────────────────────────────────────────*/
+.ogx-col-group-cell--group {
+    background: transparent;
+}
+
+/* ─── Filler cell (ungrouped / prefix spacer) ────────────────────────────────*/
+.ogx-col-group-cell--filler {
+    background: transparent;
+}
+
+/* ─── Label text ─────────────────────────────────────────────────────────────*/
+.ogx-col-group-cell__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ogx-color-gray-700, #334155);
+    padding: 0 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    text-align: center;
+    width: 100%;
+}
+
+/* ─── Dark-mode overrides ────────────────────────────────────────────────────*/
+[data-theme="dark"] .ogx-col-group-cell__label,
+.ogx--dark .ogx-col-group-cell__label {
+    color: var(--ogx-color-gray-300, #cbd5e1);
+}

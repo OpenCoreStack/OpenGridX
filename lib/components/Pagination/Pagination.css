@@ -1,0 +1,91 @@
+.ogx-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ogx-spacing-lg);
+  padding: 12px 16px;
+  border-top: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+  background: var(--ogx-grid-background);
+  font-size: var(--ogx-font-size-sm);
+  color: var(--ogx-grid-row-text);
+  min-height: 52px;
+  border-radius: 0 0 var(--ogx-border-radius-lg) var(--ogx-border-radius-lg);
+}
+.ogx-pagination__page-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ogx-pagination__label {
+  font-size: var(--ogx-font-size-sm);
+  color: var(--ogx-grid-header-text);
+  white-space: nowrap;
+}
+.ogx-pagination__select {
+  min-width: 55px;
+  padding: 0 18px 0 4px !important;
+  font-family: var(--ogx-font-family);
+  font-size: var(--ogx-font-size-sm);
+  font-weight: 500;
+  color: var(--ogx-grid-row-text);
+  background: var(--ogx-grid-background);
+  border: 1px solid var(--ogx-border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--ogx-transition-duration-fast) var(--ogx-transition-easing);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23666' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right -1px center;
+  background-size: 20px;
+  line-height: 1.5;
+}
+.ogx-pagination__select:hover {
+  border-color: var(--ogx-border-color-hover);
+}
+.ogx-pagination__select:focus {
+  outline: none;
+  border-color: var(--ogx-color-primary);
+  box-shadow: 0 0 0 2px var(--ogx-color-primary-focus);
+}
+.ogx-pagination__info {
+  font-size: var(--ogx-font-size-sm);
+  color: var(--ogx-grid-header-text);
+  white-space: nowrap;
+}
+.ogx-pagination__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ogx-spacing-xs);
+}
+.ogx-pagination__page-info {
+  padding: 0 var(--ogx-spacing-sm);
+  font-size: var(--ogx-font-size-sm);
+  color: var(--ogx-grid-header-text);
+  white-space: nowrap;
+}
+.ogx-pagination .ogx-button {
+  min-width: 32px;
+  padding: var(--ogx-spacing-xs);
+}
+.ogx-pagination .ogx-button svg {
+  display: block;
+}
+@media (max-width: 768px) {
+  .ogx-pagination {
+    flex-wrap: wrap;
+    gap: var(--ogx-spacing-md);
+  }
+  .ogx-pagination__page-size {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+  .ogx-pagination__info {
+    order: 1;
+    flex: 1;
+  }
+  .ogx-pagination__actions {
+    order: 2;
+  }
+}

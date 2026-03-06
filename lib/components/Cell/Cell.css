@@ -1,0 +1,119 @@
+.ogx__cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: var(--ogx-grid-cell-padding-y) var(--ogx-grid-cell-padding-x);
+  border-right: 1px solid var(--ogx-grid-border-color);
+  font-size: var(--ogx-grid-cell-font-size);
+  color: var(--ogx-grid-row-text);
+  line-height: var(--ogx-grid-line-height);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  background-color: inherit; 
+}
+.ogx__cell:focus {
+  outline: none;
+}
+.ogx__cell--focused {
+  /* position tracked internally; ring only shows in keyboard mode (ogx--kb on container) */
+  z-index: 10;
+}
+/* Show ring when keyboard navigation is active */
+.ogx--kb .ogx__cell--focused {
+  outline: 2px solid var(--ogx-color-primary, #2563eb);
+  outline-offset: -2px;
+}
+.ogx__cell--editable {
+  cursor: text;
+}
+.ogx__cell--editing {
+  padding: 0;
+  overflow: visible;
+  z-index: 20;
+  outline: 2px solid var(--ogx-color-primary);
+  outline-offset: -2px;
+  background-color: var(--ogx-grid-background);
+}
+.ogx__cell--align-left {
+  justify-content: flex-start;
+  text-align: left;
+}
+.ogx__cell--align-center {
+  justify-content: center;
+  text-align: center;
+}
+.ogx__cell--align-right {
+  justify-content: flex-end;
+  text-align: right;
+}
+.ogx__cell--pinned-left,
+.ogx__cell--pinned-right {
+  position: sticky;
+  z-index: 2; 
+  background: inherit; 
+  background-color: var(--ogx-grid-background); 
+}
+.ogx__cell--pinned-right {
+  border-left: 1px solid var(--ogx-grid-border-color);
+}
+.ogx:not(.ogx--row-spanning) .ogx__row:hover .ogx__cell--pinned-left,
+.ogx:not(.ogx--row-spanning) .ogx__row:hover .ogx__cell--pinned-right {
+  background-color: var(--ogx-grid-row-hover-background);
+}
+.ogx__row--selected .ogx__cell--pinned-left,
+.ogx__row--selected .ogx__cell--pinned-right {
+  background-color: var(--ogx-grid-row-selected-background);
+}
+.ogx:not(.ogx--row-spanning) .ogx__row--selected:hover .ogx__cell--pinned-left,
+.ogx:not(.ogx--row-spanning) .ogx__row--selected:hover .ogx__cell--pinned-right {
+  background-color: var(--ogx-grid-row-selected-hover-background);
+}
+.ogx__cell--pinned-left-last::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10px;
+  bottom: 0;
+  width: 10px;
+  pointer-events: none;
+  box-shadow: inset 10px 0 8px -8px rgba(0, 0, 0, 0.1);
+}
+.ogx__cell--pinned-right-first::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -10px;
+  bottom: 0;
+  width: 10px;
+  pointer-events: none;
+  box-shadow: inset -10px 0 8px -8px rgba(0, 0, 0, 0.1);
+}
+.ogx__cell--hidden {
+  visibility: hidden;
+  border: none;
+  background: transparent;
+}
+.ogx__cell-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+.ogx__cell--spanned {
+  background-color: var(--ogx-grid-background);
+  z-index: 10; 
+}
+.ogx__row--even .ogx__cell--spanned {
+  background-color: var(--ogx-grid-row-alternate-background, var(--ogx-grid-background));
+}
+.ogx:not(.ogx--row-spanning) .ogx__row:hover .ogx__cell--spanned {
+  background-color: var(--ogx-grid-row-hover-background);
+}
+.ogx__row--selected .ogx__cell--spanned {
+  background-color: var(--ogx-grid-row-selected-background);
+}
+.ogx:not(.ogx--row-spanning) .ogx__row--selected:hover .ogx__cell--spanned {
+  background-color: var(--ogx-grid-row-selected-hover-background);
+}

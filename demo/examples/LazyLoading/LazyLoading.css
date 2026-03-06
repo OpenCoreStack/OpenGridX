@@ -1,0 +1,17 @@
+/* LazyLoading Example Styles */
+.lazy-loading-container {
+    padding: 20px;
+}
+
+.lazy-loading-container h2 {
+    margin-bottom: 8px;
+}
+
+.lazy-loading-description {
+    margin-bottom: 16px;
+    color: #64748b;
+}
+
+.lazy-loading-grid-wrapper {
+    width: 100%;
+}

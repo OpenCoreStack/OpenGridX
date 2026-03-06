@@ -1,0 +1,59 @@
+.ogx-tooltip {
+  pointer-events: none;
+  background: var(--ogx-overlay-background, rgba(30, 41, 59, 0.92));
+  color: var(--ogx-overlay-text, #fff);
+  font-family: var(--ogx-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 3px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 99999;
+}
+.ogx-tooltip--top {
+  transform: translate(-50%, -100%);
+  animation: ogx-tooltip-in-top 0.15s ease-out;
+}
+
+.ogx-tooltip--bottom {
+  transform: translate(-50%, 0);
+  animation: ogx-tooltip-in-bottom 0.15s ease-out;
+}
+
+@keyframes ogx-tooltip-in-top {
+  from { opacity: 0; transform: translate(-50%, -95%) scale(0.98); }
+  to   { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+}
+
+@keyframes ogx-tooltip-in-bottom {
+  from { opacity: 0; transform: translate(-50%, -4px) scale(0.98); }
+  to   { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+/* Optional: Add a small arrow if needed */
+/* 
+.ogx-tooltip::before {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+
+.ogx-tooltip--top::before {
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top: 5px solid var(--ogx-overlay-background, rgba(30, 41, 59, 0.92));
+}
+
+.ogx-tooltip--bottom::before {
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom: 5px solid var(--ogx-overlay-background, rgba(30, 41, 59, 0.92));
+}
+*/

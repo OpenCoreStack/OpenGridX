@@ -1,0 +1,25 @@
+/* AggregationFooter Example Styles */
+.aggregation-demo-container {
+    padding: 20px;
+}
+
+.aggregation-demo-container h2 {
+    margin-top: 0;
+}
+
+.aggregation-demo-description {
+    margin-bottom: 16px;
+    color: var(--ogx-grid-header-text, #64748b);
+    font-size: 14px;
+}
+
+.aggregation-model-preview {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: var(--ogx-grid-header-background);
+    border: 1px solid var(--ogx-grid-border-color);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--ogx-grid-header-text);
+    font-family: monospace;
+}

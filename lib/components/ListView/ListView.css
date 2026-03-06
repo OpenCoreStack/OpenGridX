@@ -1,0 +1,112 @@
+/* ─── List View Container ─────────────────────────────────────────────────── */
+.ogx-list-view {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden; /* rows scroll inside .ogx-list-view__rows, not here */
+}
+
+/* ─── Scrollable rows area ───────────────────────────────────────────────────  */
+.ogx-list-view__rows {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* ─── List View Row (the "card") ─────────────────────────────────────────── */
+.ogx-list-view__row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+  background: var(--ogx-grid-background);
+  cursor: pointer;
+  transition: background 0.1s;
+  min-height: 72px;
+}
+
+.ogx-list-view__row:hover {
+  background: var(--ogx-color-gray-50, #f8fafc);
+}
+
+.ogx-list-view__row--selected {
+  background: var(--ogx-selection-bg, rgba(59, 130, 246, 0.08));
+}
+
+.ogx-list-view__row--selected:hover {
+  background: var(--ogx-selection-hover-bg, rgba(59, 130, 246, 0.13));
+}
+
+/* ─── Checkbox column inside list row ────────────────────────────────────── */
+.ogx-list-view__checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  flex-shrink: 0;
+  border-right: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+}
+
+.ogx-list-view__checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--ogx-color-primary);
+}
+
+/* ─── Cell content area ───────────────────────────────────────────────────── */
+.ogx-list-view__cell {
+  flex: 1;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-family: var(--ogx-font-family);
+  font-size: var(--ogx-font-size-sm);
+  color: var(--ogx-grid-cell-text);
+}
+
+/* ─── Toolbar in list view mode ──────────────────────────────────────────── */
+.ogx-list-view__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+  background: var(--ogx-grid-header-background);
+  font-family: var(--ogx-font-family);
+  font-size: var(--ogx-font-size-xs);
+  color: var(--ogx-grid-header-text);
+  flex-shrink: 0;
+}
+
+/* ─── Empty state ────────────────────────────────────────────────────────── */
+.ogx-list-view__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  gap: 8px;
+  font-family: var(--ogx-font-family);
+  font-size: var(--ogx-font-size-sm);
+  color: var(--ogx-text-secondary, #9ca3af);
+}
+
+/* ─── Responsive: auto switch at ≤768px when using ogx--list-auto class ─── */
+@media (max-width: 768px) {
+  .ogx--list-auto .ogx__viewport {
+    display: none;
+  }
+  .ogx--list-auto .ogx-list-view {
+    display: flex;
+  }
+}
+
+@media (min-width: 769px) {
+  .ogx--list-auto .ogx-list-view {
+    display: none;
+  }
+}

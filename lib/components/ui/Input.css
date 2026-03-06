@@ -1,0 +1,59 @@
+.ogx-input-wrapper {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  border: var(--ogx-border-width-thin) solid var(--ogx-border-color);
+  border-radius: var(--ogx-border-radius-md);
+  background: var(--ogx-color-white);
+  transition: all var(--ogx-transition-duration-fast) var(--ogx-transition-easing);
+}
+.ogx-input-wrapper--full-width {
+  width: 100%;
+}
+.ogx-input {
+  flex: 1;
+  padding: var(--ogx-spacing-sm) var(--ogx-spacing-md);
+  font-family: var(--ogx-font-family);
+  font-size: var(--ogx-font-size-md);
+  line-height: var(--ogx-line-height-normal);
+  color: var(--ogx-color-gray-900);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+.ogx-input::placeholder {
+  color: var(--ogx-color-gray-400);
+}
+.ogx-input__adornment {
+  display: flex;
+  align-items: center;
+  color: var(--ogx-color-gray-600);
+}
+.ogx-input__adornment--start {
+  padding-left: var(--ogx-spacing-md);
+}
+.ogx-input__adornment--end {
+  padding-right: var(--ogx-spacing-md);
+}
+.ogx-input-wrapper:hover:not(.ogx-input-wrapper--disabled) {
+  border-color: var(--ogx-border-color-hover);
+}
+.ogx-input-wrapper:focus-within:not(.ogx-input-wrapper--disabled) {
+  border-color: var(--ogx-color-primary);
+  box-shadow: 0 0 0 1px var(--ogx-color-primary);
+}
+.ogx-input-wrapper--error {
+  border-color: var(--ogx-color-error);
+}
+.ogx-input-wrapper--error:focus-within {
+  box-shadow: 0 0 0 1px var(--ogx-color-error);
+}
+.ogx-input-wrapper--disabled {
+  background: var(--ogx-color-gray-100);
+  border-color: var(--ogx-color-gray-200);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.ogx-input-wrapper--disabled .ogx-input {
+  cursor: not-allowed;
+}

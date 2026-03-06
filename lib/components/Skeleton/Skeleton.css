@@ -1,0 +1,54 @@
+.ogx__skeleton {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.ogx__skeleton-row {
+  display: flex;
+  align-items: center;
+  min-height: var(--ogx-row-height);
+  border-bottom: 1px solid var(--ogx-grid-border-color);
+  padding: var(--ogx-grid-cell-padding-y) var(--ogx-grid-cell-padding-x);
+}
+.ogx__skeleton-cell {
+  flex: 1;
+  margin-right: 16px;
+}
+.ogx__skeleton-cell:last-child {
+  margin-right: 0;
+}
+.ogx__skeleton-content {
+  height: 16px;
+  background: linear-gradient(
+    90deg,
+    var(--ogx-skeleton-base, rgba(0, 0, 0, 0.06)) 0%,
+    var(--ogx-skeleton-highlight, rgba(0, 0, 0, 0.08)) 50%,
+    var(--ogx-skeleton-base, rgba(0, 0, 0, 0.06)) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+.ogx__skeleton-cell:nth-child(1) .ogx__skeleton-content {
+  width: 60%;
+}
+.ogx__skeleton-cell:nth-child(2) .ogx__skeleton-content {
+  width: 80%;
+}
+.ogx__skeleton-cell:nth-child(3) .ogx__skeleton-content {
+  width: 70%;
+}
+.ogx__skeleton-cell:nth-child(4) .ogx__skeleton-content {
+  width: 90%;
+}
+.ogx__skeleton-cell:nth-child(5) .ogx__skeleton-content {
+  width: 75%;
+}
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

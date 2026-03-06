@@ -1,0 +1,143 @@
+/* ListViewDemo Example Styles */
+.list-view-demo-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.list-view-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-end;
+    padding: 10px;
+}
+
+.list-view-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ogx-grid-header-text);
+}
+
+.list-view-toggle-group {
+    display: inline-flex;
+    border-radius: 10px;
+    border: 1.5px solid var(--ogx-grid-border-color);
+    overflow: hidden;
+    background: var(--ogx-grid-header-background);
+    padding: 3px;
+    gap: 2px;
+}
+
+.list-view-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    background: transparent;
+    color: var(--ogx-grid-header-text);
+}
+
+.list-view-toggle-btn.active {
+    background: var(--ogx-color-primary, #3b82f6);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(59, 130, 246, 0.25);
+}
+
+.list-view-grid-wrapper {
+    width: 100%;
+}
+
+.list-view-how-it-works {
+    padding: 16px;
+    border-radius: 8px;
+    background: var(--ogx-grid-header-background);
+    border: 1px solid var(--ogx-grid-border-color);
+    font-size: 13px;
+    color: var(--ogx-grid-header-text);
+    line-height: 1.6;
+    margin-top: 16px;
+}
+
+/* EmployeeCard Styles */
+.employee-card-root {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 4px 0;
+}
+
+.employee-avatar-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.employee-info-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.employee-info-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.employee-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ogx-grid-cell-text);
+}
+
+.employee-dept-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.employee-inactive-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.employee-info-bottom {
+    font-size: 12px;
+    color: var(--ogx-text-secondary, #6b7280);
+    margin-top: 2px;
+}
+
+.employee-salary-box {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.employee-salary-amount {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ogx-grid-cell-text);
+}
+
+.employee-salary-period {
+    font-size: 11px;
+    color: var(--ogx-text-secondary, #6b7280);
+}
