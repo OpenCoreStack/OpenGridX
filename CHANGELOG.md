@@ -5,10 +5,15 @@
 
 ---
 
-## [0.1.3] — March 10, 2026 🐛
+## [0.1.3] — March 10, 2026 🐛✨
+
+### Added
+- `llms.txt` bundled inside the npm package — a machine-readable AI agent API context file with complete props reference, type definitions, and usage examples. Located at `node_modules/@opencorestack/opengridx/llms.txt` after installation.
 
 ### Fixed
-- CSS is now explicitly imported at the barrel entry (`lib/index.ts`) in addition to `DataGrid.tsx`, ensuring styles are never silently dropped by bundlers (Vite, Webpack, Next.js App Router) that don't auto-resolve side-effect CSS from library packages.
+- CSS now explicitly imported at the barrel entry (`lib/index.ts`), ensuring styles are never silently dropped by bundlers (Vite, Webpack, Next.js App Router) that don't auto-resolve side-effect CSS from library packages.
+- Column resize: `ColumnResizeHandle` now uses the logical stored width (`currentWidth` prop) instead of reading DOM `getBoundingClientRect()`, fixing resize jitter and incorrect delta calculations on second+ drag.
+- Pinned column resize: Resizing a pinned (sticky) column no longer corrupts its displayed width — the DOM measurement was previously offset by the sticky `left`/`right` position, causing an erroneous width jump on first drag.
 
 ### Docs
 - Updated `README.md` to accurately describe CSS handling and provide a clear fallback import instruction for all environments.
