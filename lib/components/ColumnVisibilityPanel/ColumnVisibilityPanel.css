@@ -109,14 +109,13 @@
 
 .ogx-column-visibility-panel__footer {
   border-top: var(--ogx-border-width-thin) solid var(--ogx-border-color);
-  padding: var(--ogx-spacing-sm) 0;
+  padding: var(--ogx-spacing-sm);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .ogx-column-visibility-panel__reset-btn {
-  margin-right: var(--ogx-spacing-md);
   color: var(--ogx-color-gray-400);
   background: none;
   border: none;

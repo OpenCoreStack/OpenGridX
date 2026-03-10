@@ -5,6 +5,13 @@
 
 ---
 
+## [0.1.5] — March 10, 2026 🐛
+
+### Fixed
+- Exported missing public types (`GridSortItem`, `GridApi`, `GridRowSelectionModel`, `GridColumnVisibilityModel`, etc.) in `lib/index.ts` to prevent developers from having to derive them manually using `NonNullable`.
+
+---
+
 ## [0.1.4] — March 10, 2026 ✨
 
 ### Added

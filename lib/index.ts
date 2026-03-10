@@ -64,6 +64,8 @@ export type {
     GridColDef,
     GridAlignment,
     GridSortDirection,
+    GridSortModel,
+    GridSortItem,
     GridFilterModel,
     GridFilterItem,
     GridFilterOperator,
@@ -78,6 +80,10 @@ export type {
     GridColumnPinning,
     GridRowPinning,
     GridPinnedPosition,
+    GridColumnVisibilityModel,
+    GridRowSelectionModel,
+    GridColumnOrderChangeParams,
+    GridRowOrderChangeParams,
     GridRowGroupingModel,
     GridAggregationModel,
     GridAggregationResult,
@@ -93,4 +99,8 @@ export type {
     GridListViewColDef,
     GridColumnGroup,
     GridColumnGroupingModel,
+
+    GridApi,
+    GridTreeNode,
+    GridDetailPanelParams,
 } from './types';
