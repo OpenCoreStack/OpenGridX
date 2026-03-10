@@ -5,6 +5,16 @@
 
 ---
 
+## [0.1.3] — March 10, 2026 🐛
+
+### Fixed
+- CSS is now explicitly imported at the barrel entry (`lib/index.ts`) in addition to `DataGrid.tsx`, ensuring styles are never silently dropped by bundlers (Vite, Webpack, Next.js App Router) that don't auto-resolve side-effect CSS from library packages.
+
+### Docs
+- Updated `README.md` to accurately describe CSS handling and provide a clear fallback import instruction for all environments.
+
+---
+
 ## [0.1.2] — March 6, 2026 🐛
 
 ### Fixed

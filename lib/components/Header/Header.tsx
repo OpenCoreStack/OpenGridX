@@ -487,6 +487,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             {isResizable && onColumnResize && (
                                 <ColumnResizeHandle
                                     field={colDef.field}
+                                    currentWidth={effectiveWidth}
                                     onResize={onColumnResize}
                                     minWidth={colDef.minWidth}
                                     maxWidth={colDef.maxWidth}

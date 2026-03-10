@@ -1,4 +1,7 @@
 
+// Auto-import styles — this ensures consumers do NOT need a manual CSS import
+import './styles/opengridx.css';
+
 export { DataGrid } from './components/DataGrid/DataGrid';
 export { Cell } from './components/Cell/Cell';
 export { Row } from './components/Row/Row';

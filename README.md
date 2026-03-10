@@ -17,16 +17,18 @@ npm install @opencorestack/opengridx
 ```
 
 ```tsx
-// Styles are automatically included — no separate CSS import needed
 import { DataGrid } from '@opencorestack/opengridx';
 ```
 
-> **Note:** Styles are bundled inside the component. For SSR or CSS-in-JS setups use the explicit styles export:
+> **Styles:** The CSS is bundled as a separate file (`opengridx.css`) alongside the JS. It is imported automatically via the package barrel in most setups.
+> However, **if your grid appears unstyled** (Vite, Next.js App Router, or SSR environments sometimes skip side-effect CSS auto-detection), add this explicit import once — typically in your app's root file (`main.tsx` / `layout.tsx`):
+>
 > ```tsx
 > import '@opencorestack/opengridx/styles';
 > ```
 
 ---
+
 
 ## ⚡ Basic Example
 

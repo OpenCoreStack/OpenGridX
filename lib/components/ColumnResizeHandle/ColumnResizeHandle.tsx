@@ -4,13 +4,14 @@ import React, { useCallback, useRef, useState } from 'react';
 
 export interface ColumnResizeHandleProps {
     field: string;
+    currentWidth: number;
     onResize: (field: string, newWidth: number) => void;
     minWidth?: number;
     maxWidth?: number;
 }
 
 export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
-    const { field, onResize, minWidth = 50, maxWidth = 1000 } = props;
+    const { field, currentWidth, onResize, minWidth = 50, maxWidth = 1000 } = props;
     const [isDragging, setIsDragging] = useState(false);
     const startXRef = useRef<number>(0);
     const startWidthRef = useRef<number>(0);
@@ -21,11 +22,8 @@ export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
 
         setIsDragging(true);
         startXRef.current = event.clientX;
-
-        const headerCell = (event.target as HTMLElement).closest('.ogx__header-cell');
-        if (headerCell) {
-            startWidthRef.current = headerCell.getBoundingClientRect().width;
-        }
+        // Use the logical stored width — reliable for pinned, flex, and normal columns
+        startWidthRef.current = currentWidth;
 
         let lastUpdateTime = 0;
         const throttleMs = 16;
@@ -55,14 +53,12 @@ export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-    }, [field, onResize, minWidth, maxWidth]);
+    }, [field, currentWidth, onResize, minWidth, maxWidth]);
 
     const handleDoubleClick = useCallback((event: React.MouseEvent) => {
         event.preventDefault();
         event.stopPropagation();
-
-
-    }, [field]);
+    }, []);
 
     const classNames = [
         'ogx-column-resize-handle',
