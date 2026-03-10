@@ -42,10 +42,10 @@ export default function Installation() {
 
             <section className="docs-section">
                 <h2 className="docs-h2">🎨 Styles</h2>
-                <p>Styles are <strong>automatically included</strong> when you import the <code>DataGrid</code> component — no separate CSS import is required.</p>
-                <p>If you need to import styles manually (e.g., for SSR or CSS-in-JS setups), you can use the explicit styles export:</p>
+                <p>As of <strong>v0.1.3</strong>, styles are imported at the package barrel entry — so they load automatically in the vast majority of setups (Vite, Webpack, CRA, etc.) with no extra config.</p>
+                <p>If your grid appears unstyled (can happen in Next.js App Router, SSR, or certain bundler configs), add this once to your app root (<code>main.tsx</code> / <code>layout.tsx</code>):</p>
                 <div className="docs-code-block">
-                    <span className="docs-code-comment">{'// Optional — only needed for SSR or manual style control'}</span>
+                    <span className="docs-code-comment">{'// Fallback — add to app root if grid appears unstyled'}</span>
                     <br />
                     <span className="docs-code-keyword">import</span> <span className="docs-code-string">'@opencorestack/opengridx/styles'</span>;
                 </div>
