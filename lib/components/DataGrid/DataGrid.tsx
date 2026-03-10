@@ -782,7 +782,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         }, 0);
 
         const naturalFlexWidth = unpinnedCols.reduce((sum, col) => {
-            if (col.flex && col.flex > 0) {
+            const hasManualWidth = Object.prototype.hasOwnProperty.call(columnWidths, col.field);
+            if (!hasManualWidth && col.flex && col.flex > 0) {
                 const minWidth = col.minWidth ?? 150;
                 const width = typeof col.width === 'number' ? col.width : 150;
                 return sum + (minWidth || width);
@@ -804,9 +805,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         let totalFlexUnits = 0;
 
         unpinnedCols.forEach(col => {
+            // If the user has manually resized this column, columnWidths has an explicit
+            // entry for it. Respect that stored width as fixed-width so the resize sticks,
+            // even if the column definition originally had flex.
+            const hasManualWidth = Object.prototype.hasOwnProperty.call(columnWidths, col.field);
+
             const parsed = parseWidth(getColWidth(col));
 
-            if (col.flex && col.flex > 0) {
+            if (!hasManualWidth && col.flex && col.flex > 0) {
                 flexCols.push({ col, flex: col.flex });
                 totalFlexUnits += col.flex;
                 return;
@@ -1665,6 +1671,18 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     columnVisibilityModel,
                     onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
 
+                    onColumnReorder: (fromField: string, toField: string) => {
+                        const currentOrder = [...effectiveColumnOrder];
+                        const fromIdx = currentOrder.indexOf(fromField);
+                        const toIdx = currentOrder.indexOf(toField);
+                        if (fromIdx === -1 || toIdx === -1) return;
+                        const newOrder = [...currentOrder];
+                        newOrder.splice(fromIdx, 1);
+                        newOrder.splice(toIdx, 0, fromField);
+                        if (!columnOrder) setInternalColumnOrder(newOrder);
+                        const col = effectiveColumns.find(c => c.field === fromField); if (col) onColumnOrderChange?.({ oldIndex: fromIdx, targetIndex: toIdx, column: col as any });
+                    },
+
                     forceColumnsOpen: columnsPanelOpen,
                     onColumnsPanelClose: () => setColumnsPanelOpen(false),
 
@@ -1730,6 +1748,19 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             const next = { ...columnVisibilityModel };
                             effectiveColumns.forEach(col => { if (col.hideable !== false) next[col.field] = false; });
                             handleColumnVisibilityModelChange(next);
+                        }}
+                        onColumnReorder={(fromField, toField) => {
+                            const currentOrder = [...effectiveColumnOrder];
+                            const fromIdx = currentOrder.indexOf(fromField);
+                            const toIdx = currentOrder.indexOf(toField);
+                            if (fromIdx === -1 || toIdx === -1) return;
+                            const newOrder = [...currentOrder];
+                            newOrder.splice(fromIdx, 1);
+                            newOrder.splice(toIdx, 0, fromField);
+                            if (!columnOrder) {
+                                setInternalColumnOrder(newOrder);
+                            }
+                            onColumnOrderChange?.({ oldIndex: fromIdx, targetIndex: toIdx, column: effectiveColumns.find(c => c.field === fromField) as any });
                         }}
                     />
                 </div>,

@@ -5,7 +5,11 @@
 
 ---
 
-## [0.1.4] — March 10, 2026 🐛
+## [0.1.4] — March 10, 2026 ✨
+
+### Added
+- **Column Visibility Reorder**: Added a drag handle to the `ColumnVisibilityPanel` letting users seamlessly reorder columns directly via the Visibility Panel dropdown checkbox list. Uses native HTML Drag and Drop API with no external dependencies.
+- Added `onColumnReorder` support to `ColumnVisibilityPanel` and `GridToolbar`.
 
 ### Fixed
 - `import '@opencorestack/opengridx/styles'` now resolves correctly in TypeScript projects. The `./styles` subpath export in `package.json` now includes a `types` pointer to `dist/opengridx.css.d.ts`, eliminating the "Cannot find module" TS error.

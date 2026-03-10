@@ -17,6 +17,7 @@ export interface GridToolbarProps {
     onFilterModelChange?: (model: GridFilterModel) => void;
     columnVisibilityModel?: Record<string, boolean>;
     onColumnVisibilityModelChange?: (model: Record<string, boolean>) => void;
+    onColumnReorder?: (fromField: string, toField: string) => void;
     forceColumnsOpen?: boolean;
     onColumnsPanelClose?: () => void;
     children?: React.ReactNode;
@@ -189,6 +190,7 @@ function ColumnsPanelWrapper({
     onVisibilityChange,
     onShowAll,
     onHideAll,
+    onColumnReorder,
     onClose
 }: {
     anchorRef: React.RefObject<HTMLButtonElement | null>;
@@ -197,6 +199,7 @@ function ColumnsPanelWrapper({
     onVisibilityChange: (field: string, isVisible: boolean) => void;
     onShowAll: () => void;
     onHideAll: () => void;
+    onColumnReorder?: (fromField: string, toField: string) => void;
     onClose: () => void;
 }) {
     const panelRef = useRef<HTMLDivElement>(null);
@@ -249,6 +252,7 @@ function ColumnsPanelWrapper({
                 onVisibilityChange={onVisibilityChange}
                 onShowAll={onShowAll}
                 onHideAll={onHideAll}
+                onColumnReorder={onColumnReorder}
             />
         </div>
     );
@@ -372,6 +376,7 @@ export function GridToolbar({
     onFilterModelChange,
     columnVisibilityModel = {},
     onColumnVisibilityModelChange,
+    onColumnReorder,
     forceColumnsOpen,
     onColumnsPanelClose,
     children,
@@ -521,6 +526,7 @@ export function GridToolbar({
                                 onVisibilityChange={handleVisibilityChange}
                                 onShowAll={handleShowAllColumns}
                                 onHideAll={handleHideAllColumns}
+                                onColumnReorder={onColumnReorder}
                                 onClose={() => { setColsOpen(false); onColumnsPanelClose?.(); }}
                             />
                         )}
