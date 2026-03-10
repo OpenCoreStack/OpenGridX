@@ -1,6 +1,6 @@
 {
   "name": "@opencorestack/opengridx",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "OpenGridX: High-performance React data infrastructure. Unlock advanced Row Grouping, Excel Export, and Column Pinning without the usual \"Pro\" gatekeeping. Built for speed, scale, and complete architectural freedom. Fully open, virtualization-ready, and feature-complete.",
   "type": "module",
   "main": "./dist/opengridx.umd.js",
@@ -12,7 +12,10 @@
       "import": "./dist/opengridx.es.js",
       "require": "./dist/opengridx.umd.js"
     },
-    "./styles": "./dist/opengridx.css"
+    "./styles": {
+      "types": "./dist/opengridx.css.d.ts",
+      "default": "./dist/opengridx.css"
+    }
   },
   "files": [
     "dist",
@@ -28,7 +31,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --project tsconfig.build.json && vite build",
-    "build:lib": "tsc --project tsconfig.build.json && vite build --config vite.config.lib.js",
+    "build:lib": "tsc --project tsconfig.build.json && vite build --config vite.config.lib.js && cp lib/styles/opengridx.css.d.ts dist/opengridx.css.d.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "prepublishOnly": "npm run build:lib"

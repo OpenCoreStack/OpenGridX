@@ -5,6 +5,14 @@
 
 ---
 
+## [0.1.4] — March 10, 2026 🐛
+
+### Fixed
+- `import '@opencorestack/opengridx/styles'` now resolves correctly in TypeScript projects. The `./styles` subpath export in `package.json` now includes a `types` pointer to `dist/opengridx.css.d.ts`, eliminating the "Cannot find module" TS error.
+- `build:lib` script now copies `opengridx.css.d.ts` into `dist/` automatically so it's always included in published packages.
+
+---
+
 ## [0.1.3] — March 10, 2026 🐛✨
 
 ### Added
