@@ -1,99 +1,494 @@
-# OpenGridX - High-Performance React DataGrid
+# OpenGridX — AI Agent Context
+# Package: @opencorestack/opengridx
+# Version: 0.1.3
+# Docs: https://opencorestack.github.io/OpenGridX/
+# This file is machine-readable. AI developers: start here.
 
-OpenGridX is a next-generation, open-source React DataGrid library engineered for extreme performance and deep enterprise requirements. It handles massive datasets (1,000,000+ rows) with constant 60fps scrolling via built-in virtualization, and provides a developer-first API based on the Slots pattern.
+---
 
-## Package
+## OVERVIEW
+
+OpenGridX is a zero-dependency, high-performance React DataGrid library.
+It matches and extends the feature set of MUI X DataGrid Pro — offered completely free.
+
+- **React**: 18+ required
+- **TypeScript**: Full typings shipped in `dist/index.d.ts`
+- **Bundle**: 52 KB gzip (ES module). ExcelJS is optional peer dep (lazy-loaded).
+- **CSS**: Auto-imported via barrel. If unstyled, add: `import '@opencorestack/opengridx/styles'`
+
+---
+
+## INSTALLATION
+
 ```bash
 npm install @opencorestack/opengridx
+# Optional — for advanced Excel export only:
+npm install exceljs
 ```
 
-## Core Capabilities
-- **Extreme Performance**: Row and column virtualization with constant-time rendering for any dataset size.
-- **Server-Side Native**: `useGridDataSource` for remote filtering, sorting, lazy-loading, and infinite scroll.
-- **Hierarchical Data**: Tree Data, Row Grouping, Master-Detail, and pivot table mode.
-- **Enterprise Features**: Styled Excel exports (ExcelJS), pivot mode, column/row spanning, aggregations.
-- **Headless UI**: Full Slots API — replace any internal part of the grid with your own components.
-- **A11Y**: ARIA roles (`grid`, `row`, `gridcell`, `columnheader`), keyboard navigation, aria-sort, aria-selected.
-- **Theming**: CSS variable API (`--ogx-*`) with built-in light, dark, and compact presets.
-- **State Persistence**: `initialState` + `onStateChange` for serializable grid state (filters, sort, page, column widths).
-- **Clipboard**: Ctrl+C / Cmd+C exports selected cell range as TSV for Excel/Google Sheets.
-
-## Technical Details
-- **Bundle Size**: ~52 KB Gzipped (core ES module, ExcelJS lazy-loaded separately).
-- **React**: 18+ required (Concurrent Mode compatible, strict mode safe).
-- **Architecture**: Hook-based internal state, zero external dependencies in the core.
-- **Styling**: BEM CSS with `--ogx-*` CSS variables and `ogx__` class prefix.
-- **Version**: 0.1.0.
-
-## Quick Start
 ```tsx
 import { DataGrid } from '@opencorestack/opengridx';
+// If grid appears unstyled in your bundler:
 import '@opencorestack/opengridx/styles';
+```
 
-const columns = [
-  { field: 'id', headerName: 'ID', width: 70 },
-  { field: 'name', headerName: 'Name', width: 200 },
-  {
-    field: 'score',
-    headerName: 'Score',
-    type: 'number',
-    // Dynamic cell class based on value
-    cellClassName: ({ value }) => value >= 90 ? 'cell--high' : 'cell--low',
-  }
+---
+
+## MINIMAL EXAMPLE
+
+```tsx
+import { DataGrid, GridColDef } from '@opencorestack/opengridx';
+
+const columns: GridColDef[] = [
+  { field: 'id',   headerName: 'ID',   width: 70 },
+  { field: 'name', headerName: 'Name', width: 180 },
+  { field: 'age',  headerName: 'Age',  width: 100, type: 'number', editable: true },
 ];
-const rows = [{ id: 1, name: 'OpenGridX', score: 95 }];
+const rows = [
+  { id: 1, name: 'Jon Snow',    age: 25 },
+  { id: 2, name: 'Arya Stark',  age: 18 },
+];
 
 export default function App() {
+  return <DataGrid rows={rows} columns={columns} height={400} />;
+}
+```
+
+---
+
+## DataGrid PROPS (DataGridProps<R extends GridRowModel>)
+
+### Required
+| Prop      | Type             | Description                      |
+|-----------|------------------|----------------------------------|
+| rows      | GridRowModel[]   | Data array. Each row needs an id |
+| columns   | GridColDef<R>[]  | Column definitions               |
+
+### Display
+| Prop              | Type      | Default | Description                            |
+|-------------------|-----------|---------|----------------------------------------|
+| height            | number    | 500     | Grid height in pixels                  |
+| autoHeight        | boolean   | false   | Fit height to rows                     |
+| rowHeight         | number    | 52      | Row height in pixels                   |
+| headerHeight      | number    | 56      | Header height in pixels                |
+| loading           | boolean   | false   | Show skeleton loading overlay          |
+| noRowsLabel       | string    | —       | Empty state message                    |
+| density           | 'compact'/'standard'/'comfortable' | 'standard' | Row density |
+
+### Selection
+| Prop                       | Type                          | Description                         |
+|----------------------------|-------------------------------|-------------------------------------|
+| checkboxSelection          | boolean                       | Enable checkbox column              |
+| rowSelectionModel          | GridRowId[]                   | Controlled selection                |
+| onRowSelectionModelChange  | (model: GridRowId[]) => void  | Selection change callback           |
+| disableRowSelectionOnClick | boolean                       | Prevent click toggling selection    |
+
+### Sorting
+| Prop              | Type                        | Description                     |
+|-------------------|-----------------------------|----------------------------------|
+| sortModel         | GridSortItem[]              | Controlled sort state            |
+| onSortModelChange | (model: GridSortItem[]) => void | Sort change callback          |
+| sortingMode       | 'client' / 'server'         | Where sorting is applied         |
+| disableColumnSorting | boolean                  | Disable sorting for all columns  |
+
+### Filtering
+| Prop                | Type                           | Description                       |
+|---------------------|--------------------------------|-----------------------------------|
+| filterModel         | GridFilterModel                | Controlled filter state           |
+| onFilterModelChange | (model: GridFilterModel) => void | Filter change callback          |
+| filterMode          | 'client' / 'server'            | Where filtering is applied        |
+| disableColumnFilter | boolean                        | Disable filter for all columns    |
+
+### Pagination
+| Prop                    | Type                                    | Description                      |
+|-------------------------|-----------------------------------------|----------------------------------|
+| pagination              | boolean                                 | Enable client-side pagination    |
+| paginationModel         | GridPaginationModel                     | {page, pageSize} controlled      |
+| onPaginationModelChange | (model: GridPaginationModel) => void    | Pagination change callback       |
+| pageSizeOptions         | number[]                                | Available page sizes             |
+| paginationMode          | 'client' / 'server' / 'infinite'        | Pagination mode                  |
+| rowCount                | number                                  | Total rows for server pagination |
+
+### Column Features
+| Prop                      | Type                      | Description                               |
+|---------------------------|---------------------------|-------------------------------------------|
+| pinnedColumns             | GridColumnPinning         | {left: string[], right: string[]}         |
+| onPinnedColumnsChange     | (model) => void           | Pin change callback                       |
+| columnVisibilityModel     | Record<string, boolean>   | {field: false} to hide                    |
+| onColumnVisibilityModelChange | (model) => void       | Visibility change callback                |
+| columnOrder               | string[]                  | Controlled column order                   |
+| onColumnOrderChange       | (params) => void          | Column reorder callback                   |
+| disableColumnReorder      | boolean                   | Disable drag-to-reorder                   |
+| disableColumnResize       | boolean                   | Disable resize handles                    |
+| columnGroupingModel       | GridColumnGroupingModel   | Multi-level column header groups          |
+
+### Row Features
+| Prop              | Type                      | Description                               |
+|-------------------|---------------------------|-------------------------------------------|
+| pinnedRows        | GridRowPinning            | {top: id[], bottom: id[]}                 |
+| rowReordering     | boolean                   | Enable drag-and-drop row reordering       |
+| onRowOrderChange  | (params) => void          | Row reorder callback                      |
+| getRowId          | (row: R) => GridRowId     | Custom row ID accessor (default: row.id)  |
+| getRowClassName   | (params) => string        | Dynamic CSS class per row                 |
+| getRowHeight      | (params) => number        | Dynamic row height                        |
+
+### Cell Editing
+| Prop                    | Type                       | Description                             |
+|-------------------------|----------------------------|-----------------------------------------|
+| processRowUpdate        | (newRow, oldRow) => R      | Commit edits. Must return updated row   |
+| onProcessRowUpdateError | (error) => void            | Handle commit errors                    |
+| isCellEditable          | (params) => boolean        | Fine-grained editability control        |
+
+### Detail Panels (Master-Detail)
+| Prop                    | Type                       | Description                             |
+|-------------------------|----------------------------|-----------------------------------------|
+| getDetailPanelContent   | (params) => ReactNode      | Render expanded detail row              |
+| getDetailPanelHeight    | (params) => number / 'auto'| Height of detail panel                  |
+| expandedRowIds          | Set<GridRowId>             | Controlled expanded rows                |
+| onDetailPanelExpandedRowIdsChange | (ids) => void  | Expand/collapse callback               |
+
+### Grouping & Aggregation
+| Prop                   | Type                      | Description                              |
+|------------------------|---------------------------|------------------------------------------|
+| rowGroupingModel       | string[]                  | Fields to group by                       |
+| aggregationModel       | GridAggregationModel      | {field: 'sum'/'avg'/'min'/'max'/'count'} |
+| getAggregationPosition | (group) => 'footer'/'inline' | Where to render aggregation row       |
+| defaultGroupingExpansionDepth | number             | Auto-expand depth (default -1 = all)     |
+
+### Tree Data
+| Prop                      | Type                       | Description                          |
+|---------------------------|----------------------------|--------------------------------------|
+| treeData                  | boolean                    | Enable tree data mode                |
+| getTreeDataPath           | (row) => string[]          | Return path array for each row       |
+| defaultGroupingExpansionDepth | number               | Same as grouping depth               |
+
+### Pivot
+| Prop           | Type           | Description                                   |
+|----------------|----------------|-----------------------------------------------|
+| pivotMode      | boolean        | Enable pivot view                             |
+| pivotModel     | GridPivotModel | {rowFields, columnFields, valueFields}        |
+| onPivotModelChange | (model) => void | Pivot change callback                    |
+
+### Server-Side
+| Prop       | Type            | Description                                        |
+|------------|-----------------|----------------------------------------------------|
+| dataSource | GridDataSource  | Adapter for server-side fetching (see below)       |
+
+### Styling & Customization
+| Prop         | Type                  | Description                              |
+|--------------|-----------------------|------------------------------------------|
+| slots        | GridSlots             | Replace toolbar, pagination, overlays    |
+| slotProps    | GridSlotProps         | Props for slot components                |
+| theme        | GridTheme             | Override theme tokens                    |
+| sx           | React.CSSProperties   | Inline styles on the root element        |
+
+### Callbacks
+| Prop              | Type                  | Description                   |
+|-------------------|-----------------------|-------------------------------|
+| onRowClick        | (params) => void      | Row click                     |
+| onCellClick       | (params) => void      | Cell click                    |
+| onRowDoubleClick  | (params) => void      | Row double-click              |
+| onRowsScrollEnd   | (params) => void      | Fired near bottom of scroll   |
+| onStateChange     | (state) => void       | Fires on any state change     |
+
+### State Persistence
+| Prop         | Type             | Description                                  |
+|--------------|------------------|----------------------------------------------|
+| initialState | GridInitialState | Restore column widths, sort, filter on mount |
+| apiRef       | RefObject<GridApi> | Attach imperative API handle               |
+
+### List View
+| Prop           | Type               | Description                                 |
+|----------------|--------------------|---------------------------------------------|
+| listView       | boolean            | Render as card/list instead of table        |
+| listViewColumn | GridListViewColDef | Defines the card renderer                   |
+
+---
+
+## GridColDef<R> PROPERTIES
+
+| Property          | Type                                                   | Description                                |
+|-------------------|--------------------------------------------------------|--------------------------------------------|
+| field             | string                                                 | **Required.** Key in row data              |
+| headerName        | string                                                 | Column label                               |
+| width             | number / string (px or %)                             | Column width                               |
+| flex              | number                                                 | Flex grow factor                           |
+| minWidth          | number                                                 | Minimum width constraint                   |
+| maxWidth          | number                                                 | Maximum width constraint                   |
+| type              | 'string'/'number'/'boolean'/'date'/'singleSelect'/'image' | Data type                             |
+| editable          | boolean                                                | Enable double-click editing                |
+| valueOptions      | string[] / {value, label}[]                           | Options for singleSelect type             |
+| renderCell        | (params: GridRenderCellParams) => ReactNode            | Custom cell renderer                       |
+| renderHeader      | (params: GridRenderHeaderParams) => ReactNode          | Custom header renderer                     |
+| renderEditCell    | (params: GridRenderCellParams) => ReactNode            | Custom editor component                    |
+| valueGetter       | ({row, field, value}) => any                          | Computed cell value                        |
+| valueFormatter    | ({value, row, field}) => string                       | Format display value                       |
+| cellClassName     | string / (params) => string                            | CSS class on cells                         |
+| headerClassName   | string                                                 | CSS class on header cell                   |
+| colSpan           | number / (params) => number                            | Cell column span                           |
+| rowSpan           | number / (params) => number                            | Cell row span                              |
+| align             | 'left'/'center'/'right'                               | Cell content alignment                     |
+| headerAlign       | 'left'/'center'/'right'                               | Header content alignment                   |
+| sortable          | boolean (default true)                                 | Enable sorting                             |
+| filterable        | boolean (default true)                                 | Enable filtering                           |
+| resizable         | boolean (default true)                                 | Enable resize handle                       |
+| hideable          | boolean (default true)                                 | Allow hiding via toolbar                   |
+| pinnable          | boolean (default true)                                 | Allow pinning via column menu              |
+| disableColumnMenu | boolean                                                | Hide the ⋮ column menu button             |
+
+---
+
+## GridApi METHODS (via useGridApiRef)
+
+```tsx
+import { useGridApiRef } from '@opencorestack/opengridx';
+const apiRef = useGridApiRef();
+<DataGrid apiRef={apiRef} ... />
+
+// Row access
+apiRef.current.getRow(id)            // → GridRowModel | null
+apiRef.current.getAllRows()          // → GridRowModel[]
+apiRef.current.getVisibleRows()     // → GridRowModel[]
+
+// Column access
+apiRef.current.getColumn(field)     // → GridColDef | null
+apiRef.current.getAllColumns()      // → GridColDef[]
+apiRef.current.getVisibleColumns()  // → GridColDef[]
+
+// Selection
+apiRef.current.selectRow(id, isSelected?)  // select/deselect a row
+apiRef.current.selectRows(ids, isSelected?) // bulk select
+apiRef.current.getSelectedRows()           // → GridRowId[]
+
+// Sort / Filter
+apiRef.current.sortColumn(field, 'asc' | 'desc' | null)
+apiRef.current.getSortModel()       // → GridSortItem[]
+apiRef.current.setFilterModel(model)
+
+// Pagination
+apiRef.current.setPage(page)
+apiRef.current.setPageSize(size)
+
+// Clipboard
+apiRef.current.copySelectedRows()   // → Promise<void> (TSV to clipboard)
+
+// Aggregation (when aggregationModel is set)
+apiRef.current.getAggregationResult() // → GridAggregationResult | null
+```
+
+---
+
+## CELL EDITING — FULL EXAMPLE
+
+```tsx
+const [rows, setRows] = useState(initialRows);
+
+const processRowUpdate = (newRow, oldRow) => {
+  setRows(prev => prev.map(r => r.id === newRow.id ? newRow : r));
+  return newRow; // Must return the committed row
+};
+
+<DataGrid
+  rows={rows}
+  columns={[
+    { field: 'name', headerName: 'Name', editable: true },
+    { field: 'age',  headerName: 'Age',  editable: true, type: 'number' },
+    { field: 'role', headerName: 'Role', editable: true, type: 'singleSelect',
+      valueOptions: ['Engineer', 'Manager', 'Analyst'] },
+  ]}
+  processRowUpdate={processRowUpdate}
+  onProcessRowUpdateError={console.error}
+/>
+```
+
+---
+
+## SERVER-SIDE DATA SOURCE
+
+```tsx
+import { useGridDataSource } from '@opencorestack/opengridx';
+
+const dataSource: GridDataSource = {
+  getRows: async ({ page, pageSize, sortModel, filterModel }) => {
+    const data = await fetch(`/api/rows?page=${page}&size=${pageSize}`).then(r => r.json());
+    return { rows: data.items, rowCount: data.total };
+  },
+  // Optional: lazy-load children for server-side tree data
+  getChildren: async ({ row }) => {
+    return fetch(`/api/rows/${row.id}/children`).then(r => r.json());
+  }
+};
+
+<DataGrid
+  columns={columns}
+  rows={[]}                  // empty — data comes from dataSource
+  dataSource={dataSource}
+  paginationMode="server"
+  sortingMode="server"
+  filterMode="server"
+  rowCount={1000}
+/>
+```
+
+---
+
+## THEMING
+
+```tsx
+import { DataGridThemeProvider, darkTheme } from '@opencorestack/opengridx';
+
+// Built-in themes: darkTheme, roseTheme, emeraldTheme, amberTheme, compactTheme
+<DataGridThemeProvider theme={darkTheme}>
+  <DataGrid rows={rows} columns={columns} />
+</DataGridThemeProvider>
+
+// Custom theme override:
+const myTheme = {
+  colors: {
+    primary: '#6366f1',
+    headerBackground: '#1e1e2e',
+    rowHover: '#2a2a3e',
+  }
+};
+<DataGridThemeProvider theme={myTheme}>
+  <DataGrid ... />
+</DataGridThemeProvider>
+```
+
+---
+
+## SLOTS CUSTOMIZATION
+
+```tsx
+import { GridToolbar } from '@opencorestack/opengridx';
+
+// Replace built-in components:
+<DataGrid
+  slots={{
+    toolbar: MyCustomToolbar,
+    pagination: MyPagination,
+    noRowsOverlay: EmptyState,
+    loadingOverlay: Spinner,
+    footer: CustomFooter,
+  }}
+  slotProps={{
+    toolbar: { onExport: () => apiRef.current.copySelectedRows() },
+  }}
+/>
+```
+
+---
+
+## STATE PERSISTENCE
+
+```tsx
+import { useGridStateStorage } from '@opencorestack/opengridx';
+
+function MyGrid() {
+  const { initialState, handleStateChange } = useGridStateStorage('my-grid-v1');
   return (
-    <div style={{ height: 400 }}>
-      <DataGrid rows={rows} columns={columns} />
-    </div>
+    <DataGrid
+      initialState={initialState}
+      onStateChange={handleStateChange}
+      rows={rows}
+      columns={columns}
+    />
   );
 }
 ```
 
-## Key <DataGrid /> Props
-- `rows` — `GridRowModel[]` — Data array.
-- `columns` — `GridColDef[]` — Column definitions.
-- `height` — `number` — Fixed height in pixels.
-- `loading` — `boolean` — Show skeleton overlay.
-- `checkboxSelection` — `boolean` — Multi-row selection.
-- `pagination` / `paginationMode` — Client, server, or infinite.
-- `sortModel` / `filterModel` — Controlled sort and filter state.
-- `pinnedColumns` — Pin columns left or right.
-- `rowGroupingModel` — Group rows by field.
-- `treeData` + `getTreeDataPath` — Hierarchical tree mode.
-- `aggregationModel` — Sum, avg, min, max, count per column.
-- `pivotMode` + `pivotModel` — Cross-tabulation pivot view.
-- `processRowUpdate` — Intercept and commit cell edits.
-- `dataSource` — Server-side data provider interface.
-- `slots` — Override internal components.
-- `initialState` / `onStateChange` — Persist and restore grid state.
-- `listView` + `listViewColumn` — Card/list rendering mode.
+---
 
-## Key GridColDef Properties
-- `field` — Row object key.
-- `headerName` — Column label.
-- `width` / `flex` / `minWidth` / `maxWidth` — Sizing.
-- `type` — `'string' | 'number' | 'boolean' | 'date' | 'singleSelect' | 'image'`.
-- `renderCell` — Custom cell renderer `(params) => ReactNode`.
-- `renderHeader` — Custom header renderer.
-- `renderEditCell` — Custom editor shown on double-click.
-- `cellClassName` — Static string OR `(params) => string` for dynamic per-row classes.
-- `headerClassName` — CSS class added to the header cell.
-- `valueGetter` — Derive a computed value from the row.
-- `valueFormatter` — Format display value without affecting sort/filter.
-- `editable` — Enable cell editing.
-- `colSpan` / `rowSpan` — Cell spanning (static or function).
-- `sortable` / `filterable` / `resizable` / `hideable` / `pinnable` / `disableColumnMenu`.
+## EXPORT UTILITIES
 
-## GridApi Methods (via useGridApiRef)
-- `getRow(id)` / `getAllRows()` / `getVisibleRows()`
-- `getColumn(field)` / `getVisibleColumns()`
-- `selectRow(id, isSelected)` / `getSelectedRows()`
-- `sortColumn(field, dir)` / `setFilterModel(model)` / `setPage(page)`
-- `exportToCSV()` / `exportToExcel()` / `exportToExcelAdvanced(options)`
+```tsx
+import {
+  exportToCsv,
+  exportToExcel,          // HTML-based .xlsx — zero deps
+  exportToExcelAdvanced,  // Rich .xlsx binary — requires: npm install exceljs
+  exportToJson,
+  printGrid,
+} from '@opencorestack/opengridx';
 
-## License
-MIT License. Free for open-source and commercial use.
-Web: https://opengridx.dev (coming soon)
+exportToCsv(rows, columns, { fileName: 'export.csv' });
+exportToExcel(rows, columns, { fileName: 'export.xlsx' });
+exportToExcelAdvanced(rows, columns, {
+  fileName: 'export.xlsx',
+  sheetName: 'Data',
+  columnStyles: {
+    avatar: { embedImage: true, imageWidth: 32, imageHeight: 32 }
+  }
+});
+exportToJson(rows, columns, { fileName: 'export.json' });
+printGrid(rows, columns, 'My Report Title');
+```
+
+---
+
+## CSS CUSTOMIZATION
+
+All CSS variables use the `--ogx-` prefix. Set them on the grid wrapper:
+
+```css
+.my-grid-wrapper {
+  --ogx-color-primary: #6366f1;
+  --ogx-color-header-bg: #1e1e2e;
+  --ogx-color-row-hover: rgba(99, 102, 241, 0.08);
+  --ogx-color-border: #2a2a3e;
+  --ogx-font-size-cell: 13px;
+  --ogx-border-radius: 8px;
+}
+```
+
+All class names use the `ogx__` BEM prefix, e.g.:
+- `ogx__row`, `ogx__row--selected`, `ogx__row--even`
+- `ogx__cell`, `ogx__cell--focused`, `ogx__cell--editing`
+- `ogx__header-cell`, `ogx__header-cell--sorted`
+
+---
+
+## TYPE REFERENCE
+
+```ts
+type GridRowModel = Record<string, any> & { id: GridRowId };
+type GridRowId = string | number;
+type GridSortDirection = 'asc' | 'desc' | null;
+type GridPinnedPosition = 'left' | 'right' | null;
+
+interface GridSortItem    { field: string; sort: 'asc' | 'desc'; }
+interface GridFilterItem  { field: string; operator: string; value: any; }
+interface GridFilterModel { items: GridFilterItem[]; logicOperator?: 'and' | 'or'; }
+interface GridPaginationModel { page: number; pageSize: number; }
+interface GridColumnPinning   { left?: string[]; right?: string[]; }
+interface GridRowPinning      { top?: GridRowId[]; bottom?: GridRowId[]; }
+
+interface GridRenderCellParams<R = GridRowModel> {
+  value: any; row: R; field: string;
+  colDef: GridColDef<R>; rowIndex: number; colIndex: number;
+}
+
+interface GridDataSource {
+  getRows: (params: GridGetRowsParams) => Promise<GridGetRowsResponse>;
+  getChildren?: (params: { row: GridRowModel }) => Promise<GridRowModel[]>;
+}
+interface GridGetRowsParams {
+  page: number; pageSize: number;
+  sortModel: GridSortItem[]; filterModel: GridFilterModel;
+}
+interface GridGetRowsResponse { rows: GridRowModel[]; rowCount: number; }
+```
+
+---
+
+## KEY NOTES FOR AI AGENTS
+
+1. **Always `return newRow`** from `processRowUpdate` — failing to do so breaks the internal state update.
+2. **`getRowId` default is `row.id`** — if your data uses a different key, always pass `getRowId`.
+3. **CSS must be imported**: if grid is unstyled, add `import '@opencorestack/opengridx/styles'` to app root.
+4. **ExcelJS is optional**: `exportToExcelAdvanced` requires `npm install exceljs` separately (peer dep).
+5. **`dataSource` + `rows={[]}`**: when using server-side mode, pass empty `rows` array — the grid fills via `dataSource.getRows`.
+6. **`flex` columns**: columns with `flex` expand to fill available space. Setting `width` on a flex column sets its base size but it will still flex.
+7. **`singleSelect` editing**: for dropdown editors in cells, set `type: 'singleSelect'` and provide `valueOptions`.
+8. **`initialState.columns.columnWidths`**: accepts `Record<string, number>` to restore saved column widths.
+9. **`pinnedColumns`** and **`columnWidths`** are independent state — pinning does not reset widths.
+10. **Aggregation** requires `rowGroupingModel` OR a global footer via `getAggregationPosition={() => 'footer'}`.
