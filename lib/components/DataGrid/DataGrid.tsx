@@ -1643,7 +1643,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     return (
         <div
             ref={containerRef}
-            className={`ogx ${className} ${autoHeight ? 'ogx--auto-height' : ''} ${hasRowSpanning ? 'ogx--row-spanning' : ''} ${listView ? 'ogx--list-view' : ''}`}
+            className={['ogx', className, autoHeight && 'ogx--auto-height', hasRowSpanning && 'ogx--row-spanning', listView && 'ogx--list-view'].filter(Boolean).join(' ')}
             style={{
                 ...style,
                 height: height ?? style?.height,

@@ -5,6 +5,13 @@
 
 ---
 
+## [0.1.7] — March 12, 2026 🐛
+
+### Fixed
+- Fixed an issue where the main wrapper `className` would erroneously include extra whitespace (e.g. `ogx    `) when no optional classes were active.
+- Fixed an issue where `onRowOrderChange` drag-and-drop visuals didn't actually update in the `EventsDemo` component examples because it was referencing a static array instead of React State.
+
+
 ## [0.1.6] — March 12, 2026 🎨
 
 ### Added
