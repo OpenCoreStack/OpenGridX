@@ -38,16 +38,16 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: var(--ogx-color-gray-600, #475569);
+  color: var(--ogx-grid-header-text);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   position: relative;
 }
 .ogx-toolbar__icon-btn:hover {
-  background: var(--ogx-color-gray-100, #f1f5f9);
+  background: var(--ogx-grid-header-hover-background);
 }
 .ogx-toolbar__icon-btn--active {
-  background: var(--ogx-color-gray-100, #f1f5f9);
+  background: var(--ogx-grid-header-hover-background);
   outline: none;
 }
 .ogx-toolbar__icon-btn:focus {
@@ -72,10 +72,10 @@
   position: fixed;
   width: 380px;
   max-width: calc(100vw - 24px);
-  background: var(--ogx-grid-background);
-  border: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+  background: var(--ogx-overlay-background, var(--ogx-grid-background));
+  border: var(--ogx-border-width-thin) solid var(--ogx-overlay-border, var(--ogx-grid-border-color));
   border-radius: var(--ogx-border-radius-lg);
-  box-shadow: var(--ogx-shadow-lg);
+  box-shadow: var(--ogx-overlay-shadow, var(--ogx-shadow-lg));
   z-index: 9999;
   overflow: hidden;
   animation: ogx-panel-in 0.15s ease-out;
@@ -89,7 +89,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--ogx-spacing-sm) var(--ogx-spacing-md);
-  border-bottom: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+  border-bottom: var(--ogx-border-width-thin) solid var(--ogx-overlay-border, var(--ogx-grid-border-color));
   background: var(--ogx-grid-header-background);
 }
 .ogx-toolbar__panel-title {
@@ -142,14 +142,14 @@
   align-items: center;
   gap: var(--ogx-spacing-md);
   padding: 8px var(--ogx-spacing-md);
-  border-bottom: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+  border-bottom: var(--ogx-border-width-thin) solid var(--ogx-overlay-border, var(--ogx-grid-border-color));
   transition: background 0.1s;
 }
 .ogx-toolbar__agg-row:last-child {
   border-bottom: none;
 }
 .ogx-toolbar__agg-row:hover {
-  background: var(--ogx-grid-row-hover-background);
+  background: var(--ogx-overlay-item-hover-bg, var(--ogx-grid-row-hover-background));
 }
 .ogx-toolbar__agg-label {
   flex: 0 0 100px;
@@ -170,7 +170,7 @@
   display: inline-flex;
   align-items: center;
   padding: 3px 6px;
-  border: var(--ogx-border-width-thin) solid var(--ogx-border-color);
+  border: var(--ogx-border-width-thin) solid var(--ogx-overlay-border, var(--ogx-border-color));
   border-radius: 999px;
   background: transparent;
   color: var(--ogx-grid-row-text);

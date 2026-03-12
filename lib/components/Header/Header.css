@@ -214,8 +214,8 @@
   opacity: 1;
 }
 .ogx__menu-icon-btn:hover {
-  background: var(--ogx-color-gray-200);
-  color: var(--ogx-color-gray-700);
+  background: var(--ogx-grid-header-hover-background);
+  color: var(--ogx-grid-header-text);
 }
 .ogx__menu-icon-btn--active {
   opacity: 1;

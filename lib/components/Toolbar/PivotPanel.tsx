@@ -235,5 +235,5 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
         </div>
     );
 
-    return ReactDOM.createPortal(panel, document.body);
+    return ReactDOM.createPortal(panel, anchorRef.current?.closest('.ogx-theme-provider') || document.body);
 }

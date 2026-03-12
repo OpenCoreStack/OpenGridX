@@ -20,7 +20,7 @@ const columns: GridColDef[] = [
     { field: 'status', headerName: 'Status', width: 120 },
 ];
 
-const rows = [
+const initialRows = [
     { id: 1, name: 'Alice Smith', email: 'alice@acme.com', role: 'Full-Stack Developer', status: 'Active' },
     { id: 2, name: 'Bob Johnson', email: 'bob@acme.com', role: 'UX Designer', status: 'On Leave' },
     { id: 3, name: 'Carol Williams', email: 'carol@acme.com', role: 'Product Manager', status: 'Active' },
@@ -30,6 +30,7 @@ const rows = [
 
 export default function EventsDemo() {
     const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [dataRows, setDataRows] = useState(initialRows);
 
     const addLog = useCallback((event: string, detail: string) => {
         const timestamp = new Date().toLocaleTimeString();
@@ -73,7 +74,7 @@ export default function EventsDemo() {
                 <div className="events-layout">
                     <div className="events-grid">
                         <DataGrid
-                            rows={rows}
+                            rows={dataRows}
                             columns={columns}
                             height={500}
                             checkboxSelection
@@ -82,9 +83,16 @@ export default function EventsDemo() {
                             onSortModelChange={handleSortModelChange}
                             onFilterModelChange={handleFilterModelChange}
                             onColumnOrderChange={handleColumnOrderChange}
-                            // Using standard props to simulate and track reordering
                             rowReordering={true}
-                            onRowOrderChange={(params) => addLog('Row Reorder', `Moved row ${params.row.id} from ${params.oldIndex} to ${params.targetIndex}`)}
+                            onRowOrderChange={(params) => {
+                                addLog('Row Reorder', `Moved row ${params.row.id} from ${params.oldIndex} to ${params.targetIndex}`);
+                                setDataRows((prevRows) => {
+                                    const newRows = [...prevRows];
+                                    const [movedRow] = newRows.splice(params.oldIndex, 1);
+                                    newRows.splice(params.targetIndex, 0, movedRow);
+                                    return newRows;
+                                });
+                            }}
                         />
                     </div>
 

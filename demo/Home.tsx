@@ -68,7 +68,7 @@ export default function Home(_props: HomeProps) {
                 <div className="home-logo-hero">
                     <img src={`${import.meta.env.BASE_URL}banner.png`} alt="OpenGridX Logo" className="home-banner-image" />
                 </div>
-                <span className="home-badge">OpenGridX v0.1.5</span>
+                <span className="home-badge">OpenGridX v0.1.6</span>
                 <p className="home-subtitle">
                     The elite, high-performance DataGrid for modern React.
                     Built to handle massive data with a premium developer experience.

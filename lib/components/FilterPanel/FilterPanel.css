@@ -56,10 +56,11 @@
   background: var(--ogx-grid-row-hover-background);
 }
 .ogx-filter__row--active {
-  background: var(--ogx-toolbar-chip-active-bg, rgba(25, 118, 210, 0.04));
+  background: var(--ogx-overlay-item-selected-bg, rgba(25, 118, 210, 0.04));
 }
 .ogx-filter__row--active:hover {
-  background: var(--ogx-toolbar-chip-active-bg, rgba(25, 118, 210, 0.07));
+  background: var(--ogx-overlay-item-selected-bg, rgba(25, 118, 210, 0.07));
+  opacity: 0.9;
 }
 .ogx-filter__col-label {
   flex: 0 0 140px;
@@ -102,7 +103,7 @@
   border-color: var(--ogx-color-primary);
 }
 .ogx-filter__op-select--active {
-  border-color: var(--ogx-color-primary);
+  border-color: var(--ogx-toolbar-input-focus-border, var(--ogx-color-primary));
   color: var(--ogx-color-primary);
   font-weight: 700;
 }
@@ -120,7 +121,8 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .ogx-filter__value-input::placeholder {
-  color: var(--ogx-color-gray-400, #94a3b8);
+  color: var(--ogx-overlay-text, var(--ogx-color-gray-400));
+  opacity: 0.6;
 }
 .ogx-filter__value-input:focus {
   border-color: var(--ogx-toolbar-input-focus-border, var(--ogx-color-primary));
@@ -149,7 +151,7 @@
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: var(--ogx-color-gray-400, #94a3b8);
+  color: var(--ogx-overlay-text, var(--ogx-color-gray-400));
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
@@ -164,7 +166,8 @@
   padding: var(--ogx-spacing-md);
   font-family: var(--ogx-font-family);
   font-size: var(--ogx-font-size-sm);
-  color: var(--ogx-color-gray-400, #94a3b8);
+  color: var(--ogx-overlay-text, var(--ogx-color-gray-400));
+  opacity: 0.7;
   text-align: center;
 }
 .ogx-toolbar__panel--filter {

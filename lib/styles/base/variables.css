@@ -95,6 +95,17 @@
   --ogx-grid-cell-focus-border: var(--ogx-color-primary);
   --ogx-grid-pinned-left-shadow: 4px 0 24px -4px rgba(0, 0, 0, 0.05); 
   --ogx-grid-pinned-right-shadow: -4px 0 24px -4px rgba(0, 0, 0, 0.05);
+  --ogx-skeleton-base: #f0f0f0;
+  --ogx-skeleton-highlight: #f8f8f8;
+  /* ── Overlay / Menu / Dropdown tokens ───────────────────────────────── */
+  --ogx-overlay-background: #ffffff;
+  --ogx-overlay-border: #e2e8f0;
+  --ogx-overlay-text: #334155;
+  --ogx-overlay-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.06);
+  --ogx-overlay-item-hover-bg: #f8fafc;
+  --ogx-overlay-item-hover-text: #0f172a;
+  --ogx-overlay-item-selected-text: var(--ogx-color-primary);
+  --ogx-overlay-item-selected-bg: var(--ogx-color-primary-light);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -135,5 +146,16 @@
     --ogx-checkbox-border: #64748b;
     --ogx-grid-pinned-left-shadow: 4px 0 24px -4px rgba(0, 0, 0, 0.3);
     --ogx-grid-pinned-right-shadow: -4px 0 24px -4px rgba(0, 0, 0, 0.3);
+    --ogx-skeleton-base: #2a2a2a;
+    --ogx-skeleton-highlight: #333333;
+    /* ── Overlay / Menu / Dropdown tokens (dark) ────────────────────────── */
+    --ogx-overlay-background: #1e293b;
+    --ogx-overlay-border: #334155;
+    --ogx-overlay-text: #cbd5e1;
+    --ogx-overlay-shadow: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -1px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.2);
+    --ogx-overlay-item-hover-bg: #334155;
+    --ogx-overlay-item-hover-text: #f1f5f9;
+    --ogx-overlay-item-selected-text: var(--ogx-color-primary);
+    --ogx-overlay-item-selected-bg: #1e3a5f;
   }
 }

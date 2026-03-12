@@ -1660,7 +1660,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     aggregationModel,
                     onAggregationModelChange: handleAggregationModelChange,
 
-                    ...(pivotMode ? {
+                    ...(pivotMode || propPivotModel || onPivotModelChange ? {
                         pivotModel: currentPivotModel,
                         onPivotModelChange: handlePivotModelChange,
                     } : {}),
@@ -1671,7 +1671,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     columnVisibilityModel,
                     onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
 
-                    onColumnReorder: (fromField: string, toField: string) => {
+                    onColumnReorder: disableColumnReorder ? undefined : (fromField: string, toField: string) => {
                         const currentOrder = [...effectiveColumnOrder];
                         const fromIdx = currentOrder.indexOf(fromField);
                         const toIdx = currentOrder.indexOf(toField);
@@ -1749,7 +1749,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             effectiveColumns.forEach(col => { if (col.hideable !== false) next[col.field] = false; });
                             handleColumnVisibilityModelChange(next);
                         }}
-                        onColumnReorder={(fromField, toField) => {
+                        onColumnReorder={disableColumnReorder ? undefined : (fromField, toField) => {
                             const currentOrder = [...effectiveColumnOrder];
                             const fromIdx = currentOrder.indexOf(fromField);
                             const toIdx = currentOrder.indexOf(toField);
@@ -1764,7 +1764,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                         }}
                     />
                 </div>,
-                document.body
+                containerRef.current?.closest('.ogx-theme-provider') || document.body
             )}
 
             {/* ═══════════════════════════════════════════════════════════════

@@ -59,7 +59,7 @@ const examplesConfig: { name: string; component: React.LazyExoticComponent<React
     { name: 'Row Grouping', component: GroupingExample, category: 'Advanced features' },
     { name: 'Tree Data', component: TreeDataExample, category: 'Advanced features' },
     { name: 'Master Detail', component: MasterDetailExample, category: 'Advanced features' },
-    { name: 'Aggregation Footer', component: AggregationFooterExample, category: 'Advanced features' },
+    { name: 'Aggregation', component: AggregationFooterExample, category: 'Advanced features' },
     { name: 'Row Spanning', component: RowSpanningShowcase, category: 'Advanced features' },
     { name: 'Cell Spanning', component: CellSpanningShowcase, category: 'Advanced features' },
     { name: 'Pivot Mode', component: PivotModeDemo, category: 'Advanced features' },
@@ -117,7 +117,7 @@ function App() {
                     <img src={`${import.meta.env.BASE_URL}logo.png`} alt="OpenGridX Logo" className="app-logo" />
                     <h2 className="app-title">
                         OpenGridX
-                        <span className="app-version">v0.1.5</span>
+                        <span className="app-version">v0.1.6</span>
                     </h2>
                 </div>
 

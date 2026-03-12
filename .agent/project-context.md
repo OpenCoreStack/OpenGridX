@@ -4,15 +4,17 @@
 **OpenGridX** (`@opencorestack/opengridx`) is a zero-dependency, high-performance DataGrid library for React, engineered to match and extend the feature set of MUI X DataGrid Pro — offered completely free.
 - **npm**: `@opencorestack/opengridx` (published under the `opencorestack` npm org, owned by `asif7774`)
 - **Project Path**: `/Volumes/Data/RND/OpenGridX`
-- **Core Value**: 100% custom implementation with ZERO external UI dependencies (no MUI, no Emotion, no Tailwind).
+- **Core Value**: 100% custom implementation with ZERO external UI dependencies.
 - **Performance**: Handles 100,000+ rows via custom virtualization at 60fps.
-- **Current Version**: `0.1.3` (published to npm)
+- **Current Version**: `0.1.5` (published to npm)
 
 ## 📦 NPM Publication Status
 - **v0.1.0** → Published ✅ (March 6, 2026 — first publish)
 - **v0.1.1** → Published ✅ (March 6, 2026 — ExcelJS externalized, cleaned devDeps, improved README)
 - **v0.1.2** → Published ✅ (March 6, 2026 — Cell editing internal state bug fix)
 - **v0.1.3** → Published ✅ (March 10, 2026 — CSS auto-import fix via barrel entry)
+- **v0.1.4** → Published ✅ (March 10, 2026 — Column Visibility DnD reorder + CSS subpath export fixes)
+- **v0.1.5** → Published ✅ (March 10, 2026 — Exported missing public types: GridSortItem, GridApi, etc.)
 - **Package URL**: https://www.npmjs.com/package/@opencorestack/opengridx
 - **npm org**: `opencorestack` (owner: `asif7774`)
 - **Next publish**: bump version in `package.json`, then `npm publish --access public --otp=<code>`
@@ -76,6 +78,7 @@ formats: ['es', 'umd']
 - Row Pinning (top/bottom)
 - Column Resizing (throttled 60fps drag)
 - Column & Row Reordering (DnD)
+- Column Visibility Reordering (DnD in panel)
 - Detail Panels (master-detail)
 - Cell & Row Spanning (colSpan/rowSpan)
 - List View Mode (card-based layout)
@@ -100,12 +103,14 @@ formats: ['es', 'umd']
 - Skeleton Loader (animated, auto-detects columns)
 - Server-side data source (`useGridDataSource` hook)
 
-## 🔧 Recent Fixes (v0.1.1)
-- `Ctrl+C` now works when grid checkboxes are focused
-- Programmatic `apiRef.current.copySelectedRows()` correctly reads live selection
-- ExcelJS moved from `dependencies` → optional `peerDependencies` AND marked `external` in Vite
-- `getSelectedRows()` on apiRef returns live selection state (was returning stale data)
-- `copySelectedRows` placeholder added to initial apiRef in `useDataGrid.ts` to satisfy `GridApi` type
+## 🔧 Recent Fixes (v0.1.5)
+- **Type Exports**: Exported `GridSortItem`, `GridApi`, `GridRowSelectionModel`, `GridColumnVisibilityModel`, etc., directly from the package barrel (`lib/index.ts`).
+- **CSS Subpath Types**: Added `dist/opengridx.css.d.ts` and wired it into `package.json` subpath exports so `import '@opencorestack/opengridx/styles'` doesn't throw TS errors.
+- **Column Visibility Reorder**: Added a drag handle to the `ColumnVisibilityPanel` for manual column reordering without external dependencies.
+- **Toolbar wiring**: Added `onColumnReorder` support to `GridToolbar` and the built-in `ColumnVisibilityPanel` slot.
+- **GridToolbar Stability**: Added `useMemo` for `StableToolbar` in `DataGrid.tsx` to prevent unmounting/flicker when slot components are passed as inline functions.
+- **ExcelJS Integration**: Correctly marked as external in Vite build config and as a peer dependency.
+- **Clipboard Polish**: Fixed programmatic `copySelectedRows()` to always read live selection.
 
 ## 🧠 Key Technical Gotchas
 - **Sticky positioning**: Parent must have `position: relative` + correct overflow settings
@@ -116,16 +121,25 @@ formats: ['es', 'umd']
 - **Skeleton Columns**: Use `state.dimensions.viewportWidth` not `layout.viewportWidth`
 - **Scrollbar**: Use `scrollbar-gutter: stable` to prevent 15px layout shift on data change
 
-## 🗺️ Roadmap (Post v0.1.1)
-- **v0.2.0 planned**:
-  - Rich Excel Styling (bold headers, background fill, native ExcelJS borders)
-  - Cell Range Clipboard (select rectangular region, paste from Excel into editable cells)
-  - Storybook integration (stories exist in `src/stories/`, Storybook removed from devDeps temporarily)
+## 🗺️ Roadmap (Path to v1.0.0)
+
+### 🎯 v0.2.0 (The "Power User" Update)
+- [ ] **Rich Excel Styling**: Native ExcelJS cell styling (bold headers, fill colors, border types) directly in the `.xlsx` export.
+- [ ] **Range Clipboard**: Mouse-drag selection for rectangular cell regions + Copy/Paste integration with Excel/Sheets.
+- [ ] **Context Menu API**: Pluggable right-click menu system for custom actions on rows and headers.
+- [ ] **Column Header Tooltips**: Built-in support for column metadata tooltips in the header.
+
+### 🎯 v0.3.0 (Data Scale & Infrastructure)
+- [ ] **Advanced Server-Side Grouping**: Support for "Lazy" row grouping where group children are fetched on-demand via the `dataSource`.
+- [ ] **Global State Sync**: Better synchronization between the URL query params and the grid's internal filter/sort state.
+- [ ] **Multi-selection checkboxes in Master-Detail**: Synchronized selection between master rows and detail children.
+
+### 🌟 Goal: v1.0.0 (Stability & Ecosystem)
+- [ ] **Full Storybook Integration**: Move documentation to interactive Storybook stories.
+- [ ] **Performance Audit**: Internal rendering optimizations to reduce the "large dataset" initial mount time.
+- [ ] **Comprehensive Test coverage**: Target 80%+ unit/integration coverage across core hooks.
 
 ## 📝 Maintenance Workflows
 - `/dev-demo` — Start demo dev server
 - `/add-feature` — Implementation checklist for new features
 - `/summarize-work` — EOD documentation protocol
-
-## ⚠️ Moved Folder Note
-If the project path has changed from `/Volumes/Data/RND/Custom-DataGrid`, update all path references accordingly. The workspace URI will reflect the new location.

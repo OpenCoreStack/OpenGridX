@@ -95,6 +95,7 @@
 .ogx__row--skeleton {
     pointer-events: none;
     border-bottom: 1px solid var(--ogx-grid-border-color);
+    background-color: var(--ogx-grid-background);
 }
 .ogx__row--skeleton .ogx__skeleton-cell {
     flex: 1;
@@ -109,9 +110,9 @@
     width: 80%;
     background: linear-gradient(
         90deg,
-        var(--ogx-color-gray-100, #f1f5f9) 25%,
-        var(--ogx-color-gray-200, #e2e8f0) 50%,
-        var(--ogx-color-gray-100, #f1f5f9) 75%
+        var(--ogx-skeleton-base) 25%,
+        var(--ogx-skeleton-highlight) 50%,
+        var(--ogx-skeleton-base) 75%
     );
     background-size: 600px 100%;
     animation: ogx-skeleton-shimmer 1.4s infinite linear;

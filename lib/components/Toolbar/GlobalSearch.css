@@ -22,7 +22,7 @@
 
 /* hover feedback only when collapsed */
 .ogx-global-search:not(.ogx-global-search--expanded):hover {
-    background: var(--ogx-toolbar-hover-bg, #f1f5f9);
+    background: var(--ogx-grid-header-hover-background, #f1f5f9);
 }
 
 /* ─── Expanded state ────────────────────────────────────────────────────────
@@ -31,9 +31,9 @@
    ─────────────────────────────────────────────────────────────────────────── */
 .ogx-global-search--expanded {
     width: 220px;
-    border-color: var(--ogx-color-primary, #3b82f6);
-    background: var(--ogx-grid-background, #fff);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    border-color: var(--ogx-toolbar-input-focus-border, var(--ogx-color-primary, #3b82f6));
+    background: var(--ogx-toolbar-input-bg, var(--ogx-grid-background, #fff));
+    box-shadow: var(--ogx-toolbar-input-focus-shadow, 0 0 0 3px rgba(59, 130, 246, 0.12));
     cursor: default;
     overflow: hidden;
 }
@@ -47,7 +47,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--ogx-toolbar-text, #64748b);
+    color: var(--ogx-grid-header-text, #64748b);
     pointer-events: none;
     flex-shrink: 0;
     transition: color 0.15s;
@@ -96,7 +96,7 @@
     transform: translateY(-50%);
     background: transparent;
     border: none;
-    color: var(--ogx-toolbar-text, #94a3b8);
+    color: var(--ogx-grid-header-text, #94a3b8);
     cursor: pointer;
     padding: 4px;
     border-radius: 50%;

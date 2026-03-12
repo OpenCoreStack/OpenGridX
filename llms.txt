@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 0.1.5
+# Version: 0.1.6
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 
@@ -346,13 +346,22 @@ import { DataGridThemeProvider, darkTheme } from '@opencorestack/opengridx';
 const myTheme = {
   colors: {
     primary: '#6366f1',
+  },
+  grid: {
     headerBackground: '#1e1e2e',
-    rowHover: '#2a2a3e',
+    rowHoverBackground: '#2a2a3e',
+  },
+  overlays: {
+    background: '#1e1e2e',
+    border: '#2a2a3e',
   }
 };
 <DataGridThemeProvider theme={myTheme}>
   <DataGrid ... />
 </DataGridThemeProvider>
+
+// Note: Panels and Dropdowns (Column Menu, Pivot, etc.) intelligently hunt for 
+// `.ogx-theme-provider` to inherit these variables organically through portals.
 ```
 
 ---

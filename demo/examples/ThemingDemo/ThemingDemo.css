@@ -67,3 +67,37 @@
     overflow: auto;
     max-height: 300px;
 }
+
+/* Toolbar Export Overlay */
+.theming-export-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+}
+
+.theming-export-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 160px;
+    padding: 4px 0;
+    z-index: 20;
+}
+
+/* Toolbar Export Spinner */
+.theming-spinner {
+    animation: ogx-spin 1s linear infinite;
+    border: 2px solid rgba(0,0,0,0.1);
+    border-top: 2px solid var(--ogx-color-primary, #6b7280);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+}
+
+@keyframes ogx-spin {
+    to { transform: rotate(360deg); }
+}

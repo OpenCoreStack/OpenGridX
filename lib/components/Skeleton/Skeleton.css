@@ -9,6 +9,7 @@
   min-height: var(--ogx-row-height);
   border-bottom: 1px solid var(--ogx-grid-border-color);
   padding: var(--ogx-grid-cell-padding-y) var(--ogx-grid-cell-padding-x);
+  background-color: var(--ogx-grid-background);
 }
 .ogx__skeleton-cell {
   flex: 1;
@@ -21,9 +22,9 @@
   height: 16px;
   background: linear-gradient(
     90deg,
-    var(--ogx-skeleton-base, rgba(0, 0, 0, 0.06)) 0%,
-    var(--ogx-skeleton-highlight, rgba(0, 0, 0, 0.08)) 50%,
-    var(--ogx-skeleton-base, rgba(0, 0, 0, 0.06)) 100%
+    var(--ogx-skeleton-base) 0%,
+    var(--ogx-skeleton-highlight) 50%,
+    var(--ogx-skeleton-base) 100%
   );
   background-size: 200% 100%;
   border-radius: 4px;

@@ -267,7 +267,7 @@ export function DataGridThemeProvider({
 
     return (
         <div
-            className={className}
+            className={`ogx-theme-provider ${className || ''}`.trim()}
             style={{ ...style, ...cssVars } as React.CSSProperties}
         >
             {children}

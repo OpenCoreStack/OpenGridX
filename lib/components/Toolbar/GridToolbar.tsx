@@ -180,7 +180,7 @@ function AggregationPanel({
         </div>
     );
 
-    return ReactDOM.createPortal(panel, document.body);
+    return ReactDOM.createPortal(panel, anchorRef.current?.closest('.ogx-theme-provider') || document.body);
 }
 
 function ColumnsPanelWrapper({
@@ -257,7 +257,7 @@ function ColumnsPanelWrapper({
         </div>
     );
 
-    return ReactDOM.createPortal(panel, document.body);
+    return ReactDOM.createPortal(panel, anchorRef.current?.closest('.ogx-theme-provider') || document.body);
 }
 
 function FilterPanelWrapper({
@@ -361,7 +361,7 @@ function FilterPanelWrapper({
         </div>
     );
 
-    return ReactDOM.createPortal(panel, document.body);
+    return ReactDOM.createPortal(panel, anchorRef.current?.closest('.ogx-theme-provider') || document.body);
 }
 
 const EMPTY_PIVOT: GridPivotModel = { rowFields: [], columnFields: [], valueFields: [] };

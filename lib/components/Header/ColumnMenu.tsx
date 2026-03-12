@@ -156,9 +156,14 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
         }
         document.addEventListener('mousedown', handleClickOutside);
         document.addEventListener('keydown', handleKey);
+        // Close menu on any scroll or resize so it doesn't float detached from its anchor
+        window.addEventListener('scroll', onClose, true);
+        window.addEventListener('resize', onClose);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('keydown', handleKey);
+            window.removeEventListener('scroll', onClose, true);
+            window.removeEventListener('resize', onClose);
         };
     }, [anchorEl, onClose]);
 
@@ -179,7 +184,7 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
         <div ref={menuRef} className="ogx-column-menu" style={style} role="menu" aria-label={`Column options for ${colLabel}`}>
 
             { }
-            {onSort && (
+            {onSort && colDef.sortable !== false && (
                 <>
                     <button className={`ogx-menu-item${currentSort === 'asc' ? ' ogx-menu-item--active' : ''}`}
                         onClick={() => handleSort('asc')} role="menuitemradio" aria-checked={currentSort === 'asc'}>
@@ -239,6 +244,6 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
                 Manage columns
             </button>
         </div>,
-        document.body
+        (anchorEl?.closest('.ogx-theme-provider') || document.body)
     );
 }

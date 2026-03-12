@@ -5,6 +5,18 @@
 
 ---
 
+## [0.1.6] — March 12, 2026 🎨
+
+### Added
+- Complete theming support for all advanced dropdown panels (Column Visibiity, Filter Editor, Pivot Mode, Global Search) so they correctly adapt to custom themes via `<DataGridThemeProvider>`.
+- Aggregation, Pivot, filtering, and export capability options now appear directly in the `ThemingDemo` example.
+
+### Changed
+- Replaced the hardcoded portal mounting (`document.body`) on popovers to instead intelligently hunt for `.ogx-theme-provider` to organically inherit user themes in overlay panels.
+- Fixed GlobalSearch input focus shadow not fully respecting CSS variables.
+
+---
+
 ## [0.1.5] — March 10, 2026 🐛
 
 ### Fixed
