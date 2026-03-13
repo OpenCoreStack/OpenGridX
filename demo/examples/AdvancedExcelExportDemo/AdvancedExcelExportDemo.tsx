@@ -8,7 +8,7 @@ import {
     exportToJson,
     printGrid,
     useAggregation,
-} from '../../../lib';
+} from '@opencorestack/opengridx';
 import './AdvancedExcelExportDemo.css';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────

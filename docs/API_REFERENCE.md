@@ -92,6 +92,7 @@ Defines the behavior and appearance of a single column.
 | `resizable` | `boolean` | `true` | Allow user to drag resize. |
 | `hideable` | `boolean` | `true` | Allow user to hide the column. |
 | `pinned` | `'left' \| 'right' \| null` | `null` | Sticky positioning. |
+| `exportable` | `boolean` | `true` | If `false`, column is excluded from all exports. |
 | `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format value for display. |
 | `valueGetter` | `(params: GridValueGetterParams) => any` | — | Compute value from row data. |
 | `renderCell` | `(params: GridRenderCellParams) => ReactNode` | — | Custom cell renderer. |

@@ -1,6 +1,6 @@
 
 import { useMemo, useState } from 'react';
-import { DataGrid, GridColDef, GridAggregationModel, GridToolbar, GridFilterModel } from '../../../lib';
+import { DataGrid, GridColDef, GridAggregationModel, GridToolbar, GridFilterModel } from '@opencorestack/opengridx';
 import './RealEstatePortfolioDemo.css';
 
 // --- Mock Data ---

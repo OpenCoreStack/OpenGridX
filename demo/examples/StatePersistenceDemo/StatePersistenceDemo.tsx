@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
-import { DataGrid, useGridStateStorage } from '../../../lib';
-import type { GridColDef, GridRowModel } from '../../../lib';
+import { DataGrid, useGridStateStorage } from '@opencorestack/opengridx';
+import type { GridColDef, GridRowModel } from '@opencorestack/opengridx';
 import './StatePersistenceDemo.css';
 
 interface Employee extends GridRowModel {

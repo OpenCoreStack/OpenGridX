@@ -1,6 +1,6 @@
 
 import { useState, useMemo, useCallback } from 'react';
-import { DataGrid, GridColDef, GridDataSource, GridGetRowsParams, GridPaginationModel } from '../../../lib';
+import { DataGrid, GridColDef, GridDataSource, GridGetRowsParams, GridPaginationModel } from '@opencorestack/opengridx';
 import './InfiniteScrollDemo.css';
 
 const TOTAL = 15000;

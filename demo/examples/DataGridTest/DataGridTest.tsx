@@ -1,10 +1,10 @@
 
 
 import { useState, useMemo } from 'react';
-import { DataGrid } from '../../../lib';
+import { DataGrid } from '@opencorestack/opengridx';
 import { QuickFilter } from '../../../lib/components/QuickFilter/QuickFilter';
 import { ColumnVisibilityPanel } from '../../../lib/components/ColumnVisibilityPanel/ColumnVisibilityPanel';
-import type { GridColDef, GridRowModel, GridFilterModel, GridColumnPinning, GridRowPinning, GridRowId, GridRowGroupingModel, GridAggregationModel } from '../../../lib';
+import type { GridColDef, GridRowModel, GridFilterModel, GridColumnPinning, GridRowPinning, GridRowId, GridRowGroupingModel, GridAggregationModel } from '@opencorestack/opengridx';
 import '../../../lib/components/QuickFilter/QuickFilter.css';
 import '../../../lib/components/ColumnVisibilityPanel/ColumnVisibilityPanel.css';
 import './DataGridTest.css';

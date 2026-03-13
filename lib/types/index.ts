@@ -134,6 +134,13 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
    *   headerClassName: 'my-header'
    */
   headerClassName?: string;
+
+  /**
+   * If false, this column is excluded from all exports (CSV, Excel, JSON, Print).
+   * Useful for action columns with buttons.
+   * @default true
+   */
+  exportable?: boolean;
 }
 
 /** Column definition used exclusively in List View mode. */

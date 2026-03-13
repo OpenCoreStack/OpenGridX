@@ -1,4 +1,4 @@
-import { DataGrid, GridToolbar, Button } from '../../../lib';
+import { DataGrid, GridToolbar, Button } from '@opencorestack/opengridx';
 import { useState, useCallback, useMemo } from 'react';
 
 interface User {

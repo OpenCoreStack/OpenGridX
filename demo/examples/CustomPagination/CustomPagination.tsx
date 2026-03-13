@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { DataGrid, GridColDef } from '../../../lib';
+import { DataGrid, GridColDef } from '@opencorestack/opengridx';
 import './CustomPagination.css';
 
 function CustomPaginationComponent(props: any) {

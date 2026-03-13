@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { DataGrid, GridToolbar, GridTooltip } from '../../../lib';
-import type { GridColDef, GridPivotModel, GridPivotValueField } from '../../../lib';
-import { exportToCsv, exportToExcel, exportToJson, printGrid } from '../../../lib';
+import { DataGrid, GridToolbar, GridTooltip } from '@opencorestack/opengridx';
+import type { GridColDef, GridPivotModel, GridPivotValueField } from '@opencorestack/opengridx';
+import { exportToCsv, exportToExcel, exportToJson, printGrid } from '@opencorestack/opengridx';
 import './PivotModeDemo.css';
 
 type SaleRow = {

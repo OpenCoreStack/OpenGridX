@@ -19,6 +19,13 @@
   },
   "files": [
     "dist",
+    "lib",
+    "docs/components",
+    "docs/customization",
+    "docs/features",
+    "docs/API_REFERENCE.md",
+    "docs/README.md",
+    "docs/roadmap.md",
     "README.md",
     "LICENSE",
     "CHANGELOG.md",
@@ -67,9 +74,9 @@
     "url": "https://github.com/OpenCoreStack/OpenGridX/issues"
   },
   "peerDependencies": {
+    "exceljs": ">=4.0.0",
     "react": ">=18.0.0",
-    "react-dom": ">=18.0.0",
-    "exceljs": ">=4.0.0"
+    "react-dom": ">=18.0.0"
   },
   "peerDependenciesMeta": {
     "exceljs": {
@@ -94,5 +101,7 @@
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^4.0.18"
   },
-  "dependencies": {}
+  "dependencies": {
+    "react-router-dom": "^7.13.1"
+  }
 }

@@ -1,6 +1,6 @@
 
 import { useMemo } from 'react';
-import { DataGrid, GridColDef, GridColumnGroupingModel } from '../../../lib';
+import { DataGrid, GridColDef, GridColumnGroupingModel } from '@opencorestack/opengridx';
 import './ColumnGroupingExample.css';
 
 // ─── Shared formatter ─────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DataGrid, GridColDef, useGridApiRef } from '../../../lib';
+import { DataGrid, GridColDef, useGridApiRef } from '@opencorestack/opengridx';
 import { DocsLayout } from '../../components/DocsLayout';
 import './ClipboardDemo.css';
 

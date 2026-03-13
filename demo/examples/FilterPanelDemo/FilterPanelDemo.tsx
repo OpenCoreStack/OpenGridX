@@ -1,5 +1,5 @@
-import { DataGrid, Button } from '../../../lib';
-import type { GridColDef, GridFilterModel } from '../../../lib';
+import { DataGrid, Button } from '@opencorestack/opengridx';
+import type { GridColDef, GridFilterModel } from '@opencorestack/opengridx';
 import { useState } from 'react';
 
 interface Product {

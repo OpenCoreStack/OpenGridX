@@ -1,12 +1,18 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath, URL } from 'node:url';
 
 // https://vite.dev/config/
 export default defineConfig({
   base: '/OpenGridX/',
   plugins: [react()],
   root: './demo',
+  resolve: {
+    alias: {
+      '@opencorestack/opengridx': fileURLToPath(new URL('./lib/index.ts', import.meta.url))
+    }
+  },
   build: {
     sourcemap: 'inline',
     // Raise the warning threshold — the DataGrid library is intentionally large

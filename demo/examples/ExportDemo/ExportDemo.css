@@ -305,3 +305,35 @@
 @keyframes ogx-spin {
     to { transform: rotate(360deg); }
 }
+
+/* Action Buttons */
+.demo-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    cursor: pointer;
+    color: #6b7280;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.demo-action-btn:hover {
+    background: #f9fafb;
+}
+
+.demo-action-btn--edit:hover {
+    color: #3b82f6;
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.demo-action-btn--delete:hover {
+    color: #ef4444;
+    border-color: #ef4444;
+    background: #fef2f2;
+}

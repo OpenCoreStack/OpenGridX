@@ -1,5 +1,7 @@
-import { useState, lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
+import { Toc } from './components/Toc';
 
 const Home = lazy(() => import('./Home'));
 const BasicExample = lazy(() => import('./examples/Basic/Basic'));
@@ -36,55 +38,55 @@ const FilterPanelDemo = lazy(() => import('./examples/FilterPanelDemo/FilterPane
 const SlotsDemo = lazy(() => import('./examples/SlotsDemo/SlotsDemo'));
 const CRUDTutorial = lazy(() => import('./examples/CRUDTutorial/CRUDTutorial'));
 
-const examplesConfig: { name: string; component: React.LazyExoticComponent<React.ComponentType<any>>; category: string }[] = [
+const examplesConfig = [
     // Resources
-    { name: 'Home', component: Home, category: 'Resources' },
-    { name: 'Installation', component: lazy(() => import('./pages/Installation')), category: 'Resources' },
-    { name: 'Quickstart', component: lazy(() => import('./pages/Quickstart')), category: 'Resources' },
-    { name: 'API Reference', component: lazy(() => import('./pages/APIDocumentation')), category: 'Resources' },
-    { name: 'Licensing', component: lazy(() => import('./pages/Licensing')), category: 'Resources' },
-    { name: 'Support', component: lazy(() => import('./pages/Support')), category: 'Resources' },
+    { path: '/home', name: 'Home', component: Home, category: 'Resources' },
+    { path: '/installation', name: 'Installation', component: lazy(() => import('./pages/Installation')), category: 'Resources' },
+    { path: '/quickstart', name: 'Quickstart', component: lazy(() => import('./pages/Quickstart')), category: 'Resources' },
+    { path: '/api-reference', name: 'API Reference', component: lazy(() => import('./pages/APIDocumentation')), category: 'Resources' },
+    { path: '/licensing', name: 'Licensing', component: lazy(() => import('./pages/Licensing')), category: 'Resources' },
+    { path: '/support', name: 'Support', component: lazy(() => import('./pages/Support')), category: 'Resources' },
 
     // Main Features
-    { name: 'Basic Usage', component: BasicExample, category: 'Main features' },
-    { name: 'Loading States', component: LoadingStatesDemo, category: 'Main features' },
-    { name: 'Export Data', component: ExportDemo, category: 'Main features' },
-    { name: 'Clipboard Copy', component: ClipboardDemo, category: 'Main features' },
-    { name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
-    { name: 'Cell Editing', component: EditingExample, category: 'Main features' },
-    { name: 'Events Observer', component: EventsDemo, category: 'Main features' },
-    { name: 'Full Feature Test', component: DataGridTest, category: 'Main features' },
+    { path: '/basic', name: 'Basic Usage', component: BasicExample, category: 'Main features' },
+    { path: '/loading', name: 'Loading States', component: LoadingStatesDemo, category: 'Main features' },
+    { path: '/export', name: 'Export Data', component: ExportDemo, category: 'Main features' },
+    { path: '/clipboard', name: 'Clipboard Copy', component: ClipboardDemo, category: 'Main features' },
+    { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
+    { path: '/editing', name: 'Cell Editing', component: EditingExample, category: 'Main features' },
+    { path: '/events', name: 'Events Observer', component: EventsDemo, category: 'Main features' },
+    { path: '/full-test', name: 'Full Feature Test', component: DataGridTest, category: 'Main features' },
 
     // Advanced Features
-    { name: 'Row Grouping', component: GroupingExample, category: 'Advanced features' },
-    { name: 'Tree Data', component: TreeDataExample, category: 'Advanced features' },
-    { name: 'Master Detail', component: MasterDetailExample, category: 'Advanced features' },
-    { name: 'Aggregation', component: AggregationFooterExample, category: 'Advanced features' },
-    { name: 'Row Spanning', component: RowSpanningShowcase, category: 'Advanced features' },
-    { name: 'Cell Spanning', component: CellSpanningShowcase, category: 'Advanced features' },
-    { name: 'Pivot Mode', component: PivotModeDemo, category: 'Advanced features' },
-    { name: 'Column Grouping', component: ColumnGroupingExample, category: 'Advanced features' },
-    { name: 'State Persistence', component: StatePersistenceDemo, category: 'Advanced features' },
-    { name: 'Advanced Excel Export', component: AdvancedExcelExportDemo, category: 'Advanced features' },
-    { name: 'Lazy Loading', component: LazyLoadingExample, category: 'Advanced features' },
-    { name: 'Infinite Scroll', component: InfiniteScrollDemo, category: 'Advanced features' },
-    { name: 'Server-Side Tree', component: ServerSideTreeDemo, category: 'Advanced features' },
-    { name: 'Server-Side Aggregation', component: ServerSideAggregationDemo, category: 'Advanced features' },
-    { name: 'Custom Pagination', component: CustomPaginationDemo, category: 'Advanced features' },
+    { path: '/grouping', name: 'Row Grouping', component: GroupingExample, category: 'Advanced features' },
+    { path: '/tree-data', name: 'Tree Data', component: TreeDataExample, category: 'Advanced features' },
+    { path: '/master-detail', name: 'Master Detail', component: MasterDetailExample, category: 'Advanced features' },
+    { path: '/aggregation', name: 'Aggregation', component: AggregationFooterExample, category: 'Advanced features' },
+    { path: '/row-span', name: 'Row Spanning', component: RowSpanningShowcase, category: 'Advanced features' },
+    { path: '/cell-span', name: 'Cell Spanning', component: CellSpanningShowcase, category: 'Advanced features' },
+    { path: '/pivot', name: 'Pivot Mode', component: PivotModeDemo, category: 'Advanced features' },
+    { path: '/col-grouping', name: 'Column Grouping', component: ColumnGroupingExample, category: 'Advanced features' },
+    { path: '/persistence', name: 'State Persistence', component: StatePersistenceDemo, category: 'Advanced features' },
+    { path: '/excel-export', name: 'Advanced Excel Export', component: AdvancedExcelExportDemo, category: 'Advanced features' },
+    { path: '/lazy-loading', name: 'Lazy Loading', component: LazyLoadingExample, category: 'Advanced features' },
+    { path: '/infinite', name: 'Infinite Scroll', component: InfiniteScrollDemo, category: 'Advanced features' },
+    { path: '/server-tree', name: 'Server-Side Tree', component: ServerSideTreeDemo, category: 'Advanced features' },
+    { path: '/server-agg', name: 'Server-Side Aggregation', component: ServerSideAggregationDemo, category: 'Advanced features' },
+    { path: '/custom-pagination', name: 'Custom Pagination', component: CustomPaginationDemo, category: 'Advanced features' },
 
     // Components
-    { name: 'Toolbar', component: ToolbarDemo, category: 'Components' },
-    { name: 'Filter Panel', component: FilterPanelDemo, category: 'Components' },
+    { path: '/toolbar', name: 'Toolbar', component: ToolbarDemo, category: 'Components' },
+    { path: '/filter-panel', name: 'Filter Panel', component: FilterPanelDemo, category: 'Components' },
 
     // Customization
-    { name: 'Theming', component: ThemingDemo, category: 'Customization' },
-    { name: 'List View', component: ListViewDemo, category: 'Customization' },
-    { name: 'Slots & Renderers', component: SlotsDemo, category: 'Customization' },
+    { path: '/theming', name: 'Theming', component: ThemingDemo, category: 'Customization' },
+    { path: '/list-view', name: 'List View', component: ListViewDemo, category: 'Customization' },
+    { path: '/slots', name: 'Slots & Renderers', component: SlotsDemo, category: 'Customization' },
 
     // Tutorials
-    { name: 'Real Estate Portfolio', component: RealEstatePortfolioDemo, category: 'Tutorials' },
-    { name: 'Time Off Calendar', component: EmployeeCalendarDemo, category: 'Tutorials' },
-    { name: 'Interactive CRUD', component: CRUDTutorial, category: 'Tutorials' },
+    { path: '/real-estate', name: 'Real Estate Portfolio', component: RealEstatePortfolioDemo, category: 'Tutorials' },
+    { path: '/calendar', name: 'Time Off Calendar', component: EmployeeCalendarDemo, category: 'Tutorials' },
+    { path: '/crud', name: 'Interactive CRUD', component: CRUDTutorial, category: 'Tutorials' },
 ];
 
 function DemoSkeleton() {
@@ -96,12 +98,21 @@ function DemoSkeleton() {
     );
 }
 
-function App() {
-    const [selectedExample, setSelectedExample] = useState('Home');
+function PageWrapper({ children }: { children: React.ReactNode }) {
+    const location = useLocation();
 
-    const activeConfig = examplesConfig.find(e => e.name === selectedExample) || examplesConfig[0];
-    const ActiveComponent = activeConfig.component;
+    // Automatically extract TOC from current page
+    return (
+        <div className="app-page-wrapper" key={location.pathname}>
+            <div className="app-content-column">
+                {children}
+            </div>
+            <Toc />
+        </div>
+    );
+}
 
+export default function App() {
     const grouped = examplesConfig.reduce((acc, item) => {
         if (!acc[item.category]) acc[item.category] = [];
         acc[item.category].push(item);
@@ -111,58 +122,80 @@ function App() {
     const categories = ['Resources', 'Main features', 'Advanced features', 'Components', 'Customization', 'Tutorials'];
 
     return (
-        <div className="app-container">
-            <nav className="app-sidebar">
-                <div className="app-logo-section">
-                    <img src={`${import.meta.env.BASE_URL}logo.png`} alt="OpenGridX Logo" className="app-logo" />
-                    <h2 className="app-title">
-                        OpenGridX
-                        <span className="app-version">v0.1.7</span>
-                    </h2>
-                </div>
+        <Router basename={import.meta.env.BASE_URL}>
+            <div className="app-root">
+                <header className="app-top-header">
+                    <div className="app-logo-section">
+                        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="OpenGridX Logo" className="app-logo" />
+                        <h2 className="app-title">
+                            OpenGridX
+                            <span className="app-version">v0.1.7</span>
+                        </h2>
+                    </div>
 
-                {categories.map(category => (
-                    <div key={category}>
-                        <h3 className="sidebar-category-title">
-                            {category}
-                        </h3>
-                        <div className="sidebar-nav-group">
-                            {grouped[category]?.map(item => (
-                                <button
-                                    key={item.name}
-                                    className={`sidebar-nav-button${selectedExample === item.name ? ' sidebar-nav-button--active' : ''}`}
-                                    onClick={() => setSelectedExample(item.name)}
+                    <a href="https://github.com/OpenCoreStack/OpenGridX" target="_blank" rel="noopener noreferrer" className="app-github-link">
+                        <svg height="24" viewBox="0 0 16 16" width="24" fill="currentColor">
+                            <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path>
+                        </svg>
+                        GitHub
+                    </a>
+                </header>
+
+                <div className="app-container">
+                    <nav className="app-sidebar">
+                        {categories.map(category => (
+                            <div key={category}>
+                                <h3 className="sidebar-category-title">
+                                    {category}
+                                </h3>
+                                <div className="sidebar-nav-group">
+                                    {grouped[category]?.map(item => (
+                                        <NavLink
+                                            key={item.path}
+                                            to={item.path}
+                                            className={({ isActive }) =>
+                                                `sidebar-nav-button${isActive ? ' sidebar-nav-button--active' : ''}`
+                                            }
+                                        >
+                                            {item.name}
+                                        </NavLink>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+
+                        <div style={{ marginTop: 'auto', paddingTop: '24px', borderTop: '1px solid #e2e8f0' }}>
+                            <h3 className="sidebar-category-title">Discovery</h3>
+                            <div className="sidebar-nav-group">
+                                <a
+                                    href="/llms.txt"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="sidebar-nav-button"
+                                    style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
                                 >
-                                    {item.name}
-                                </button>
-                            ))}
+                                    <span>🤖</span>
+                                    llms.txt
+                                </a>
+                            </div>
                         </div>
-                    </div>
-                ))}
-
-                <div style={{ marginTop: 'auto', paddingTop: '24px', borderTop: '1px solid #e2e8f0' }}>
-                    <h3 className="sidebar-category-title">Discovery</h3>
-                    <div className="sidebar-nav-group">
-                        <a
-                            href="/llms.txt"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="sidebar-nav-button"
-                            style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
-                        >
-                            <span>🤖</span>
-                            llms.txt
-                        </a>
-                    </div>
+                    </nav>
+                    <main className="app-main-content">
+                        <Suspense fallback={<DemoSkeleton />}>
+                            <Routes>
+                                <Route path="/" element={<Navigate to="/home" replace />} />
+                                {examplesConfig.map((item) => (
+                                    <Route
+                                        key={item.path}
+                                        path={item.path}
+                                        element={<PageWrapper><item.component /></PageWrapper>}
+                                    />
+                                ))}
+                            </Routes>
+                        </Suspense>
+                    </main>
                 </div>
-            </nav>
-            <main className="app-main-content">
-                <Suspense fallback={<DemoSkeleton />}>
-                    <ActiveComponent onNavigate={setSelectedExample} />
-                </Suspense>
-            </main>
-        </div>
+            </div>
+        </Router>
     );
 }
-
-export default App;

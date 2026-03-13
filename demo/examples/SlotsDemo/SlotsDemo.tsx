@@ -1,4 +1,4 @@
-import { DataGrid, Button } from '../../../lib';
+import { DataGrid, Button } from '@opencorestack/opengridx';
 import { useMemo } from 'react';
 
 const rows = [

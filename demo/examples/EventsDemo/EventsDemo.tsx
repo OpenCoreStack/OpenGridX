@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { DataGrid, GridColDef, GridCellParams, GridRowParams } from '../../../lib';
+import { DataGrid, GridColDef, GridCellParams, GridRowParams } from '@opencorestack/opengridx';
 import { DocsLayout } from '../../components/DocsLayout';
 import './EventsDemo.css';
 

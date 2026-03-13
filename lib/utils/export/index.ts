@@ -33,7 +33,7 @@ export function exportToCsv<R extends GridRowModel>(
     }
 
     const exportColumns = columns.filter(col => {
-
+        if (col.exportable === false) return false;
         if (col.field === '__check__' || col.field === '__actions__') return false;
         return true;
     });
@@ -135,6 +135,7 @@ export function exportToExcel<R extends GridRowModel>(
     }
 
     const exportColumns = columns.filter(col => {
+        if (col.exportable === false) return false;
         if (col.field === '__check__' || col.field === '__actions__') return false;
         return true;
     });
@@ -256,6 +257,7 @@ export function exportToJson<R extends GridRowModel>(
 
     // Filter columns
     const exportColumns = columns.filter(col => {
+        if (col.exportable === false) return false;
         if (col.field === '__check__' || col.field === '__actions__') return false;
         return true;
     });
@@ -398,6 +400,7 @@ export async function printGrid<R extends GridRowModel>(
 
         // Filter columns
         const exportColumns = columns.filter(col => {
+            if (col.exportable === false) return false;
             if (col.field === '__check__' || col.field === '__actions__') return false;
             return true;
         });

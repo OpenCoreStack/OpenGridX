@@ -9,7 +9,7 @@ import {
     GridGetRowsResponse,
     GridAggregationModel,
     GridAggregationResult,
-} from '../../../lib';
+} from '@opencorestack/opengridx';
 import './ServerSideAggregationDemo.css';
 
 type Employee = {

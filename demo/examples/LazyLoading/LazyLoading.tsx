@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { DataGrid } from '../../../lib';
+import { DataGrid } from '@opencorestack/opengridx';
 import { GridColDef, GridDataSource, GridGetRowsParams, GridRowModel, GridPaginationModel } from '../../../lib/types';
 import './LazyLoading.css';
 

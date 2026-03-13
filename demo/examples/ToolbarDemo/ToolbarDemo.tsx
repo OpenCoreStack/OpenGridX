@@ -1,4 +1,4 @@
-import { DataGrid, GridToolbar, Button } from '../../../lib';
+import { DataGrid, GridToolbar, Button } from '@opencorestack/opengridx';
 import { useMemo } from 'react';
 
 const rows = [

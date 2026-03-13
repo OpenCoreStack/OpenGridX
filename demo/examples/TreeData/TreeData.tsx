@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { DataGrid, GridPaginationModel, GridRowId } from '../../../lib';
+import { DataGrid, GridPaginationModel, GridRowId } from '@opencorestack/opengridx';
 import { generateEmployees, Employee } from '../../data/mockData';
 import { allColumns } from '../../data/columns';
 import './TreeData.css';

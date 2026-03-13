@@ -1,6 +1,6 @@
 
 import { useMemo, useState } from 'react';
-import { DataGrid, GridColDef, GridColumnGroupingModel } from '../../../lib';
+import { DataGrid, GridColDef, GridColumnGroupingModel } from '@opencorestack/opengridx';
 import './EmployeeCalendarDemo.css';
 
 // --- Mock Data ---

@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { DataGrid, GridToolbar, GridColDef, GridFilterModel, GridTooltip, exportToCsv, exportToExcel, exportToJson, printGrid } from '../../../lib';
+import { DataGrid, GridToolbar, GridColDef, GridFilterModel, GridTooltip, exportToCsv, exportToExcel, exportToJson, printGrid } from '@opencorestack/opengridx';
 import { DocsLayout } from '../../components/DocsLayout';
 import './AdvancedFilteringDemo.css';
 

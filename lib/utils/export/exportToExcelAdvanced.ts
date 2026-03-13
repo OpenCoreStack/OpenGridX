@@ -197,6 +197,7 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
 
     // Filter system columns — cast to GridColDef<any> to avoid generic covariance issues
     const exportColumns: GridColDef<any>[] = (columns as GridColDef<any>[]).filter(col =>
+        col.exportable !== false &&
         col.field !== '__check__' &&
         col.field !== '__actions__' &&
         !(col as any).isSpacer

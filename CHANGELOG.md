@@ -5,11 +5,19 @@
 
 ---
 
-## [0.1.7] — March 12, 2026 🐛
+## [0.1.7] — March 13, 2026 🐛✨
+
+### Added
+- **`exportable` Property**: Added `exportable?: boolean` to `GridColDef`. This allows excluding specific columns (like action buttons, menus, or images) from all export formats (CSV, Excel, JSON, and Print).
+- **AI-Native Integration**: The published npm package now includes raw source code (`lib/`) and full documentation (`docs/`). This allows AI agents (Cursor, Windsurf, Copilot) to "see" the implementation patterns and documentation inside `node_modules`, leading to significantly better code generation for downstream users.
 
 ### Fixed
 - Fixed an issue where the main wrapper `className` would erroneously include extra whitespace (e.g. `ogx    `) when no optional classes were active.
 - Fixed an issue where `onRowOrderChange` drag-and-drop visuals didn't actually update in the `EventsDemo` component examples because it was referencing a static array instead of React State.
+- Corrected a TypeScript regression where `headerClassName` comment structure was accidentally broken during the previous update.
+
+### Changed
+- Refined the npm package publication files: `docs/research` and `docs/assets` (large binary images) are now excluded to keep the package size lean while retaining all high-value documentation for humans and AI.
 
 
 ## [0.1.6] — March 12, 2026 🎨

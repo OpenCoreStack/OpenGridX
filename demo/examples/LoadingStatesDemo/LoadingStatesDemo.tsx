@@ -1,5 +1,5 @@
 
-import { DataGrid, GridColDef } from '../../../lib';
+import { DataGrid, GridColDef } from '@opencorestack/opengridx';
 import { DocsLayout } from '../../components/DocsLayout';
 import './LoadingStatesDemo.css';
 import sourceCode from './LoadingStatesDemo.tsx?raw';

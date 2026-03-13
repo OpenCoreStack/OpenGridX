@@ -7,7 +7,7 @@ import {
     GridDataSource,
     GridGetRowsParams,
     GridGetRowsResponse,
-} from '../../../lib';
+} from '@opencorestack/opengridx';
 import './ServerSideTreeDemo.css';
 
 interface MockServerRow extends GridRowModel {

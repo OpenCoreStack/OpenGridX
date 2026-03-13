@@ -234,6 +234,7 @@ export default function App() {
 | resizable         | boolean (default true)                                 | Enable resize handle                       |
 | hideable          | boolean (default true)                                 | Allow hiding via toolbar                   |
 | pinnable          | boolean (default true)                                 | Allow pinning via column menu              |
+| exportable        | boolean (default true)                                 | Include in CSV/Excel/JSON/Print exports    |
 | disableColumnMenu | boolean                                                | Hide the ⋮ column menu button             |
 
 ---

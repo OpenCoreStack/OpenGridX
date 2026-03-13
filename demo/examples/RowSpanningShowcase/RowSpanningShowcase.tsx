@@ -1,6 +1,6 @@
 
 import { useState, useMemo } from 'react';
-import { DataGrid, GridColDef } from '../../../lib';
+import { DataGrid, GridColDef } from '@opencorestack/opengridx';
 import './RowSpanningShowcase.css';
 
 interface OrderItem {

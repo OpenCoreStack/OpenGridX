@@ -1,5 +1,5 @@
 
-import { DataGrid } from '../../../lib';
+import { DataGrid } from '@opencorestack/opengridx';
 import { columnDefinitions, mockRows } from '../../mockData';
 import './Basic.css';
 

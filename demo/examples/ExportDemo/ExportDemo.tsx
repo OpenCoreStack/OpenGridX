@@ -1,6 +1,6 @@
 
 import { useState, useRef } from 'react';
-import { DataGrid, GridColDef, GridTooltip, exportToCsv, exportToExcel, exportToJson, printGrid, useGridApiRef } from '../../../lib';
+import { DataGrid, GridColDef, GridTooltip, exportToCsv, exportToExcel, exportToJson, printGrid, useGridApiRef } from '@opencorestack/opengridx';
 import { Button } from '../../../lib/components/ui/Button';
 import './ExportDemo.css';
 
@@ -76,7 +76,41 @@ const columns: GridColDef[] = [
     { field: 'rating', headerName: 'Rating', width: 120 },
     { field: 'performanceScore', headerName: 'Score', width: 80, type: 'number' },
     { field: 'status', headerName: 'Status', width: 100 },
-    { field: 'notes', headerName: 'Notes', width: 300 }
+    { field: 'notes', headerName: 'Notes', width: 300 },
+    {
+        field: 'actions',
+        headerName: 'Actions',
+        width: 100,
+        sortable: false,
+        filterable: false,
+        hideable: false,
+        pinnable: false,
+        exportable: false, // This column is excluded from exports
+        renderCell: (params) => (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', height: '100%' }}>
+                <button
+                    className="demo-action-btn demo-action-btn--edit"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        alert(`Editing employee: ${params.row.name}`);
+                    }}
+                    title="Edit"
+                >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button
+                    className="demo-action-btn demo-action-btn--delete"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        alert(`Deleting employee: ${params.row.name}`);
+                    }}
+                    title="Delete"
+                >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                </button>
+            </div>
+        )
+    }
 ];
 
 interface ExportOptionsDialogProps {
@@ -535,6 +569,7 @@ export default function ExportDemo() {
                     <li><strong>Print:</strong> Optimized print layout with proper formatting</li>
                     <li><strong>Selected Export:</strong> Export only selected rows</li>
                     <li><strong>Value Formatters:</strong> Exported data respects column formatters (e.g., salary formatting)</li>
+                    <li><strong>Excluded Columns:</strong> Use `exportable: false` to skip columns like 'Actions' in the generated files.</li>
                 </ul>
             </div>
         </div>

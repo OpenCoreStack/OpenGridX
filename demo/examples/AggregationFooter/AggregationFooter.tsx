@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
-import { DataGrid, GridToolbar } from '../../../lib';
-import type { GridColDef, GridAggregationModel } from '../../../lib';
+import { DataGrid, GridToolbar } from '@opencorestack/opengridx';
+import type { GridColDef, GridAggregationModel } from '@opencorestack/opengridx';
 import './AggregationFooter.css';
 
 interface Movie {

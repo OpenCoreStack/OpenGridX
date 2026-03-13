@@ -7,7 +7,7 @@ import {
     GridFilterModel,
     GridListViewColDef,
     GridRenderCellParams,
-} from '../../../lib';
+} from '@opencorestack/opengridx';
 import { DocsLayout } from '../../components/DocsLayout';
 import './ListViewDemo.css';
 

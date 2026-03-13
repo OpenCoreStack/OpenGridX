@@ -77,8 +77,17 @@ export default function App() {
 - **Clipboard**: `Ctrl+C` / `Cmd+C` copies selected rows as TSV for Excel/Sheets.
 - **Accessibility**: WCAG 2.1 AA — full ARIA roles and keyboard navigation.
 - **Theming**: CSS variable API with 5 built-in themes + custom theme support.
+- **AI-Native Integration**: Shipped with raw `lib/` source and `docs/` inside the npm package, allowing AI agents (Cursor, Copilot, Windsurf) to flawlessly implement features by "seeing" the internal logic.
 
 ---
+
+## 🤖 AI-Powered Implementation
+
+OpenGridX is built for the era of AI-native development. When you install `@opencorestack/opengridx`, we include the full raw source code and markdown documentation in your `node_modules`. 
+
+This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agents can read the actual implementation patterns and docs to accurately help you build complex features like server-side tree data or pivot tables without guessing.
+
+> **Tip for Cursor/Copilot users:** If your AI is struggling, tell it to "Read the docs and source in `./node_modules/@opencorestack/opengridx/docs`" for instant context.
 
 ## 📐 API Reference
 

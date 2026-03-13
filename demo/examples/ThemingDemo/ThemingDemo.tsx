@@ -20,8 +20,8 @@ import {
     exportToExcel,
     exportToJson,
     printGrid,
-} from '../../../lib';
-import type { GridTheme } from '../../../lib';
+} from '@opencorestack/opengridx';
+import type { GridTheme } from '@opencorestack/opengridx';
 import { generateEmployees } from '../../data/mockData';
 import { allColumns } from '../../data/columns';
 import { DocsLayout } from '../../components/DocsLayout';

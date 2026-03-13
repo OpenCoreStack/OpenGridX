@@ -381,13 +381,27 @@ const columns: GridColDef[] = [
 
 ## Excluding Columns
 
-System columns are automatically excluded:
+You can exclude specific columns (e.g., action buttons or menus) from all export formats using the `exportable` property in the column definition. System columns are also automatically excluded.
 
-| Field | Auto-excluded |
+| Method | Description |
 |---|---|
-| `__check__` | ✅ |
-| `__actions__` | ✅ |
-| Any column with `isSpacer: true` | ✅ |
+| `exportable: false` | Set in `GridColDef` to manually exclude any column |
+| `__check__` | Native checkbox column (auto-excluded) |
+| `__actions__` | Common field for action buttons (auto-excluded) |
+| `isSpacer: true` | Spacer columns (auto-excluded) |
+
+### Example
+```tsx
+const columns: GridColDef[] = [
+  { field: 'id', headerName: 'ID' },
+  { field: 'name', headerName: 'Name' },
+  { 
+    field: 'actions', 
+    headerName: 'Actions', 
+    exportable: false // This column won't appear in CSV/Excel/JSON/Print
+  },
+];
+```
 
 ---
 
