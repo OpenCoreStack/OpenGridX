@@ -5,6 +5,20 @@
 
 ---
 
+## [0.1.8] — March 18, 2026 🐛✨
+
+### Fixed
+- **Toolbar Component Identity:** Fixed a major bug where defining the `GridToolbar` within a component's render body produced a new React component reference on every render, causing the toolbar to constantly unmount and remount (destroying all internal states like open panels or typed search text). Replaced `React.createElement` with direct function invocation in the `StableWrapper` to bypass React's component-identity check and persist internal DOM state.
+- **Global Search Focus Preservation:** Refactored `GlobalSearch` into an uncontrolled component to prevent continuous data re-renders from stealing focus. Added a `useLayoutEffect` to automatically restore browser focus to the input field if a React virtual DOM diff incidentally drops it mid-keystroke.
+- **Filter Panel Auto-Dismiss:** The Advanced Filter panel no longer collapses indiscriminately when clicking into numeric filter fields or during parent re-renders. Implemented a stable callback ref that prevents the underlying event listeners from rehooking during typing. Click-outside auto-close has been structurally disabled in favor of an explicit "Close" button.
+- **Pivot Mode Aggregation:** Addressed a critical bug where `aggregationModel` was trying to read base columns (e.g. `revenue`) on pivot rows that use synthetic column keys (e.g. `Q1\u001frevenue\u001fsum`), resulting in broken totals.
+  - The aggregation footer now renders synthetic pivot totals correctly.
+  - The `GridToolbar` now actively provisions `effectiveColumns` to the `AggregationPanel` to allow users to build summaries on pivot dimensions.
+  - Added a built-in "Grand Total" row appended directly to the `usePivot` output to generate automatic baseline column totals.
+- **Exporting Selected Rows:** Corrected data omission in the Demo files where print exports were grabbing the entire dataset instead of respecting active row selection. Used `apiRef.current.getSelectedRows()` to extract standard export data without requiring explicit prop-threading.
+
+---
+
 ## [0.1.7] — March 13, 2026 🐛✨
 
 ### Added
@@ -178,4 +192,4 @@ This is the initial public release of OpenGridX. All planned v0.1.0 features are
 
 ---
 
-*Last Updated: March 6, 2026*
+*Last Updated: March 18, 2026*

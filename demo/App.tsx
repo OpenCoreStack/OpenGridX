@@ -100,14 +100,18 @@ function DemoSkeleton() {
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
     const location = useLocation();
+    
+    // Check if current route is in 'Resources' category
+    const currentConfig = examplesConfig.find(item => item.path === location.pathname);
+    const isResourcePage = currentConfig?.category === 'Resources';
 
-    // Automatically extract TOC from current page
+    // Automatically extract TOC from current page, except for Resources
     return (
         <div className="app-page-wrapper" key={location.pathname}>
-            <div className="app-content-column">
+            <div className={`app-content-column ${isResourcePage ? 'app-content-column--full-width' : ''}`}>
                 {children}
             </div>
-            <Toc />
+            {!isResourcePage && <Toc />}
         </div>
     );
 }
@@ -129,7 +133,7 @@ export default function App() {
                         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="OpenGridX Logo" className="app-logo" />
                         <h2 className="app-title">
                             OpenGridX
-                            <span className="app-version">v0.1.7</span>
+                            <span className="app-version">v0.1.8</span>
                         </h2>
                     </div>
 

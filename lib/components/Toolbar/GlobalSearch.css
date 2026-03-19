@@ -40,7 +40,6 @@
 
 /* ─── Icon wrapper ────────────────────────────────────────────────────────── */
 .ogx-global-search__icon-wrapper {
-    /* Fixed 34×34 square — never shrinks so the icon is always centred       */
     flex: 0 0 34px;
     width: 34px;
     height: 34px;
@@ -51,7 +50,6 @@
     pointer-events: none;
     flex-shrink: 0;
     transition: color 0.15s;
-    /* No border, no background — the unit looks seamless                      */
 }
 .ogx-global-search--expanded .ogx-global-search__icon-wrapper {
     color: var(--ogx-color-primary, #3b82f6);
@@ -74,7 +72,6 @@
     font-size: var(--ogx-font-size-sm, 13px);
     color: var(--ogx-grid-row-text, #1e293b);
     outline: none;
-    /* Hide with opacity, not display:none, so focus events still fire         */
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.18s ease;

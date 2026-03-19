@@ -1,6 +1,6 @@
 {
   "name": "@opencorestack/opengridx",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "OpenGridX: High-performance React data infrastructure. Unlock advanced Row Grouping, Excel Export, and Column Pinning without the usual \"Pro\" gatekeeping. Built for speed, scale, and complete architectural freedom. Fully open, virtualization-ready, and feature-complete.",
   "type": "module",
   "main": "./dist/opengridx.umd.js",
@@ -99,9 +99,8 @@
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
     "vite-plugin-dts": "^4.5.4",
-    "vitest": "^4.0.18"
-  },
-  "dependencies": {
+    "vitest": "^4.0.18",
     "react-router-dom": "^7.13.1"
-  }
+  },
+  "dependencies": {}
 }

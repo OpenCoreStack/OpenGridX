@@ -93,6 +93,31 @@ export function usePivot(
             pivotRows.push(pivotRow);
         }
 
+        // ── Grand Total row ───────────────────────────────────────────────────
+        // Sum every numeric pivot cell across all pivot rows so users get
+        // column totals. The row uses the same synthetic field keys as regular
+        // pivot rows, so it renders with the correct valueFormatters.
+        // Label columns (rowFields) show 'Grand Total' in the first field, empty elsewhere.
+        const totalRow: GridRowModel = { id: '__pivot_grand_total__' };
+        for (let i = 0; i < rowFields.length; i++) {
+            totalRow[rowFields[i]] = i === 0 ? 'Grand Total' : '';
+        }
+        for (const ck of colKeys) {
+            for (const vf of valueFields) {
+                const cellKey = columnFields.length > 0
+                    ? `${ck}\u001f${vf.field}\u001f${vf.aggFn}`
+                    : `${vf.field}\u001f${vf.aggFn}`;
+                // Sum the already-aggregated cell values across all pivot rows
+                const colTotal = pivotRows.reduce((acc, r) => {
+                    const v = r[cellKey];
+                    return acc + (v != null && !isNaN(Number(v)) ? Number(v) : 0);
+                }, 0);
+                totalRow[cellKey] = colTotal;
+            }
+        }
+        pivotRows.push(totalRow);
+
+
         const pivotColumns: GridColDef[] = [];
 
         for (const f of rowFields) {

@@ -117,6 +117,23 @@
   background: var(--ogx-toolbar-btn-danger-bg, rgba(239, 68, 68, 0.08));
   border-color: var(--ogx-color-error, #ef4444);
 }
+.ogx-toolbar__close-btn {
+  padding: 2px 10px;
+  border: var(--ogx-border-width-thin) solid var(--ogx-border-color);
+  border-radius: var(--ogx-border-radius-sm);
+  background: transparent;
+  color: var(--ogx-grid-header-text);
+  font-family: var(--ogx-font-family);
+  font-size: var(--ogx-font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ogx-toolbar__close-btn:hover {
+  background: var(--ogx-grid-header-hover-background);
+  border-color: var(--ogx-color-primary);
+  color: var(--ogx-color-primary);
+}
 .ogx-toolbar__panel-body {
   padding: var(--ogx-spacing-xs) 0;
   max-height: 360px;

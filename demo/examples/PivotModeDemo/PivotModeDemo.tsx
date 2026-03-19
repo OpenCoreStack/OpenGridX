@@ -297,26 +297,27 @@ function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarP
     );
 }
 
+// Module-level: stable function reference so React never unmounts/remounts the toolbar.
+function CustomToolbar(props: any) {
+    return (
+        <GridToolbar
+            {...props}
+            rightContent={
+                <div className="pivot-toolbar-right">
+                    <ExportToolbar
+                        apiRef={props.apiRef}
+                        fallbackRows={props._fallbackRows || []}
+                        fallbackColumns={props._fallbackColumns || []}
+                    />
+                </div>
+            }
+        />
+    );
+}
+
 export default function PivotModeDemo() {
     const [pivotMode, setPivotMode] = useState(true);
     const [pivotModel, setPivotModel] = useState<GridPivotModel>(PRESETS[0].model);
-
-    const CustomToolbar = (props: any) => {
-        return (
-            <GridToolbar
-                {...props}
-                rightContent={
-                    <div className="pivot-toolbar-right">
-                        <ExportToolbar
-                            apiRef={props.apiRef}
-                            fallbackRows={RAW_ROWS}
-                            fallbackColumns={SOURCE_COLUMNS as any}
-                        />
-                    </div>
-                }
-            />
-        );
-    };
 
     return (
         <div className="pivot-demo-container">
@@ -395,6 +396,12 @@ export default function PivotModeDemo() {
                     paginationModel={{ page: 0, pageSize: 50 }}
                     pageSizeOptions={[25, 50, 100]}
                     slots={{ toolbar: CustomToolbar }}
+                    slotProps={{
+                        toolbar: {
+                            _fallbackRows: RAW_ROWS,
+                            _fallbackColumns: SOURCE_COLUMNS,
+                        }
+                    }}
                     height={500}
                 />
             </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 
 
 interface GlobalSearchProps {
@@ -27,48 +27,102 @@ function CloseIcon() {
 }
 
 export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', debounceMs = 250 }: GlobalSearchProps) {
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(() => value.length > 0);
+    // Fully uncontrolled: localValue is the single source of truth.
     const [localValue, setLocalValue] = useState(value);
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    // Keep onChange always current without adding it to effect deps
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+    // Track the last value we emitted upward
+    const lastEmittedRef = useRef(value);
+    // Track the last incoming prop value to detect external resets
+    const lastIncomingValueRef = useRef(value);
+    // Track whether input was focused BEFORE a re-render so we can restore it
+    const wasFocusedRef = useRef(false);
 
-    // Sync local value with prop
-    useEffect(() => {
-        setLocalValue(value);
-        if (value && !isExpanded) {
-            setIsExpanded(true);
+    // ── Focus preservation across re-renders ─────────────────────────────────
+    // When the parent updates filterModel (triggered by our debounce), React
+    // re-renders the entire tree. Even though the input element stays mounted,
+    // the browser can lose focus during heavy reconciliation. We detect this
+    // via useLayoutEffect (runs synchronously after DOM mutations, before paint)
+    // and immediately restore focus without any visual flicker.
+    useLayoutEffect(() => {
+        if (wasFocusedRef.current && document.activeElement !== inputRef.current) {
+            inputRef.current?.focus();
         }
-    }, [value, isExpanded]);
+    });
 
-    // Debounce change
+    // ── External reset detection ──────────────────────────────────────────────
+    // Only responds when the PARENT programmatically changes the value
+    // (e.g. "Clear all filters" button) — not from our own typing.
+    useEffect(() => {
+        if (value === lastIncomingValueRef.current) return;
+        lastIncomingValueRef.current = value;
+
+        if (value !== lastEmittedRef.current) {
+            setLocalValue(value);
+            lastEmittedRef.current = value;
+            if (!value) {
+                wasFocusedRef.current = false;
+                setIsExpanded(false);
+            } else {
+                setIsExpanded(true);
+            }
+        }
+    }, [value]);
+
+    // ── Debounced upward notification ─────────────────────────────────────────
     useEffect(() => {
         const handler = setTimeout(() => {
-            if (localValue !== value) {
-                onChange(localValue);
+            if (localValue !== lastEmittedRef.current) {
+                lastEmittedRef.current = localValue;
+                onChangeRef.current(localValue);
             }
         }, debounceMs);
         return () => clearTimeout(handler);
-    }, [localValue, onChange, debounceMs, value]);
+    }, [localValue, debounceMs]);
 
-    const handleFocus = () => {
+    const handleExpand = useCallback(() => {
         setIsExpanded(true);
-    };
+        requestAnimationFrame(() => inputRef.current?.focus());
+    }, []);
 
-    const handleClear = (e: React.MouseEvent) => {
+    const handleClear = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         setLocalValue('');
+        lastEmittedRef.current = '';
+        onChangeRef.current('');
         inputRef.current?.focus();
-        onChange(''); // Immediate clear
-    };
+    }, []);
 
-    // Close on blur if empty
-    const handleBlur = () => {
-        if (!localValue) {
-            setIsExpanded(false);
-        }
-    };
+    const handleFocus = useCallback(() => {
+        wasFocusedRef.current = true;
+        setIsExpanded(true);
+    }, []);
 
-    // Click outside to collapse if empty
+    // Blur: defer 150ms to allow focus to move within the container first
+    // (e.g. clicking the clear button) before deciding to collapse.
+    const handleBlur = useCallback(() => {
+        wasFocusedRef.current = false;
+        setTimeout(() => {
+            if (
+                containerRef.current &&
+                document.activeElement &&
+                containerRef.current.contains(document.activeElement)
+            ) {
+                // Focus is still inside — mark as focused again and abort
+                wasFocusedRef.current = true;
+                return;
+            }
+            if (!localValue) {
+                setIsExpanded(false);
+            }
+        }, 150);
+    }, [localValue]);
+
+    // ── Click outside ─────────────────────────────────────────────────────────
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -77,7 +131,6 @@ export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', 
                 }
             }
         };
-
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [localValue]);
@@ -86,13 +139,7 @@ export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', 
         <div
             ref={containerRef}
             className={`ogx-global-search${isExpanded ? ' ogx-global-search--expanded' : ''}`}
-            onClick={() => {
-                if (!isExpanded) {
-                    setIsExpanded(true);
-
-                    setTimeout(() => inputRef.current?.focus(), 50);
-                }
-            }}
+            onClick={!isExpanded ? handleExpand : undefined}
         >
             <div className="ogx-global-search__icon-wrapper">
                 <SearchIcon />

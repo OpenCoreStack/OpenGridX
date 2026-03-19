@@ -123,16 +123,30 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const isAggregationControlled = propAggregationModel !== undefined;
 
     // ─── Stabilize toolbar component identity ────────────────────────────────
-    // If the consumer passes an inline arrow function as slots.toolbar (e.g.
-    // `slots={{ toolbar: (p) => <GridToolbar {...p}/> }}`), a new function is
-    // created on every parent render. React reconciles by component *identity*,
-    // so a changed reference means it unmounts the old toolbar and mounts a new
-    // one — destroying focus, replaying animations, etc.
-    // useMemo with an empty dep-array gives React a stable identity. If the
-    // caller genuinely changes slots.toolbar (e.g. swaps to a different UI),
-    // the new value IS used; we just don't thrash for incidental re-renders.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const StableToolbar = useMemo(() => slots?.toolbar, [slots?.toolbar]);
+    // Problem: demos/users often define their toolbar as an inline function
+    // INSIDE their component body, e.g.:
+    //   const MyToolbar = (props) => <GridToolbar {...props} />  // inside render!
+    // This creates a NEW function reference on every parent re-render. React
+    // reconciles by component *identity*, so a new reference = unmount old
+    // toolbar + mount fresh one = all toolbar state (search expansion, filter
+    // open, typed text) is destroyed on every keystroke.
+    //
+    // Fix: a stable wrapper component created ONCE via useRef. Its identity
+    // never changes, so React keeps it mounted. It reads the latest toolbar
+    // from a separate ref that is updated on every render, so the rendered
+    // output is always current — zero stale closures.
+    const latestToolbarRef = useRef(slots?.toolbar);
+    latestToolbarRef.current = slots?.toolbar;
+    // The wrapper itself has a stable identity (created once via useRef).
+    // We call latestToolbarRef.current(props) as a PLAIN FUNCTION — not via
+    // React.createElement — so React never sees a changing component type.
+    // The elements the toolbar function returns are reconciled normally, so
+    // GridToolbar's internal state (filterOpen, search expansion) is preserved
+    // even when the toolbar is defined as an inline function inside the parent.
+    const StableToolbar = useRef((props: Record<string, unknown>) => {
+        const Toolbar = latestToolbarRef.current;
+        return Toolbar ? (Toolbar as (p: typeof props) => React.ReactElement | null)(props) : null;
+    }).current;
     const [internalAggregationModel, setInternalAggregationModel] = useState<GridAggregationModel>(
         () => propAggregationModel ?? {}
     );
@@ -1653,10 +1667,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             aria-busy={effectiveLoading}
         >
             { }
-            {StableToolbar && (() => {
+            {slots?.toolbar && (() => {
                 const toolbarProps = {
                     apiRef: gridData.apiRef,
-                    columns: effectiveColumns,
+                    columns: effectiveColumns as unknown as GridColDef[],
+                    baseColumns: columns as unknown as GridColDef[],
                     aggregationModel,
                     onAggregationModelChange: handleAggregationModelChange,
 
@@ -1667,7 +1682,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
                     filterModel,
                     onFilterModelChange,
-
                     columnVisibilityModel,
                     onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
 
@@ -2141,8 +2155,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             </div>
                         )}
 
-                        {/* Aggregation Footer Row */}
-                        {hasAggregation && (
+                        {/* Aggregation Footer Row — suppressed in pivot mode because pivot rows
+                             already contain pre-aggregated values with synthetic field keys
+                             (e.g. 'Q1\u001frevenue\u001fsum') that don't match aggregationModel keys. */}
+                        {hasAggregation && !pivotMode && (
                             <div
                                 className="ogx__aggregation-footer"
                                 role="row"

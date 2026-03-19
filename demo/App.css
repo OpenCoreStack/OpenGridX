@@ -149,6 +149,10 @@
     padding-right: 24px;
 }
 
+.app-content-column--full-width {
+    padding-right: 0;
+}
+
 /* Base Headings within app content area for TOC generation */
 .app-content-column h2 { 
     margin-top: 36px;

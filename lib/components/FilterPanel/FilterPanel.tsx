@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type {
     GridFilterModel,
     GridFilterItem,
@@ -29,6 +29,37 @@ const FilterRow: React.FC<{
     const isActive = !!item;
     const currentOperator = item?.operator ?? operators[0];
 
+    // Local input state to prevent full filter-panel re-render on every keystroke
+    const [localValue, setLocalValue] = useState(item?.value ?? '');
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+
+    // Sync when the external item changes (e.g. operator change, clear)
+    const prevItemValue = useRef(item?.value);
+    useEffect(() => {
+        if (item?.value !== prevItemValue.current) {
+            prevItemValue.current = item?.value;
+            setLocalValue(item?.value ?? '');
+        }
+    }, [item?.value]);
+
+    // Debounce propagating the value upward (300ms)
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            const currentValue = item?.value ?? '';
+            if (localValue !== currentValue) {
+                onChangeRef.current({
+                    id: item?.id ?? `${col.field}-${Date.now()}`,
+                    field: col.field,
+                    operator: currentOperator as GridFilterOperator,
+                    value: localValue,
+                });
+            }
+        }, 300);
+        return () => clearTimeout(handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [localValue]);
+
     const handleOperatorChange = (op: string) => {
         const noValue = NO_VALUE_OPERATORS.has(op);
         const newItem: GridFilterItem = {
@@ -40,16 +71,8 @@ const FilterRow: React.FC<{
         onChange(newItem);
     };
 
-    const handleValueChange = (value: string) => {
-        onChange({
-            id: item?.id ?? `${col.field}-${Date.now()}`,
-            field: col.field,
-            operator: currentOperator as GridFilterOperator,
-            value,
-        });
-    };
-
     const handleClear = () => {
+        setLocalValue('');
         onChange(null);
     };
 
@@ -87,7 +110,15 @@ const FilterRow: React.FC<{
                         name={`filter-val-${col.field}`}
                         className={`ogx-filter__value-input ogx-filter__value-select${isActive ? ' ogx-filter__value-input--active' : ''}`}
                         value={String(item?.value ?? 'true')}
-                        onChange={(e) => handleValueChange(e.target.value)}
+                        onChange={(e) => {
+                            setLocalValue(e.target.value);
+                            onChange({
+                                id: item?.id ?? `${col.field}-${Date.now()}`,
+                                field: col.field,
+                                operator: currentOperator as GridFilterOperator,
+                                value: e.target.value,
+                            });
+                        }}
                         aria-label={`Filter value for ${col.headerName || col.field}`}
                     >
                         <option value="true">true</option>
@@ -100,10 +131,10 @@ const FilterRow: React.FC<{
                         id={`ogx-filter-val-${col.field}`}
                         name={`filter-val-${col.field}`}
                         className={`ogx-filter__value-input${isActive ? ' ogx-filter__value-input--active' : ''}`}
-                        type={col.type === 'number' ? 'number' : 'text'}
-                        value={item?.value ?? ''}
-                        onChange={(e) => handleValueChange(e.target.value)}
-                        placeholder="Value…"
+                        type="text"
+                        value={localValue}
+                        onChange={(e) => setLocalValue(e.target.value)}
+                        placeholder={col.type === 'number' ? 'Number…' : 'Value…'}
                         aria-label={`Filter value for ${col.headerName || col.field}`}
                     />
                 )}

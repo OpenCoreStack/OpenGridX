@@ -92,37 +92,55 @@ function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarP
     const [isPrinting, setIsPrinting] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
 
-    const getRows = () => apiRef?.current?.getVisibleRows?.() || fallbackRows;
+    // Use apiRef to get current state — no need to thread selectedRows as a prop.
+    // getSelectedRows() returns the array of selected row IDs.
+    // getVisibleRows() returns rows after filtering/sorting.
+    const getAllRows = () => apiRef?.current?.getVisibleRows?.() || fallbackRows;
     const getColumns = () => apiRef?.current?.getVisibleColumns?.() || fallbackColumns;
     const getAgg = () => apiRef?.current?.getAggregationResult?.() || null;
     const getAggModel = () => apiRef?.current?.getAggregationModel?.() || null;
 
-    const performPrint = async () => {
-        setIsPrinting(true);
-        try {
-            await printGrid(getRows(), getColumns(), {
-                title: 'Data Export',
-                aggregationResult: getAgg(),
-                aggregationModel: getAggModel(),
-            });
-        } catch (error) {
-            console.error('Print failed:', error);
-        } finally {
-            setIsPrinting(false);
+    const getRowsToExport = () => {
+        const selectedIds: (string | number)[] = apiRef?.current?.getSelectedRows?.() || [];
+        if (selectedIds.length > 0) {
+            const allRows = getAllRows();
+            return allRows.filter((r: any) => selectedIds.includes(r.id));
         }
+        return getAllRows();
     };
 
-    const handleExportClick = (format: 'csv' | 'excel' | 'json' | 'print') => {
-        const currentRows = getRows();
+    const getSelectedCount = () => (apiRef?.current?.getSelectedRows?.() || []).length;
+
+    const performExport = async (format: 'csv' | 'excel' | 'json' | 'print') => {
+        const rowsToExport = getRowsToExport();
         const currentCols = getColumns();
         const aggResult = getAgg();
         const aggModel = getAggModel();
+        const selectedCount = getSelectedCount();
+        const suffix = selectedCount > 0 ? ` (${selectedCount} selected)` : '';
 
-        if (format === 'csv') exportToCsv(currentRows, currentCols, { fileName: 'export.csv', aggregationResult: aggResult, aggregationModel: aggModel });
-        else if (format === 'excel') exportToExcel(currentRows, currentCols, { fileName: 'export.xlsx', sheetName: 'Data', aggregationResult: aggResult, aggregationModel: aggModel });
-        else if (format === 'json') exportToJson(currentRows, currentCols, { fileName: 'export.json', pretty: true, aggregationResult: aggResult, aggregationModel: aggModel });
-        else if (format === 'print') performPrint();
         setShowMenu(false);
+
+        if (format === 'csv') {
+            exportToCsv(rowsToExport, currentCols, { fileName: 'export.csv', aggregationResult: aggResult, aggregationModel: aggModel });
+        } else if (format === 'excel') {
+            exportToExcel(rowsToExport, currentCols, { fileName: 'export.xlsx', sheetName: 'Data', aggregationResult: aggResult, aggregationModel: aggModel });
+        } else if (format === 'json') {
+            exportToJson(rowsToExport, currentCols, { fileName: 'export.json', pretty: true, aggregationResult: aggResult, aggregationModel: aggModel });
+        } else if (format === 'print') {
+            setIsPrinting(true);
+            try {
+                await printGrid(rowsToExport, currentCols, {
+                    title: `Data Export${suffix}`,
+                    aggregationResult: aggResult,
+                    aggregationModel: aggModel,
+                });
+            } catch (error) {
+                console.error('Print failed:', error);
+            } finally {
+                setIsPrinting(false);
+            }
+        }
     };
 
     return (
@@ -149,23 +167,42 @@ function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarP
                         onClick={() => setShowMenu(false)}
                     />
                     <div className="ogx-toolbar__panel theming-export-menu">
-                        <div onClick={() => handleExportClick('csv')} className="ogx-menu-item">
+                        <div onClick={() => performExport('csv')} className="ogx-menu-item">
                             {Icons.Csv} Export as CSV
                         </div>
-                        <div onClick={() => handleExportClick('excel')} className="ogx-menu-item">
+                        <div onClick={() => performExport('excel')} className="ogx-menu-item">
                             {Icons.Excel} Export as Excel
                         </div>
-                        <div onClick={() => handleExportClick('json')} className="ogx-menu-item">
+                        <div onClick={() => performExport('json')} className="ogx-menu-item">
                             {Icons.Json} Export as JSON
                         </div>
                         <div className="ogx-menu-divider" />
-                        <div onClick={() => handleExportClick('print')} className="ogx-menu-item">
+                        <div onClick={() => performExport('print')} className="ogx-menu-item">
                             {Icons.Print} Print View
                         </div>
                     </div>
                 </>
             )}
         </div>
+    );
+}
+
+// ── Stable toolbar component (defined at MODULE LEVEL, not inside ThemingDemo) ──
+// If this were defined inside the component body, every render would create a
+// new function reference, causing React to unmount/remount the entire toolbar
+// and losing all state (search expansion, filter panel open, etc.).
+function ToolbarWithExport(props: any) {
+    return (
+        <GridToolbar
+            {...props}
+            rightContent={
+                <ExportToolbar
+                    apiRef={props.apiRef}
+                    fallbackRows={props._fallbackRows || []}
+                    fallbackColumns={props._fallbackColumns || []}
+                />
+            }
+        />
     );
 }
 
@@ -186,14 +223,6 @@ export default function ThemingDemo() {
 
     const theme = presetThemes[selectedTheme];
     const isDark = selectedTheme === 'Dark' || selectedTheme === 'Dark + Compact';
-
-    const ToolbarWithExport = (props: any) => (
-        <GridToolbar
-            {...props}
-            globalSearch={true}
-            rightContent={<ExportToolbar apiRef={props.apiRef} fallbackRows={rows} fallbackColumns={allColumns} />}
-        />
-    );
 
     return (
         <DocsLayout
@@ -264,6 +293,12 @@ export default function ThemingDemo() {
                             onColumnVisibilityModelChange={setColumnVisibilityModel}
                             
                             slots={{ toolbar: ToolbarWithExport }}
+                            slotProps={{
+                                toolbar: {
+                                    _fallbackRows: rows,
+                                    _fallbackColumns: allColumns,
+                                }
+                            }}
 
                             height={500}
                             rowHeight={selectedTheme.includes('Compact') ? 36 : undefined}

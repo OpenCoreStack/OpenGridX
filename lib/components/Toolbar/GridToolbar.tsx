@@ -9,6 +9,11 @@ import { GridTooltip } from '../Tooltip/Tooltip';
 
 export interface GridToolbarProps {
     columns?: GridColDef[];
+    /** Original user-defined columns (before pivot transformation).
+     *  When provided, the PivotPanel shows these instead of `columns`
+     *  to prevent pivot-generated synthetic columns from appearing in
+     *  'Available Fields' and causing infinite nested aggregations. */
+    baseColumns?: GridColDef[];
     aggregationModel?: GridAggregationModel;
     onAggregationModelChange?: (model: GridAggregationModel) => void;
     pivotModel?: GridPivotModel;
@@ -275,6 +280,11 @@ function FilterPanelWrapper({
 }) {
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<PanelPosition>({ top: 0, right: 0 });
+    // Stable ref for onClose — prevents the mousedown effect from
+    // tearing down and re-registering on every filterModel update,
+    // which could fire the close callback during the re-register window.
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
 
     const computePos = useCallback((): PanelPosition => {
         if (!anchorRef.current) return { top: 0, right: 0 };
@@ -296,25 +306,17 @@ function FilterPanelWrapper({
         };
     }, [computePos]);
 
+    // Only Escape key closes the filter panel automatically.
+    // Click-outside is intentionally removed: users need to type in filter
+    // inputs without the panel closing. There is an explicit Close button.
     useEffect(() => {
-        function handleClick(e: MouseEvent) {
-            if (
-                panelRef.current && !panelRef.current.contains(e.target as Node) &&
-                anchorRef.current && !anchorRef.current.contains(e.target as Node)
-            ) {
-                onClose();
-            }
-        }
         function handleKey(e: KeyboardEvent) {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape') onCloseRef.current();
         }
-        document.addEventListener('mousedown', handleClick);
         document.addEventListener('keydown', handleKey);
-        return () => {
-            document.removeEventListener('mousedown', handleClick);
-            document.removeEventListener('keydown', handleKey);
-        };
-    }, [anchorRef, onClose]);
+        return () => document.removeEventListener('keydown', handleKey);
+    // Empty deps — listener is registered once and uses the stable ref
+    }, []);
 
     const activeFilterCount = filterModel.items?.length ?? 0;
 
@@ -330,7 +332,6 @@ function FilterPanelWrapper({
             aria-label="Advanced filters"
             style={{ top: pos.top, right: pos.right, width: 540, maxWidth: 'calc(100vw - 24px)' }}
         >
-            { }
             <div className="ogx-toolbar__panel-header">
                 <span className="ogx-toolbar__panel-title">
                     <FilterIcon />
@@ -339,18 +340,27 @@ function FilterPanelWrapper({
                         <span className="ogx-toolbar__panel-count">{activeFilterCount}</span>
                     )}
                 </span>
-                {activeFilterCount > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {activeFilterCount > 0 && (
+                        <button
+                            className="ogx-toolbar__clear-btn"
+                            onClick={handleClearAll}
+                            title="Clear all filters"
+                        >
+                            Clear all
+                        </button>
+                    )}
                     <button
-                        className="ogx-toolbar__clear-btn"
-                        onClick={handleClearAll}
-                        title="Clear all filters"
+                        className="ogx-toolbar__close-btn"
+                        onClick={() => onCloseRef.current()}
+                        title="Close filters"
+                        aria-label="Close filters panel"
                     >
-                        Clear all
+                        Close
                     </button>
-                )}
+                </div>
             </div>
 
-            { }
             <div className="ogx-toolbar__panel-body ogx-toolbar__panel-body--filter">
                 <FilterPanel
                     columns={columns}
@@ -368,6 +378,7 @@ const EMPTY_PIVOT: GridPivotModel = { rowFields: [], columnFields: [], valueFiel
 
 export function GridToolbar({
     columns = [],
+    baseColumns,
     aggregationModel = {},
     onAggregationModelChange,
     pivotModel,
@@ -594,7 +605,7 @@ export function GridToolbar({
                         {pivotOpen && (
                             <PivotPanel
                                 anchorRef={pivotButtonRef}
-                                columns={columns}
+                                columns={baseColumns ?? columns}
                                 model={currentPivotModel}
                                 onChange={(m) => { onPivotModelChange?.(m); }}
                                 onClose={() => setPivotOpen(false)}
