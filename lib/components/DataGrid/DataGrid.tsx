@@ -1050,6 +1050,36 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         effectivePaginationModel.pageSize
     ]);
 
+    useEffect(() => {
+        gridData.apiRef.current.scrollToIndexes = ({ rowIndex, colIndex }) => {
+            const el = viewportRef.current;
+            if (!el) return;
+
+            if (rowIndex !== undefined && rowIndex >= 0) {
+                const rowTop = rowIndex > 0 ? layout.cumulativeHeights[rowIndex - 1] : 0;
+                const rowBottom = layout.cumulativeHeights[rowIndex] ?? rowTop;
+                const { scrollTop, clientHeight } = el;
+                if (rowTop < scrollTop) {
+                    el.scrollTop = rowTop;
+                } else if (rowBottom > scrollTop + clientHeight) {
+                    el.scrollTop = rowBottom - clientHeight;
+                }
+            }
+
+            if (colIndex !== undefined && colIndex >= 0) {
+                const colLocalLeft = colIndex > 0 ? layout.unpinnedAccWidths[colIndex - 1] : 0;
+                const colLocalRight = layout.unpinnedAccWidths[colIndex] ?? colLocalLeft;
+                const colRight = layout.leftWidth + colLocalRight;
+                const { scrollLeft, clientWidth } = el;
+                if (colLocalLeft < scrollLeft) {
+                    el.scrollLeft = colLocalLeft;
+                } else if (colRight > scrollLeft + clientWidth) {
+                    el.scrollLeft = colRight - clientWidth;
+                }
+            }
+        };
+    }, [layout, viewportRef, gridData.apiRef]);
+
     const virtualization = useMemo(() => {
         const {
             unpinnedAccWidths,
