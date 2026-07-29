@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import { useLayout } from '../../hooks/core/useLayout';
+import { useGridKeyboardNavigation } from '../../hooks/core/useGridKeyboardNavigation';
 import ReactDOM from 'react-dom';
 import { ListViewRow } from '../ListView/ListViewRow';
 import type { GridState } from '../../state/types';
@@ -228,8 +229,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const defaultGetRowId = useCallback((row: R) => row.id, []);
     const effectiveGetRowId = getRowId || defaultGetRowId;
-
-    const [focusedCell, setFocusedCell] = useState<{ id: GridRowId; field: string } | null>(null);
 
     // Keyboard-mode flag: toggled via DOM classname — no React state needed
     // so the ring appears instantly without a re-render cycle.
@@ -974,13 +973,31 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onSortModelChange?.(newSortModel as any);
     }, [isSortControlled, onSortModelChange]);
 
+    const { focusedCell, setFocusedCell, handleFocus, handleBlur, handleKeyDown } = useGridKeyboardNavigation({
+        allRenderableRows,
+        navigationColumns,
+        checkboxSelection,
+        selectedRowIds,
+        handleSelectionChange,
+        handleDetailPanelToggle,
+        editingHandlers,
+        setKeyboardMode,
+        sortModel,
+        handleSort,
+        isCellEditable,
+        pagination,
+        pageSize: effectivePaginationModel.pageSize,
+        virtualization,
+        viewportRef,
+    });
+
     const handleCellClick = useCallback((params: GridCellParams<R>) => {
         setKeyboardMode(false);
         setFocusedCell({ id: params.row.id, field: params.field });
 
         gridRef.current?.focus({ preventScroll: true });
         onCellClick?.(params);
-    }, [onCellClick, setKeyboardMode]);
+    }, [onCellClick, setKeyboardMode, setFocusedCell]);
 
     const prevEditingCellRef = useRef(editingHandlers.editingCell);
     useEffect(() => {
@@ -1037,329 +1054,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const allSelected = rows.length > 0 && selectedRowIds.size === rows.length;
     const someSelected = selectedRowIds.size > 0 && selectedRowIds.size < rows.length;
-
-    const handleFocus = useCallback((event: React.FocusEvent<HTMLDivElement>) => {
-
-        if (event.target === event.currentTarget) {
-            setFocusedCell(prev => {
-                if (prev) return prev;
-
-                if (checkboxSelection) {
-                    return { id: 'HEADER', field: '__checkbox_col__' };
-                }
-
-                const firstRow = allRenderableRows[0];
-                const firstCol = navigationColumns[0];
-                if (firstRow && firstCol) {
-                    return { id: firstRow.id, field: firstCol.field };
-                }
-                return null;
-            });
-        }
-    }, [allRenderableRows, navigationColumns]);
-
-    const handleBlur = useCallback((event: React.FocusEvent<HTMLDivElement>) => {
-
-        if (!event.currentTarget.contains(event.relatedTarget as Node)) {
-            setFocusedCell(null);
-        }
-    }, []);
-
-    const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
-        setKeyboardMode(true);
-
-        if (!focusedCell) return;
-
-        const { id, field } = focusedCell;
-
-        const isEditing = Boolean(editingHandlers.editingCell);
-
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            if (isEditing) {
-                editingHandlers.stopCellEdit();
-            } else {
-
-                const col = navigationColumns.find(c => c.field === field);
-                if (col?.editable) {
-                    const row = allRenderableRows.find(r => r.id === id);
-                    if (row) {
-                        editingHandlers.startCellEdit({
-                            id,
-                            field,
-                            value: (row as any)[field]
-                        });
-                    }
-                }
-            }
-            return;
-        }
-
-        if (event.key === ' ' || event.key === 'Spacebar') {
-            if (!isEditing) {
-                if (field === '__checkbox_col__') {
-                    event.preventDefault();
-                    handleSelectionChange(id, !selectedRowIds.has(id));
-                    return;
-                }
-                if (field === '__expand_col__') {
-                    event.preventDefault();
-                    handleDetailPanelToggle(id);
-                    return;
-                }
-            }
-        }
-
-        if (id === 'HEADER' && (event.key === 'Enter' || event.key === ' ')) {
-            event.preventDefault();
-
-            const col = navigationColumns.find(c => c.field === field);
-            if (col && (col as any).sortable !== false) {
-                const currentSort = sortModel.find(item => item.field === field);
-                let newDirection: GridSortDirection = 'asc';
-
-                if (currentSort) {
-                    if (currentSort.sort === 'asc') {
-                        newDirection = 'desc';
-                    } else {
-                        newDirection = null;
-                    }
-                }
-                handleSort(field, newDirection);
-            }
-            return;
-        }
-
-        if (event.key === 'Escape') {
-            if (isEditing) {
-                event.preventDefault();
-                editingHandlers.stopCellEdit({ cancel: true });
-            }
-            return;
-        }
-
-        if (isEditing && event.key !== 'Tab') {
-            return;
-        }
-
-        const isHeader = id === 'HEADER';
-        const rowIndex = isHeader ? -1 : allRenderableRows.findIndex(r => r.id === id);
-        const colIndex = navigationColumns.findIndex(c => c.field === field);
-
-        if (!isHeader && rowIndex === -1) return;
-        if (colIndex === -1) return;
-
-        // Find the next FOCUSABLE cell (any cell — editability not required for arrow navigation)
-        const findNextCell = (
-            startRow: number,
-            startCol: number,
-            deltaRow: number,
-            deltaCol: number,
-            wrapRow: boolean,
-            allowHeader: boolean = false
-        ) => {
-            let r = startRow + deltaRow;
-            let c = startCol + deltaCol;
-
-            if (wrapRow && deltaCol !== 0) {
-                if (deltaCol > 0 && c >= navigationColumns.length) { c = 0; r++; }
-                else if (deltaCol < 0 && c < 0) { c = navigationColumns.length - 1; r--; }
-            }
-
-            if (!wrapRow && (c < 0 || c >= navigationColumns.length)) return null;
-            if (r < (allowHeader ? -1 : 0) || r >= allRenderableRows.length) return null;
-
-            return { r, c };
-        };
-
-        // Find the next EDITABLE cell (for Tab key navigation)
-        const findNextEditable = (
-            startRow: number,
-            startCol: number,
-            deltaRow: number,
-            deltaCol: number,
-            wrapRow: boolean,
-            allowHeader: boolean = false
-        ) => {
-            let r = startRow;
-            let c = startCol;
-            let steps = 0;
-
-            const maxSteps = allRenderableRows.length * navigationColumns.length + navigationColumns.length;
-
-            while (steps < maxSteps) {
-                steps++;
-
-                r += deltaRow;
-                c += deltaCol;
-
-                if (wrapRow && deltaCol !== 0) {
-                    if (deltaCol > 0) {
-                        if (c >= navigationColumns.length) { c = 0; r++; }
-                    } else {
-                        if (c < 0) { c = navigationColumns.length - 1; r--; }
-                    }
-                } else {
-                    if (c < 0 || c >= navigationColumns.length) return null;
-                }
-
-                if (r < -1 || r >= allRenderableRows.length) return null;
-
-                if (r === -1) {
-                    if (!allowHeader) continue;
-                    const col = navigationColumns[c];
-                    const isSortable = (col as any).sortable !== false;
-                    const isInteractive = ['__checkbox_col__'].includes(col.field) || isSortable;
-                    if (isInteractive) return { r, c };
-                    continue;
-                }
-
-                const row = allRenderableRows[r];
-                const col = navigationColumns[c];
-
-                const isInteractable = ['__checkbox_col__', '__expand_col__', '__reorder_col__'].includes(col.field);
-                let isEditable = col.editable || isInteractable;
-
-                if (isCellEditable && !isInteractable) {
-                    try {
-                        isEditable = isCellEditable({
-                            row,
-                            field: col.field,
-                            value: (row as any)[col.field],
-                            colDef: col,
-                            rowIndex: r,
-                            colIndex: c
-                        });
-                    } catch (e) {
-                        console.error('Error in isCellEditable:', e);
-                    }
-                }
-
-                if (isEditable) return { r, c };
-            }
-            return null;
-        };
-
-        let nextRowIndex = rowIndex;
-        let nextColIndex = colIndex;
-        let handled = false;
-
-        if (event.key === 'Tab') {
-            // Tab moves to next EDITABLE cell
-            const dir = event.shiftKey ? -1 : 1;
-            const res = findNextEditable(rowIndex, colIndex, 0, dir, true, false);
-            if (res) {
-                nextRowIndex = res.r;
-                nextColIndex = res.c;
-                handled = true;
-            }
-        } else if (event.key === 'ArrowRight') {
-            const res = findNextCell(rowIndex, colIndex, 0, 1, true, true);
-            if (res) { nextRowIndex = res.r; nextColIndex = res.c; handled = true; }
-        } else if (event.key === 'ArrowLeft') {
-            const res = findNextCell(rowIndex, colIndex, 0, -1, true, true);
-            if (res) { nextRowIndex = res.r; nextColIndex = res.c; handled = true; }
-        } else if (event.key === 'ArrowDown') {
-            const res = findNextCell(rowIndex, colIndex, 1, 0, false, true);
-            if (res) { nextRowIndex = res.r; nextColIndex = res.c; handled = true; }
-        } else if (event.key === 'ArrowUp') {
-            const res = findNextCell(rowIndex, colIndex, -1, 0, false, true);
-            if (res) { nextRowIndex = res.r; nextColIndex = res.c; handled = true; }
-        } else if (event.key === 'Home') {
-            if (event.ctrlKey || event.metaKey) {
-                nextRowIndex = -1;
-                nextColIndex = 0;
-            } else {
-                nextColIndex = 0;
-            }
-            handled = true;
-        } else if (event.key === 'End') {
-            if (event.ctrlKey || event.metaKey) {
-                nextRowIndex = allRenderableRows.length - 1;
-                nextColIndex = navigationColumns.length - 1;
-            } else {
-                nextColIndex = navigationColumns.length - 1;
-            }
-            handled = true;
-        } else if (event.key === 'PageUp') {
-            const pageSize = pagination ? effectivePaginationModel.pageSize : 10;
-            nextRowIndex = Math.max(-1, nextRowIndex - pageSize);
-            handled = true;
-        } else if (event.key === 'PageDown') {
-            const pageSize = pagination ? effectivePaginationModel.pageSize : 10;
-            nextRowIndex = Math.min(allRenderableRows.length - 1, nextRowIndex + pageSize);
-            handled = true;
-        }
-
-        if (handled) {
-            event.preventDefault();
-
-            if (isEditing && event.key === 'Tab') {
-                editingHandlers.stopCellEdit();
-            }
-
-            if (nextRowIndex >= -1 && nextRowIndex < allRenderableRows.length &&
-                nextColIndex >= 0 && nextColIndex < navigationColumns.length) {
-
-                const nextCol = navigationColumns[nextColIndex];
-
-                if (nextRowIndex === -1) {
-                    setFocusedCell({ id: 'HEADER', field: nextCol.field });
-                } else {
-                    const nextRow = allRenderableRows[nextRowIndex];
-                    setFocusedCell({ id: nextRow.id, field: nextCol.field });
-                }
-
-                if (viewportRef.current) {
-                    const { cumulativeHeights, pinnedTopHeight } = virtualization;
-                    const { clientHeight, clientWidth, scrollTop, scrollLeft } = viewportRef.current;
-
-                    const rowTop = nextRowIndex === 0 ? 0 : cumulativeHeights[nextRowIndex - 1];
-                    const rowBottom = cumulativeHeights[nextRowIndex];
-                    const pinnedOffset = pinnedTopHeight;
-                    const visibleTop = scrollTop + pinnedOffset;
-                    const visibleBottom = scrollTop + clientHeight;
-
-                    let newScrollTop = scrollTop;
-                    if (rowTop < visibleTop) {
-                        newScrollTop = Math.max(0, rowTop - pinnedOffset);
-                    } else if (rowBottom > visibleBottom) {
-                        newScrollTop = rowBottom - clientHeight;
-                    }
-
-                    if (newScrollTop !== scrollTop) {
-                        viewportRef.current.scrollTop = newScrollTop;
-                    }
-
-                    if (virtualization.columnMetrics) {
-                        const { leftPinnedWidth, rightPinnedWidth, unpinnedAccWidths, unpinnedCols, totalSpecialsWidth, pinnedSpecialsWidth } = virtualization.columnMetrics;
-                        const field = nextCol.field;
-                        const unpinnedIndex = unpinnedCols.findIndex((c: any) => c.field === field);
-
-                        if (unpinnedIndex !== -1) {
-                            const colLeft = totalSpecialsWidth + leftPinnedWidth + (unpinnedIndex > 0 ? unpinnedAccWidths[unpinnedIndex - 1] : 0);
-                            const colRight = totalSpecialsWidth + leftPinnedWidth + unpinnedAccWidths[unpinnedIndex];
-
-                            const visibleStart = scrollLeft + pinnedSpecialsWidth + leftPinnedWidth;
-                            const visibleEnd = scrollLeft + clientWidth - rightPinnedWidth;
-
-                            let newScrollLeft = scrollLeft;
-
-                            if (colLeft < visibleStart) {
-                                newScrollLeft = Math.max(0, colLeft - pinnedSpecialsWidth - leftPinnedWidth);
-                            } else if (colRight > visibleEnd) {
-                                newScrollLeft = colRight - clientWidth + rightPinnedWidth;
-                            }
-
-                            if (newScrollLeft !== scrollLeft) {
-                                viewportRef.current.scrollLeft = newScrollLeft;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }, [focusedCell, allRenderableRows, navigationColumns, editingHandlers, virtualization, selectedRowIds, handleSelectionChange, handleDetailPanelToggle]);
 
     const hasRowSpanning = React.useMemo(() => effectiveColumns.some(c => !!c.rowSpan), [effectiveColumns]);
     const [columnsPanelOpen, setColumnsPanelOpen] = React.useState(false);
