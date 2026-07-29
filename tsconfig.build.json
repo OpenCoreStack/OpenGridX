@@ -8,5 +8,5 @@
     "allowImportingTsExtensions": false
   },
   "include": ["lib"],
-  "exclude": ["demo", "node_modules", "dist"]
+  "exclude": ["demo", "node_modules", "dist", "lib/**/*.test.ts", "lib/**/*.test.tsx", "src"]
 }
