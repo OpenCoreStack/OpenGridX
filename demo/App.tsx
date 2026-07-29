@@ -37,6 +37,7 @@ const ToolbarDemo = lazy(() => import('./examples/ToolbarDemo/ToolbarDemo'));
 const FilterPanelDemo = lazy(() => import('./examples/FilterPanelDemo/FilterPanelDemo'));
 const SlotsDemo = lazy(() => import('./examples/SlotsDemo/SlotsDemo'));
 const CRUDTutorial = lazy(() => import('./examples/CRUDTutorial/CRUDTutorial'));
+const ScrollToIndexesDemo = lazy(() => import('./examples/ScrollToIndexesDemo/ScrollToIndexesDemo'));
 
 const examplesConfig = [
     // Resources
@@ -55,6 +56,7 @@ const examplesConfig = [
     { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
     { path: '/editing', name: 'Cell Editing', component: EditingExample, category: 'Main features' },
     { path: '/events', name: 'Events Observer', component: EventsDemo, category: 'Main features' },
+    { path: '/scroll-to', name: 'Scroll To Indexes', component: ScrollToIndexesDemo, category: 'Main features' },
     { path: '/full-test', name: 'Full Feature Test', component: DataGridTest, category: 'Main features' },
 
     // Advanced Features

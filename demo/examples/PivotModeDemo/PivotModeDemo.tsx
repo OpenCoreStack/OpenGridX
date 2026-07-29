@@ -221,7 +221,7 @@ function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarP
         const aggModel = getAggModel();
 
         if (format === 'csv') exportToCsv(currentRows, currentCols, { fileName: 'pivot-export.csv', aggregationResult: aggResult, aggregationModel: aggModel });
-        else if (format === 'excel') exportToExcel(currentRows, currentCols, { fileName: 'pivot-export.xlsx', sheetName: 'Pivot Data', aggregationResult: aggResult, aggregationModel: aggModel });
+        else if (format === 'excel') exportToExcel(currentRows, currentCols, { fileName: 'pivot-export.xls', sheetName: 'Pivot Data', aggregationResult: aggResult, aggregationModel: aggModel });
         else if (format === 'json') exportToJson(currentRows, currentCols, { fileName: 'pivot-export.json', pretty: true, aggregationResult: aggResult, aggregationModel: aggModel });
         else if (format === 'print') performPrint();
         setShowMenu(false);

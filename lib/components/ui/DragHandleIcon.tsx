@@ -1,6 +1,6 @@
 import React from 'react';
 
-export interface DragHandleIconProps extends React.ButtonHTMLAttributes<HTMLButtonElement> { }
+export type DragHandleIconProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 export const DragHandleIcon: React.FC<DragHandleIconProps> = ({ className = '', ...props }) => {
     return (

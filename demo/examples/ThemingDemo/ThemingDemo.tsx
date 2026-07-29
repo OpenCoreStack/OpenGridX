@@ -124,7 +124,7 @@ function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarP
         if (format === 'csv') {
             exportToCsv(rowsToExport, currentCols, { fileName: 'export.csv', aggregationResult: aggResult, aggregationModel: aggModel });
         } else if (format === 'excel') {
-            exportToExcel(rowsToExport, currentCols, { fileName: 'export.xlsx', sheetName: 'Data', aggregationResult: aggResult, aggregationModel: aggModel });
+            exportToExcel(rowsToExport, currentCols, { fileName: 'export.xls', sheetName: 'Data', aggregationResult: aggResult, aggregationModel: aggModel });
         } else if (format === 'json') {
             exportToJson(rowsToExport, currentCols, { fileName: 'export.json', pretty: true, aggregationResult: aggResult, aggregationModel: aggModel });
         } else if (format === 'print') {

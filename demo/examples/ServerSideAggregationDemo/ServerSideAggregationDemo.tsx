@@ -63,7 +63,7 @@ const mockServer = {
     async getRows(params: GridGetRowsParams): Promise<GridGetRowsResponse<Employee>> {
         await new Promise((r) => setTimeout(r, 500));
 
-        let data = [...ALL_EMPLOYEES];
+        const data = [...ALL_EMPLOYEES];
 
         if (params.sortModel.length > 0) {
             const { field, sort } = params.sortModel[0];

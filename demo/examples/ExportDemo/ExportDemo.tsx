@@ -113,30 +113,16 @@ const columns: GridColDef[] = [
     }
 ];
 
-interface ExportOptionsDialogProps {
-    open: boolean;
-    onClose: () => void;
-    onConfirm: (option: 'all' | 'current' | 'range', from?: number, to?: number) => void;
-    paginationModel: { page: number; pageSize: number };
-    totalRows: number;
-    title?: string;
+interface OptionCardProps {
+    label: string;
+    description?: string;
+    checked: boolean;
+    onClick: () => void;
+    children?: React.ReactNode;
 }
 
-function ExportOptionsDialog({ open, onClose, onConfirm, paginationModel, totalRows, title = 'Export Options' }: ExportOptionsDialogProps) {
-    if (!open) return null;
-
-    const [option, setOption] = useState<'all' | 'current' | 'range'>('all');
-    const [from, setFrom] = useState(1);
-    const [to, setTo] = useState(1);
-
-    const totalPages = Math.ceil(totalRows / paginationModel.pageSize);
-    const currentPage = paginationModel.page + 1;
-
-    const handleConfirm = () => {
-        onConfirm(option, from, to);
-    };
-
-    const OptionCard = ({ label, description, checked, onClick, children }: any) => (
+function OptionCard({ label, description, checked, onClick, children }: OptionCardProps) {
+    return (
         <div
             onClick={onClick}
             className={`option-card ${checked ? 'option-card--checked' : ''}`}
@@ -161,6 +147,30 @@ function ExportOptionsDialog({ open, onClose, onConfirm, paginationModel, totalR
             )}
         </div>
     );
+}
+
+interface ExportOptionsDialogProps {
+    open: boolean;
+    onClose: () => void;
+    onConfirm: (option: 'all' | 'current' | 'range', from?: number, to?: number) => void;
+    paginationModel: { page: number; pageSize: number };
+    totalRows: number;
+    title?: string;
+}
+
+function ExportOptionsDialog({ open, onClose, onConfirm, paginationModel, totalRows, title = 'Export Options' }: ExportOptionsDialogProps) {
+    const [option, setOption] = useState<'all' | 'current' | 'range'>('all');
+    const [from, setFrom] = useState(1);
+    const [to, setTo] = useState(1);
+
+    if (!open) return null;
+
+    const totalPages = Math.ceil(totalRows / paginationModel.pageSize);
+    const currentPage = paginationModel.page + 1;
+
+    const handleConfirm = () => {
+        onConfirm(option, from, to);
+    };
 
     return (
         <div className="export-overlay">
@@ -273,7 +283,7 @@ function ExportToolbar({ rows, columns, selectedRows, paginationModel, options, 
         if (selectedRows && selectedRows.length > 0) {
             const selectedData = rows.filter(row => selectedRows.includes(row.id));
             if (format === 'csv') exportToCsv(selectedData, columns, { fileName: 'employees.csv', aggregationResult: aggResult, aggregationModel: aggModel });
-            else if (format === 'excel') exportToExcel(selectedData, columns, { fileName: 'employees.xlsx', sheetName: 'Employees', aggregationResult: aggResult, aggregationModel: aggModel });
+            else if (format === 'excel') exportToExcel(selectedData, columns, { fileName: 'employees.xls', sheetName: 'Employees', aggregationResult: aggResult, aggregationModel: aggModel });
             else if (format === 'json') exportToJson(selectedData, columns, { fileName: 'employees.json', pretty: true, aggregationResult: aggResult, aggregationModel: aggModel });
             else if (format === 'print') performPrint(rows, ' - Selected');
         } else {
@@ -306,7 +316,7 @@ function ExportToolbar({ rows, columns, selectedRows, paginationModel, options, 
         const aggModel = getAggModel();
 
         if (format === 'csv') exportToCsv(rowsToExport, columns, { fileName: `employees${suffix}.csv`, aggregationResult: aggResult, aggregationModel: aggModel });
-        else if (format === 'excel') exportToExcel(rowsToExport, columns, { fileName: `employees${suffix}.xlsx`, sheetName: 'Employees', aggregationResult: aggResult, aggregationModel: aggModel });
+        else if (format === 'excel') exportToExcel(rowsToExport, columns, { fileName: `employees${suffix}.xls`, sheetName: 'Employees', aggregationResult: aggResult, aggregationModel: aggModel });
         else if (format === 'json') exportToJson(rowsToExport, columns, { fileName: `employees${suffix}.json`, pretty: true, aggregationResult: aggResult, aggregationModel: aggModel });
         else if (format === 'print') performPrint(rowsToExport, suffix);
     };
@@ -441,7 +451,7 @@ export default function ExportDemo() {
         if (format === 'csv') {
             exportToCsv(selectedData, columns, { fileName: 'selected-employees.csv', ...options });
         } else if (format === 'excel') {
-            exportToExcel(selectedData, columns, { fileName: 'selected-employees.xlsx', sheetName: 'Selected', ...options });
+            exportToExcel(selectedData, columns, { fileName: 'selected-employees.xls', sheetName: 'Selected', ...options });
         } else if (format === 'json') {
             exportToJson(selectedData, columns, { fileName: 'selected-employees.json', pretty: true, ...options });
         } else if (format === 'print') {

@@ -34,7 +34,7 @@ async function writeToClipboard(text: string): Promise<void> {
   let fallbackSuccess = false;
   try {
     fallbackSuccess = copyTextSynchronous(text);
-  } catch (e) {
+  } catch {
     // Ignore fallback errors
   }
 

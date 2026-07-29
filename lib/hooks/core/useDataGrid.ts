@@ -1,5 +1,5 @@
 
-import { useReducer, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useReducer, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import type {
   GridState,
   GridRowModel,
@@ -259,7 +259,7 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
   });
 
   const stateRef = useRef(state);
-  stateRef.current = state;
+  useLayoutEffect(() => { stateRef.current = state; });
 
   // Sync internal state when the external `rows` prop changes
   const prevRowsRef = useRef(rows);

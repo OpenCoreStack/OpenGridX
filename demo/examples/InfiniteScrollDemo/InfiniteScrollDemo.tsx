@@ -36,7 +36,7 @@ export default function InfiniteScrollDemo() {
             await new Promise(resolve => setTimeout(resolve, 400));
 
             const { startRow, endRow, sortModel } = params;
-            let rows = [...mockServerData];
+            const rows = [...mockServerData];
 
             if (sortModel && sortModel.length > 0) {
                 const { field, sort } = sortModel[0];
