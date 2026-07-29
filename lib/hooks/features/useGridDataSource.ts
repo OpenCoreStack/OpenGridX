@@ -108,7 +108,7 @@ export function useGridDataSource<R extends GridRowModel>(params: UseGridDataSou
       if (response.rowCount !== undefined) {
         setRowCount(response.rowCount);
       } else if (paginationMode === 'infinite') {
-
+        // rowCount is not required for infinite scroll — the grid uses appendRows
       }
 
       prevParamsRef.current = {

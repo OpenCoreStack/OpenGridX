@@ -97,6 +97,45 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     const expandCellRef = React.useRef<HTMLDivElement>(null);
     const checkboxCellRef = React.useRef<HTMLDivElement>(null);
 
+    // All hooks must come before any early returns (Rules of Hooks)
+    React.useLayoutEffect(() => {
+        if (focusedCellField === '__expand_col__' && expandCellRef.current) {
+            expandCellRef.current.focus({ preventScroll: true });
+        }
+        if (focusedCellField === '__checkbox_col__' && checkboxCellRef.current) {
+            checkboxCellRef.current.focus({ preventScroll: true });
+        }
+    }, [focusedCellField]);
+
+    const pinnedPositions = React.useMemo(() => {
+        return calculatePinnedPositions(
+            columns,
+            columnWidths,
+            pinnedColumns,
+            checkboxSelection,
+            pinCheckboxColumn,
+            hasDetailPanel,
+            pinExpandColumn,
+            rowReordering
+        );
+    }, [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]);
+
+    const isGroupRow = (row as any)._hasChildren === true;
+
+    const handleCellEditStart = React.useCallback((field: string, value: any) => {
+        if (!isGroupRow) {
+            onEditStart?.({ id: row.id, field, value });
+        }
+    }, [isGroupRow, row.id, onEditStart]);
+
+    const handleCellValueChange = React.useCallback((field: string, newValue: any) => {
+        onEditCellValueChange?.({ id: row.id, field, value: newValue });
+    }, [onEditCellValueChange, row.id]);
+
+    const handleEditStopWrapper = React.useCallback((cancel?: boolean) => {
+        onEditStop?.({ cancel });
+    }, [onEditStop]);
+
     // ── Skeleton row (shown during infinite-scroll fetch) ─────────────────────
     if ((row as any)._isSkeleton) {
         // Render shimmer placeholders — one per visible column, matching row height
@@ -117,15 +156,6 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         );
     }
 
-    React.useLayoutEffect(() => {
-        if (focusedCellField === '__expand_col__' && expandCellRef.current) {
-            expandCellRef.current.focus({ preventScroll: true });
-        }
-        if (focusedCellField === '__checkbox_col__' && checkboxCellRef.current) {
-            checkboxCellRef.current.focus({ preventScroll: true });
-        }
-    }, [focusedCellField]);
-
     const handleRowClick = (event: React.MouseEvent) => {
 
         if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell')) {
@@ -144,38 +174,9 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         onDetailPanelToggle?.(row.id);
     };
 
-    const pinnedPositions = React.useMemo(() => {
-        return calculatePinnedPositions(
-            columns,
-            columnWidths,
-            pinnedColumns,
-            checkboxSelection,
-            pinCheckboxColumn,
-            hasDetailPanel,
-            pinExpandColumn,
-            rowReordering
-        );
-    }, [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]);
-
     const rowPinnedPosition = isRowPinned(row.id, pinnedRows);
     const isRowPinnedTop = rowPinnedPosition === 'top';
     const isRowPinnedBottom = rowPinnedPosition === 'bottom';
-
-    const isGroupRow = (row as any)._hasChildren === true;
-
-    const handleCellEditStart = React.useCallback((field: string, value: any) => {
-        if (!isGroupRow) {
-            onEditStart?.({ id: row.id, field, value });
-        }
-    }, [isGroupRow, row.id, onEditStart]);
-
-    const handleCellValueChange = React.useCallback((field: string, newValue: any) => {
-        onEditCellValueChange?.({ id: row.id, field, value: newValue });
-    }, [onEditCellValueChange, row.id]);
-
-    const handleEditStopWrapper = React.useCallback((cancel?: boolean) => {
-        onEditStop?.({ cancel });
-    }, [onEditStop]);
 
     const classNames = [
         'ogx__row',

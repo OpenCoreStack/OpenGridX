@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
 import type { GridColDef, GridAggregationModel, GridPivotModel, GridFilterModel } from '../../types';
 import { PivotPanel, PivotIcon } from './PivotPanel';
@@ -87,6 +87,11 @@ function AggregationPanel({
 }) {
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<PanelPosition>({ top: 0, right: 0 });
+    const [portalContainer, setPortalContainer] = useState<Element>(document.body);
+
+    useLayoutEffect(() => {
+        setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
+    }, [anchorRef]);
 
     const computePos = useCallback((): PanelPosition => {
         if (!anchorRef.current) return { top: 0, right: 0 };
@@ -185,7 +190,7 @@ function AggregationPanel({
         </div>
     );
 
-    return ReactDOM.createPortal(panel, anchorRef.current?.closest('.ogx-theme-provider') || document.body);
+    return ReactDOM.createPortal(panel, portalContainer);
 }
 
 function ColumnsPanelWrapper({
@@ -209,6 +214,11 @@ function ColumnsPanelWrapper({
 }) {
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<PanelPosition>({ top: 0, right: 0 });
+    const [portalContainer, setPortalContainer] = useState<Element>(document.body);
+
+    useLayoutEffect(() => {
+        setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
+    }, [anchorRef]);
 
     const computePos = useCallback((): PanelPosition => {
         if (!anchorRef.current) return { top: 0, right: 0 };
@@ -262,7 +272,7 @@ function ColumnsPanelWrapper({
         </div>
     );
 
-    return ReactDOM.createPortal(panel, anchorRef.current?.closest('.ogx-theme-provider') || document.body);
+    return ReactDOM.createPortal(panel, portalContainer);
 }
 
 function FilterPanelWrapper({
@@ -284,7 +294,12 @@ function FilterPanelWrapper({
     // tearing down and re-registering on every filterModel update,
     // which could fire the close callback during the re-register window.
     const onCloseRef = useRef(onClose);
-    onCloseRef.current = onClose;
+    useLayoutEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+    const [portalContainer, setPortalContainer] = useState<Element>(document.body);
+
+    useLayoutEffect(() => {
+        setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
+    }, [anchorRef]);
 
     const computePos = useCallback((): PanelPosition => {
         if (!anchorRef.current) return { top: 0, right: 0 };
@@ -371,7 +386,7 @@ function FilterPanelWrapper({
         </div>
     );
 
-    return ReactDOM.createPortal(panel, anchorRef.current?.closest('.ogx-theme-provider') || document.body);
+    return ReactDOM.createPortal(panel, portalContainer);
 }
 
 const EMPTY_PIVOT: GridPivotModel = { rowFields: [], columnFields: [], valueFields: [] };

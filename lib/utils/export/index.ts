@@ -119,7 +119,7 @@ export function exportToExcel<R extends GridRowModel>(
     options: ExcelExportOptions = {}
 ): void {
     const {
-        fileName = 'export.xlsx',
+        fileName = 'export.xls',
         sheetName = 'Sheet1',
         includeHeaders = true,
         selectedRows

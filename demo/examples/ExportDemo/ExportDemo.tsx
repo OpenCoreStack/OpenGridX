@@ -113,30 +113,16 @@ const columns: GridColDef[] = [
     }
 ];
 
-interface ExportOptionsDialogProps {
-    open: boolean;
-    onClose: () => void;
-    onConfirm: (option: 'all' | 'current' | 'range', from?: number, to?: number) => void;
-    paginationModel: { page: number; pageSize: number };
-    totalRows: number;
-    title?: string;
+interface OptionCardProps {
+    label: string;
+    description?: string;
+    checked: boolean;
+    onClick: () => void;
+    children?: React.ReactNode;
 }
 
-function ExportOptionsDialog({ open, onClose, onConfirm, paginationModel, totalRows, title = 'Export Options' }: ExportOptionsDialogProps) {
-    if (!open) return null;
-
-    const [option, setOption] = useState<'all' | 'current' | 'range'>('all');
-    const [from, setFrom] = useState(1);
-    const [to, setTo] = useState(1);
-
-    const totalPages = Math.ceil(totalRows / paginationModel.pageSize);
-    const currentPage = paginationModel.page + 1;
-
-    const handleConfirm = () => {
-        onConfirm(option, from, to);
-    };
-
-    const OptionCard = ({ label, description, checked, onClick, children }: any) => (
+function OptionCard({ label, description, checked, onClick, children }: OptionCardProps) {
+    return (
         <div
             onClick={onClick}
             className={`option-card ${checked ? 'option-card--checked' : ''}`}
@@ -161,6 +147,30 @@ function ExportOptionsDialog({ open, onClose, onConfirm, paginationModel, totalR
             )}
         </div>
     );
+}
+
+interface ExportOptionsDialogProps {
+    open: boolean;
+    onClose: () => void;
+    onConfirm: (option: 'all' | 'current' | 'range', from?: number, to?: number) => void;
+    paginationModel: { page: number; pageSize: number };
+    totalRows: number;
+    title?: string;
+}
+
+function ExportOptionsDialog({ open, onClose, onConfirm, paginationModel, totalRows, title = 'Export Options' }: ExportOptionsDialogProps) {
+    const [option, setOption] = useState<'all' | 'current' | 'range'>('all');
+    const [from, setFrom] = useState(1);
+    const [to, setTo] = useState(1);
+
+    if (!open) return null;
+
+    const totalPages = Math.ceil(totalRows / paginationModel.pageSize);
+    const currentPage = paginationModel.page + 1;
+
+    const handleConfirm = () => {
+        onConfirm(option, from, to);
+    };
 
     return (
         <div className="export-overlay">

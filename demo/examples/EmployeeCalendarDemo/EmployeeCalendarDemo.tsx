@@ -53,7 +53,7 @@ export default function EmployeeCalendarDemo() {
         ];
 
         // Generate columns for each date
-        let currentDate = new Date(2026, 7, START_DATE); // August 2026
+        const currentDate = new Date(2026, 7, START_DATE); // August 2026
 
         for (let i = START_DATE; i <= END_DATE; i++) {
             const dateStr = `08-${i.toString().padStart(2, '0')}`;

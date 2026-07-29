@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import type { GridColDef } from '../../types';
 import type { GridPivotModel, GridPivotAggFn, GridPivotValueField } from '../../types';
@@ -31,6 +31,11 @@ export interface PivotPanelProps {
 export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: PivotPanelProps) {
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState({ top: 0, right: 0 });
+    const [portalContainer, setPortalContainer] = useState<Element>(document.body);
+
+    useLayoutEffect(() => {
+        setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
+    }, [anchorRef]);
 
     const computePos = useCallback(() => {
         if (!anchorRef.current) return { top: 0, right: 0 };
@@ -235,5 +240,5 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
         </div>
     );
 
-    return ReactDOM.createPortal(panel, anchorRef.current?.closest('.ogx-theme-provider') || document.body);
+    return ReactDOM.createPortal(panel, portalContainer);
 }

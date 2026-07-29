@@ -42,7 +42,7 @@ const mockDataSource: GridDataSource<Employee> = {
         await new Promise(resolve => setTimeout(resolve, 600));
 
         const { startRow, endRow, sortModel } = params;
-        let rows = [...allEmployees];
+        const rows = [...allEmployees];
 
         if (sortModel.length > 0) {
             const { field, sort } = sortModel[0];

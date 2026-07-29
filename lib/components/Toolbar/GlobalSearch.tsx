@@ -34,7 +34,7 @@ export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', 
     const containerRef = useRef<HTMLDivElement>(null);
     // Keep onChange always current without adding it to effect deps
     const onChangeRef = useRef(onChange);
-    onChangeRef.current = onChange;
+    useLayoutEffect(() => { onChangeRef.current = onChange; }, [onChange]);
     // Track the last value we emitted upward
     const lastEmittedRef = useRef(value);
     // Track the last incoming prop value to detect external resets

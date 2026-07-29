@@ -62,39 +62,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         isHiddenByRowSpan
     } = props;
 
-    if (colSpanInfo?.spannedByColSpan) {
-
-        return null;
-    }
-
-    if (isHiddenByRowSpan) {
-
-        return (
-            <div
-                className="ogx__cell ogx__cell--hidden"
-                style={{ width: width ?? colDef.width ?? 100 }}
-                role="presentation"
-                data-field={colDef.field}
-                data-colindex={colIndex}
-            />
-        );
-    }
-
-    const handleClick = (e: React.MouseEvent) => {
-        if (onCellClick) {
-            e.stopPropagation();
-            onCellClick({
-                row,
-                field: colDef.field,
-                value,
-                colDef,
-                rowIndex,
-                colIndex
-            });
-        }
-        onClick?.(e);
-    };
-
+    // All hooks must come before any early returns (Rules of Hooks)
     const handleValueChange = React.useCallback((newValue: any) => {
         if (onCellValueChange) {
             onCellValueChange(colDef.field, newValue);
@@ -102,17 +70,6 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
             onValueChange?.(newValue);
         }
     }, [onCellValueChange, onValueChange, colDef.field]);
-
-    const handleDoubleClick = (e: React.MouseEvent) => {
-        if (isEditable && (onEditStart || onCellEditStart)) {
-            e.stopPropagation();
-            if (onCellEditStart) {
-                onCellEditStart(colDef.field, value);
-            } else {
-                onEditStart?.();
-            }
-        }
-    };
 
     const formattedValue = React.useMemo(() => {
         if (colDef.valueFormatter) {
@@ -130,7 +87,6 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         return String(value);
     }, [value, row, colDef]);
 
-    // Render custom cell content OR Edit Content
     const cellContent = React.useMemo(() => {
         if (isEditing && (onCellValueChange || onValueChange) && onEditStop) {
             if (colDef.renderEditCell) {
@@ -172,8 +128,6 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         return formattedValue;
     }, [value, row, colDef, rowIndex, colIndex, formattedValue, isEditing, handleValueChange, onEditStop, onCellValueChange, onValueChange]);
 
-    const isPinned = pinnedPosition !== null && pinnedPosition !== undefined;
-
     const resolvedCellClassName = React.useMemo(() => {
         if (!colDef.cellClassName) return '';
         if (typeof colDef.cellClassName === 'function') {
@@ -181,6 +135,58 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         }
         return colDef.cellClassName;
     }, [colDef, value, row, rowIndex, colIndex]);
+
+    const cellRef = React.useRef<HTMLDivElement>(null);
+
+    React.useLayoutEffect(() => {
+        if (isFocused && cellRef.current) {
+            cellRef.current.focus({ preventScroll: true });
+        }
+    }, [isFocused]);
+
+    if (colSpanInfo?.spannedByColSpan) {
+        return null;
+    }
+
+    if (isHiddenByRowSpan) {
+        return (
+            <div
+                className="ogx__cell ogx__cell--hidden"
+                style={{ width: width ?? colDef.width ?? 100 }}
+                role="presentation"
+                data-field={colDef.field}
+                data-colindex={colIndex}
+            />
+        );
+    }
+
+    const handleClick = (e: React.MouseEvent) => {
+        if (onCellClick) {
+            e.stopPropagation();
+            onCellClick({
+                row,
+                field: colDef.field,
+                value,
+                colDef,
+                rowIndex,
+                colIndex
+            });
+        }
+        onClick?.(e);
+    };
+
+    const handleDoubleClick = (e: React.MouseEvent) => {
+        if (isEditable && (onEditStart || onCellEditStart)) {
+            e.stopPropagation();
+            if (onCellEditStart) {
+                onCellEditStart(colDef.field, value);
+            } else {
+                onEditStart?.();
+            }
+        }
+    };
+
+    const isPinned = pinnedPosition !== null && pinnedPosition !== undefined;
 
     const classNames = [
         'ogx__cell',
@@ -229,14 +235,6 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
             style.right = pinnedOffset;
         }
     }
-
-    const cellRef = React.useRef<HTMLDivElement>(null);
-
-    React.useLayoutEffect(() => {
-        if (isFocused && cellRef.current) {
-            cellRef.current.focus({ preventScroll: true });
-        }
-    }, [isFocused]);
 
     return (
         <div

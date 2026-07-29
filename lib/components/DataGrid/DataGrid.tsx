@@ -23,7 +23,6 @@ import { getPinnedRowGroups, isRowPinned, isColumnPinned } from '../../utils/pin
 import { sortRows } from '../../utils/sorting';
 import { filterRows } from '../../utils/filtering';
 import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColumnOrderChangeParams, GridColDef, GridRenderCellParams, GridRowParams, GridCellParams, GridPaginationModel, GridDataSource, GridAggregationResult, GridAggregationModel, GridPivotModel, GridColumnPinning, GridFilterModel } from '../../types';
-import '../../styles/opengridx.css';
 
 export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridProps<R>) {
     const {
@@ -816,7 +815,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         const fixedWidthCols: Array<{ col: GridColDef<R>, width: number }> = [];
         const percentageCols: Array<{ col: GridColDef<R>, percentage: number }> = [];
         const flexCols: Array<{ col: GridColDef<R>, flex: number }> = [];
-        let totalFlexUnits = 0;
 
         unpinnedCols.forEach(col => {
             // If the user has manually resized this column, columnWidths has an explicit
@@ -828,7 +826,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
             if (!hasManualWidth && col.flex && col.flex > 0) {
                 flexCols.push({ col, flex: col.flex });
-                totalFlexUnits += col.flex;
                 return;
             }
 
@@ -840,7 +837,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
                 const implicitFlex = 1;
                 flexCols.push({ col, flex: implicitFlex });
-                totalFlexUnits += implicitFlex;
             }
         });
 

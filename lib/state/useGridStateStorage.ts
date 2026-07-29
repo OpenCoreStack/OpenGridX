@@ -47,7 +47,7 @@ function writeToStorage(
       : state;
     storage!.setItem(key, JSON.stringify(toWrite));
   } catch {
-
+    // swallow localStorage write errors (private browsing, quota exceeded)
   }
 }
 
