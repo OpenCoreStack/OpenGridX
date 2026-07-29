@@ -5,6 +5,22 @@
 
 ---
 
+## [0.1.9] — July 29, 2026 🛠️✨
+
+### Added
+- **`GridApi.scrollToIndexes`**: New imperative API method `apiRef.current.scrollToIndexes({ rowIndex?, colIndex? })` scrolls the viewport to bring any row and/or column into view. Column index addresses all data columns (left-pinned + unpinned + right-pinned); pinned columns are always visible so they are silently skipped. Row scrolling accounts for variable-height rows (expanded detail panels, grouped rows).
+- **`useGridKeyboardNavigation` hook**: Extracted ~370 lines of keyboard navigation state and handlers from `DataGrid.tsx` into a standalone `useGridKeyboardNavigation` hook. Fixes a previously dead code path where pressing Enter/Space on a header cell never triggered column sort (the edit handler ran first). The hook is part of the public `lib/` source.
+- **`useLayout` hook**: Extracted all layout-computation logic from `DataGrid.tsx` into a standalone `useLayout` hook, reducing the main component by ~350 lines.
+- **Test suite**: Added Vitest + `@testing-library/react` infrastructure with 65 unit tests covering `filterRows`, `sortRows`, `useAggregation`, and a DataGrid smoke test.
+- **ScrollToIndexes demo**: New `/scroll-to` demo page showcasing the `scrollToIndexes` API with live row/column index controls.
+
+### Fixed
+- **Excel export file format error**: `exportToExcel` generates an HTML-table file with `application/vnd.ms-excel` MIME type (the legacy XLS trick). All demo call-sites were passing explicit `.xlsx` filenames, causing Excel 2007+ to reject the download with "file format or file extension is not valid". Changed all `exportToExcel` usages to `.xls`. `exportToExcelAdvanced` (ExcelJS, real OOXML) is unaffected and correctly keeps `.xlsx`.
+- **Keyboard sort on column headers**: Enter/Space on a focused header cell now correctly triggers sort. Previously the generic Enter-edit handler ran first, making header sort unreachable via keyboard.
+- **ESLint errors**: Resolved all lint errors across the library — hooks called after conditional early returns (`Cell.tsx`, `Row.tsx`), ref mutations in the render phase moved to `useLayoutEffect`, and portal targets reading `ref.current` during render moved to `useState + useLayoutEffect`.
+
+---
+
 ## [0.1.8] — March 18, 2026 🐛✨
 
 ### Fixed

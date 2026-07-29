@@ -9,6 +9,7 @@ export default defineConfig({
         react(),
         dts({
             include: ['lib'],
+            exclude: ['**/*.test.ts', '**/*.test.tsx'],
             outDir: 'dist',
             rollupTypes: true
         })
