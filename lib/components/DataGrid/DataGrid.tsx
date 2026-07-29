@@ -764,8 +764,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             }
 
             if (colIndex !== undefined && colIndex >= 0) {
-                const colLocalLeft = colIndex > 0 ? layout.unpinnedAccWidths[colIndex - 1] : 0;
-                const colLocalRight = layout.unpinnedAccWidths[colIndex] ?? colLocalLeft;
+                // colIndex is an index into all data columns: leftPinned + unpinned + rightPinned
+                const allDataCols = [...layout.leftPinnedCols, ...layout.unpinnedColsWithWidth, ...layout.rightPinnedCols];
+                const targetCol = allDataCols[colIndex];
+                if (!targetCol) return;
+                const unpinnedIndex = layout.unpinnedColsWithWidth.findIndex(c => c.field === targetCol.field);
+                if (unpinnedIndex === -1) return; // pinned column — always visible, no scroll needed
+                const colLocalLeft = unpinnedIndex > 0 ? layout.unpinnedAccWidths[unpinnedIndex - 1] : 0;
+                const colLocalRight = layout.unpinnedAccWidths[unpinnedIndex] ?? colLocalLeft;
                 const colRight = layout.leftWidth + colLocalRight;
                 const { scrollLeft, clientWidth } = el;
                 if (colLocalLeft < scrollLeft) {

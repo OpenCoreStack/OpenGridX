@@ -106,6 +106,20 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         const { id, field } = focusedCell;
         const isEditing = Boolean(editingHandlers.editingCell);
 
+        if (id === 'HEADER' && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            const col = navigationColumns.find(c => c.field === field);
+            if (col && col.sortable !== false) {
+                const currentSort = sortModel.find(item => item.field === field);
+                let newDirection: GridSortDirection = 'asc';
+                if (currentSort) {
+                    newDirection = currentSort.sort === 'asc' ? 'desc' : null;
+                }
+                handleSort(field, newDirection);
+            }
+            return;
+        }
+
         if (event.key === 'Enter') {
             event.preventDefault();
             if (isEditing) {
@@ -135,20 +149,6 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
                     return;
                 }
             }
-        }
-
-        if (id === 'HEADER' && (event.key === 'Enter' || event.key === ' ')) {
-            event.preventDefault();
-            const col = navigationColumns.find(c => c.field === field);
-            if (col && col.sortable !== false) {
-                const currentSort = sortModel.find(item => item.field === field);
-                let newDirection: GridSortDirection = 'asc';
-                if (currentSort) {
-                    newDirection = currentSort.sort === 'asc' ? 'desc' : null;
-                }
-                handleSort(field, newDirection);
-            }
-            return;
         }
 
         if (event.key === 'Escape') {
