@@ -43,7 +43,7 @@ function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarP
         const aggModel = getAggModel();
 
         if (format === 'csv') exportToCsv(currentRows, currentCols, { fileName: 'export.csv', aggregationResult: aggResult, aggregationModel: aggModel });
-        else if (format === 'excel') exportToExcel(currentRows, currentCols, { fileName: 'export.xlsx', sheetName: 'Data', aggregationResult: aggResult, aggregationModel: aggModel });
+        else if (format === 'excel') exportToExcel(currentRows, currentCols, { fileName: 'export.xls', sheetName: 'Data', aggregationResult: aggResult, aggregationModel: aggModel });
         else if (format === 'json') exportToJson(currentRows, currentCols, { fileName: 'export.json', pretty: true, aggregationResult: aggResult, aggregationModel: aggModel });
         else if (format === 'print') performPrint();
         setShowMenu(false);

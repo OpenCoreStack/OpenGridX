@@ -283,7 +283,7 @@ function ExportToolbar({ rows, columns, selectedRows, paginationModel, options, 
         if (selectedRows && selectedRows.length > 0) {
             const selectedData = rows.filter(row => selectedRows.includes(row.id));
             if (format === 'csv') exportToCsv(selectedData, columns, { fileName: 'employees.csv', aggregationResult: aggResult, aggregationModel: aggModel });
-            else if (format === 'excel') exportToExcel(selectedData, columns, { fileName: 'employees.xlsx', sheetName: 'Employees', aggregationResult: aggResult, aggregationModel: aggModel });
+            else if (format === 'excel') exportToExcel(selectedData, columns, { fileName: 'employees.xls', sheetName: 'Employees', aggregationResult: aggResult, aggregationModel: aggModel });
             else if (format === 'json') exportToJson(selectedData, columns, { fileName: 'employees.json', pretty: true, aggregationResult: aggResult, aggregationModel: aggModel });
             else if (format === 'print') performPrint(rows, ' - Selected');
         } else {
@@ -316,7 +316,7 @@ function ExportToolbar({ rows, columns, selectedRows, paginationModel, options, 
         const aggModel = getAggModel();
 
         if (format === 'csv') exportToCsv(rowsToExport, columns, { fileName: `employees${suffix}.csv`, aggregationResult: aggResult, aggregationModel: aggModel });
-        else if (format === 'excel') exportToExcel(rowsToExport, columns, { fileName: `employees${suffix}.xlsx`, sheetName: 'Employees', aggregationResult: aggResult, aggregationModel: aggModel });
+        else if (format === 'excel') exportToExcel(rowsToExport, columns, { fileName: `employees${suffix}.xls`, sheetName: 'Employees', aggregationResult: aggResult, aggregationModel: aggModel });
         else if (format === 'json') exportToJson(rowsToExport, columns, { fileName: `employees${suffix}.json`, pretty: true, aggregationResult: aggResult, aggregationModel: aggModel });
         else if (format === 'print') performPrint(rowsToExport, suffix);
     };
@@ -451,7 +451,7 @@ export default function ExportDemo() {
         if (format === 'csv') {
             exportToCsv(selectedData, columns, { fileName: 'selected-employees.csv', ...options });
         } else if (format === 'excel') {
-            exportToExcel(selectedData, columns, { fileName: 'selected-employees.xlsx', sheetName: 'Selected', ...options });
+            exportToExcel(selectedData, columns, { fileName: 'selected-employees.xls', sheetName: 'Selected', ...options });
         } else if (format === 'json') {
             exportToJson(selectedData, columns, { fileName: 'selected-employees.json', pretty: true, ...options });
         } else if (format === 'print') {
