@@ -267,18 +267,27 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         apiRef,
         setRows,
         setColumns,
-        setScroll,
         setDimensions,
         setDataSourceLoading,
         setDataSourceError,
         setRowCount
     } = gridData;
 
+    const scrollPosRef = useRef({ scrollTop: 0, scrollLeft: 0 });
+    const scrollRafRef = useRef<number | null>(null);
+    const [scrollTick, setScrollTick] = useState(0);
+
     useEffect(() => {
         if (propApiRef) {
             propApiRef.current = apiRef.current;
         }
     }, [propApiRef, apiRef]);
+
+    useEffect(() => {
+        return () => {
+            if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
+        };
+    }, []);
 
     const { copySelectedRows } = useGridClipboard({
         selectedRowIds,
@@ -666,9 +675,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     }, [sortedUnpinnedRows, pagination, effectivePaginationModel.page, effectivePaginationModel.pageSize, paginationMode, dataSource]);
 
     useEffect(() => {
-        gridData.apiRef.current.getVisibleRows = () => sortedUnpinnedRows;
+        gridData.apiRef.current.getVisibleRows = () => pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
         gridData.apiRef.current.getVisibleColumns = () => effectiveColumns as any[];
-    }, [sortedUnpinnedRows, effectiveColumns, gridData.apiRef]);
+    }, [sortedUnpinnedRows, paginatedUnpinnedRows, pagination, effectiveColumns, gridData.apiRef]);
 
     const rowReorderHandlers = useRowReorder({
         rows: pagination ? paginatedUnpinnedRows : sortedUnpinnedRows,
@@ -802,8 +811,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             unpinnedRowsLength
         } = layout;
 
-        const scrollLeft = state.virtualization.scrollLeft;
-        const scrollTop = state.virtualization.scrollTop;
+        const scrollLeft = scrollPosRef.current.scrollLeft;
+        const scrollTop = scrollPosRef.current.scrollTop;
         const viewportWidth = state.dimensions.viewportWidth || 1000;
         const viewportHeight = autoHeight ? (pinnedTopHeight + unpinnedRowsHeight + pinnedBottomHeight + 50) : (state.dimensions.viewportHeight || 600);
 
@@ -900,8 +909,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         };
     }, [
         layout,
-        state.virtualization.scrollTop,
-        state.virtualization.scrollLeft,
+        scrollTick,
         state.dimensions.viewportHeight,
         state.dimensions.viewportWidth,
         autoHeight
@@ -909,14 +917,19 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
         const target = event.currentTarget;
-        setScroll(target.scrollTop, target.scrollLeft);
+        scrollPosRef.current = { scrollTop: target.scrollTop, scrollLeft: target.scrollLeft };
+
+        if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = requestAnimationFrame(() => {
+            scrollRafRef.current = null;
+            setScrollTick(t => t + 1);
+        });
 
         if (onRowsScrollEnd) {
             const { scrollTop, scrollHeight, clientHeight } = target;
             const scrollThreshold = 100;
 
             if (scrollHeight - scrollTop - clientHeight < scrollThreshold) {
-
                 onRowsScrollEnd({
                     visibleTop: scrollTop,
                     visibleBottom: scrollTop + clientHeight,
@@ -924,7 +937,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 });
             }
         }
-    }, [setScroll, onRowsScrollEnd]);
+    }, [onRowsScrollEnd]);
 
     useEffect(() => {
         if (!viewportRef.current) return;
@@ -1422,7 +1435,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             <div
                                 className="ogx__rows"
                                 style={{
-                                    transform: `translateY(${virtualization.renderContext.firstRowIndex * rowHeight}px)`
+                                    transform: `translateY(${virtualization.offsetTop}px)`
                                 }}
                                 role="rowgroup"
                             >
@@ -1470,7 +1483,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                         .map(({ row, rowIndex: actualIndex }) => {
                                             return (
                                                 <Row
-                                                    key={`${row.id}-${virtualization.totalWidth}`}
+                                                    key={row.id}
                                                     row={row}
                                                     columns={virtualization.virtualColumns}
                                                     rowIndex={actualIndex}

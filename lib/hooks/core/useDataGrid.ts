@@ -1,7 +1,7 @@
 
 import { useReducer, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import type {
-  GridState,
+  GridInternalState as GridState,
   GridRowModel,
   GridColDef,
   GridRowId,
@@ -19,7 +19,6 @@ type GridAction =
   | { type: 'SET_FILTER_MODEL'; payload: GridFilterModel }
   | { type: 'SET_PAGINATION_MODEL'; payload: GridPaginationModel }
   | { type: 'SET_SELECTION'; payload: Set<GridRowId> }
-  | { type: 'SET_SCROLL'; payload: { scrollTop: number; scrollLeft: number } }
   | { type: 'SET_DIMENSIONS'; payload: { viewportWidth: number; viewportHeight: number } }
   | { type: 'SET_DATASOURCE_LOADING'; payload: boolean }
   | { type: 'SET_DATASOURCE_ERROR'; payload: any }
@@ -78,8 +77,6 @@ function createInitialState(rows: GridRowModel[], columns: GridColDef[], columnV
         firstColumnIndex: 0,
         lastColumnIndex: 0
       },
-      scrollTop: 0,
-      scrollLeft: 0
     },
     dimensions: {
       rowHeight: 52,
@@ -137,7 +134,7 @@ function gridReducer(state: GridState, action: GridAction): GridState {
           all: action.payload,
           lookup: columnLookup,
           orderedFields,
-          columnVisibilityModel: {}
+          columnVisibilityModel: state.columns.columnVisibilityModel
         }
       };
     }
@@ -167,16 +164,6 @@ function gridReducer(state: GridState, action: GridAction): GridState {
       return {
         ...state,
         selection: { selectedRows: action.payload }
-      };
-
-    case 'SET_SCROLL':
-      return {
-        ...state,
-        virtualization: {
-          ...state.virtualization,
-          scrollTop: action.payload.scrollTop,
-          scrollLeft: action.payload.scrollLeft
-        }
       };
 
     case 'SET_DIMENSIONS':
@@ -294,10 +281,6 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
     dispatch({ type: 'SET_SELECTION', payload: selectedRows });
   }, []);
 
-  const setScroll = useCallback((scrollTop: number, scrollLeft: number) => {
-    dispatch({ type: 'SET_SCROLL', payload: { scrollTop, scrollLeft } });
-  }, []);
-
   const setDimensions = useCallback((viewportWidth: number, viewportHeight: number) => {
     dispatch({ type: 'SET_DIMENSIONS', payload: { viewportWidth, viewportHeight } });
   }, []);
@@ -383,7 +366,6 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
     setFilterModel,
     setPaginationModel,
     setSelection,
-    setScroll,
     setDimensions,
     setDataSourceLoading,
     setDataSourceError,

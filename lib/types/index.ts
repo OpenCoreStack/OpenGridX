@@ -363,8 +363,6 @@ export interface GridPinnedRows<R extends GridRowModel = GridRowModel> {
 
 export interface GridVirtualizationState {
   renderContext: GridRenderContext;
-  scrollTop: number;
-  scrollLeft: number;
 }
 
 export type GridRowGroupingModel = string[]; 
@@ -400,7 +398,7 @@ export interface GridRenderContext {
   lastColumnIndex: number;
 }
 
-export interface GridState {
+export interface GridInternalState {
   rows: {
     idRowsLookup: Map<GridRowId, GridRowModel>;
     allRows: GridRowId[];
