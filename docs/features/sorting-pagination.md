@@ -52,7 +52,9 @@ When using `paginationMode="server"`, you must provide the `rowCount` and handle
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `pagination` | `boolean` | `false` | Enable/disable the pagination footer. |
-| `paginationMode` | `'client' \| 'server'` | `'client'` | Location of the pagination logic. |
+| `paginationMode` | `'client' \| 'server' \| 'infinite'` | `'client'` | Location of the pagination logic. |
+| `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). |
+| `onPaginationModelChange` | `(model: GridPaginationModel) => void` | — | Fired when page or page size changes. |
 | `pageSizeOptions` | `number[]` | `[10, 25, 50]` | Options for the rows-per-page selector. |
 
 ---

@@ -63,5 +63,4 @@ The following features support state persistence:
 - **Filtering**: `filterModel`
 - **Pagination**: `paginationModel`
 - **Columns**: `columnVisibilityModel`, `columnOrder`, `pinnedColumns`, `columnWidths`
-- **Selection**: `rowSelectionModel`
-- **Grouping**: `rowGroupingModel`
+- **Density**: `density`

@@ -47,7 +47,8 @@ const [selection, setSelection] = useState<GridRowId[]>([]);
 | `disableRowSelectionOnClick` | `boolean` | `false` | If true, clicking a cell won't select the row. |
 | `disableMultipleRowSelection` | `boolean` | `false` | Restricts selection to a single row. |
 | `rowSelectionModel` | `GridRowId[]` | `[]` | Controlled array of selected IDs. |
-| `isRowSelectable` | `(params) => boolean` | `undefined` | Predicate to disable selection for specific rows. |
+| `onRowSelectionModelChange` | `(model: GridRowSelectionModel) => void` | — | Fired when the selection changes. |
+| `pinCheckboxColumn` | `boolean` | `false` | Keep the checkbox column visible during horizontal scroll. |
 
 ---
 

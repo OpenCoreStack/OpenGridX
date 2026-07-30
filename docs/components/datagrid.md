@@ -29,8 +29,9 @@ function MyGrid() {
 | `loading` | `boolean` | `false` | Displays a loading skeleton/shimmer. |
 | `checkboxSelection` | `boolean` | `false` | Enable row checkboxes. |
 | `pagination` | `boolean` | `false` | Enable/Disable bottom pagination bar. |
-| `paginationModel` | `GridPaginationModel` | `{page:0, pageSize:25}` | Controlled pagination state. |
-| `initialState` | `GridState` | `undefined` | Initial configuration (sorting, columns, etc). |
+| `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). |
+| `pageSizeOptions` | `number[]` | `[10, 25, 50]` | Available page size options. |
+| `initialState` | `GridInitialState` | `undefined` | Initial configuration (sorting, columns, etc). |
 
 ## 🖱️ Interaction & Events
 
@@ -38,8 +39,9 @@ function MyGrid() {
 | :--- | :--- | :--- |
 | `onRowClick` | `(params) => void` | Fired when clicking a row body. |
 | `onCellClick` | `(params) => void` | Fired when clicking a specific cell. |
+| `onPaginationModelChange` | `(model: GridPaginationModel) => void` | Fired when page or page size changes. |
 | `onStateChange` | `(state) => void` | Fired on any internal state update. |
-| `processRowUpdate` | `(new, old) => R` | Fired after a cell edit is committed. |
+| `processRowUpdate` | `(new, old) => R \| Promise<R>` | Fired after a cell edit is committed. |
 
 ## 📦 Slots
 

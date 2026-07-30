@@ -22,11 +22,15 @@ The main component for displaying and interacting with data.
 | `checkboxSelection` | `boolean` | `false` | Enable row selection via checkboxes. |
 | `pagination` | `boolean` | `false` | Enable the bottom pagination bar. |
 | `paginationMode` | `'client' \| 'server' \| 'infinite'` | `'client'` | How to handle paging. |
-| `paginationModel` | `GridPaginationModel` | `{page:0, pageSize:25}` | Current page and page size. |
+| `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). |
+| `onPaginationModelChange` | `(model: GridPaginationModel) => void` | — | Fired when page or page size changes. |
+| `pageSizeOptions` | `number[]` | `[10, 25, 50]` | Available page size options. |
 | `rowCount` | `number` | — | Total rows (required for server-side paging). |
+| `height` | `number \| string` | `undefined` | Total height of the grid container. |
+| `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density. |
 | `initialState` | `GridInitialState` | `undefined` | Starting state for sorting, filters, etc. |
 | `slots` | `GridSlots` | `{}` | Custom component overrides. |
-| `slotProps` | `Record<string, any>` | `{}` | Props passed to custom slots. |
+| `slotProps` | `Record<string, unknown>` | `{}` | Props passed to custom slots. |
 | `filterModel` | `GridFilterModel` | `undefined` | Active filters. |
 | `sortModel` | `GridSortItem[]` | `undefined` | Active sorting. |
 | `onRowClick` | `(params: GridRowParams) => void` | — | Fired when a row is clicked. |
@@ -54,8 +58,14 @@ Access these methods via the `apiRef` prop.
 | `sortColumn(field, dir)` | `void` | Programmatically sort a column. |
 | `getSortModel()` | `GridSortItem[]` | Get active sorting state. |
 | `setFilterModel(model)` | `void` | Programmatically set filters. |
+| `getFilterModel()` | `GridFilterModel` | Get the current filter model. |
 | `setPage(page)` | `void` | Change current page (0-indexed). |
+| `setPageSize(pageSize)` | `void` | Change the current page size. |
 | `scrollToIndexes(params)` | `void` | Scroll to specific row/column index. |
+| `getAllColumns()` | `GridColDef[]` | Get all defined columns. |
+| `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results. |
+| `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
+| `copySelectedRows()` | `Promise<void>` | Copy selected rows to clipboard as TSV. |
 
 ---
 
@@ -71,7 +81,7 @@ Used in Tree Data and Row Grouping hierarchies.
 | `depth` | `number` | Nesting level (0 for root). |
 | `isExpanded` | `boolean` | Current expansion state. |
 | `children` | `GridRowId[]` | IDs of child nodes. |
-| `groupingValue` | `any` | The value this node is grouping by. |
+| `groupingValue` | `unknown` | The value this node is grouping by. |
 | `aggregatedValues` | `object` | Sums/Avgs computed for this group. |
 
 ---
@@ -85,13 +95,13 @@ Defines the behavior and appearance of a single column.
 | :--- | :--- | :--- | :--- |
 | `field` | `string` | — | Unique identifier (matches row property). |
 | `headerName` | `string` | — | Text displayed in the header. |
-| `width` | `number` | `100` | Width in pixels. |
-| `type` | `'string' \| 'number' \| 'date' \| 'dateTime' \| 'boolean'` | `'string'` | Data type for formatting and filtering. |
+| `width` | `number \| string` | `100` | Width in pixels or percentage string. |
+| `type` | `'string' \| 'number' \| 'date' \| 'boolean' \| 'singleSelect' \| 'image'` | `'string'` | Data type for formatting and filtering. |
 | `sortable` | `boolean` | `true` | Enable sorting for this column. |
 | `filterable` | `boolean` | `true` | Enable filtering for this column. |
 | `resizable` | `boolean` | `true` | Allow user to drag resize. |
 | `hideable` | `boolean` | `true` | Allow user to hide the column. |
-| `pinned` | `'left' \| 'right' \| null` | `null` | Sticky positioning. |
+| `pinnable` | `boolean` | `true` | Allow column to be pinned via the UI. |
 | `exportable` | `boolean` | `true` | If `false`, column is excluded from all exports. |
 | `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format value for display. |
 | `valueGetter` | `(params: GridValueGetterParams) => any` | — | Compute value from row data. |
@@ -153,7 +163,7 @@ interface GridSortItem {
 ### `GridFilterModel`
 ```typescript
 interface GridFilterModel {
-  items: GridFilterItem[];
+  items?: (GridFilterItem | GridFilterGroup)[];
   logicOperator?: 'and' | 'or';
   quickFilterValues?: string[];
 }

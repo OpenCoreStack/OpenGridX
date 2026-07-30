@@ -82,18 +82,22 @@ const [colOrder, setColOrder] = useState(['id', 'name', 'status']);
 <DataGrid
   columnOrder={colOrder}
   onColumnOrderChange={(params) => {
-    // params.newOrder is the updated array of field strings
-    setColOrder(params.newOrder);
+    // params: { column: GridColDef, oldIndex: number, targetIndex: number }
+    const newOrder = [...colOrder];
+    const [moved] = newOrder.splice(params.oldIndex, 1);
+    newOrder.splice(params.targetIndex, 0, moved);
+    setColOrder(newOrder);
   }}
 />
 ```
 
 ### Non-Reorderable Columns
-To prevent a specific column from being moved, set `reorderable: false` in its definition.
+To prevent all columns from being reordered, use `disableColumnReorder` on the grid. For individual column control, pin the column using `pinnedColumns` at the grid level — pinned columns do not participate in drag-reorder.
 
 ```tsx
-const columns = [
-  { field: 'id', reorderable: false }, // Stay pinned at start
-  { field: 'name' }
-];
+// Disable reordering globally
+<DataGrid disableColumnReorder />
+
+// Keep a column fixed by pinning it
+<DataGrid pinnedColumns={{ left: ['id'] }} />
 ```

@@ -49,7 +49,7 @@ The `GridFilterModel` describes the current state of filters.
 
 ```typescript
 interface GridFilterModel {
-  items: GridFilterItem[];    // Active filter items
+  items?: (GridFilterItem | GridFilterGroup)[];  // Active filter items or groups
   logicOperator?: 'and' | 'or'; // How to combine items
   quickFilterValues?: string[]; // Values for the global search
 }
@@ -57,27 +57,29 @@ interface GridFilterModel {
 interface GridFilterItem {
   field: string;              // Column to filter
   operator: GridFilterOperator;
-  value?: any;                // Comparison value
+  value?: unknown;            // Comparison value
 }
 ```
 
 ### Supported Operators
 | Type | Operators |
 | :--- | :--- |
-| **String** | `contains`, `equals`, `startsWith`, `endsWith`, `isEmpty`, `isNotEmpty` |
-| **Number** | `=`, `!=`, `>`, `>=`, `<`, `<=`, `isEmpty`, `isNotEmpty` |
-| **Date** | `is`, `not`, `after`, `before`, `isEmpty`, `isNotEmpty` |
+| **String** | `contains`, `equals`, `startsWith`, `endsWith`, `isEmpty`, `isNotEmpty`, `isAnyOf` |
+| **Number** | `equals`, `!=`, `>`, `>=`, `<`, `<=`, `isEmpty`, `isNotEmpty` |
+| **Date** | `is`, `not`, `isEmpty`, `isNotEmpty` |
 | **Boolean** | `is` |
 
 ---
 
-## 🎨 Customizing Filter Components
-You can replace the default filter panel via the `slots` API:
+## 🎨 Customizing the Toolbar
+The filter panel is accessible through the built-in `GridToolbar`. To use your own toolbar that includes a filter entry point, pass a custom component to the `toolbar` slot:
 
 ```tsx
 <DataGrid
   slots={{
-    filterPanel: MyCustomFilterPanel
+    toolbar: MyCustomToolbar
   }}
 />
 ```
+
+The `FilterPanel` component is also exported from `@opencorestack/opengridx` if you need to embed it inside a custom layout.
