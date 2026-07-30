@@ -5,6 +5,14 @@
 
 ---
 
+## [1.0.1] — July 30, 2026 📚
+
+### Fixed
+- **Bundled documentation accuracy**: All doc files shipped inside the npm package (`docs/`) have been corrected to match the actual v1.0.0 API. Key fixes: removed non-existent `pageSize` standalone prop (correct API is `paginationModel` + `pageSizeOptions`), fixed `height` type to `number | string`, corrected `onColumnOrderChange` params shape, removed non-existent `isRowSelectable` and `reorderable` props, fixed `GridFilterModel.items` type, added missing `GridApi` methods (`getFilterModel`, `getAllColumns`, `setPageSize`, `getAggregationResult`, `getAggregationModel`, `copySelectedRows`), and corrected `GridInitialState` persisted state fields. AI agents (Cursor, Copilot, Windsurf) reading bundled docs will now generate accurate code.
+- **README API reference**: Same prop and type corrections applied — complete `apiRef` method list, new prop tables for Events, Columns, Pinning, Inline Editing, Row Reordering, and updated comparison table.
+
+---
+
 ## [1.0.0] — July 30, 2026 🚀
 
 First stable public release. All 32 demo pages ship with a live source viewer. npm publish workflow is live.
