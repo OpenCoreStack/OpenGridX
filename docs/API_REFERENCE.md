@@ -39,6 +39,129 @@ The main component for displaying and interacting with data.
 | `processRowUpdate` | `(new, old) => R \| Promise<R>` | — | Fired after a cell edit is committed. |
 | `dataSource` | `GridDataSource` | — | Remote data provider interface. |
 
+#### Sorting, Filtering & Pagination
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `sortingMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles sorting. The grid calls `onSortModelChange` but does not re-sort rows locally. |
+| `filterMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles filtering. The grid calls `onFilterModelChange` but does not re-filter rows locally. |
+| `onSortModelChange` | `(model: GridSortItem[]) => void` | — | Fired when the active sort model changes. |
+| `onFilterModelChange` | `(model: GridFilterModel) => void` | — | Fired when the active filter model changes. |
+
+#### Row Selection
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `rowSelectionModel` | `GridRowSelectionModel` | `[]` | Controlled selection state — array of selected row IDs. |
+| `onRowSelectionModelChange` | `(model: GridRowSelectionModel) => void` | — | Fired when the selection changes. |
+| `disableRowSelectionOnClick` | `boolean` | `false` | When `true`, clicking a row does not toggle its selection. |
+| `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time. |
+
+#### Column Visibility
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `columnVisibilityModel` | `GridColumnVisibilityModel` | — | Map of `field → boolean` controlling which columns are visible (`false` = hidden). |
+| `onColumnVisibilityModelChange` | `(model: GridColumnVisibilityModel) => void` | — | Fired when the visibility of any column changes. |
+
+#### Column & Row Reordering
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `disableColumnReorder` | `boolean` | `false` | Disables drag-and-drop column reordering. |
+| `columnOrder` | `GridColumnOrder` | — | Controlled ordered array of column field names. |
+| `onColumnOrderChange` | `(params: GridColumnOrderChangeParams) => void` | — | Fired after a column is dragged to a new position. |
+| `rowReordering` | `boolean` | `false` | Enables drag-and-drop row reordering. |
+| `onRowOrderChange` | `(params: GridRowOrderChangeParams) => void` | — | Fired after a row is dragged to a new position. |
+
+#### Pinning
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `pinnedColumns` | `GridColumnPinning` | — | Columns pinned to the left or right viewport edges. See [Column & Row Pinning](#-column--row-pinning). |
+| `onPinnedColumnsChange` | `(model: GridColumnPinning) => void` | — | Fired when column pinning changes. |
+| `pinnedRows` | `GridRowPinning` | — | Row IDs pinned to the top or bottom of the viewport. |
+| `onPinnedRowsChange` | `(model: GridRowPinning) => void` | — | Fired when row pinning changes. |
+| `pinCheckboxColumn` | `boolean` | `false` | Keeps the checkbox column visible during horizontal scrolling. |
+| `pinExpandColumn` | `boolean` | `false` | Keeps the Master-Detail expansion column visible during horizontal scrolling. |
+
+#### Inline Editing
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `isCellEditable` | `(params: GridCellParams) => boolean` | — | Per-cell predicate. Return `false` to make a specific cell read-only even when the column has `editable: true`. |
+| `onProcessRowUpdateError` | `(error: unknown) => void` | — | Fired if `processRowUpdate` throws or returns a rejected Promise. Use to display validation errors or restore the previous row value. |
+
+#### Master-Detail
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `getDetailPanelContent` | `(params: GridDetailPanelParams) => ReactNode` | — | Returns the JSX content rendered inside the expandable detail panel. |
+| `getDetailPanelHeight` | `(params: GridDetailPanelParams) => number \| 'auto'` | `'auto'` | Controls the panel height in pixels, or `'auto'` to fit content. |
+| `detailPanelExpandedRowIds` | `Set<GridRowId>` | — | Controlled set of currently-expanded detail panel row IDs. |
+| `onDetailPanelExpandedRowIdsChange` | `(ids: Set<GridRowId>) => void` | — | Fired when detail panels expand or collapse. |
+
+#### Tree Data
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `treeData` | `boolean` | `false` | Enables hierarchical tree data display. |
+| `getTreeDataPath` | `(row: R) => string[]` | — | Returns the hierarchy path for a row (e.g. `['Engineering', 'Frontend']`). |
+| `groupingColDef` | `GridColDef` | — | Overrides the auto-generated tree expand/collapse column definition. |
+| `defaultGroupingExpansionDepth` | `number` | `0` | Number of tree levels expanded on initial render (`-1` = all). |
+
+#### Row Grouping & Aggregation
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `rowGroupingModel` | `GridRowGroupingModel` | `[]` | Array of field names to group rows by (e.g. `['department', 'team']`). See [Row Grouping](#️-row-grouping). |
+| `onRowGroupingModelChange` | `(model: GridRowGroupingModel) => void` | — | Fired when the grouping model changes. |
+| `aggregationModel` | `GridAggregationModel` | — | Map of `field → aggFn` (e.g. `{ salary: 'sum', age: 'avg' }`). See [Aggregation Reference](#-aggregation-reference). |
+| `onAggregationModelChange` | `(model: GridAggregationModel) => void` | — | Fired when the aggregation model changes. |
+| `getAggregationPosition` | `(groupNode: GridTreeNode \| null) => 'inline' \| 'footer' \| null` | — | Controls where aggregation results appear. `'inline'` = inside the group row, `'footer'` = a dedicated row below the group, `null` = hidden. Pass `null` groupNode = grand-total (root) position. |
+
+#### Pivot
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `pivotMode` | `boolean` | `false` | Switches the grid to multidimensional Pivot Mode. |
+| `pivotModel` | `GridPivotModel` | — | Controlled pivot configuration (row fields, column fields, value fields). |
+| `onPivotModelChange` | `(model: GridPivotModel) => void` | — | Fired when the pivot model changes. |
+
+#### Scroll & Viewport
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `onRowsScrollEnd` | `(params: GridRowScrollEndParams) => void` | — | Fired when the user scrolls to the bottom of the grid viewport. Use this to trigger the next page in infinite-scroll mode. |
+
+#### Accessibility & Appearance
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `ariaLabel` | `string` | — | ARIA label for the grid container element. |
+| `noRowsLabel` | `string` | `'No rows'` | Message shown in the empty-state overlay when there are no rows. |
+| `className` | `string` | — | Additional CSS class applied to the outermost grid wrapper element. |
+| `style` | `React.CSSProperties` | — | Inline styles applied to the grid wrapper element. |
+
+#### Imperative Ref
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `apiRef` | `React.MutableRefObject<GridApi>` | — | Reactive ref to the imperative API. Create with `useGridApiRef()`. |
+
+#### List View
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `listView` | `boolean` | `false` | Renders the grid as a single-column list of cards. Designed for mobile and responsive layouts. |
+| `listViewColumn` | `GridListViewColDef` | — | Column definition for list view mode. Must provide a `renderCell` function. The `field` value is used as a key. |
+
+#### Column Group Headers
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `columnGroupingModel` | `GridColumnGroupingModel` | — | Defines spanning header rows above the regular column headers. See [Column Group Headers](#️-column-group-headers). |
+
 ---
 
 ## 🕹️ Imperative API (`GridApi`)
@@ -385,5 +508,625 @@ interface GridPivotModel {
   rowFields: string[];
   columnFields: string[];
   valueFields: { field: string; aggFn: string; headerName?: string }[];
+}
+```
+
+---
+
+## 📡 Event Callback Types
+
+These interfaces describe the parameter objects passed to every event callback prop.
+
+### `GridRowParams<R>`
+Passed to `onRowClick`.
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `row` | `R` | The full row data object. |
+| `id` | `GridRowId` | Unique identifier of the row. |
+| `rowIndex` | `number` | Zero-based index of the row in the visible dataset. |
+
+### `GridCellParams<R>`
+Passed to `onCellClick` and `isCellEditable`.
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `row` | `R` | The full row data object. |
+| `field` | `string` | The column field name. |
+| `value` | `unknown` | The cell value (after `valueGetter`, before `valueFormatter`). |
+| `colDef` | `GridColDef<R>` | The column definition. |
+| `rowIndex` | `number` | Zero-based row index in the visible dataset. |
+| `colIndex` | `number` | Zero-based column index. |
+
+### `GridColumnOrderChangeParams`
+Passed to `onColumnOrderChange`.
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `column` | `GridColDef` | The column definition that was moved. |
+| `oldIndex` | `number` | Previous column index. |
+| `targetIndex` | `number` | New column index after the move. |
+
+### `GridRowOrderChangeParams<R>`
+Passed to `onRowOrderChange`.
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `row` | `R` | The row data object that was moved. |
+| `oldIndex` | `number` | Previous row index. |
+| `targetIndex` | `number` | New row index after the move. |
+
+### `GridRowScrollEndParams`
+Passed to `onRowsScrollEnd`.
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `visibleTop` | `number` | Pixel offset of the topmost visible row. |
+| `visibleBottom` | `number` | Pixel offset of the bottommost visible row. |
+| `viewportHeight` | `number` | Current height of the scroll viewport in pixels. |
+
+### `GridDetailPanelParams<R>`
+Passed to `getDetailPanelContent` and `getDetailPanelHeight`.
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `row` | `R` | The full row data object. |
+| `id` | `GridRowId` | Unique identifier of the row. |
+| `rowIndex` | `number` | Zero-based index of the row in the visible dataset. |
+
+---
+
+## 🌐 Server-Side Data Source (`GridDataSource`)
+
+The `dataSource` prop is the primary integration point for connecting the grid to a remote API. When set, the grid delegates data fetching — including pagination, sorting, filtering, and optionally aggregation — to your `getRows` function instead of processing the data locally.
+
+### `GridDataSource<R>`
+
+| Property | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `getRows` | `(params: GridGetRowsParams) => Promise<GridGetRowsResponse<R>>` | Yes | Called whenever the grid needs data. The promise must resolve with rows and optionally a total row count. |
+| `getAggregations` | `(params: Omit<GridGetRowsParams, 'startRow' \| 'endRow'>) => Promise<Record<string, unknown>>` | No | Called to fetch aggregate values for the full dataset (e.g. column totals). If omitted, aggregation results from `getRows.aggregationResults` are used instead. |
+
+### `GridGetRowsParams`
+The object passed to `getRows` by the grid on every data fetch.
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `startRow` | `number` | Zero-based index of the first row to fetch (based on `page * pageSize`). |
+| `endRow` | `number` | Zero-based index of the last row to fetch (exclusive). |
+| `sortModel` | `GridSortItem[]` | Active sort configuration. Empty array when no sort is applied. |
+| `filterModel` | `GridFilterModel` | Active filter state. Has empty `items` when no filters are applied. |
+| `groupKeys` | `string[]` | Path of grouping key values for the current group level (used in lazy-loaded tree/grouping). Empty array for the root level. |
+| `aggregationModel` | `GridAggregationModel \| undefined` | Active aggregation configuration, forwarded so the server can compute column summaries. |
+
+### `GridGetRowsResponse<R>`
+The object your `getRows` function must resolve with.
+
+| Property | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `rows` | `R[]` | Yes | The rows for the requested page/range. |
+| `rowCount` | `number` | No | Total number of rows in the full dataset. Required for server-side pagination; optional for infinite scroll. |
+| `aggregationResults` | `Record<string, unknown>` | No | Column aggregation values for this response (e.g. `{ salary: 84500, age: 34.2 }`). |
+
+### Complete Server-Side Usage Example
+
+```tsx
+import {
+  DataGrid,
+  GridDataSource,
+  GridGetRowsParams,
+  GridGetRowsResponse,
+  GridRowModel,
+  GridColDef,
+} from '@opencorestack/opengridx';
+
+interface Employee extends GridRowModel {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+const columns: GridColDef<Employee>[] = [
+  { field: 'name', headerName: 'Name', flex: 1 },
+  { field: 'department', headerName: 'Department', width: 160 },
+  { field: 'salary', headerName: 'Salary', type: 'number', width: 130 },
+];
+
+const dataSource: GridDataSource<Employee> = {
+  getRows: async (params: GridGetRowsParams): Promise<GridGetRowsResponse<Employee>> => {
+    const response = await fetch('/api/employees', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const data = await response.json();
+    // data must have shape { rows: Employee[], total: number }
+    return { rows: data.rows, rowCount: data.total };
+  },
+
+  getAggregations: async (params) => {
+    const response = await fetch('/api/employees/aggregations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    return response.json(); // e.g. { salary: 4250000 }
+  },
+};
+
+export default function EmployeeGrid() {
+  return (
+    <DataGrid<Employee>
+      rows={[]}
+      columns={columns}
+      dataSource={dataSource}
+      paginationMode="server"
+      sortingMode="server"
+      filterMode="server"
+      pagination
+      pageSizeOptions={[25, 50, 100]}
+      height={600}
+    />
+  );
+}
+```
+
+**How the grid decides when to call `getRows`:** The hook fires (with a 300 ms debounce) whenever `paginationMode`, `sortingMode`, or `filterMode` is set to `'server'` AND a `dataSource` is provided. Any change to `sortModel`, `filterModel`, or `paginationModel` re-triggers the fetch. Stale responses from superseded requests are silently discarded — only the latest request updates the grid.
+
+---
+
+## 📌 Column & Row Pinning
+
+### `GridColumnPinning`
+
+Pinned columns stay visible at the left or right edge of the grid during horizontal scrolling.
+
+```typescript
+interface GridColumnPinning {
+  left?: string[];   // field names pinned to the left edge
+  right?: string[];  // field names pinned to the right edge
+}
+```
+
+### `GridRowPinning`
+
+Pinned rows stay visible at the top or bottom of the viewport during vertical scrolling. The values are **row IDs**, not full row objects.
+
+```typescript
+interface GridRowPinning {
+  top?: GridRowId[];    // IDs of rows pinned to the top
+  bottom?: GridRowId[]; // IDs of rows pinned to the bottom
+}
+```
+
+### Column-level pinning control
+
+Set `pinnable: false` on a `GridColDef` to prevent that column from being pinned via the UI menu.
+
+### Usage Example
+
+```tsx
+import { DataGrid, GridColumnPinning, GridRowPinning } from '@opencorestack/opengridx';
+
+<DataGrid
+  rows={rows}
+  columns={columns}
+  // Pin 'name' to the left and 'actions' to the right
+  pinnedColumns={{ left: ['name'], right: ['actions'] }}
+  // Pin rows with id=1 to the top, id=99 to the bottom
+  pinnedRows={{ top: [1], bottom: [99] }}
+  // Checkbox and expand columns stay visible while scrolling horizontally
+  checkboxSelection
+  pinCheckboxColumn
+  pinExpandColumn
+/>
+```
+
+---
+
+## 🔍 Filter Model Deep Reference
+
+### `GridFilterModel`
+
+The top-level filter state passed to `filterModel` and `onFilterModelChange`.
+
+```typescript
+interface GridFilterModel {
+  items?: (GridFilterItem | GridFilterGroup)[];
+  logicOperator?: 'and' | 'or';   // default: 'and'
+  quickFilterValues?: string[];    // global search terms
+}
+```
+
+| Property | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `items` | `(GridFilterItem \| GridFilterGroup)[]` | `[]` | Root-level filter conditions or nested groups. |
+| `logicOperator` | `'and' \| 'or'` | `'and'` | How to combine the root `items`. |
+| `quickFilterValues` | `string[]` | `[]` | Each string must match at least one field in the row (all strings must match). Applied before `items`. |
+
+### `GridFilterItem`
+
+A single column filter condition.
+
+| Property | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `string \| number` | No | Optional stable identifier for this item (useful for controlled updates). |
+| `field` | `string` | Yes | The column field to filter on. |
+| `operator` | `GridFilterOperator` | Yes | The comparison operator to apply. |
+| `value` | `unknown` | No | The value to compare against. Not required for `isEmpty` / `isNotEmpty`. |
+
+### `GridFilterGroup`
+
+A nested group of filter conditions combined with a logical operator. Groups can be nested arbitrarily.
+
+| Property | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `string \| number` | No | Optional stable identifier. |
+| `logicOperator` | `'and' \| 'or'` | Yes | How to combine the child `items` in this group. |
+| `items` | `(GridFilterItem \| GridFilterGroup)[]` | Yes | Child conditions or nested groups. |
+
+### `GridFilterOperator`
+
+```typescript
+type GridFilterOperator =
+  | 'contains' | 'equals' | 'startsWith' | 'endsWith'
+  | 'isEmpty'  | 'isNotEmpty' | 'isAnyOf'
+  | '>'  | '>=' | '<' | '<=' | '!='
+  | 'is' | 'not';
+```
+
+### Default Operators per Column Type
+
+The filter panel shows only the operators relevant to each column's `type`. These are also the operators used when the grid applies client-side filtering.
+
+| Column `type` | Default operator | Available operators |
+| :--- | :--- | :--- |
+| `string` (default) | `contains` | `contains`, `equals`, `startsWith`, `endsWith`, `isEmpty`, `isNotEmpty` |
+| `number` | `=` (numeric eq.) | `=`, `!=`, `>`, `>=`, `<`, `<=`, `isEmpty`, `isNotEmpty` |
+| `date` | `is` | `is`, `not`, `after`, `onOrAfter`, `before`, `onOrBefore`, `isEmpty`, `isNotEmpty` |
+| `boolean` | `is` | `is` |
+| `singleSelect` | `isAnyOf` | `isAnyOf`, `is`, `not` |
+
+### Nested Group Example
+
+```tsx
+import { DataGrid, GridFilterModel } from '@opencorestack/opengridx';
+
+const filterModel: GridFilterModel = {
+  logicOperator: 'and',
+  items: [
+    // Simple item: department equals Engineering
+    { id: 1, field: 'department', operator: 'equals', value: 'Engineering' },
+    // Nested group: salary > 80000 OR title contains 'Lead'
+    {
+      id: 2,
+      logicOperator: 'or',
+      items: [
+        { id: 3, field: 'salary', operator: '>', value: 80000 },
+        { id: 4, field: 'title', operator: 'contains', value: 'Lead' },
+      ],
+    },
+  ],
+};
+
+<DataGrid rows={rows} columns={columns} filterModel={filterModel} filterMode="client" />
+```
+
+---
+
+## 💾 `GridInitialState` and `GridState`
+
+`GridInitialState` is a type alias for `GridState`. Pass it to `initialState` to restore persisted grid state on mount (e.g. from `localStorage`). Each key corresponds to a feature slice — all are optional.
+
+```typescript
+type GridInitialState = GridState;
+
+interface GridState {
+  sorting?:    GridSortingState;
+  filter?:     GridFilterState;
+  pagination?: GridPaginationState;
+  columns?:    GridColumnsState;
+  density?:    GridDensityState;
+  dataSource?: GridDataSourceState;
+}
+```
+
+### State Slices
+
+| Slice key | Interface | Shape |
+| :--- | :--- | :--- |
+| `sorting` | `GridSortingState` | `{ sortModel: GridSortItem[] }` |
+| `filter` | `GridFilterState` | `{ filterModel: GridFilterModel }` |
+| `pagination` | `GridPaginationState` | `{ paginationModel: GridPaginationModel; rowCount?: number }` |
+| `columns` | `GridColumnsState` | `{ columnWidths: Record<string, number>; columnOrder: string[]; pinnedColumns?: GridColumnPinning; columnVisibilityModel?: Record<string, boolean> }` |
+| `density` | `GridDensityState` | `{ density: 'compact' \| 'standard' \| 'comfortable' }` |
+| `dataSource` | `GridDataSourceState` | `{ loading: boolean; error?: unknown }` (read-only — not meaningful to restore) |
+
+### Restoring State from `localStorage`
+
+The recommended way is `useGridStateStorage` (see Hooks section), but you can also drive it manually:
+
+```tsx
+import { DataGrid, GridState, GridInitialState } from '@opencorestack/opengridx';
+import { useState, useCallback } from 'react';
+
+const STORAGE_KEY = 'my-grid-state';
+
+function loadState(): GridInitialState | undefined {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as GridInitialState) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export default function PersistentGrid() {
+  const [initialState] = useState<GridInitialState | undefined>(loadState);
+
+  const handleStateChange = useCallback((state: GridState) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }, []);
+
+  return (
+    <DataGrid
+      rows={rows}
+      columns={columns}
+      initialState={initialState}
+      onStateChange={handleStateChange}
+    />
+  );
+}
+```
+
+---
+
+## ∑ Aggregation Reference
+
+### `GridAggregationModel`
+
+A plain object mapping column field names to aggregation function names.
+
+```typescript
+interface GridAggregationModel {
+  [field: string]: string; // e.g. { salary: 'sum', age: 'avg', name: 'count' }
+}
+```
+
+### `GridAggregationResult`
+
+The computed output, also a plain object mapping field names to their computed values.
+
+```typescript
+type GridAggregationResult = Record<string, unknown>;
+// e.g. { salary: 420000, age: 34.2, name: 12 }
+```
+
+### Built-In Aggregation Functions
+
+| Function | Input | Output | Description |
+| :--- | :--- | :--- | :--- |
+| `sum` | numeric values | `number` | Sum of all non-null numeric values in the group. |
+| `avg` | numeric values | `number \| null` | Arithmetic mean. Returns `null` if there are no numeric values. |
+| `min` | numeric values | `number \| null` | Smallest numeric value. Returns `null` if there are no numeric values. |
+| `max` | numeric values | `number \| null` | Largest numeric value. Returns `null` if there are no numeric values. |
+| `count` | any values | `number` | Count of non-null values. |
+| `unique` | any values | `number` | Count of distinct non-null values (uses a `Set`). |
+
+All built-in functions are exported as the `BuiltInAggFn` type: `'sum' | 'avg' | 'count' | 'min' | 'max' | 'unique'`.
+
+Use `formatAggregationValue(value, fnName)` to turn a raw result into a display string. `avg` is formatted to 2 decimal places; all other numbers use `toLocaleString()`.
+
+### `getAggregationPosition` Callback
+
+```typescript
+getAggregationPosition?: (groupNode: GridTreeNode | null) => 'inline' | 'footer' | null
+```
+
+Called once per group node (and once with `null` for the grand-total / root level) to decide where the aggregated row appears:
+
+| Return value | Effect |
+| :--- | :--- |
+| `'inline'` | Aggregation values appear inside the group header row itself. |
+| `'footer'` | A separate aggregation row is rendered below the group's last row. |
+| `null` | Aggregation result is hidden for this group. |
+
+### Aggregation + Row Grouping Example
+
+```tsx
+import {
+  DataGrid,
+  GridColDef,
+  GridRowModel,
+  GridTreeNode,
+  GridAggregationModel,
+  GridRowGroupingModel,
+} from '@opencorestack/opengridx';
+
+interface Employee extends GridRowModel {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+const columns: GridColDef<Employee>[] = [
+  { field: 'name', headerName: 'Name', flex: 1 },
+  { field: 'department', headerName: 'Department', width: 160, groupable: true },
+  { field: 'salary', headerName: 'Salary', type: 'number', width: 130, aggregable: true },
+];
+
+const aggregationModel: GridAggregationModel = { salary: 'sum' };
+const rowGroupingModel: GridRowGroupingModel = ['department'];
+
+export default function GroupedGrid() {
+  return (
+    <DataGrid<Employee>
+      rows={rows}
+      columns={columns}
+      rowGroupingModel={rowGroupingModel}
+      aggregationModel={aggregationModel}
+      getAggregationPosition={(groupNode: GridTreeNode | null) => {
+        // Show grand total at the footer, group totals inline
+        return groupNode === null ? 'footer' : 'inline';
+      }}
+    />
+  );
+}
+```
+
+---
+
+## 🗂️ Row Grouping
+
+### `GridRowGroupingModel`
+
+A simple array of field names that defines which columns the grid groups rows by, in order.
+
+```typescript
+type GridRowGroupingModel = string[];
+// e.g. ['department']            → one level of grouping
+// e.g. ['department', 'team']    → two levels (department → team → rows)
+```
+
+The referenced fields must have `groupable: true` (the default) on their `GridColDef`.
+
+### Usage Example
+
+```tsx
+import { DataGrid, GridRowGroupingModel, GridAggregationModel } from '@opencorestack/opengridx';
+import { useState } from 'react';
+
+export default function GroupingExample() {
+  const [rowGroupingModel, setRowGroupingModel] = useState<GridRowGroupingModel>(['department']);
+  const [aggregationModel, setAggregationModel] = useState<GridAggregationModel>({
+    salary: 'sum',
+    age: 'avg',
+  });
+
+  return (
+    <DataGrid
+      rows={rows}
+      columns={columns}
+      rowGroupingModel={rowGroupingModel}
+      onRowGroupingModelChange={setRowGroupingModel}
+      aggregationModel={aggregationModel}
+      onAggregationModelChange={setAggregationModel}
+    />
+  );
+}
+```
+
+### Interaction with `aggregationModel`
+
+When `rowGroupingModel` is set, the grid creates group nodes (see `GridTreeNode`). The `aggregationModel` controls which columns show summaries on those nodes. The `getAggregationPosition` callback gives per-group control over whether the summary appears inline (in the group header row) or as a footer row below the group. For server-side grouping, return aggregation values in `GridGetRowsResponse.aggregationResults`.
+
+---
+
+## 🗃️ Column Group Headers
+
+Column groups render spanning header cells above the normal column header row, allowing multi-level column organisation.
+
+### `GridColumnGroup`
+
+```typescript
+interface GridColumnGroup {
+  groupId: string;           // unique identifier for this group
+  headerName: string;        // text shown in the spanning header cell
+  headerClassName?: string;  // optional CSS class for custom styling
+  children: Array<string | GridColumnGroup>; // field names (leaf) or nested groups
+}
+
+type GridColumnGroupingModel = GridColumnGroup[];
+```
+
+The `children` array can contain:
+- **`string`** — a column `field` name, making this a leaf group that spans exactly those columns.
+- **`GridColumnGroup`** — a nested sub-group, enabling multi-level spanning headers.
+
+### Usage Example
+
+```tsx
+import { DataGrid, GridColumnGroup, GridColumnGroupingModel } from '@opencorestack/opengridx';
+
+const columnGroupingModel: GridColumnGroupingModel = [
+  {
+    groupId: 'personal',
+    headerName: 'Personal Info',
+    children: ['firstName', 'lastName', 'age'],
+  },
+  {
+    groupId: 'compensation',
+    headerName: 'Compensation',
+    children: [
+      { groupId: 'base', headerName: 'Base', children: ['salary', 'bonus'] },
+      { groupId: 'equity', headerName: 'Equity', children: ['options', 'rsu'] },
+    ],
+  },
+];
+
+export default function GroupedHeadersGrid() {
+  return (
+    <DataGrid
+      rows={rows}
+      columns={columns}
+      columnGroupingModel={columnGroupingModel}
+    />
+  );
+}
+```
+
+The grid renders two header rows: the spanning group row on top, and the regular per-column header row below. Groups that are not referenced in `columnGroupingModel` are rendered without a spanning header.
+
+---
+
+## 📋 List View
+
+List view renders the grid as a single-column list of cards, replacing all normal column layout. It is designed for narrow viewports and mobile layouts.
+
+### `GridListViewColDef<R>`
+
+```typescript
+interface GridListViewColDef<R extends GridRowModel = GridRowModel> {
+  field: string;
+  renderCell: (params: GridRenderCellParams<R>) => React.ReactNode;
+}
+```
+
+The `renderCell` function receives the full `GridRenderCellParams` (including `row`), so you have access to every field of the row to build a rich card layout.
+
+### Usage Example
+
+```tsx
+import { DataGrid, GridListViewColDef, GridRenderCellParams } from '@opencorestack/opengridx';
+
+interface Employee extends GridRowModel {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+const listViewColumn: GridListViewColDef<Employee> = {
+  field: 'card',
+  renderCell: (params: GridRenderCellParams<Employee>) => (
+    <div style={{ padding: '12px 16px' }}>
+      <strong>{params.row.name}</strong>
+      <span> — {params.row.department}</span>
+      <div>${params.row.salary.toLocaleString()}</div>
+    </div>
+  ),
+};
+
+export default function MobileGrid() {
+  return (
+    <DataGrid<Employee>
+      rows={rows}
+      columns={columns}
+      listView
+      listViewColumn={listViewColumn}
+    />
+  );
 }
 ```
