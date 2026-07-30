@@ -5,6 +5,13 @@
 
 ---
 
+## [1.0.3] — July 30, 2026 📚
+
+### Fixed
+- **API reference expanded to full surface coverage**: `docs/API_REFERENCE.md` grew from 188 to 1,132 lines. Added 8 new top-level sections — server-side data source (`GridDataSource`, `GridGetRowsParams`, `GridGetRowsResponse`), all event callback param types (`GridRowParams`, `GridCellParams`, `GridColumnOrderChangeParams`, `GridRowOrderChangeParams`, `GridDetailPanelParams`), column and row pinning types, full filter model deep reference (per-type operator table, `GridFilterGroup` nesting), grid state and initial state slice reference, aggregation reference (all 6 built-in functions, `getAggregationPosition` semantics), row grouping, column group headers, and list view. DataGrid props section restructured into 13 feature-area sub-tables covering every previously undocumented prop. Developers building server-side sorting + aggregation + pinned columns no longer need to read TypeScript source.
+
+---
+
 ## [1.0.2] — July 30, 2026 📚
 
 ### Fixed
