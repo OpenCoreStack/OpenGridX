@@ -91,21 +91,71 @@ Used in Tree Data and Row Grouping hierarchies.
 ### `GridColDef`
 Defines the behavior and appearance of a single column.
 
+#### Sizing & Layout
+
 | Property | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `field` | `string` | — | Unique identifier (matches row property). |
-| `headerName` | `string` | — | Text displayed in the header. |
-| `width` | `number \| string` | `100` | Width in pixels or percentage string. |
-| `type` | `'string' \| 'number' \| 'date' \| 'boolean' \| 'singleSelect' \| 'image'` | `'string'` | Data type for formatting and filtering. |
-| `sortable` | `boolean` | `true` | Enable sorting for this column. |
-| `filterable` | `boolean` | `true` | Enable filtering for this column. |
-| `resizable` | `boolean` | `true` | Allow user to drag resize. |
-| `hideable` | `boolean` | `true` | Allow user to hide the column. |
-| `pinnable` | `boolean` | `true` | Allow column to be pinned via the UI. |
-| `exportable` | `boolean` | `true` | If `false`, column is excluded from all exports. |
-| `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format value for display. |
-| `valueGetter` | `(params: GridValueGetterParams) => any` | — | Compute value from row data. |
-| `renderCell` | `(params: GridRenderCellParams) => ReactNode` | — | Custom cell renderer. |
+| `field` | `string` | — | **Required.** Unique identifier matching the row object key. |
+| `headerName` | `string` | — | Text shown in the column header cell. |
+| `description` | `string` | — | Tooltip shown on header hover (accessibility label). |
+| `width` | `number \| string` | `100` | Fixed width in pixels or a percentage string. |
+| `minWidth` | `number` | — | Minimum width in pixels (enforced during resize). |
+| `maxWidth` | `number` | — | Maximum width in pixels (enforced during resize). |
+| `flex` | `number` | — | Flex grow factor — distributes remaining space proportionally. Mutually exclusive with a fixed `width`. |
+| `align` | `'left' \| 'center' \| 'right'` | `'left'` | Horizontal alignment of cell content. |
+| `headerAlign` | `'left' \| 'center' \| 'right'` | `'left'` | Horizontal alignment of the header cell content. |
+
+#### Data & Type
+
+| Property | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `type` | `'string' \| 'number' \| 'date' \| 'boolean' \| 'singleSelect' \| 'image'` | `'string'` | Data type — determines default filter operators and cell formatting. |
+| `valueOptions` | `Array<string \| number \| { value: unknown; label: string }>` | — | Allowed values for `type: 'singleSelect'` — used in the filter dropdown and edit cell. |
+| `valueGetter` | `(params: GridValueGetterParams) => unknown` | — | Derive a computed value from the row object. Runs before `valueFormatter` and `renderCell`. |
+| `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format the value into a display string (e.g. currency, dates). Does not affect editing or sorting. |
+
+#### Rendering
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `renderCell` | `(params: GridRenderCellParams) => ReactNode` | Fully custom cell renderer. Receives `value`, `row`, `field`, `rowIndex`, `colIndex`. |
+| `renderHeader` | `(params: GridRenderHeaderParams) => ReactNode` | Custom header cell renderer. Use for icons, sort indicators, or rich headers. |
+| `renderEditCell` | `(params: GridRenderCellParams) => ReactNode` | Custom editor rendered when the cell enters edit mode. Requires `editable: true`. |
+
+#### Editing
+
+| Property | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `editable` | `boolean` | `false` | Enables inline cell editing. Commit is handled by `DataGrid.processRowUpdate`. |
+
+#### Spanning
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `colSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of columns this cell merges horizontally. |
+| `rowSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of rows this cell merges vertically. |
+
+#### Styling
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `cellClassName` | `string \| ((params: GridRenderCellParams) => string)` | CSS class applied to every cell in this column. Use a function for conditional per-row styling. |
+| `headerClassName` | `string` | CSS class applied to the header cell. |
+
+#### Feature Flags
+
+| Property | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `sortable` | `boolean` | `true` | Enable/disable sorting for this column. |
+| `filterable` | `boolean` | `true` | Enable/disable filtering for this column. |
+| `resizable` | `boolean` | `true` | Allow the user to drag-resize this column. |
+| `hideable` | `boolean` | `true` | Allow the user to hide this column via the panel. |
+| `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. |
+| `disableColumnMenu` | `boolean` | `false` | Hide the column header kebab/context menu. |
+| `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, and Print exports. |
+| `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. |
+| `aggregable` | `boolean` | `true` | Allow this column to be aggregated. |
+| `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are available for this column (e.g. `['sum', 'avg']`). |
 
 ---
 
@@ -136,17 +186,169 @@ Context provider for overriding the grid's visual system.
 ## 🛠️ Hooks
 
 ### `useGridApiRef()`
-Returns a ref to interact with the grid programmatically.
-- `state`: Access full internal state.
-- `getVisibleRows()`: Returns filtered/sorted rows.
-- `getVisibleColumns()`: Returns currently visible columns.
+
+Creates a typed ref to pass to the `apiRef` prop. Gives you imperative access to the grid after mount.
+
+```tsx
+import { useGridApiRef } from '@opencorestack/opengridx';
+
+const apiRef = useGridApiRef();
+
+// Pass to the grid
+<DataGrid apiRef={apiRef} rows={rows} columns={columns} />
+
+// Then call methods imperiously
+apiRef.current.scrollToIndexes({ rowIndex: 0 });
+apiRef.current.setFilterModel({ items: [] });
+```
+
+See the [Imperative API (`GridApi`)](#%EF%B8%8F-imperative-api-gridapi) table above for the full method list.
+
+---
 
 ### `useAggregation(params)`
-Compute summary values for datasets.
-- **Built-in Functions**: `sum`, `avg`, `min`, `max`, `count`, `unique`.
+
+Headless hook for computing column summaries outside of the built-in `aggregationModel` prop. Useful when you need aggregation results for a custom footer or external display.
+
+```tsx
+import { useAggregation } from '@opencorestack/opengridx';
+
+const { aggregationResult, isLoading } = useAggregation({
+  rows,
+  aggregationModel: { salary: 'sum', age: 'avg' },
+  isServerSide: false,
+});
+```
+
+#### Params (`UseAggregationParams`)
+
+| Param | Type | Description |
+| :--- | :--- | :--- |
+| `rows` | `GridRowModel[]` | The rows to aggregate. |
+| `aggregationModel` | `GridAggregationModel` | Map of `field → aggFn` (e.g. `{ salary: 'sum' }`). |
+| `isServerSide` | `boolean` | If `true`, skips client computation and uses `serverAggregationResults`. |
+| `filterModel` | `GridFilterModel` | Optional — restricts aggregation to filtered rows. |
+| `sortModel` | `GridSortItem[]` | Optional — used when `dataSource` is provided. |
+| `dataSource` | `GridDataSource` | Optional — server-side data adapter for async aggregation. |
+| `serverAggregationResults` | `GridAggregationResult \| null` | Pre-fetched results when `isServerSide: true`. |
+
+#### Return (`UseAggregationReturn`)
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `aggregationResult` | `GridAggregationResult` | Map of `field → computed value`. |
+| `isLoading` | `boolean` | `true` while a server-side fetch is in progress. |
+| `error` | `unknown` | Set if the server-side fetch threw. |
+
+**Built-in aggregation functions:** `sum`, `avg`, `min`, `max`, `count`, `unique`
+
+You can also use `formatAggregationValue(value, fnName)` to produce a display string from a raw result.
+
+---
+
+### `usePivot(rawRows, rawCols, model, enabled)`
+
+Headless hook that transforms a flat dataset into pivot rows and pivot column definitions. Pass the output directly to `<DataGrid rows={} columns={} />` when `pivotMode` is active.
+
+```tsx
+import { usePivot } from '@opencorestack/opengridx';
+
+const { pivotRows, pivotColumns, isValid } = usePivot(
+  rows,
+  columns,
+  {
+    rowFields: ['department'],
+    columnFields: ['year'],
+    valueFields: [{ field: 'revenue', aggFn: 'sum' }],
+  },
+  isPivotEnabled,
+);
+
+<DataGrid
+  rows={isPivotEnabled ? pivotRows : rows}
+  columns={isPivotEnabled ? pivotColumns : columns}
+/>
+```
+
+#### Parameters
+
+| Param | Type | Description |
+| :--- | :--- | :--- |
+| `rawRows` | `GridRowModel[]` | Original flat dataset. |
+| `rawCols` | `GridColDef[]` | Original column definitions. |
+| `model` | `GridPivotModel` | Pivot configuration — `rowFields`, `columnFields`, `valueFields`. |
+| `enabled` | `boolean` | When `false`, returns empty arrays immediately (no computation). |
+
+#### Return (`UsePivotReturn`)
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `pivotRows` | `GridRowModel[]` | Transformed rows ready for the grid. |
+| `pivotColumns` | `GridColDef[]` | Generated column definitions for each pivot key. |
+| `colKeys` | `string[]` | The distinct column pivot values used. |
+| `isValid` | `boolean` | `false` if the model is incomplete (e.g. no `rowFields` or `valueFields`). |
+
+#### `GridPivotModel`
+
+```ts
+interface GridPivotModel {
+  rowFields: string[];     // fields to group rows by
+  columnFields: string[];  // fields to spread as columns
+  valueFields: Array<{
+    field: string;
+    aggFn: 'sum' | 'avg' | 'count' | 'min' | 'max';
+    headerName?: string;
+  }>;
+}
+```
+
+---
 
 ### `useGridStateStorage(options)`
-Persist and restore grid configurations to LocalStorage or a backend.
+
+Persists grid state (sort, filters, pagination, column visibility, etc.) to `localStorage` and restores it on mount. Pass the returned values directly to `DataGrid`.
+
+```tsx
+import { useGridStateStorage } from '@opencorestack/opengridx';
+
+// Simple — just a storage key
+const { initialState, onStateChange } = useGridStateStorage('my-grid');
+
+// Advanced — with options
+const { initialState, onStateChange, clearState } = useGridStateStorage({
+  key: 'my-grid',
+  debounceMs: 500,                        // default: 300
+  include: ['sorting', 'filter', 'pagination'], // persist only these slices
+  storage: sessionStorage,                // default: localStorage
+});
+
+<DataGrid
+  rows={rows}
+  columns={columns}
+  initialState={initialState}
+  onStateChange={onStateChange}
+/>
+
+// Clear saved state (e.g. on a "Reset" button)
+<button onClick={clearState}>Reset Grid</button>
+```
+
+#### Options (`UseGridStateStorageOptions`)
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `key` | `string` | — | **Required.** Storage key — use a unique value per grid instance. |
+| `debounceMs` | `number` | `300` | Debounce delay in ms before writing to storage. |
+| `include` | `(keyof GridState)[]` | all | Restrict which state slices are persisted. |
+| `storage` | `Storage` | `localStorage` | Any object implementing `getItem`/`setItem`/`removeItem` (e.g. `sessionStorage` or a custom backend adapter). |
+
+#### Return (`UseGridStateStorageReturn`)
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `initialState` | `GridState \| undefined` | Restored state from storage — pass to `DataGrid.initialState`. |
+| `onStateChange` | `(state: GridState) => void` | Callback to pass to `DataGrid.onStateChange`. |
+| `clearState` | `() => void` | Removes the saved state from storage. |
 
 ---
 

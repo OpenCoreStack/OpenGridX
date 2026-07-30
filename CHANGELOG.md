@@ -5,6 +5,14 @@
 
 ---
 
+## [1.0.2] — July 30, 2026 📚
+
+### Fixed
+- **`GridColDef` documentation**: Added all previously undocumented column properties — `flex`, `minWidth`, `maxWidth`, `align`, `headerAlign`, `description`, `editable`, `renderHeader`, `renderEditCell`, `cellClassName`, `headerClassName`, `disableColumnMenu`, `groupable`, `aggregable`, `availableAggregationFunctions`, `valueOptions` (for `singleSelect`), `colSpan`, `rowSpan`. Both `README.md` and `docs/API_REFERENCE.md` now carry the complete table.
+- **Hooks documentation**: Expanded the stubs in `docs/API_REFERENCE.md` into full reference entries. `usePivot` (was entirely missing), `useGridStateStorage` (was one sentence — now has a full options + return table and code example), `useAggregation` (now has params/return tables and built-in function list), `useGridApiRef` (corrected description and added usage example).
+
+---
+
 ## [1.0.1] — July 30, 2026 📚
 
 ### Fixed

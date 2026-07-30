@@ -118,6 +118,42 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `className` | `string` | — | Custom CSS class on the grid container. |
 | `style` | `React.CSSProperties` | — | Custom inline styles on the grid container. |
 
+### Column Definitions (`GridColDef`)
+
+| Property | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `field` | `string` | — | **Required.** Must match the row object key. |
+| `headerName` | `string` | — | Header label text. |
+| `description` | `string` | — | Tooltip on header hover. |
+| `width` | `number \| string` | `100` | Fixed width in px. |
+| `flex` | `number` | — | Flex-grow weight — fills remaining space. Cannot be combined with `width`. |
+| `minWidth` | `number` | — | Minimum width in px, enforced during resize. |
+| `maxWidth` | `number` | — | Maximum width in px, enforced during resize. |
+| `align` | `'left' \| 'center' \| 'right'` | `'left'` | Cell content alignment. |
+| `headerAlign` | `'left' \| 'center' \| 'right'` | `'left'` | Header content alignment. |
+| `type` | `'string' \| 'number' \| 'date' \| 'boolean' \| 'singleSelect' \| 'image'` | `'string'` | Drives filter operators and default formatting. |
+| `valueOptions` | `Array<string \| number \| { value, label }>` | — | Options list for `type: 'singleSelect'`. |
+| `editable` | `boolean` | `false` | Enables inline cell editing. Pair with `processRowUpdate`. |
+| `valueGetter` | `(params) => unknown` | — | Derive a computed cell value from the row. |
+| `valueFormatter` | `(params) => string` | — | Format the display string (does not affect edit or sort). |
+| `renderCell` | `(params) => ReactNode` | — | Fully custom cell renderer. |
+| `renderHeader` | `(params) => ReactNode` | — | Custom header cell renderer. |
+| `renderEditCell` | `(params) => ReactNode` | — | Custom editor rendered in edit mode. |
+| `cellClassName` | `string \| ((params) => string)` | — | CSS class on every cell; use a function for conditional per-row styling. |
+| `headerClassName` | `string` | — | CSS class on the header cell. |
+| `colSpan` | `number \| ((params) => number)` | — | Merge cells horizontally. |
+| `rowSpan` | `number \| ((params) => number)` | — | Merge cells vertically. |
+| `sortable` | `boolean` | `true` | Enable/disable column sorting. |
+| `filterable` | `boolean` | `true` | Enable/disable column filtering. |
+| `resizable` | `boolean` | `true` | Allow drag-resize. |
+| `hideable` | `boolean` | `true` | Allow hiding via the column panel. |
+| `pinnable` | `boolean` | `true` | Allow pinning via the UI. |
+| `disableColumnMenu` | `boolean` | `false` | Hide the column header context menu. |
+| `exportable` | `boolean` | `true` | Set to `false` to exclude from all exports. |
+| `groupable` | `boolean` | `true` | Allow as a row grouping dimension. |
+| `aggregable` | `boolean` | `true` | Allow aggregation on this column. |
+| `availableAggregationFunctions` | `string[]` | all | Restrict which aggregation functions are offered. |
+
 ### Selection
 
 | Prop | Type | Description |
