@@ -7,8 +7,24 @@ export type GridRowId = string | number;
 export interface GridRowModel {
   /** Uniquely identifies the row. */
   id: GridRowId;
+  /** Internal: row has child nodes (tree data / row grouping). */
+  _hasChildren?: boolean;
+  /** Internal: row is a skeleton placeholder during infinite-scroll loading. */
+  _isSkeleton?: boolean;
+  /** Internal: depth in the tree or grouping hierarchy. */
+  _treeDepth?: number;
+  /** Internal: whether the group/tree node is currently expanded. */
+  _isExpanded?: boolean;
+  /** Internal: field used for grouping at this level. */
+  _groupingField?: string;
+  /** Internal: grouping field value at this level. */
+  _groupingValue?: unknown;
+  /** Internal: total descendant count for tree/grouping nodes. */
+  _descendantCount?: number;
+  /** Internal: server-reported child count for lazy-loaded tree nodes. */
+  serverChildrenCount?: number;
   /** Any other dynamic row properties. */
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export type GridAlignment = 'left' | 'center' | 'right';
@@ -27,10 +43,10 @@ export interface GridTreeNode {
     /** The field this node is grouping by. */
     groupingField?: string;
     /** The actual value being grouped. */
-    groupingValue?: any;
+    groupingValue?: unknown;
 
     /** Computed aggregation results for this group. */
-    aggregatedValues?: Record<string, any>;
+    aggregatedValues?: Record<string, unknown>;
     /** Position of the aggregation row relative to the group. */
     aggregationPosition?: 'inline' | 'footer' | null; 
     /** Current expansion state. */
@@ -91,13 +107,15 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
   hideable?: boolean;
   /** If false, the column cannot be pinned. */
   pinnable?: boolean;
+  /** Internal: marks this column as a virtual spacer used for horizontal virtualization. */
+  isSpacer?: boolean;
   /** Type used to determine default operators and formatting logic. */
   type?: 'string' | 'number' | 'date' | 'boolean' | 'singleSelect' | 'image';
   /** Options used for 'singleSelect' type. */
-  valueOptions?: Array<string | number | { value: any; label: string }>;
+  valueOptions?: Array<string | number | { value: unknown; label: string }>;
 
   /** Function to compute a cell value from raw row data. */
-  valueGetter?: (params: GridValueGetterParams<R>) => any;
+  valueGetter?: (params: GridValueGetterParams<R>) => unknown;
   /** Function to format a value into a human-readable string. */
   valueFormatter?: (params: GridValueFormatterParams<R>) => string;
   /** Custom component or element to render in the cell. */
@@ -186,13 +204,13 @@ export interface GridValueGetterParams<R extends GridRowModel = GridRowModel> {
   /** The field name. */
   field: string;
   /** The raw value from the row object. */
-  value: any;
+  value: unknown;
 }
 
 /** Parameters passed to the `valueFormatter` function. */
 export interface GridValueFormatterParams<R extends GridRowModel = GridRowModel> {
   /** The raw value to format. */
-  value: any;
+  value: unknown;
   /** The row object. */
   row: R;
   /** The field name. */
@@ -202,7 +220,7 @@ export interface GridValueFormatterParams<R extends GridRowModel = GridRowModel>
 /** Parameters passed to the `renderCell` function. */
 export interface GridRenderCellParams<R extends GridRowModel = GridRowModel> {
   /** The current cell value. */
-  value: any;
+  value: unknown;
   /** The row object. */
   row: R;
   /** The field name and unique ID. */
@@ -256,7 +274,7 @@ export interface GridFilterItem {
   /** The comparison operator. */
   operator: GridFilterOperator;
   /** The value to compare against. */
-  value?: any;
+  value?: unknown;
 }
 
 /** Describes a group of filters combined with a logical operator. */
@@ -325,7 +343,7 @@ export interface GridGetRowsParams {
 export interface GridGetRowsResponse<R extends GridRowModel = GridRowModel> {
   rows: R[];
   rowCount?: number;
-    aggregationResults?: Record<string, any>;
+    aggregationResults?: Record<string, unknown>;
 }
 
 /**
@@ -341,7 +359,7 @@ export interface GridDataSource<R extends GridRowModel = GridRowModel> {
   /**
    * Optional: Fetches aggregation results for the entire dataset.
    */
-  getAggregations?: (params: Omit<GridGetRowsParams, 'startRow' | 'endRow'>) => Promise<Record<string, any>>;
+  getAggregations?: (params: Omit<GridGetRowsParams, 'startRow' | 'endRow'>) => Promise<Record<string, unknown>>;
 }
 
 export interface GridPaginationModel {
@@ -367,13 +385,13 @@ export interface GridVirtualizationState {
 
 export type GridRowGroupingModel = string[]; 
 
-export type GridAggregationFunction = (values: any[]) => any;
+export type GridAggregationFunction = (values: unknown[]) => unknown;
 
 export interface GridAggregationModel {
-  [field: string]: string; 
+  [field: string]: string;
 }
 
-export type GridAggregationResult = Record<string, any>;
+export type GridAggregationResult = Record<string, unknown>;
 
 export type GridAggregationPosition = 'footer' | 'inline' | 'both';
 
@@ -435,7 +453,7 @@ export interface GridInternalState {
   };
   dataSource: {
     loading: boolean;
-    error: any;
+    error: unknown;
   };
 }
 
@@ -601,7 +619,7 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   /** Callback to process an updated row after inline editing. Supports promises and validation. */
   processRowUpdate?: (newRow: R, oldRow: R) => R | Promise<R>;
   /** Callback fired if `processRowUpdate` throws or rejects. */
-  onProcessRowUpdateError?: (error: any) => void;
+  onProcessRowUpdateError?: (error: unknown) => void;
 
   /** Interface for connecting the grid to an external (server-side) data source. */
   dataSource?: GridDataSource<R>;
@@ -614,23 +632,23 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   /** Custom components to replace internal grid parts. */
   slots?: {
     /** Component rendered as the grid toolbar. */
-    toolbar?: React.ComponentType<any>;
+    toolbar?: React.ComponentType<Record<string, unknown>>;
     /** Component rendered as the pagination control. */
-    pagination?: React.ComponentType<any>;
+    pagination?: React.ComponentType<Record<string, unknown>>;
     /** Component rendered when the grid is empty. */
-    noRowsOverlay?: React.ComponentType<any>;
+    noRowsOverlay?: React.ComponentType<Record<string, unknown>>;
     /** Component rendered during loading states. */
-    loadingOverlay?: React.ComponentType<any>;
+    loadingOverlay?: React.ComponentType<Record<string, unknown>>;
     /** Component rendered at the very bottom of the grid. */
-    footer?: React.ComponentType<any>;
+    footer?: React.ComponentType<Record<string, unknown>>;
   };
   /** Properties passed directly to custom slots. */
   slotProps?: {
-    toolbar?: any;
-    pagination?: any;
-    noRowsOverlay?: any;
-    loadingOverlay?: any;
-    footer?: any;
+    toolbar?: Record<string, unknown>;
+    pagination?: Record<string, unknown>;
+    noRowsOverlay?: Record<string, unknown>;
+    loadingOverlay?: Record<string, unknown>;
+    footer?: Record<string, unknown>;
   };
 
   /** When true, renders the grid as a single-column list of cards. Perfect for mobile/responsive views. */
@@ -645,7 +663,7 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   columnGroupingModel?: GridColumnGroupingModel;
 }
 
-export interface GridEditCellProps<V = any> {
+export interface GridEditCellProps<V = unknown> {
   id: GridRowId;
   field: string;
   value?: V;
@@ -667,7 +685,7 @@ export interface GridRowParams<R extends GridRowModel = GridRowModel> {
 export interface GridCellParams<R extends GridRowModel = GridRowModel> {
   row: R;
   field: string;
-  value: any;
+  value: unknown;
   colDef: GridColDef<R>;
   rowIndex: number;
   colIndex: number;
@@ -705,7 +723,7 @@ export interface GridApi {
   /** Returns all rows currently visible after filtering and sorting. */
   getVisibleRows: () => GridRowModel[];
   /** Returns the current aggregation results. */
-  getAggregationResult: () => Record<string, any> | null;
+  getAggregationResult: () => Record<string, unknown> | null;
   /** Returns the active aggregation configuration. */
   getAggregationModel: () => GridAggregationModel | null;
 

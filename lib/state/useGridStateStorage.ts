@@ -70,7 +70,7 @@ export function useGridStateStorage(
     if (!storage) return undefined;
     return readFromStorage(key, storage);
 
-  }, [key]); 
+  }, [key, storage]);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestStateRef = useRef<GridState | null>(null);

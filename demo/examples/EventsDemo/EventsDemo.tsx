@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { DataGrid, GridColDef, GridCellParams, GridRowParams } from '@opencorestack/opengridx';
+import { DataGrid, GridToolbar, GridColDef, GridCellParams, GridRowParams, GridSortItem, GridFilterModel, GridColumnOrderChangeParams } from '@opencorestack/opengridx';
 import { DocsLayout } from '../../components/DocsLayout';
 import './EventsDemo.css';
 
@@ -48,7 +48,7 @@ export default function EventsDemo() {
         addLog('Cell Click', `Field: ${params.field}, Value: ${params.value}`);
     };
 
-    const handleSortModelChange = (model: any) => {
+    const handleSortModelChange = (model: GridSortItem[]) => {
         if (model.length === 0) {
             addLog('Sort Change', 'Cleared all sorting');
         } else {
@@ -56,11 +56,11 @@ export default function EventsDemo() {
         }
     };
 
-    const handleFilterModelChange = (model: any) => {
+    const handleFilterModelChange = (model: GridFilterModel) => {
         addLog('Filter Change', `${model.items.length} active filters`);
     };
 
-    const handleColumnOrderChange = (params: any) => {
+    const handleColumnOrderChange = (params: GridColumnOrderChangeParams) => {
         addLog('Column Reorder', `Moved ${params.column.field} to index ${params.targetIndex}`);
     };
 
@@ -78,6 +78,7 @@ export default function EventsDemo() {
                             columns={columns}
                             height={500}
                             checkboxSelection
+                            slots={{ toolbar: GridToolbar }}
                             onRowClick={handleRowClick}
                             onCellClick={handleCellClick}
                             onSortModelChange={handleSortModelChange}

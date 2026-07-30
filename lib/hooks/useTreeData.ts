@@ -277,7 +277,7 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
                         ...row,
                         _treeDepth: node.depth,
                         _isExpanded: expandedGroupIds.has(id),
-                        _hasChildren: (node.children && node.children.length > 0) || (node.serverChildrenCount && node.serverChildrenCount > 0),
+                        _hasChildren: Boolean((node.children && node.children.length > 0) || (node.serverChildrenCount && node.serverChildrenCount > 0)),
                         _descendantCount: node.children ? node.children.length : 0
                     };
                     result.push(enhancedRow);

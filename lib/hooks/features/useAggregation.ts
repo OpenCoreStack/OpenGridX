@@ -11,15 +11,15 @@ import type {
 
 export type BuiltInAggFn = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'unique';
 
-const AGGREGATION_FUNCTIONS: Record<BuiltInAggFn, (values: any[]) => any> = {
+const AGGREGATION_FUNCTIONS: Record<BuiltInAggFn, (values: unknown[]) => unknown> = {
     sum: (values) => {
         const nums = values.filter((v) => v != null && !isNaN(Number(v)));
-        return nums.reduce((acc, v) => acc + Number(v), 0);
+        return nums.reduce((acc: number, v) => acc + Number(v), 0);
     },
     avg: (values) => {
         const nums = values.filter((v) => v != null && !isNaN(Number(v)));
         if (nums.length === 0) return null;
-        return nums.reduce((acc, v) => acc + Number(v), 0) / nums.length;
+        return nums.reduce((acc: number, v) => acc + Number(v), 0) / nums.length;
     },
     count: (values) => values.filter((v) => v != null).length,
     min: (values) => {
@@ -33,7 +33,7 @@ const AGGREGATION_FUNCTIONS: Record<BuiltInAggFn, (values: any[]) => any> = {
     unique: (values) => new Set(values.filter((v) => v != null)).size,
 };
 
-export function formatAggregationValue(value: any, fnName: string): string {
+export function formatAggregationValue(value: unknown, fnName: string): string {
     if (value == null) return '—';
     if (typeof value === 'number') {
         if (fnName === 'avg') {
@@ -57,7 +57,7 @@ export interface UseAggregationParams<R extends GridRowModel> {
 export interface UseAggregationReturn {
         aggregationResult: GridAggregationResult;
         isLoading: boolean;
-        error: any;
+        error: unknown;
 }
 
 export function useAggregation<R extends GridRowModel>(
@@ -83,7 +83,7 @@ export function useAggregation<R extends GridRowModel>(
                 console.warn(`[useAggregation] Unknown aggregation function: "${fnName}"`);
                 continue;
             }
-            const values = rows.map((row) => (row as any)[field]);
+            const values = rows.map((row) => (row as GridRowModel)[field]);
             result[field] = fn(values);
         }
         return result;
@@ -91,7 +91,7 @@ export function useAggregation<R extends GridRowModel>(
 
     const [serverResult, setServerResult] = useState<GridAggregationResult>({});
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<any>(null);
+    const [error, setError] = useState<unknown>(null);
     const requestIdRef = useRef(0);
 
     const fetchServerAggregations = useCallback(async () => {

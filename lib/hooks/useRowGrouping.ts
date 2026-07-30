@@ -50,7 +50,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
             return { treeNodes, rootIds, groupingRows };
         }
 
-        const getGroupId = (field: string, value: any, parentId: GridRowId | null) => {
+        const getGroupId = (field: string, value: unknown, parentId: GridRowId | null) => {
             return `auto-group-${field}-${value}-${parentId || 'root'}`;
         };
 
@@ -75,7 +75,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
             }
 
             const field = rowGroupingModel[depth];
-            const groups = new Map<any, R[]>();
+            const groups = new Map<string, R[]>();
 
             // Group current rows by value of the current field
             currentRows.forEach(row => {
@@ -99,18 +99,18 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                 groupIds.push(groupId);
 
                 // Calculate Aggregations for this group
-                const aggregatedValues: Record<string, any> = {};
+                const aggregatedValues: Record<string, unknown> = {};
                 if (aggregationModel) {
                     Object.entries(aggregationModel).forEach(([aggField, aggType]) => {
                         const values = groupRowsList.map(r => r[aggField]);
                         if (aggType === 'sum') {
-                            aggregatedValues[aggField] = values.reduce((a, b) => (Number(a) || 0) + (Number(b) || 0), 0);
+                            aggregatedValues[aggField] = values.reduce((a: number, b) => a + (Number(b) || 0), 0);
                         } else if (aggType === 'min') {
                             aggregatedValues[aggField] = Math.min(...values.map(v => Number(v) || 0));
                         } else if (aggType === 'max') {
                             aggregatedValues[aggField] = Math.max(...values.map(v => Number(v) || 0));
                         } else if (aggType === 'avg') {
-                            const sum = values.reduce((a, b) => (Number(a) || 0) + (Number(b) || 0), 0);
+                            const sum = values.reduce((a: number, b) => a + (Number(b) || 0), 0);
                             aggregatedValues[aggField] = values.length ? sum / values.length : 0;
                         } else if (aggType === 'count') {
                             aggregatedValues[aggField] = values.length;
@@ -118,11 +118,11 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                     });
                 }
 
-                const groupRow: any = {
-                    [field]: rawValue, 
-                    ...aggregatedValues, 
-                    id: groupId 
-                };
+                const groupRow = {
+                    [field]: rawValue,
+                    ...aggregatedValues,
+                    id: groupId
+                } as unknown as R;
 
                 groupingRows.set(groupId, groupRow);
 
@@ -183,7 +183,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
             setExpandedGroupIds(new Set());
         }
 
-    }, [rowGroupingModel, defaultGroupingExpansionDepth]);
+    }, [rowGroupingModel, defaultGroupingExpansionDepth, treeNodes]);
 
     const toggleExpansion = useCallback((id: GridRowId) => {
         setExpandedGroupIds(prev => {
@@ -243,8 +243,8 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                     if (!rowA || !rowB) return 0;
 
                     for (const sortItem of sortModel) {
-                        const valA = (rowA as any)[sortItem.field];
-                        const valB = (rowB as any)[sortItem.field];
+                        const valA = rowA[sortItem.field];
+                        const valB = rowB[sortItem.field];
                         const compareResult = compareValues(valA, valB, sortItem.sort);
                         if (compareResult !== 0) return compareResult;
                     }
@@ -287,7 +287,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
         return result;
 
-    }, [rows, getRowId, treeNodes, rootIds, groupingRows, filterModel, sortModel, expandedGroupIds]);
+    }, [rows, getRowId, treeNodes, rootIds, groupingRows, filterModel, sortModel, expandedGroupIds, rowGroupingModel]);
 
     const getNode = useCallback((id: GridRowId) => treeNodes.get(id), [treeNodes]);
 

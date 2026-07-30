@@ -133,7 +133,7 @@
     background: #fff;
     flex: 1;
     overflow-y: auto;
-    height: calc(100vh - 60px);
+    height: calc(100vh);
 }
 
 .app-page-wrapper {
@@ -154,9 +154,9 @@
 }
 
 /* Base Headings within app content area for TOC generation */
-.app-content-column h2 { 
+.app-content-column h2 {
     margin-top: 36px;
-    margin-bottom: 16px; 
+    margin-bottom: 16px;
     border-bottom: 1px solid #e2e8f0;
     padding-bottom: 8px;
 }
@@ -197,8 +197,13 @@
     gap: 4px;
 }
 
-.toc-item.toc-level-2 { margin-left: 0; }
-.toc-item.toc-level-3 { margin-left: 12px; }
+.toc-item.toc-level-2 {
+    margin-left: 0;
+}
+
+.toc-item.toc-level-3 {
+    margin-left: 12px;
+}
 
 .toc-link {
     display: block;
@@ -248,5 +253,7 @@
 }
 
 @keyframes ogx-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }

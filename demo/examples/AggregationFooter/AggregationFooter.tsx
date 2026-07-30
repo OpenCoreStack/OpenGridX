@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { DataGrid, GridToolbar } from '@opencorestack/opengridx';
 import type { GridColDef, GridAggregationModel } from '@opencorestack/opengridx';
 import './AggregationFooter.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './AggregationFooter.tsx?raw';
 
 interface Movie {
     id: number;
@@ -46,7 +48,7 @@ const ROWS: Movie[] = [
     { id: 25, title: 'Top Gun: Maverick', gross: 1_491_000_000, budget: 170_000_000, profit: 1_321_000_000, year: 2022, runtime: 130, rating: 8.3, votes: 560_000, genre: 'Action', studio: 'Paramount' },
 ];
 
-const fmt$ = ({ value }: { value: any }) =>
+const fmt$ = ({ value }: { value: unknown }) =>
     typeof value === 'number' ? `$${value.toLocaleString('en-US')}` : String(value ?? '');
 
 const columns: GridColDef<Movie>[] = [
@@ -122,14 +124,11 @@ export default function AggregationFooterExample() {
     });
 
     return (
-        <div className="aggregation-demo-container">
-            <h2>Aggregation — Toolbar Configuration</h2>
-            <p className="aggregation-demo-description">
-                Click the <strong>Σ (sigma) icon</strong> in the toolbar to open the aggregation panel.
-                Choose a function (sum, avg, count, min, max) for any numeric column — the result
-                appears as a sticky footer row below the data.
-            </p>
-
+        <DocsLayout
+            title="Aggregation"
+            description="Compute sum, average, count, min, and max across any numeric column. Results appear in a sticky footer row and are configurable via the toolbar Σ panel."
+            sourceCode={sourceCode}
+        >
             <DataGrid<Movie>
                 rows={ROWS}
                 columns={columns}
@@ -147,6 +146,6 @@ export default function AggregationFooterExample() {
                 <strong>Current aggregation model:</strong>{' '}
                 {JSON.stringify(aggregationModel)}
             </div>
-        </div>
+        </DocsLayout>
     );
 }

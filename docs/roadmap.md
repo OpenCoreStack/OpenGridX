@@ -54,6 +54,20 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 *   **Demo**: `AdvancedExcelExportDemo` in demo app (`Data Management` category).
 *   **Docs**: `docs/features/export-guide.md` fully updated with feature comparison table and all options.
 
+### Code Quality & Architecture *(completed 2026-07-29 → 2026-07-30)*
+*   **DataGrid decomposition**: Extracted `useGridControlledState`, `useGridRowPipeline`, `useGridVirtualization`, `useGridScrollSync`, `useGridVisibleRows`, `useGridColumns` hooks, plus `GridEmptyState`, `GridErrorOverlay`, `GridAggregationFooter`, `GridVirtualRows`, `GridPinnedRows`, `GridStandaloneColumnPanel`, `GridListView` components from `DataGrid.tsx`. Each module has a single clear responsibility with typed params and return interfaces.
+*   **Full `any` elimination**: Every `any` across `lib/` replaced with proper types or `unknown`. `GridRowModel` index signature, all cell/value/error params, aggregation functions, slot types, and export utilities are now fully typed. Zero `eslint-disable` suppressions remain — every case fixed at the root.
+*   **Regression test suite**: 3 test files covering column-visibility-model persistence, pivot aggregation correctness including grand-total avg and null-value exclusion, and pagination rendering/row key stability.
+*   **Pivot null-value fix**: `Number(null) === 0` caused null numeric fields to be silently included as `0` in avg/min/max pivot aggregation. Both the per-row bucket loop and the grand-total bucket loop in `usePivot.ts` now guard with `raw != null` before pushing values.
+
+### Bug Fixes *(completed 2026-07-30)*
+*   **`onRowClick` never fired when `onCellClick` was registered**: `Cell.tsx` called `e.stopPropagation()` on every cell click, silently preventing events from reaching the row's `onClick` handler. Removed — both callbacks now fire in natural bubble order.
+*   **Column visibility panel order not updating after reorder**: Panel received `effectiveColumns` (pre-ordering, definition order) instead of `orderedColumns`. Fixed — panel list now reflects the live reordered sequence.
+*   **Reset button ignoring column sequence**: Reset only restored visibility; column order was left wherever the user dragged it. Added `onColumnOrderReset` callback that restores `internalColumnOrder` to original definition order.
+*   **`FilterPanel` debounce stale-closure**: Debounce effect read `item`/`col.field`/`currentOperator` from stale closure, previously suppressed with `eslint-disable`. Replaced with `useLayoutEffect` refs-sync pattern.
+*   **`FilterPanelDemo` inaccessible**: Missing `slots={{ toolbar: GridToolbar }}` meant the filter panel had no UI entry point. Fixed; demo also migrated to `DocsLayout`.
+*   **`EventsDemo` dead handlers**: Fixed broken `onRowClick`, dead filter/column-order callbacks, and three `any`-typed handler signatures.
+
 ---
 
 ## 📅 Upcoming Features
@@ -66,6 +80,11 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 ### DX & Publishing
 *   **npm publish**: Finalize `package.json` metadata, `README.md`, and publish to npm registry.
 
+### Demo Site
+*   **Full source viewer coverage**: Migrate all 32 examples to `DocsLayout` using Vite `?raw` auto-loading (eliminates string-literal source maintenance). See `docs/superpowers/plans/2026-07-29-demo-app-refactor.md`.
+*   **Syntax highlighting**: Prism.js token-based highlighting in the source viewer.
+*   **GitHub Pages deployment**: CI/CD via GitHub Actions (`base: '/OpenGridX/'` already configured in `vite.config.js`).
+
 ## ✅ Implemented Features (Recent)
-*   **Storybook / Docs site**: Interactive component documentation with source code viewer and categorized navigation (implemented via `demo` app).
+*   **Demo app (partial)**: 32 interactive examples across 6 categories (Main features, Advanced features, Components, Customization, Tutorials, Resources) with categorized sidebar navigation and per-page Table of Contents. Source code viewer present on 6 of 32 examples. Syntax highlighting and public deployment are in the upcoming Demo Site section above.
 *   **Quickstart & Installation Guides**: Comprehensive onboarding documentation for developers.

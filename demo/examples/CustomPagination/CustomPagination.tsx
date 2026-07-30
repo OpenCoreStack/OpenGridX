@@ -2,8 +2,19 @@
 import { useState } from 'react';
 import { DataGrid, GridColDef } from '@opencorestack/opengridx';
 import './CustomPagination.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './CustomPagination.tsx?raw';
 
-function CustomPaginationComponent(props: any) {
+interface CustomPaginationComponentProps {
+    page: number;
+    pageSize: number;
+    rowCount: number;
+    pageSizeOptions: number[];
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (pageSize: number) => void;
+}
+
+function CustomPaginationComponent(props: CustomPaginationComponentProps) {
     const {
         page,
         pageSize,
@@ -107,13 +118,11 @@ export default function CustomPaginationDemo() {
     });
 
     return (
-        <div className="custom-pagination-demo-container">
-            <h2>Custom Pagination Example</h2>
-            <p>
-                This example shows how to use a custom pagination component.
-                Replace <code>CustomPaginationComponent</code> with your own specialized pagination UI.
-            </p>
-
+        <DocsLayout
+            title="Custom Pagination"
+            description="Provide your own pagination UI via the slots API while keeping all built-in server-side pagination logic. Full control over page size, navigation, and styling."
+            sourceCode={sourceCode}
+        >
             <DataGrid
                 rows={rows}
                 columns={columns}
@@ -127,6 +136,6 @@ export default function CustomPaginationDemo() {
                     pagination: CustomPaginationComponent
                 }}
             />
-        </div>
+        </DocsLayout>
     );
 }

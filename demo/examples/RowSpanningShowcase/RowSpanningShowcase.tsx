@@ -2,6 +2,8 @@
 import { useState, useMemo } from 'react';
 import { DataGrid, GridColDef } from '@opencorestack/opengridx';
 import './RowSpanningShowcase.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './RowSpanningShowcase.tsx?raw';
 
 interface OrderItem {
     id: number;
@@ -483,15 +485,11 @@ function WeeklyTimetableExample() {
 
 export default function RowSpanningShowcase() {
     return (
-        <div className="row-spanning-container">
-            <div className="row-spanning-header">
-                <h2>Row Spanning Examples</h2>
-                <p>
-                    Comprehensive examples demonstrating various row spanning use cases,
-                    inspired by MUI X DataGrid documentation.
-                </p>
-            </div>
-
+        <DocsLayout
+            title="Row Spanning"
+            description="Merge cells vertically across multiple rows using the rowSpan callback. Group visually related data without restructuring your underlying dataset."
+            sourceCode={sourceCode}
+        >
             <OrderItemsExample />
             <EmployeeRolesExample />
             <CourseScheduleExample />
@@ -515,6 +513,6 @@ export default function RowSpanningShowcase() {
                     or tables where interactive features are not required. For dynamic hierarchical data, consider using the Tree Data feature instead.
                 </p>
             </div>
-        </div>
+        </DocsLayout>
     );
 }

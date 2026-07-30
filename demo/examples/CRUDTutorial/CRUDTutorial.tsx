@@ -1,5 +1,7 @@
-import { DataGrid, GridToolbar, Button } from '@opencorestack/opengridx';
+import { DataGrid, GridToolbar, Button, GridRenderCellParams } from '@opencorestack/opengridx';
 import { useState, useCallback, useMemo } from 'react';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './CRUDTutorial.tsx?raw';
 
 interface User {
     id: number;
@@ -41,7 +43,7 @@ export default function CRUDTutorial() {
             field: 'actions',
             headerName: 'Actions',
             width: 100,
-            renderCell: (params: any) => (
+            renderCell: (params: GridRenderCellParams<User>) => (
                 <Button
                     size="small"
                     variant="outlined"
@@ -55,24 +57,19 @@ export default function CRUDTutorial() {
     ], [deleteUser]);
 
     return (
-        <div style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div>
-                    <h2 style={{ margin: 0 }}>Tutorial: Interactive CRUD</h2>
-                    <p style={{ color: '#64748b', marginTop: '4px' }}>Learn how to create, update, and delete data using the grid state.</p>
-                </div>
-                <Button onClick={addUser}>➕ Add User</Button>
-            </div>
-
-            <div style={{ display: 'inline-flex' }}>
-                <DataGrid
-                    rows={rows}
-                    columns={columns}
-                    processRowUpdate={processRowUpdate}
-                    height={400}
-                    slots={{ toolbar: GridToolbar }}
-                />
-            </div>
-        </div>
+        <DocsLayout
+            title="Interactive CRUD"
+            description="A complete create-read-update-delete tutorial. Add rows, inline-edit any cell, and delete rows — with optimistic updates and type-safe row processing."
+            sourceCode={sourceCode}
+        >
+            <Button onClick={addUser}>➕ Add User</Button>
+            <DataGrid
+                rows={rows}
+                columns={columns}
+                processRowUpdate={processRowUpdate}
+                height={400}
+                slots={{ toolbar: GridToolbar }}
+            />
+        </DocsLayout>
     );
 }

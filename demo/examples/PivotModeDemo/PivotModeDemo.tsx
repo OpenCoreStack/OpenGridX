@@ -1,9 +1,11 @@
 
 import React, { useState } from 'react';
 import { DataGrid, GridToolbar, GridTooltip } from '@opencorestack/opengridx';
-import type { GridColDef, GridPivotModel, GridPivotValueField } from '@opencorestack/opengridx';
+import type { GridColDef, GridPivotModel, GridPivotValueField, GridAggregationResult, GridAggregationModel } from '@opencorestack/opengridx';
 import { exportToCsv, exportToExcel, exportToJson, printGrid } from '@opencorestack/opengridx';
 import './PivotModeDemo.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './PivotModeDemo.tsx?raw';
 
 type SaleRow = {
     id: number;
@@ -184,10 +186,17 @@ const PRESETS: { label: string; model: GridPivotModel }[] = [
     },
 ];
 
+interface PivotGridApi {
+    getVisibleRows?: () => SaleRow[];
+    getVisibleColumns?: () => GridColDef<SaleRow>[];
+    getAggregationResult?: () => GridAggregationResult;
+    getAggregationModel?: () => GridAggregationModel;
+}
+
 interface ExportToolbarProps {
-    apiRef?: any;
-    fallbackRows: any[];
-    fallbackColumns: GridColDef[];
+    apiRef?: React.RefObject<PivotGridApi>;
+    fallbackRows: SaleRow[];
+    fallbackColumns: GridColDef<SaleRow>[];
 }
 
 function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarProps) {
@@ -297,17 +306,23 @@ function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarP
     );
 }
 
+type CustomToolbarProps = React.ComponentProps<typeof GridToolbar> & {
+    apiRef?: React.RefObject<PivotGridApi>;
+    _fallbackRows?: SaleRow[];
+    _fallbackColumns?: GridColDef<SaleRow>[];
+};
+
 // Module-level: stable function reference so React never unmounts/remounts the toolbar.
-function CustomToolbar(props: any) {
+function CustomToolbar({ apiRef, _fallbackRows, _fallbackColumns, ...rest }: CustomToolbarProps) {
     return (
         <GridToolbar
-            {...props}
+            {...rest}
             rightContent={
                 <div className="pivot-toolbar-right">
                     <ExportToolbar
-                        apiRef={props.apiRef}
-                        fallbackRows={props._fallbackRows || []}
-                        fallbackColumns={props._fallbackColumns || []}
+                        apiRef={apiRef}
+                        fallbackRows={_fallbackRows || []}
+                        fallbackColumns={_fallbackColumns || []}
                     />
                 </div>
             }
@@ -320,18 +335,11 @@ export default function PivotModeDemo() {
     const [pivotModel, setPivotModel] = useState<GridPivotModel>(PRESETS[0].model);
 
     return (
-        <div className="pivot-demo-container">
-
-            {/* Header */}
-            <div className="pivot-demo-header">
-                <h2>Pivot Mode</h2>
-                <p>
-                    {RAW_ROWS.length.toLocaleString()} rows · {SOURCE_COLUMNS.length} columns.
-                    Use the <strong>toolbar icon</strong> to configure Row / Column / Value fields,
-                    or pick a preset below.
-                </p>
-            </div>
-
+        <DocsLayout
+            title="Pivot Mode"
+            description="Cross-tabulate your data dynamically. Drag fields into rows, columns, and values to reshape the dataset on the fly with aggregation (Sum, Avg, Count, Min, Max)."
+            sourceCode={sourceCode}
+        >
             {/* Controls */}
             <div className="pivot-demo-controls">
                 <label className="pivot-mode-toggle">
@@ -384,27 +392,24 @@ export default function PivotModeDemo() {
                 </div>
             )}
 
-            {/* Grid */}
-            <div className="pivot-grid-wrapper">
-                <DataGrid
-                    rows={RAW_ROWS}
-                    columns={SOURCE_COLUMNS}
-                    pivotMode={pivotMode}
-                    pivotModel={pivotModel}
-                    onPivotModelChange={setPivotModel}
-                    pagination
-                    paginationModel={{ page: 0, pageSize: 50 }}
-                    pageSizeOptions={[25, 50, 100]}
-                    slots={{ toolbar: CustomToolbar }}
-                    slotProps={{
-                        toolbar: {
-                            _fallbackRows: RAW_ROWS,
-                            _fallbackColumns: SOURCE_COLUMNS,
-                        }
-                    }}
-                    height={500}
-                />
-            </div>
-        </div>
+            <DataGrid
+                rows={RAW_ROWS}
+                columns={SOURCE_COLUMNS}
+                pivotMode={pivotMode}
+                pivotModel={pivotModel}
+                onPivotModelChange={setPivotModel}
+                pagination
+                paginationModel={{ page: 0, pageSize: 50 }}
+                pageSizeOptions={[25, 50, 100]}
+                slots={{ toolbar: CustomToolbar }}
+                slotProps={{
+                    toolbar: {
+                        _fallbackRows: RAW_ROWS,
+                        _fallbackColumns: SOURCE_COLUMNS,
+                    }
+                }}
+                height={500}
+            />
+        </DocsLayout>
     );
 }

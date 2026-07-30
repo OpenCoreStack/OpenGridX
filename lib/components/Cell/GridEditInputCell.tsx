@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GridRenderCellParams } from '../../types';
 
 export interface GridEditInputCellProps extends GridRenderCellParams {
-    onValueChange: (value: any) => void;
+    onValueChange: (value: unknown) => void;
     onCommit: () => void;
     onCancel: () => void;
 }
@@ -31,7 +31,7 @@ function TextEditor({ value, onValueChange, onCommit, onCancel }: GridEditInputC
 
 // ─── Number ───────────────────────────────────────────────────────────────────
 function NumberEditor({ value, onValueChange, onCommit, onCancel }: GridEditInputCellProps) {
-    const [local, setLocal] = useState(value ?? '');
+    const [local, setLocal] = useState<string | number>(typeof value === 'number' ? value : '');
     const ref = useRef<HTMLInputElement>(null);
     useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
 
@@ -94,7 +94,7 @@ function SelectEditor({ value, colDef, onValueChange, onCommit, onCancel }: Grid
         <select
             ref={ref}
             className="ogx__edit-select"
-            value={value ?? ''}
+            value={String(value ?? '')}
             onChange={e => { onValueChange(e.target.value); }}
             onBlur={onCommit}
             onKeyDown={e => {
@@ -113,7 +113,7 @@ function SelectEditor({ value, colDef, onValueChange, onCommit, onCancel }: Grid
 
 // ─── Date ─────────────────────────────────────────────────────────────────────
 function DateEditor({ value, onValueChange, onCommit, onCancel }: GridEditInputCellProps) {
-    const [local, setLocal] = useState(value ?? '');
+    const [local, setLocal] = useState<string>(typeof value === 'string' ? value : String(value ?? ''));
     const ref = useRef<HTMLInputElement>(null);
     useEffect(() => { ref.current?.focus(); }, []);
 

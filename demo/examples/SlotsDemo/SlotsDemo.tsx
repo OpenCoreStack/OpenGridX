@@ -1,21 +1,31 @@
-import { DataGrid, Button } from '@opencorestack/opengridx';
+import { DataGrid, Button, GridColDef } from '@opencorestack/opengridx';
 import { useMemo } from 'react';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './SlotsDemo.tsx?raw';
 
-const rows = [
+interface EmployeeRow {
+    id: number;
+    name: string;
+    email: string;
+    performance: number;
+    color: string;
+}
+
+const rows: EmployeeRow[] = [
     { id: 1, name: 'Asif Ansari', email: 'asif@example.com', performance: 95, color: '#4f46e5' },
     { id: 2, name: 'John Doe', email: 'john@example.com', performance: 88, color: '#10b981' },
     { id: 3, name: 'Jane Smith', email: 'jane@example.com', performance: 92, color: '#f59e0b' },
 ];
 
 export default function SlotsDemo() {
-    const columns = useMemo(() => [
+    const columns = useMemo<GridColDef<EmployeeRow>[]>(() => [
         { field: 'name', headerName: 'Employee', width: 200 },
         { field: 'email', headerName: 'Email', width: 200 },
         {
             field: 'performance',
             headerName: 'Performance',
             width: 150,
-            renderCell: (params: any) => (
+            renderCell: (params) => (
                 <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{
                         flex: 1,
@@ -39,7 +49,7 @@ export default function SlotsDemo() {
             field: 'actions',
             headerName: 'Quick Actions',
             width: 150,
-            renderCell: (params: any) => (
+            renderCell: (params) => (
                 <Button size="small" onClick={() => alert(`Reviewing ${params.row.name}`)}>
                     View Profile
                 </Button>
@@ -54,11 +64,11 @@ export default function SlotsDemo() {
     }), []);
 
     return (
-        <div style={{ padding: '20px' }}>
-            <h2 style={{ marginBottom: '16px' }}>Customization: Slots & Renderers</h2>
-            <p style={{ color: '#64748b', marginBottom: '24px' }}>
-                The Slots API and <code>renderCell</code> allow you to transform the grid into a rich dashboard by injecting your own components.
-            </p>
+        <DocsLayout
+            title="Slots & Renderers"
+            description="Replace any internal component with your own via the slots API. Custom cell renderers, header renderers, toolbar, no-rows overlay, and loading overlay."
+            sourceCode={sourceCode}
+        >
             <div style={{ height: 300, width: '100%' }}>
                 <DataGrid
                     rows={rows}
@@ -73,6 +83,6 @@ export default function SlotsDemo() {
                     Unlike traditional tables, OpenGridX uses a "Headless" mindset. We manage the scrolling, selection, and state, but YOU decide how the data looks.
                 </p>
             </div>
-        </div>
+        </DocsLayout>
     );
 }

@@ -1,6 +1,9 @@
-import { DataGrid, Button } from '@opencorestack/opengridx';
-import type { GridColDef, GridFilterModel } from '@opencorestack/opengridx';
 import { useState } from 'react';
+import { DataGrid, GridToolbar } from '@opencorestack/opengridx';
+import type { GridColDef, GridFilterModel } from '@opencorestack/opengridx';
+import { DocsLayout } from '../../components/DocsLayout';
+
+import sourceCode from './FilterPanelDemo.tsx?raw';
 
 interface Product {
     id: number;
@@ -26,48 +29,39 @@ const columns: GridColDef<Product>[] = [
 ];
 
 export default function FilterPanelDemo() {
-    const [showStandalone, setShowStandalone] = useState(false);
     const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
 
     return (
-        <div style={{ padding: '20px', maxWidth: '1000px' }}>
-            <h2 style={{ marginBottom: '16px' }}>Component: Filter Panel</h2>
-            <p style={{ color: '#64748b', marginBottom: '24px' }}>
-                OpenGridX provides an advanced Filter Panel with multi-logic support (AND/OR). It can be used via the toolbar or applied programmatically.
-            </p>
+        <DocsLayout
+            title="Filter Panel"
+            description="OpenGridX provides an advanced Filter Panel with multi-logic support (AND/OR). Click the filter icon in the toolbar to open the panel and apply filters per column."
+            sourceCode={sourceCode}
+        >
+            <DataGrid
+                rows={rows}
+                columns={columns}
+                height={420}
+                slots={{ toolbar: GridToolbar }}
+                filterModel={filterModel}
+                onFilterModelChange={setFilterModel}
+            />
 
-            <div style={{ marginBottom: '20px', display: 'flex', gap: '12px' }}>
-                <Button variant="outlined" onClick={() => setShowStandalone(!showStandalone)}>
-                    {showStandalone ? 'Hide Filter State Panel' : 'Show Active Filter State'}
-                </Button>
-            </div>
-
-            {showStandalone && (
+            {filterModel.items.length > 0 && (
                 <div style={{
-                    marginBottom: '16px',
-                    padding: '16px',
+                    marginTop: '16px',
+                    padding: '12px 16px',
                     border: '1px solid #e2e8f0',
                     borderRadius: '8px',
                     background: '#f8fafc',
                 }}>
-                    <h4 style={{ marginBottom: '8px' }}>Active Filter Model (JSON):</h4>
-                    <pre style={{ fontSize: '0.8rem', color: '#475569', margin: 0 }}>
+                    <strong style={{ fontSize: '0.8rem', color: '#475569' }}>
+                        Active Filter Model ({filterModel.items.length} filter{filterModel.items.length !== 1 ? 's' : ''})
+                    </strong>
+                    <pre style={{ fontSize: '0.75rem', color: '#475569', margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>
                         {JSON.stringify(filterModel, null, 2)}
                     </pre>
-                    <p style={{ marginTop: '12px', fontSize: '0.8rem', color: '#64748b' }}>
-                        Active Filters: <strong>{filterModel.items?.length ?? 0}</strong>. Use the filter icon in the toolbar to add filters.
-                    </p>
                 </div>
             )}
-
-            <div style={{ height: 400, width: '100%' }}>
-                <DataGrid
-                    rows={rows}
-                    columns={columns}
-                    filterModel={filterModel}
-                    onFilterModelChange={setFilterModel}
-                />
-            </div>
-        </div>
+        </DocsLayout>
     );
 }

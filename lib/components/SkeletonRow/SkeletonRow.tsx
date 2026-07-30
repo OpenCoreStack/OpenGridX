@@ -1,8 +1,15 @@
 import React from 'react';
+import type { GridColDef } from '../../types';
 
+interface SkeletonColumn extends GridColDef {
+    left?: number;
+    right?: number;
+    pinned?: 'left' | 'right';
+    zIndex?: number;
+}
 
 interface SkeletonRowProps {
-    columns: any[];
+    columns: SkeletonColumn[];
     rowHeight: number;
     checkboxSelection?: boolean;
     hasDetailPanel?: boolean;
@@ -54,7 +61,7 @@ export const SkeletonRow: React.FC<SkeletonRowProps> = ({
 
             { }
             {columns.map((col, index) => {
-                const width = col.width || 150;
+                const width = typeof col.width === 'number' ? col.width : 150;
                 const skeletonWidth = Math.min(width * 0.7, width - 20);
 
                 return (

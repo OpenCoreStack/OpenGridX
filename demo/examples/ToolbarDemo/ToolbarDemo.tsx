@@ -1,5 +1,7 @@
 import { DataGrid, GridToolbar, Button } from '@opencorestack/opengridx';
 import { useMemo } from 'react';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './ToolbarDemo.tsx?raw';
 
 const rows = [
     { id: 1, name: 'Project Alpha', status: 'In Progress', priority: 'High', budget: 50000 },
@@ -38,16 +40,18 @@ export default function ToolbarDemo() {
     }), []);
 
     return (
-        <div style={{ height: 400, width: '100%', padding: '20px' }}>
-            <h2 style={{ marginBottom: '16px' }}>Component: Toolbar</h2>
-            <p style={{ color: '#64748b', marginBottom: '24px' }}>
-                The Toolbar component can be easily extended or completely replaced via the Slots API.
-            </p>
-            <DataGrid
-                rows={rows}
-                columns={columns}
-                slots={slots}
-            />
-        </div>
+        <DocsLayout
+            title="Toolbar"
+            description="The built-in GridToolbar provides global search, column visibility management, advanced filters, aggregation panel, and pivot mode — all configurable via slots."
+            sourceCode={sourceCode}
+        >
+            <div style={{ height: 400 }}>
+                <DataGrid
+                    rows={rows}
+                    columns={columns}
+                    slots={slots}
+                />
+            </div>
+        </DocsLayout>
     );
 }

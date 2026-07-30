@@ -10,6 +10,8 @@ import {
     useAggregation,
 } from '@opencorestack/opengridx';
 import './AdvancedExcelExportDemo.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './AdvancedExcelExportDemo.tsx?raw';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -206,82 +208,78 @@ export default function AdvancedExcelExportDemo() {
     };
 
     return (
-        <div className="adv-excel-export-container">
-            {/* Header */}
-            <div className="adv-excel-export-header">
-                <div className="adv-excel-export-title-box">
-                    <h1>📊 Advanced Excel Export</h1>
-                    <p>Real .xlsx files — typed cells, styled headers, multi-sheet, aggregation totals</p>
-                </div>
+        <DocsLayout
+            title="Advanced Excel Export"
+            description="Real .xlsx files via ExcelJS — styled headers, typed cells, frozen header row, auto-filter dropdowns, alternating row colors, aggregation totals, and multi-sheet workbooks."
+            sourceCode={sourceCode}
+        >
+            <div className="adv-excel-export-actions">
+                <ExportButton
+                    emoji="📋"
+                    label="Basic Excel"
+                    sublabel="1 sheet, styled"
+                    color="#10b981"
+                    onClick={handleBasicExcel}
+                    disabled={exporting}
+                />
 
-                <div className="adv-excel-export-actions">
-                    <ExportButton
-                        emoji="📋"
-                        label="Basic Excel"
-                        sublabel="1 sheet, styled"
-                        color="#10b981"
-                        onClick={handleBasicExcel}
-                        disabled={exporting}
-                    />
+                <ExportButton
+                    emoji="📚"
+                    label="Full Report"
+                    sublabel={selectedRowIds.length > 0
+                        ? `${selectedRowIds.length} sel + summary`
+                        : '2 sheets + summary'}
+                    color="#6366f1"
+                    onClick={handleMultiSheetExcel}
+                    disabled={exporting}
+                />
 
-                    <ExportButton
-                        emoji="📚"
-                        label="Full Report"
-                        sublabel={selectedRowIds.length > 0
-                            ? `${selectedRowIds.length} sel + summary`
-                            : '2 sheets + summary'}
-                        color="#6366f1"
-                        onClick={handleMultiSheetExcel}
-                        disabled={exporting}
-                    />
+                <div className="adv-excel-action-divider" />
 
-                    <div className="adv-excel-action-divider" />
+                <ExportButton
+                    emoji="📄"
+                    label="CSV"
+                    sublabel="UTF-8"
+                    color="#64748b"
+                    onClick={() => exportToCsv(rows, columns, {
+                        fileName: 'employees.csv',
+                        aggregationResult: aggResult,
+                        aggregationModel,
+                        selectedRows: selectedRowIds.length > 0 ? selectedRowIds : undefined,
+                    })}
+                    disabled={exporting}
+                />
 
-                    <ExportButton
-                        emoji="📄"
-                        label="CSV"
-                        sublabel="UTF-8"
-                        color="#64748b"
-                        onClick={() => exportToCsv(rows, columns, {
-                            fileName: 'employees.csv',
-                            aggregationResult: aggResult,
-                            aggregationModel,
-                            selectedRows: selectedRowIds.length > 0 ? selectedRowIds : undefined,
-                        })}
-                        disabled={exporting}
-                    />
+                <ExportButton
+                    emoji="🔧"
+                    label="JSON"
+                    sublabel="pretty"
+                    color="#64748b"
+                    onClick={() => exportToJson(rows, columns, {
+                        fileName: 'employees.json',
+                        pretty: true,
+                        aggregationResult: aggResult,
+                        aggregationModel,
+                    })}
+                    disabled={exporting}
+                />
 
-                    <ExportButton
-                        emoji="🔧"
-                        label="JSON"
-                        sublabel="pretty"
-                        color="#64748b"
-                        onClick={() => exportToJson(rows, columns, {
-                            fileName: 'employees.json',
-                            pretty: true,
-                            aggregationResult: aggResult,
-                            aggregationModel,
-                        })}
-                        disabled={exporting}
-                    />
-
-                    <ExportButton
-                        emoji="🖨️"
-                        label="Print"
-                        sublabel="dialog"
-                        color="#64748b"
-                        onClick={() => printGrid(rows, columns, 'Employee Report')}
-                        disabled={exporting}
-                    />
-                </div>
-
-                {exporting && (
-                    <div className="adv-excel-exporting-status">
-                        <span className="adv-excel-spinning-icon">⚙️</span>
-                        Generating…
-                    </div>
-                )}
+                <ExportButton
+                    emoji="🖨️"
+                    label="Print"
+                    sublabel="dialog"
+                    color="#64748b"
+                    onClick={() => printGrid(rows, columns, 'Employee Report')}
+                    disabled={exporting}
+                />
             </div>
+
+            {exporting && (
+                <div className="adv-excel-exporting-status">
+                    <span className="adv-excel-spinning-icon">⚙️</span>
+                    Generating…
+                </div>
+            )}
 
             {/* Feature callouts */}
             <div className="adv-excel-features">
@@ -305,27 +303,24 @@ export default function AdvancedExcelExportDemo() {
                 )}
             </div>
 
-            {/* Grid */}
-            <div className="adv-excel-grid-wrapper">
-                <DataGrid
-                    rows={rows}
-                    columns={columns}
-                    checkboxSelection
-                    rowSelectionModel={selectedRowIds}
-                    onRowSelectionModelChange={setSelectedRowIds}
-                    pagination
-                    height={500}
-                    initialState={{ pagination: { paginationModel: { page: 0, pageSize: 50 } } }}
-                    pageSizeOptions={[25, 50, 100]}
-                    aggregationModel={aggregationModel}
-                    slots={{
-                        toolbar: () => null,
-                    }}
-                />
-            </div>
+            <DataGrid
+                rows={rows}
+                columns={columns}
+                checkboxSelection
+                rowSelectionModel={selectedRowIds}
+                onRowSelectionModelChange={setSelectedRowIds}
+                pagination
+                height={500}
+                initialState={{ pagination: { paginationModel: { page: 0, pageSize: 50 } } }}
+                pageSizeOptions={[25, 50, 100]}
+                aggregationModel={aggregationModel}
+                slots={{
+                    toolbar: () => null,
+                }}
+            />
 
             <DeveloperNotes />
-        </div>
+        </DocsLayout>
     );
 }
 

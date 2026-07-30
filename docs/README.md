@@ -22,6 +22,9 @@ Detailed reference for the core structural components.
 - **[Column Visibility](components/column-visibility.md)** - Managing visible fields
 - **[Column Grouping](components/column-group-header.md)** - Multi-level nested headers
 - **[Column Resizing](components/column-resize.md)** - Dynamic width controls
+- **[Empty State](components/empty-state.md)** - No-rows overlay and `noRowsOverlay` slot
+- **[Error Overlay](components/error-overlay.md)** - Data source error display
+- **[Aggregation Footer](components/aggregation-footer.md)** - Sticky totals row
 ---
 
 ## 🚀 Features
@@ -54,6 +57,17 @@ Make the grid your own.
 - **[Slots API](customization/slots-api.md)** - Replacing internal components
 
 ---
+
+## 🏛️ Architecture — Internal Hooks
+Reference for core hooks extracted from `DataGrid.tsx`. Intended for contributors.
+
+- **[useGridControlledState](architecture/use-grid-controlled-state.md)** - Controlled/uncontrolled state for all 7 state pairs
+- **[useGridRowPipeline](architecture/use-grid-row-pipeline.md)** - Filter → pin → sort → paginate row pipeline
+- **[useGridVirtualization](architecture/use-grid-virtualization.md)** - Render context and scroll-position math
+- **[useGridColumns](architecture/use-grid-columns.md)** - Column management: effective, ordered, visible, reorder handlers
+- **[useGridVisibleRows](architecture/use-grid-visible-rows.md)** - Render window: pinned + virtual center merge
+- **[useGridScrollSync](architecture/use-grid-scroll-sync.md)** - RAF-batched scroll tick, scrollPosRef, onRowsScrollEnd threshold
+- **[useGridStateSnapshot](architecture/use-grid-state-snapshot.md)** - onStateChange callback delivery on sort/filter/pagination/column changes
 
 ## 🛠️ Project Meta
 - **[Development Roadmap](roadmap.md)** - What's built and what's next

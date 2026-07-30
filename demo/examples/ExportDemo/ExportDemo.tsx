@@ -3,6 +3,8 @@ import { useState, useRef } from 'react';
 import { DataGrid, GridColDef, GridTooltip, exportToCsv, exportToExcel, exportToJson, printGrid, useGridApiRef } from '@opencorestack/opengridx';
 import { Button } from '../../../lib/components/ui/Button';
 import './ExportDemo.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './ExportDemo.tsx?raw';
 
 const rows = Array.from({ length: 5000 }, (_, i) => ({
     id: i + 1,
@@ -236,8 +238,10 @@ function ExportOptionsDialog({ open, onClose, onConfirm, paginationModel, totalR
     );
 }
 
+type ExportRow = (typeof rows)[number];
+
 interface ExportToolbarProps {
-    rows: any[];
+    rows: ExportRow[];
     columns: GridColDef[];
     selectedRows?: number[];
     paginationModel: { page: number; pageSize: number };
@@ -247,7 +251,7 @@ interface ExportToolbarProps {
         json?: boolean;
         print?: boolean;
     };
-    apiRef?: any;
+    apiRef?: ReturnType<typeof useGridApiRef>;
 }
 
 function ExportToolbar({ rows, columns, selectedRows, paginationModel, options, apiRef }: ExportToolbarProps) {
@@ -261,7 +265,7 @@ function ExportToolbar({ rows, columns, selectedRows, paginationModel, options, 
     const getAgg = () => apiRef?.current?.getAggregationResult?.() || null;
     const getAggModel = () => apiRef?.current?.getAggregationModel?.() || null;
 
-    const performPrint = async (rowsToPrint: any[], titleSuffix: string = '') => {
+    const performPrint = async (rowsToPrint: ExportRow[], titleSuffix: string = '') => {
         setIsPrinting(true);
         try {
             await printGrid(rowsToPrint, columns, {
@@ -469,7 +473,11 @@ export default function ExportDemo() {
     };
 
     return (
-        <div className="export-demo-container">
+        <DocsLayout
+            title="Export Data"
+            description="Export grid data to CSV, Excel, JSON, or send to print. Active filters and sort order are reflected in the output. Advanced Excel export produces real .xlsx files."
+            sourceCode={sourceCode}
+        >
             {showSelectionExportDialog && (
                 <div className="export-overlay">
                     <div className="export-dialog">
@@ -489,7 +497,7 @@ export default function ExportDemo() {
                             ].map(item => (
                                 <button
                                     key={item.id}
-                                    onClick={() => handleExportConfirm(item.id as any)}
+                                    onClick={() => handleExportConfirm(item.id as 'csv' | 'excel' | 'json' | 'print')}
                                     className="export-format-btn"
                                     onMouseEnter={e => {
                                         e.currentTarget.style.borderColor = item.color;
@@ -513,40 +521,31 @@ export default function ExportDemo() {
                 </div>
             )}
 
-            <div className="export-demo-header">
-                <h2>Export Functionality Demo</h2>
-                <p>
-                    Export data to CSV, Excel, JSON, or print. Select rows to export only selected data.
-                </p>
-            </div>
-
-            <div className="export-demo-grid-wrapper">
-                <DataGrid
-                    apiRef={apiRef}
-                    rows={rows}
-                    columns={columns}
-                    pagination
-                    paginationModel={paginationModel}
-                    onPaginationModelChange={setPaginationModel}
-                    pageSizeOptions={[500, 1000, 2500, 5000]}
-                    checkboxSelection
-                    rowSelectionModel={selectedRows}
-                    onRowSelectionModelChange={(newSelection) => setSelectedRows(newSelection as number[])}
-                    slots={{
-                        toolbar: ExportToolbar
-                    }}
-                    slotProps={{
-                        toolbar: {
-                            rows,
-                            columns,
-                            selectedRows,
-                            paginationModel,
-                            options: { json: true }
-                        }
-                    }}
-                    height={500}
-                />
-            </div>
+            <DataGrid
+                apiRef={apiRef}
+                rows={rows}
+                columns={columns}
+                pagination
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[500, 1000, 2500, 5000]}
+                checkboxSelection
+                rowSelectionModel={selectedRows}
+                onRowSelectionModelChange={(newSelection) => setSelectedRows(newSelection as number[])}
+                slots={{
+                    toolbar: ExportToolbar
+                }}
+                slotProps={{
+                    toolbar: {
+                        rows,
+                        columns,
+                        selectedRows,
+                        paginationModel,
+                        options: { json: true }
+                    }
+                }}
+                height={500}
+            />
 
             {selectedRows.length > 0 && (
                 <div className="selection-info-bar">
@@ -582,6 +581,6 @@ export default function ExportDemo() {
                     <li><strong>Excluded Columns:</strong> Use `exportable: false` to skip columns like 'Actions' in the generated files.</li>
                 </ul>
             </div>
-        </div>
+        </DocsLayout>
     );
 }

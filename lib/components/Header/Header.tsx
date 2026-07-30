@@ -236,7 +236,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
     // All non-spacer fields in order (for group-span math) with their effective physical width
     const allCols = allColumns ?? columns;
     const allLeafFields = allCols
-        .filter(c => !(c as any).isSpacer)
+        .filter(c => !c.isSpacer)
         .map(c => ({
             field: c.field,
             width: columnWidths[c.field] ?? c.width ?? 100
@@ -354,7 +354,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                 )}
 
                 {columns.map((colDef, index) => {
-                    if ((colDef as any).isSpacer) {
+                    if (colDef.isSpacer) {
                         return (
                             <div
                                 key={colDef.field}
@@ -409,7 +409,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                     }
 
                     const headerContent = colDef.renderHeader
-                        ? colDef.renderHeader({ field: colDef.field, colDef: colDef as any, colIndex: index })
+                        ? colDef.renderHeader({ field: colDef.field, colDef: colDef as unknown as GridColDef, colIndex: index })
                         : colDef.headerName || colDef.field;
 
                     const handleHeaderClick = (e: React.MouseEvent) => {
@@ -499,7 +499,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
 
                 {menuOpenParams && (
                     <ColumnMenu
-                        colDef={menuOpenParams.colDef}
+                        colDef={menuOpenParams.colDef as unknown as GridColDef<GridRowModel>}
                         sortModel={sortModel}
                         onSort={onSort}
                         onHide={onHideColumn}

@@ -2,6 +2,8 @@
 import { useMemo } from 'react';
 import { DataGrid, GridColDef, GridColumnGroupingModel } from '@opencorestack/opengridx';
 import './ColumnGroupingExample.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './ColumnGroupingExample.tsx?raw';
 
 // ─── Shared formatter ─────────────────────────────────────────────────────────
 const fmt = (v: number) => `$${v.toLocaleString()}`;
@@ -103,13 +105,11 @@ export default function ColumnGroupingExample() {
     const stableColumns2 = useMemo(() => columns2, []);
 
     return (
-        <div className="col-group-container">
-            <h2>Column Grouping</h2>
-            <p className="col-group-description">
-                Native column group headers rendered inside the DataGrid's sticky header block.
-                Group spans update live on column resize. Reordering is disabled while groups are active.
-            </p>
-
+        <DocsLayout
+            title="Column Grouping"
+            description="Multi-level nested column headers for complex tabular layouts. Define column groups and sub-groups declaratively via the columnGroupingModel prop."
+            sourceCode={sourceCode}
+        >
             {/* ── Single level ── */}
             <div className="col-group-section">
                 <h3>1. Single-level grouping</h3>
@@ -158,6 +158,6 @@ export default function ColumnGroupingExample() {
   ]}
 />`}</pre>
             </div>
-        </div>
+        </DocsLayout>
     );
 }

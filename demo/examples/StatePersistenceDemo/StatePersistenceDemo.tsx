@@ -3,6 +3,8 @@ import { useState, useCallback } from 'react';
 import { DataGrid, useGridStateStorage } from '@opencorestack/opengridx';
 import type { GridColDef, GridRowModel } from '@opencorestack/opengridx';
 import './StatePersistenceDemo.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './StatePersistenceDemo.tsx?raw';
 
 interface Employee extends GridRowModel {
     id: number;
@@ -100,15 +102,11 @@ export default function StatePersistenceDemo() {
     const storedState = raw ? JSON.parse(raw) : null;
 
     return (
-        <div className="state-persist-container">
-            <h2>State Persistence</h2>
-            <p className="state-persist-description">
-                Sort columns, resize them, reorder them, or change pages — then <strong>reload the page</strong>.
-                The grid will restore exactly where you left off. State is saved to{' '}
-                <code className="state-persist-code">localStorage</code>{' '}
-                via the <code className="state-persist-code">useGridStateStorage</code> hook.
-            </p>
-
+        <DocsLayout
+            title="State Persistence"
+            description="Save and restore complete grid configuration — column order, widths, sort model, filter model, and visibility — to localStorage or any custom storage backend."
+            sourceCode={sourceCode}
+        >
             <div className="state-persist-controls">
                 <button
                     onClick={handleClear}
@@ -148,6 +146,6 @@ export default function StatePersistenceDemo() {
                     <pre>{JSON.stringify(storedState, null, 2)}</pre>
                 </details>
             )}
-        </div>
+        </DocsLayout>
     );
 }

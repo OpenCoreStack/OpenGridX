@@ -1,10 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
-import type { GridColDef, GridSortDirection, GridColumnPinning } from '../../types';
+import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning } from '../../types';
 
 
 interface ColumnMenuProps {
-    colDef: GridColDef<any>;
+    colDef: GridColDef<GridRowModel>;
     sortModel?: Array<{ field: string; sort: 'asc' | 'desc' }>;
     onSort?: (field: string, direction: GridSortDirection) => void;
     onHide?: (field: string) => void;

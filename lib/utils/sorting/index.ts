@@ -1,7 +1,7 @@
 
 import type { GridRowModel, GridSortItem } from '../../types';
 
-export function compareValues(a: any, b: any, direction: 'asc' | 'desc'): number {
+export function compareValues(a: unknown, b: unknown, direction: 'asc' | 'desc'): number {
 
   if (a == null && b == null) return 0;
   if (a == null) return direction === 'asc' ? 1 : -1;

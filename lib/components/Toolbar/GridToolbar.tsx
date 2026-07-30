@@ -23,6 +23,7 @@ export interface GridToolbarProps {
     columnVisibilityModel?: Record<string, boolean>;
     onColumnVisibilityModelChange?: (model: Record<string, boolean>) => void;
     onColumnReorder?: (fromField: string, toField: string) => void;
+    onColumnOrderReset?: () => void;
     forceColumnsOpen?: boolean;
     onColumnsPanelClose?: () => void;
     children?: React.ReactNode;
@@ -201,6 +202,7 @@ function ColumnsPanelWrapper({
     onShowAll,
     onHideAll,
     onColumnReorder,
+    onColumnOrderReset,
     onClose
 }: {
     anchorRef: React.RefObject<HTMLButtonElement | null>;
@@ -210,6 +212,7 @@ function ColumnsPanelWrapper({
     onShowAll: () => void;
     onHideAll: () => void;
     onColumnReorder?: (fromField: string, toField: string) => void;
+    onColumnOrderReset?: () => void;
     onClose: () => void;
 }) {
     const panelRef = useRef<HTMLDivElement>(null);
@@ -268,6 +271,7 @@ function ColumnsPanelWrapper({
                 onShowAll={onShowAll}
                 onHideAll={onHideAll}
                 onColumnReorder={onColumnReorder}
+                onColumnOrderReset={onColumnOrderReset}
             />
         </div>
     );
@@ -403,6 +407,7 @@ export function GridToolbar({
     columnVisibilityModel = {},
     onColumnVisibilityModelChange,
     onColumnReorder,
+    onColumnOrderReset,
     forceColumnsOpen,
     onColumnsPanelClose,
     children,
@@ -553,6 +558,7 @@ export function GridToolbar({
                                 onShowAll={handleShowAllColumns}
                                 onHideAll={handleHideAllColumns}
                                 onColumnReorder={onColumnReorder}
+                                onColumnOrderReset={onColumnOrderReset}
                                 onClose={() => { setColsOpen(false); onColumnsPanelClose?.(); }}
                             />
                         )}

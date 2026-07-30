@@ -1,5 +1,5 @@
 
-import { useReducer, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
+import { useReducer, useCallback, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import type {
   GridInternalState as GridState,
   GridRowModel,
@@ -21,24 +21,23 @@ type GridAction =
   | { type: 'SET_SELECTION'; payload: Set<GridRowId> }
   | { type: 'SET_DIMENSIONS'; payload: { viewportWidth: number; viewportHeight: number } }
   | { type: 'SET_DATASOURCE_LOADING'; payload: boolean }
-  | { type: 'SET_DATASOURCE_ERROR'; payload: any }
+  | { type: 'SET_DATASOURCE_ERROR'; payload: unknown }
   | { type: 'SET_ROW_COUNT'; payload: number };
 
-function createInitialState(rows: GridRowModel[], columns: GridColDef[], columnVisibilityModel: GridColumnVisibilityModel = {}): GridState {
+function createInitialState<R extends GridRowModel>(rows: R[], columns: GridColDef<R>[], columnVisibilityModel: GridColumnVisibilityModel = {}): GridState {
   const idRowsLookup = new Map<GridRowId, GridRowModel>();
   const allRows: GridRowId[] = [];
 
   rows.forEach(row => {
-    const id = row.id;
-    idRowsLookup.set(id, row);
-    allRows.push(id);
+    idRowsLookup.set(row.id, row);
+    allRows.push(row.id);
   });
 
   const columnLookup = new Map<string, GridColDef>();
   const orderedFields: string[] = [];
 
   columns.forEach(col => {
-    columnLookup.set(col.field, col);
+    columnLookup.set(col.field, col as unknown as GridColDef);
     orderedFields.push(col.field);
   });
 
@@ -48,7 +47,7 @@ function createInitialState(rows: GridRowModel[], columns: GridColDef[], columnV
       allRows
     },
     columns: {
-      all: columns,
+      all: columns as unknown as GridColDef[],
       lookup: columnLookup,
       orderedFields,
       columnVisibilityModel
@@ -221,18 +220,17 @@ export interface UseDataGridParams<R extends GridRowModel = GridRowModel> {
 export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDataGridParams<R>) {
   const { rows, columns, rowHeight = 52, headerHeight = 56, columnVisibilityModel, initialState: propInitialState } = params;
 
-  const internalInitialState = useMemo(
-    () => createInitialState(rows, columns as any, columnVisibilityModel),
-    [] 
+  const [internalInitialState] = useState(() =>
+    createInitialState(rows, columns, columnVisibilityModel)
   );
 
   const [state, dispatch] = useReducer(gridReducer, {
     ...internalInitialState,
     sorting: propInitialState?.sorting || internalInitialState.sorting,
     filter: propInitialState?.filter || internalInitialState.filter,
-    dataSource: (propInitialState?.dataSource 
+    dataSource: propInitialState?.dataSource
       ? { ...internalInitialState.dataSource, ...propInitialState.dataSource }
-      : internalInitialState.dataSource) as any,
+      : internalInitialState.dataSource,
     pagination: {
       ...internalInitialState.pagination,
       ...(propInitialState?.pagination || {}),
@@ -289,7 +287,7 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
     dispatch({ type: 'SET_DATASOURCE_LOADING', payload: loading });
   }, []);
 
-  const setDataSourceError = useCallback((error: any) => {
+  const setDataSourceError = useCallback((error: unknown) => {
     dispatch({ type: 'SET_DATASOURCE_ERROR', payload: error });
   }, []);
 

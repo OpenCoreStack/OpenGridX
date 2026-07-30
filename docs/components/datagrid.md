@@ -68,3 +68,6 @@ Customize internal components using the `slots` prop.
 - [Column Visibility](column-visibility.md)
 - [Column Grouping](column-group-header.md)
 - [Column Resizing](column-resize.md)
+- [Empty State](empty-state.md)
+- [Error Overlay](error-overlay.md)
+- [Aggregation Footer](aggregation-footer.md)

@@ -22,7 +22,7 @@ export interface GridPaginationState {
 
 export interface GridDataSourceState {
   loading: boolean;
-  error?: any;
+  error?: unknown;
 }
 
 export interface GridColumnsState {

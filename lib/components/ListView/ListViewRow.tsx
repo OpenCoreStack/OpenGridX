@@ -1,5 +1,5 @@
 import React from 'react';
-import type { GridRowModel, GridRowId, GridListViewColDef, GridRenderCellParams } from '../../types';
+import type { GridColDef, GridRowModel, GridRowId, GridListViewColDef, GridRenderCellParams } from '../../types';
 
 export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
     row: R;
@@ -26,7 +26,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
         row,
         value: undefined,
         field: listViewColumn.field,
-        colDef: { field: listViewColumn.field } as any,
+        colDef: { field: listViewColumn.field } as unknown as GridColDef<R>,
         rowIndex,
         colIndex: 0,
     };

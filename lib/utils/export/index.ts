@@ -7,7 +7,7 @@ export interface CsvExportOptions {
     includeHeaders?: boolean;
     delimiter?: string;
     selectedRows?: (string | number)[];
-    aggregationResult?: Record<string, any> | null;
+    aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
 }
 
@@ -48,7 +48,7 @@ export function exportToCsv<R extends GridRowModel>(
 
     rowsToExport.forEach(row => {
         const values = exportColumns.map(col => {
-            let value: any = row[col.field as keyof R];
+            let value: unknown = (row as GridRowModel)[col.field];
 
             if (col.valueGetter) {
                 value = col.valueGetter({ row, field: col.field, value });
@@ -109,7 +109,7 @@ export interface ExcelExportOptions {
     sheetName?: string;
     includeHeaders?: boolean;
     selectedRows?: (string | number)[];
-    aggregationResult?: Record<string, any> | null;
+    aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
 }
 
@@ -159,7 +159,7 @@ export function exportToExcel<R extends GridRowModel>(
     rowsToExport.forEach(row => {
         html += '<tr>';
         exportColumns.forEach(col => {
-            let value: any = row[col.field as keyof R];
+            let value: unknown = (row as GridRowModel)[col.field];
 
             if (col.valueGetter) {
                 value = col.valueGetter({ row, field: col.field, value });
@@ -227,7 +227,7 @@ export interface JsonExportOptions {
     fileName?: string;
     pretty?: boolean;
     selectedRows?: (string | number)[];
-    aggregationResult?: Record<string, any> | null;
+    aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
 }
 
@@ -264,9 +264,9 @@ export function exportToJson<R extends GridRowModel>(
 
     // Build JSON data
     const data = rowsToExport.map(row => {
-        const obj: any = {};
+        const obj: Record<string, unknown> = {};
         exportColumns.forEach(col => {
-            let value: any = row[col.field as keyof R];
+            let value: unknown = (row as GridRowModel)[col.field];
 
             // Use valueGetter if available
             if (col.valueGetter) {
@@ -278,23 +278,27 @@ export function exportToJson<R extends GridRowModel>(
         return obj;
     });
 
-    let outData: any = data;
+    type ExportJsonPayload =
+        | Record<string, unknown>[]
+        | { data: Record<string, unknown>[]; aggregation: { labels: Record<string, unknown>; values: Record<string, unknown> } };
+
+    let outData: ExportJsonPayload = data;
 
     if (options.aggregationResult) {
         const aggResult = options.aggregationResult;
         const aggModel = options.aggregationModel || {};
-        
-        const summaryLabelObj: any = {};
+
+        const summaryLabelObj: Record<string, unknown> = {};
         exportColumns.forEach((col) => {
             if (aggModel[col.field]) {
                summaryLabelObj[col.field] = aggModel[col.field].toUpperCase();
             }
         });
 
-        const summaryDataObj: any = {};
+        const summaryDataObj: Record<string, unknown> = {};
         exportColumns.forEach((col) => {
             if (aggResult[col.field] !== undefined && aggResult[col.field] !== null) {
-               let aggVal = aggResult[col.field];
+               let aggVal: unknown = aggResult[col.field];
                if (col.valueFormatter) {
                    aggVal = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
                } else if (aggModel[col.field]) {
@@ -326,7 +330,7 @@ export function exportToJson<R extends GridRowModel>(
 export interface PrintOptions {
     title?: string;
     selectedRows?: (string | number)[];
-    aggregationResult?: Record<string, any> | null;
+    aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
 }
 
@@ -376,7 +380,7 @@ export async function printGrid<R extends GridRowModel>(
     try {
         let title = 'Print';
         let selectedRows: (string | number)[] | undefined;
-        let aggregationResult: Record<string, any> | null = null;
+        let aggregationResult: Record<string, unknown> | null = null;
         let aggregationModel: GridAggregationModel | null = null;
 
         if (typeof titleOrOptions === 'string') {
@@ -447,7 +451,7 @@ export async function printGrid<R extends GridRowModel>(
         rowsToExport.forEach(row => {
             html += '<tr>';
             exportColumns.forEach(col => {
-                let value: any = row[col.field as keyof R];
+                let value: unknown = (row as GridRowModel)[col.field];
 
                 if (col.valueGetter) {
                     value = col.valueGetter({ row, field: col.field, value });
@@ -529,10 +533,11 @@ export async function printGrid<R extends GridRowModel>(
             }
         }, 500);
 
-    } catch (e: any) {
+    } catch (e) {
         console.error('Print generation failed:', e);
         if (printWindow && !printWindow.closed) {
-            printWindow.document.body.innerHTML = `<div style="color: red; padding: 20px;"><h3>Error Generating Print Preview</h3><p>${e.message}</p></div>`;
+            const message = e instanceof Error ? e.message : String(e);
+            printWindow.document.body.innerHTML = `<div style="color: red; padding: 20px;"><h3>Error Generating Print Preview</h3><p>${message}</p></div>`;
         }
     }
 }

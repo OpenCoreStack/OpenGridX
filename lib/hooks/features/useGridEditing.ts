@@ -1,13 +1,12 @@
-import { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import type { GridRowId, GridRowModel } from '../../types';
 
 export interface GridEditingState {
-
     editingCell: {
         id: GridRowId;
         field: string;
-        value: any;
-        originalValue: any;
+        value: unknown;
+        originalValue: unknown;
     } | null;
 }
 
@@ -15,41 +14,43 @@ export interface UseGridEditingParams<R extends GridRowModel> {
     rows: R[];
     getRowId: (row: R) => GridRowId;
     processRowUpdate?: (newRow: R, oldRow: R) => R | Promise<R>;
-    onProcessRowUpdateError?: (error: any) => void;
-    onRowChange?: (newRow: R) => void; 
+    onProcessRowUpdateError?: (error: unknown) => void;
+    onRowChange?: (newRow: R) => void;
 }
 
+type EditingCellState = GridEditingState['editingCell'];
+
 export function useGridEditing<R extends GridRowModel>(params: UseGridEditingParams<R>) {
-    const { 
-        rows, 
-        getRowId, 
-        processRowUpdate, 
+    const {
+        rows,
+        getRowId,
+        processRowUpdate,
         onProcessRowUpdateError,
-        onRowChange 
+        onRowChange
     } = params;
 
-    const [editingCell, setEditingCellState] = useState<GridEditingState['editingCell']>(null);
-    const editingCellRef = useRef<GridEditingState['editingCell']>(null);
+    const [editingCell, setEditingCellState] = useState<EditingCellState>(null);
+    const editingCellRef = useRef<EditingCellState>(null);
 
-    const setEditingCell = useCallback((val: any) => {
+    const setEditingCell = useCallback((val: React.SetStateAction<EditingCellState>) => {
         setEditingCellState(val);
         editingCellRef.current = typeof val === 'function' ? val(editingCellRef.current) : val;
     }, []);
 
-    const startCellEdit = useCallback((params: { id: GridRowId, field: string, value: any }) => {
+    const startCellEdit = useCallback((editParams: { id: GridRowId; field: string; value: unknown }) => {
         setEditingCell({
-            id: params.id,
-            field: params.field,
-            value: params.value,
-            originalValue: params.value
+            id: editParams.id,
+            field: editParams.field,
+            value: editParams.value,
+            originalValue: editParams.value
         });
-    }, []);
+    }, [setEditingCell]);
 
-    const stopCellEdit = useCallback(async (params?: { cancel?: boolean }) => {
+    const stopCellEdit = useCallback(async (stopParams?: { cancel?: boolean }) => {
         const currentCell = editingCellRef.current;
         if (!currentCell) return;
 
-        if (params?.cancel) {
+        if (stopParams?.cancel) {
             setEditingCell(null);
             return;
         }
@@ -63,8 +64,8 @@ export function useGridEditing<R extends GridRowModel>(params: UseGridEditingPar
 
         const existingRow = rows.find(r => getRowId(r) === id);
         if (!existingRow) {
-             setEditingCell(null);
-             return;
+            setEditingCell(null);
+            return;
         }
 
         const newRow = { ...existingRow, [field]: value };
@@ -78,18 +79,16 @@ export function useGridEditing<R extends GridRowModel>(params: UseGridEditingPar
             }
             setEditingCell(null);
         } catch (error) {
-            if (onProcessRowUpdateError) {
-                onProcessRowUpdateError(error);
-            }
+            onProcessRowUpdateError?.(error);
         }
 
-    }, [editingCell, rows, getRowId, processRowUpdate, onRowChange, onProcessRowUpdateError]);
+    }, [setEditingCell, rows, getRowId, processRowUpdate, onRowChange, onProcessRowUpdateError]);
 
-    const setEditCellValue = useCallback((params: { id: GridRowId, field: string, value: any }) => {
-        if (editingCell && editingCell.id === params.id && editingCell.field === params.field) {
-            setEditingCell((prev: any) => prev ? { ...prev, value: params.value } : null);
+    const setEditCellValue = useCallback((editParams: { id: GridRowId; field: string; value: unknown }) => {
+        if (editingCell && editingCell.id === editParams.id && editingCell.field === editParams.field) {
+            setEditingCell(prev => prev ? { ...prev, value: editParams.value } : null);
         }
-    }, [editingCell]);
+    }, [editingCell, setEditingCell]);
 
     return {
         editingCell,

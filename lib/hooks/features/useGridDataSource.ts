@@ -22,7 +22,7 @@ interface UseGridDataSourceParams<R extends GridRowModel> {
   setRows: (rows: R[] | ((prev: R[]) => R[]), preserveRowCount?: boolean) => void;
   setRowCount: (count: number) => void;
   setDataSourceLoading: (loading: boolean) => void;
-  setDataSourceError: (error: any) => void;
+  setDataSourceError: (error: unknown) => void;
     onAggregationResults?: (results: GridAggregationResult) => void;
 }
 

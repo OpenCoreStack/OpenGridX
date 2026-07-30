@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type {
     GridFilterModel,
     GridFilterItem,
@@ -30,34 +30,42 @@ const FilterRow: React.FC<{
     const currentOperator = item?.operator ?? operators[0];
 
     // Local input state to prevent full filter-panel re-render on every keystroke
-    const [localValue, setLocalValue] = useState(item?.value ?? '');
+    const [localValue, setLocalValue] = useState<string>(item?.value != null ? String(item.value) : '');
     const onChangeRef = useRef(onChange);
-    onChangeRef.current = onChange;
+    const itemRef = useRef(item);
+    const colFieldRef = useRef(col.field);
+    const operatorRef = useRef(currentOperator);
+    useLayoutEffect(() => {
+        onChangeRef.current = onChange;
+        itemRef.current = item;
+        colFieldRef.current = col.field;
+        operatorRef.current = currentOperator;
+    });
 
     // Sync when the external item changes (e.g. operator change, clear)
     const prevItemValue = useRef(item?.value);
     useEffect(() => {
         if (item?.value !== prevItemValue.current) {
             prevItemValue.current = item?.value;
-            setLocalValue(item?.value ?? '');
+            setLocalValue(item?.value != null ? String(item.value) : '');
         }
     }, [item?.value]);
 
     // Debounce propagating the value upward (300ms)
     useEffect(() => {
         const handler = setTimeout(() => {
-            const currentValue = item?.value ?? '';
+            const currentItem = itemRef.current;
+            const currentValue = currentItem?.value ?? '';
             if (localValue !== currentValue) {
                 onChangeRef.current({
-                    id: item?.id ?? `${col.field}-${Date.now()}`,
-                    field: col.field,
-                    operator: currentOperator as GridFilterOperator,
+                    id: currentItem?.id ?? `${colFieldRef.current}-${Date.now()}`,
+                    field: colFieldRef.current,
+                    operator: operatorRef.current as GridFilterOperator,
                     value: localValue,
                 });
             }
         }, 300);
         return () => clearTimeout(handler);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [localValue]);
 
     const handleOperatorChange = (op: string) => {
@@ -158,7 +166,7 @@ const FilterRow: React.FC<{
 // ── Root panel ────────────────────────────────────────────────────────────────
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({ filterModel, columns, onFilterModelChange }) => {
-    const items: GridFilterItem[] = (filterModel.items ?? []) as GridFilterItem[];
+    const items = useMemo<GridFilterItem[]>(() => (filterModel.items ?? []) as GridFilterItem[], [filterModel.items]);
     const logicOperator = filterModel.logicOperator ?? 'and';
 
     const handleItemChange = useCallback((field: string, newItem: GridFilterItem | null) => {

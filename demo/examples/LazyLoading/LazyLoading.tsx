@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { DataGrid } from '@opencorestack/opengridx';
 import { GridColDef, GridDataSource, GridGetRowsParams, GridRowModel, GridPaginationModel } from '../../../lib/types';
 import './LazyLoading.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './LazyLoading.tsx?raw';
 
 interface Employee extends GridRowModel {
     id: number;
@@ -66,28 +68,25 @@ export default function LazyLoadingExample() {
     });
 
     return (
-        <div className="lazy-loading-container">
-            <h2>Lazy Loading (Server-Side Pagination)</h2>
-            <p className="lazy-loading-description">
-                Data is fetched page-by-page from the server. Total: 15,000 records.
-                Change page or page size to trigger a new fetch.
-            </p>
-            <div className="lazy-loading-grid-wrapper">
-                <DataGrid
-                    columns={columns}
-                    rows={[]}
-                    dataSource={mockDataSource}
-                    pagination
-                    paginationMode="server"
-                    sortingMode="server"
-                    paginationModel={paginationModel}
-                    onPaginationModelChange={setPaginationModel}
-                    pageSizeOptions={[50, 100, 200]}
-                    rowHeight={52}
-                    headerHeight={56}
-                    height={400}
-                />
-            </div>
-        </div>
+        <DocsLayout
+            title="Lazy Loading"
+            description="Load rows in batches as the user scrolls, with animated skeleton placeholder rows during fetch. Combine with server-side data sources for scalable list rendering."
+            sourceCode={sourceCode}
+        >
+            <DataGrid
+                columns={columns}
+                rows={[]}
+                dataSource={mockDataSource}
+                pagination
+                paginationMode="server"
+                sortingMode="server"
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[50, 100, 200]}
+                rowHeight={52}
+                headerHeight={56}
+                height={400}
+            />
+        </DocsLayout>
     );
 }

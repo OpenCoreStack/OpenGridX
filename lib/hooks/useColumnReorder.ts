@@ -84,7 +84,7 @@ export function useColumnReorder<R extends GridRowModel = GridRowModel>(
 
       if (onColumnOrderChange) {
         onColumnOrderChange({
-          column: column as any,
+          column: column as unknown as GridColDef,
           oldIndex,
           targetIndex,
         });

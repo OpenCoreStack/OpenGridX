@@ -9,6 +9,8 @@ import {
     GridGetRowsResponse,
 } from '@opencorestack/opengridx';
 import './ServerSideTreeDemo.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './ServerSideTreeDemo.tsx?raw';
 
 interface MockServerRow extends GridRowModel {
     id: string;
@@ -77,27 +79,22 @@ export function ServerSideTreeDemo() {
     }, []);
 
     return (
-        <div className="ss-tree-container">
-            <div className="ss-tree-header">
-                <h2>Server-Side Tree Data (Lazy Loading)</h2>
-                <p>
-                    Expand folders to lazy-load their children from the server.
-                </p>
-            </div>
-
-            <div className="ss-tree-grid-wrapper">
-                <DataGrid
-                    rows={rows}
-                    columns={columns}
-                    dataSource={dataSource}
-                    treeData
-                    getTreeDataPath={getTreeDataPath}
-                    groupingColDef={{ field: 'name', headerName: 'File System', width: 300 }}
-                    paginationMode="server"
-                    rowCount={100}
-                    height={600}
-                />
-            </div>
-        </div>
+        <DocsLayout
+            title="Server-Side Tree"
+            description="Tree data with lazy server-side child fetching. Child nodes are loaded on demand when the user expands a parent row."
+            sourceCode={sourceCode}
+        >
+            <DataGrid
+                rows={rows}
+                columns={columns}
+                dataSource={dataSource}
+                treeData
+                getTreeDataPath={getTreeDataPath}
+                groupingColDef={{ field: 'name', headerName: 'File System', width: 300 }}
+                paginationMode="server"
+                rowCount={100}
+                height={600}
+            />
+        </DocsLayout>
     );
 }

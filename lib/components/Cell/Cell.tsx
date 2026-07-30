@@ -7,9 +7,9 @@ import { GridEditInputCell } from './GridEditInputCell';
 
 export interface CellProps<R extends GridRowModel = GridRowModel> {
     onCellClick?: (params: GridCellParams<R>) => void;
-    onCellEditStart?: (field: string, value: any) => void;
-    onCellValueChange?: (field: string, newValue: any) => void;
-    value: any;
+    onCellEditStart?: (field: string, value: unknown) => void;
+    onCellValueChange?: (field: string, newValue: unknown) => void;
+    value: unknown;
     row: R;
     colDef: GridColDef<R>;
     rowIndex: number;
@@ -27,7 +27,7 @@ export interface CellProps<R extends GridRowModel = GridRowModel> {
     isEditing?: boolean;
     onEditStart?: () => void;
     onEditStop?: (cancel?: boolean) => void;
-    onValueChange?: (newValue: any) => void;
+    onValueChange?: (newValue: unknown) => void;
 
     colSpanInfo?: CellColSpanInfo;
     rowSpan?: number;
@@ -63,7 +63,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
     } = props;
 
     // All hooks must come before any early returns (Rules of Hooks)
-    const handleValueChange = React.useCallback((newValue: any) => {
+    const handleValueChange = React.useCallback((newValue: unknown) => {
         if (onCellValueChange) {
             onCellValueChange(colDef.field, newValue);
         } else {
@@ -94,7 +94,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                     value,
                     row,
                     field: colDef.field,
-                    colDef: colDef as any,
+                    colDef,
                     rowIndex,
                     colIndex
                 });
@@ -104,7 +104,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                     value={value}
                     row={row}
                     field={colDef.field}
-                    colDef={colDef as any}
+                    colDef={colDef as unknown as GridColDef}
                     rowIndex={rowIndex}
                     colIndex={colIndex}
                     onValueChange={handleValueChange}
@@ -119,7 +119,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                 value,
                 row,
                 field: colDef.field,
-                colDef: colDef as any,
+                colDef,
                 rowIndex,
                 colIndex
             });
@@ -131,7 +131,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
     const resolvedCellClassName = React.useMemo(() => {
         if (!colDef.cellClassName) return '';
         if (typeof colDef.cellClassName === 'function') {
-            return colDef.cellClassName({ value, row, field: colDef.field, colDef: colDef as any, rowIndex, colIndex }) || '';
+            return colDef.cellClassName({ value, row, field: colDef.field, colDef, rowIndex, colIndex }) || '';
         }
         return colDef.cellClassName;
     }, [colDef, value, row, rowIndex, colIndex]);
@@ -162,7 +162,6 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
 
     const handleClick = (e: React.MouseEvent) => {
         if (onCellClick) {
-            e.stopPropagation();
             onCellClick({
                 row,
                 field: colDef.field,

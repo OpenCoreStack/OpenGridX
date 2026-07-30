@@ -2,6 +2,8 @@
 import { useState, useMemo } from 'react';
 import { DataGrid, GridColDef } from '@opencorestack/opengridx';
 import './CellSpanningShowcase.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './CellSpanningShowcase.tsx?raw';
 
 interface User {
     id: number;
@@ -535,15 +537,11 @@ function RowSpanningExample() {
 
 export default function CellSpanningShowcase() {
     return (
-        <div className="spanning-showcase-container">
-            <div className="spanning-showcase-header">
-                <h2>Cell Spanning Examples</h2>
-                <p>
-                    Comprehensive examples demonstrating various cell spanning use cases,
-                    inspired by MUI X DataGrid documentation.
-                </p>
-            </div>
-
+        <DocsLayout
+            title="Cell Spanning"
+            description="Merge cells horizontally across multiple columns using the colSpan callback. Ideal for summary rows, section headers, and grouped column layouts."
+            sourceCode={sourceCode}
+        >
             <SimpleColumnSpanExample />
             <InvoiceExample />
             <TimetableExample />
@@ -567,6 +565,6 @@ export default function CellSpanningShowcase() {
                     or tables where interactive features are not required.
                 </p>
             </div>
-        </div>
+        </DocsLayout>
     );
 }

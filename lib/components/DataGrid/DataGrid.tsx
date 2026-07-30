@@ -1,30 +1,33 @@
 import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import { useLayout } from '../../hooks/core/useLayout';
 import { useGridKeyboardNavigation } from '../../hooks/core/useGridKeyboardNavigation';
-import ReactDOM from 'react-dom';
-import { ListViewRow } from '../ListView/ListViewRow';
-import type { GridState } from '../../state/types';
+import { useGridControlledState } from '../../hooks/core/useGridControlledState';
+import { useGridRowPipeline } from '../../hooks/core/useGridRowPipeline';
+import { useGridVirtualization } from '../../hooks/core/useGridVirtualization';
+import { useGridColumns } from '../../hooks/core/useGridColumns';
+import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
+import { useGridScrollSync } from '../../hooks/core/useGridScrollSync';
+import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
+import { GridAggregationFooter } from './GridAggregationFooter';
+import { GridEmptyState } from './GridEmptyState';
+import { GridErrorOverlay } from './GridErrorOverlay';
 import { Header } from '../Header/Header';
-import { Row } from '../Row/Row';
-import { SkeletonRow } from '../SkeletonRow';
 import { Pagination } from '../Pagination/Pagination';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
-import { useColumnReorder } from '../../hooks/useColumnReorder';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useTreeData } from '../../hooks/useTreeData';
 import { useRowGrouping } from '../../hooks/useRowGrouping';
 import { useGridEditing } from '../../hooks/features/useGridEditing';
 import { useGridSpanning } from '../../hooks/features/useGridSpanning';
 import { useGridDataSource } from '../../hooks/features/useGridDataSource';
-import { useAggregation, formatAggregationValue } from '../../hooks/features/useAggregation';
+import { useAggregation } from '../../hooks/features/useAggregation';
 import { usePivot } from '../../hooks/features/usePivot';
 import { useGridClipboard } from '../../hooks/features/useGridClipboard';
-import { ExpandIcon } from '../ui/ExpandIcon';
-import { ColumnVisibilityPanel } from '../ColumnVisibilityPanel/ColumnVisibilityPanel';
-import { getPinnedRowGroups, isRowPinned } from '../../utils/pinning';
-import { sortRows } from '../../utils/sorting';
-import { filterRows } from '../../utils/filtering';
-import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColumnOrderChangeParams, GridColDef, GridRenderCellParams, GridRowParams, GridCellParams, GridPaginationModel, GridDataSource, GridAggregationResult, GridAggregationModel, GridPivotModel, GridColumnPinning, GridFilterModel } from '../../types';
+import { GridListView } from './GridListView';
+import { GridPinnedRows } from './GridPinnedRows';
+import { GridVirtualRows } from './GridVirtualRows';
+import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
+import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridAggregationResult, GridFilterModel, GridTreeNode, GridSortItem } from '../../types';
 
 export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridProps<R>) {
     const {
@@ -113,15 +116,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const defaultFilterModel: GridFilterModel = useMemo(() => ({ items: [] }), []);
     const filterModel = (propFilterModel || defaultFilterModel) as GridFilterModel;
 
-    const [internalSortModel, setInternalSortModel] = useState<{ field: string; sort: 'asc' | 'desc' }[]>(
-        () => initialState?.sorting?.sortModel ?? []
-    );
-    const isSortControlled = propSortModel !== undefined;
-    const sortModel = isSortControlled ? propSortModel : internalSortModel;
-
     const defaultRowGroupingModel = useMemo(() => [], []);
     const rowGroupingModel = propRowGroupingModel || defaultRowGroupingModel;
-    const isAggregationControlled = propAggregationModel !== undefined;
 
     // ─── Stabilize toolbar component identity ────────────────────────────────
     // Problem: demos/users often define their toolbar as an inline function
@@ -148,51 +144,46 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         const Toolbar = latestToolbarRef.current;
         return Toolbar ? (Toolbar as (p: typeof props) => React.ReactElement | null)(props) : null;
     }).current;
-    const [internalAggregationModel, setInternalAggregationModel] = useState<GridAggregationModel>(
-        () => propAggregationModel ?? {}
-    );
-    const aggregationModel = isAggregationControlled ? propAggregationModel : internalAggregationModel;
 
-    const handleAggregationModelChange = useCallback((model: GridAggregationModel) => {
-        if (!isAggregationControlled) {
-            setInternalAggregationModel(model);
-        }
-        onAggregationModelChange?.(model);
-    }, [isAggregationControlled, onAggregationModelChange]);
+    const controlledState = useGridControlledState({
+        initialState,
+        sortModel: propSortModel,
+        onSortModelChange,
+        aggregationModel: propAggregationModel,
+        onAggregationModelChange,
+        columnVisibilityModel: propColumnVisibilityModel,
+        onColumnVisibilityModelChange,
+        pinnedColumns: propPinnedColumns,
+        onPinnedColumnsChange,
+        pivotModel: propPivotModel,
+        onPivotModelChange,
+        paginationModel,
+        onPaginationModelChange,
+        rowSelectionModel: propRowSelectionModel,
+        onRowSelectionModelChange: propOnRowSelectionModelChange,
+    });
 
-    const [internalColumnVisibilityModel, setInternalColumnVisibilityModel] = useState<Record<string, boolean>>(
-        () => initialState?.columns?.columnVisibilityModel ?? {}
-    );
-    const isColumnVisibilityControlled = propColumnVisibilityModel !== undefined;
-    const columnVisibilityModel = isColumnVisibilityControlled ? propColumnVisibilityModel : internalColumnVisibilityModel;
+    const {
+        sortModel,
+        isSortControlled,
+        setInternalSortModel,
+        aggregationModel,
+        handleAggregationModelChange,
+        columnVisibilityModel,
+        handleColumnVisibilityModelChange,
+        pinnedColumns,
+        handlePinnedColumnsChange,
+        currentPivotModel,
+        handlePivotModelChange,
+        effectivePaginationModel,
+        handlePaginationModelChange,
+        selectedRowIds,
+        isSelectionControlled,
+        setInternalRowSelectionModel,
+    } = controlledState;
 
-    const handleColumnVisibilityModelChange = useCallback((model: Record<string, boolean>) => {
-        if (!isColumnVisibilityControlled) {
-            setInternalColumnVisibilityModel(model);
-        }
-        onColumnVisibilityModelChange?.(model);
-    }, [isColumnVisibilityControlled, onColumnVisibilityModelChange]);
+    const onRowSelectionModelChange = propOnRowSelectionModelChange;
 
-    const [internalPinnedColumns, setInternalPinnedColumns] = useState<GridColumnPinning>(
-        () => initialState?.columns?.pinnedColumns ?? {}
-    );
-    const isPinnedColumnsControlled = propPinnedColumns !== undefined;
-    const pinnedColumns = isPinnedColumnsControlled ? propPinnedColumns : internalPinnedColumns;
-
-    const handlePinnedColumnsChange = useCallback((model: GridColumnPinning) => {
-        if (!isPinnedColumnsControlled) {
-            setInternalPinnedColumns(model);
-        }
-        onPinnedColumnsChange?.(model);
-    }, [isPinnedColumnsControlled, onPinnedColumnsChange]);
-
-    const EMPTY_PIVOT_MODEL: GridPivotModel = useMemo(() => ({ rowFields: [], columnFields: [], valueFields: [] }), []);
-    const [internalPivotModel, setInternalPivotModel] = useState<GridPivotModel>(propPivotModel ?? EMPTY_PIVOT_MODEL);
-    const currentPivotModel = propPivotModel ?? internalPivotModel;
-    const handlePivotModelChange = useCallback((model: GridPivotModel) => {
-        setInternalPivotModel(model);
-        onPivotModelChange?.(model);
-    }, [onPivotModelChange]);
     const pivot = usePivot(rows as GridRowModel[], columns as unknown as GridColDef[], currentPivotModel, pivotMode);
 
     const activeRows = (pivotMode && pivot.isValid ? pivot.pivotRows : rows) as unknown as R[];
@@ -203,25 +194,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     useEffect(() => {
         setServerAggregationResults(null);
     }, [aggregationModel]);
-
-    const [internalPaginationModel, setInternalPaginationModel] = useState(
-        () => initialState?.pagination?.paginationModel ?? paginationModel
-    );
-    const isPaginationControlled = props.paginationModel !== undefined;
-    const effectivePaginationModel = isPaginationControlled ? paginationModel : internalPaginationModel;
-
-    const handlePaginationModelChange = useCallback((newModel: GridPaginationModel) => {
-        if (!isPaginationControlled) {
-            setInternalPaginationModel(newModel);
-        }
-        onPaginationModelChange?.(newModel);
-    }, [isPaginationControlled, onPaginationModelChange]);
-
-    const [internalRowSelectionModel, setInternalRowSelectionModel] = useState<GridRowId[]>([]);
-    const isSelectionControlled = propRowSelectionModel !== undefined;
-    const rowSelectionModel = isSelectionControlled ? propRowSelectionModel : internalRowSelectionModel;
-    const selectedRowIds = useMemo(() => new Set(rowSelectionModel), [rowSelectionModel]);
-    const onRowSelectionModelChange = propOnRowSelectionModelChange;
 
     const viewportRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -240,12 +212,12 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     dataSourceRef.current = dataSource;
 
     const fetchChildrenRef = useRef<((parentId: GridRowId, groupKeys: string[]) => Promise<void>) | null>(null);
-    const treeDataRef = useRef<any>(null);
+    const treeDataRef = useRef<ReturnType<typeof useTreeData> | null>(null);
 
-    const handleNodeExpansion = useCallback((node: any) => {
+    const handleNodeExpansion = useCallback((node: GridTreeNode) => {
         if (dataSourceRef.current && treeData) {
 
-            if (node.serverChildrenCount > 0 && node.children.length === 0) {
+            if ((node.serverChildrenCount ?? 0) > 0 && (node.children ?? []).length === 0) {
 
                 const groupKeys = treeDataRef.current?.getNodePath(node.id) || [node.groupingKey];
                 fetchChildrenRef.current?.(node.id, groupKeys);
@@ -273,21 +245,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         setRowCount
     } = gridData;
 
-    const scrollPosRef = useRef({ scrollTop: 0, scrollLeft: 0 });
-    const scrollRafRef = useRef<number | null>(null);
-    const [scrollTick, setScrollTick] = useState(0);
+    const { scrollTop, scrollLeft, handleScroll } = useGridScrollSync({ onRowsScrollEnd });
 
     useEffect(() => {
         if (propApiRef) {
             propApiRef.current = apiRef.current;
         }
     }, [propApiRef, apiRef]);
-
-    useEffect(() => {
-        return () => {
-            if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
-        };
-    }, []);
 
     const { copySelectedRows } = useGridClipboard({
         selectedRowIds,
@@ -346,7 +310,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             const { dispatch } = gridData;
             const currentRows = Array.from(gridData.state.rows.idRowsLookup.values());
             const nextRows = currentRows.map(r =>
-                (r as any).id === (updatedRow as any).id ? updatedRow : r
+                r.id === updatedRow.id ? updatedRow : r
             );
             dispatch({ type: 'SET_ROWS', payload: nextRows });
         },
@@ -361,129 +325,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const handleRowClick = useCallback((params: GridRowParams<R>) => {
         const { row, id } = params;
-        const rowData = row as any;
 
-        if (isHierarchyEnabled && rowData._hasChildren) {
+        if (isHierarchyEnabled && row._hasChildren) {
             activeHierarchyHandlers?.toggleExpansion(id);
             return;
         }
 
         onRowClick?.(params);
     }, [isHierarchyEnabled, activeHierarchyHandlers, onRowClick]);
-
-    const effectiveColumns = useMemo(() => {
-        if (!isHierarchyEnabled) return activeColumns;
-
-        return activeColumns.map((col, index) => {
-
-            if (index === 0) {
-                return {
-                    ...col,
-                    renderCell: (params: GridRenderCellParams<R>) => {
-                        const { _treeDepth, _hasChildren, _isExpanded, _groupingField, _groupingValue, _descendantCount } = params.row as any;
-                        const depth = _treeDepth || 0;
-                        const paddingLeft = depth * 24;
-
-                        let content = col.renderCell ? col.renderCell(params) : params.value;
-
-                        if (isTreeData && _hasChildren && params.row._isGroupRow) {
-                            content = (
-                                <div className="ogx__group-cell-content">
-                                    {params.value}
-                                    {_descendantCount !== undefined && _descendantCount > 0 ? ` (${_descendantCount})` : ''}
-                                </div>
-                            );
-                        }
-
-                        // For row grouping, override the first column content to show the group label
-                        if (isRowGrouping && _hasChildren && _groupingField) {
-                            content = (
-                                <div className="ogx__group-cell-content">
-                                    {col.field === _groupingField ? '' : `${_groupingField}: `}
-                                    {String(_groupingValue)}
-                                    {_descendantCount !== undefined ? ` (${_descendantCount})` : ''}
-                                </div>
-                            );
-                        }
-
-                        return (
-                            <div style={{ display: 'flex', alignItems: 'center', paddingLeft, width: '100%', height: '100%' }}>
-                                <div
-                                    style={{
-                                        marginRight: 4,
-                                        width: 24,
-                                        height: 24,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        cursor: _hasChildren ? 'pointer' : 'default',
-                                        flexShrink: 0
-                                    }}
-                                >
-
-                                    {_hasChildren ? (
-                                        <div
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                e.preventDefault();
-                                                activeHierarchyHandlers?.toggleExpansion(params.row.id);
-                                            }}
-                                            onMouseDown={(e) => {
-                                                e.stopPropagation();
-                                            }}
-                                            style={{
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                pointerEvents: 'auto',
-                                                zIndex: 10,
-                                                position: 'relative'
-                                            }}
-                                        >
-                                            <ExpandIcon
-                                                isExpanded={_isExpanded}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    e.preventDefault();
-                                                    activeHierarchyHandlers?.toggleExpansion(params.row.id);
-                                                }}
-                                            />
-                                        </div>
-                                    ) : null}
-                                </div>
-                                <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {content}
-                                </div>
-                            </div>
-                        );
-                    }
-                };
-            }
-
-            return {
-                ...col,
-                renderCell: (params: GridRenderCellParams<R>) => {
-                    const { _hasChildren, _groupingField } = params.row as any;
-
-                    if (isRowGrouping && _hasChildren) {
-
-                        if (col.field === _groupingField) {
-                            return null;
-                        }
-
-                        if (params.value !== undefined && params.value !== null) {
-                            return col.renderCell ? col.renderCell(params) : params.value;
-                        }
-
-                        return null;
-                    }
-
-                    return col.renderCell ? col.renderCell(params) : params.value;
-                }
-            };
-        }) as GridColDef<R>[];
-    }, [activeColumns, isHierarchyEnabled, isRowGrouping, activeHierarchyHandlers]);
 
     const dataSourceHandlers = useGridDataSource({
         dataSource,
@@ -507,68 +356,16 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         }
     }, [dataSourceHandlers.fetchChildren]);
 
-    const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
-        () => initialState?.columns?.columnWidths ?? {}
-    );
-
-    const [internalColumnOrder, setInternalColumnOrder] = useState<string[]>(() =>
-        initialState?.columns?.columnOrder ?? activeColumns.map(col => col.field)
-    );
-
-    const effectiveColumnOrder = columnOrder || internalColumnOrder;
-
     useEffect(() => {
         if (!dataSource) {
             setRows(activeRows);
         }
     }, [activeRows, setRows, dataSource]);
 
-    useEffect(() => {
-        setColumns(activeColumns as any);
-    }, [activeColumns, setColumns]);
-
-    useEffect(() => {
-        if (pivotMode) {
-            setInternalColumnOrder(activeColumns.map(col => col.field));
-        }
-    }, [pivotMode, activeColumns]);
-
-    const orderedColumns = useMemo(() => {
-        if (disableColumnReorder) return effectiveColumns as GridColDef<R>[];
-
-        const orderMap = new Map(effectiveColumnOrder.map((field, index) => [field, index]));
-        return [...(effectiveColumns as GridColDef<R>[])].sort((a, b) => {
-            const aIndex = orderMap.get(a.field) ?? effectiveColumns.indexOf(a);
-            const bIndex = orderMap.get(b.field) ?? effectiveColumns.indexOf(b);
-            return aIndex - bIndex;
-        });
-    }, [effectiveColumns, effectiveColumnOrder, disableColumnReorder]);
-
-    const visibleOrderedColumns = useMemo(() => {
-        return orderedColumns.filter(col => columnVisibilityModel[col.field] !== false);
-    }, [orderedColumns, columnVisibilityModel]);
-
-    const columnReorderHandlers = useColumnReorder({
-        columns: orderedColumns,
-        onColumnOrderChange: useCallback((params: GridColumnOrderChangeParams) => {
-            const { oldIndex, targetIndex } = params;
-
-            const newOrder = [...effectiveColumnOrder];
-            const [movedField] = newOrder.splice(oldIndex, 1);
-            newOrder.splice(targetIndex, 0, movedField);
-
-            if (!columnOrder) {
-                setInternalColumnOrder(newOrder);
-            }
-
-            onColumnOrderChange?.(params);
-        }, [effectiveColumnOrder, columnOrder, onColumnOrderChange]),
-        disableColumnReorder,
-    });
-
+    // ── Detail panel (hoisted — hasDetailPanel feeds into useGridColumns) ──────
+    const hasDetailPanel = Boolean(getDetailPanelContent);
     const [internalExpandedRowIds, setInternalExpandedRowIds] = useState<Set<GridRowId>>(new Set());
     const expandedRowIds = controlledExpandedRowIds ?? internalExpandedRowIds;
-    const hasDetailPanel = Boolean(getDetailPanelContent);
 
     const handleDetailPanelToggle = useCallback((rowId: GridRowId) => {
         const newExpandedRowIds = new Set(expandedRowIds);
@@ -577,45 +374,43 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         } else {
             newExpandedRowIds.add(rowId);
         }
-
         if (controlledExpandedRowIds === undefined) {
             setInternalExpandedRowIds(newExpandedRowIds);
         }
         onDetailPanelExpandedRowIdsChange?.(newExpandedRowIds);
     }, [expandedRowIds, controlledExpandedRowIds, onDetailPanelExpandedRowIdsChange]);
 
-    const navigationColumns = useMemo(() => {
-        const cols: { field: string; editable?: boolean }[] = [];
-        if (rowReordering) cols.push({ field: '__reorder_col__' });
-        if (hasDetailPanel) cols.push({ field: '__expand_col__' });
-        if (checkboxSelection) cols.push({ field: '__checkbox_col__' });
-        return [...cols, ...orderedColumns];
-    }, [orderedColumns, checkboxSelection, hasDetailPanel, rowReordering]);
+    // ── Column management ─────────────────────────────────────────────────────
+    const {
+        effectiveColumns,
+        orderedColumns,
+        visibleOrderedColumns,
+        navigationColumns,
+        columnWidths,
+        effectiveColumnOrder,
+        setInternalColumnOrder,
+        columnReorderHandlers,
+        handleColumnResize,
+    } = useGridColumns<R>({
+        activeColumns,
+        isHierarchyEnabled,
+        isRowGrouping,
+        isTreeData,
+        activeHierarchyHandlers,
+        columnVisibilityModel,
+        columnOrder,
+        onColumnOrderChange,
+        disableColumnReorder,
+        pivotMode,
+        checkboxSelection,
+        hasDetailPanel,
+        rowReordering,
+        initialState,
+        setColumns,
+    });
 
-    const handleColumnResize = useCallback((field: string, newWidth: number) => {
-        setColumnWidths(prev => ({ ...prev, [field]: newWidth }));
-    }, []);
-
-    const onStateChangeRef = useRef(onStateChange);
-    onStateChangeRef.current = onStateChange;
-
-    useEffect(() => {
-        if (!onStateChangeRef.current) return;
-
-        const snapshot: GridState = {
-            sorting: { sortModel: sortModel as { field: string; sort: 'asc' | 'desc' }[] },
-            filter: { filterModel },
-            pagination: { paginationModel: effectivePaginationModel },
-            columns: {
-                columnWidths,
-                columnOrder: effectiveColumnOrder,
-                columnVisibilityModel,
-                pinnedColumns: pinnedColumns,
-            },
-        };
-
-        onStateChangeRef.current(snapshot);
-    }, [
+    useGridStateSnapshot({
+        onStateChange,
         sortModel,
         filterModel,
         effectivePaginationModel,
@@ -623,60 +418,33 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         effectiveColumnOrder,
         columnVisibilityModel,
         pinnedColumns,
-    ]);
+    });
 
-    const baseRows = useMemo(() => {
-        return effectiveRows;
-    }, [effectiveRows]);
-
-    const filteredRows = useMemo(() => {
-        if (activeHierarchyHandlers) {
-
-            return (activeHierarchyHandlers.getVisibleRows() || []) as R[];
-        }
-
-        if (filterMode === 'server' && dataSource) {
-            return baseRows;
-        }
-
-        return filterRows(baseRows, filterModel);
-    }, [baseRows, filterModel, activeHierarchyHandlers, filterMode, dataSource]);
-
-    const { top: pinnedTopRows, center: unpinnedRows, bottom: pinnedBottomRows } = useMemo(() => {
-        if (activeHierarchyHandlers) {
-
-            return { top: [], center: filteredRows, bottom: [] };
-        }
-        return getPinnedRowGroups(filteredRows, pinnedRows);
-    }, [filteredRows, pinnedRows, activeHierarchyHandlers]);
-
-    const sortedUnpinnedRows = useMemo(() => {
-        if (activeHierarchyHandlers) {
-            return unpinnedRows;
-        }
-
-        if (sortingMode === 'server' && dataSource) {
-            return unpinnedRows;
-        }
-
-        return sortRows(unpinnedRows, sortModel);
-    }, [unpinnedRows, sortModel, activeHierarchyHandlers, sortingMode, dataSource]);
-
-    const paginatedUnpinnedRows = useMemo(() => {
-        if (!pagination) return sortedUnpinnedRows;
-
-        if (paginationMode === 'server' && dataSource) {
-            return sortedUnpinnedRows;
-        }
-
-        const start = effectivePaginationModel.page * effectivePaginationModel.pageSize;
-        const end = start + effectivePaginationModel.pageSize;
-        return sortedUnpinnedRows.slice(start, end);
-    }, [sortedUnpinnedRows, pagination, effectivePaginationModel.page, effectivePaginationModel.pageSize, paginationMode, dataSource]);
+    const rowPipeline = useGridRowPipeline<GridRowModel>({
+        effectiveRows: effectiveRows as GridRowModel[],
+        activeHierarchyHandlers: activeHierarchyHandlers as { getVisibleRows: () => GridRowModel[] } | null,
+        filterMode,
+        filterModel,
+        dataSource: dataSource as GridDataSource<GridRowModel> | undefined,
+        sortModel,
+        sortingMode,
+        pagination,
+        paginationMode,
+        effectivePaginationModel,
+        pinnedRows,
+        isLoading: state.dataSource.loading,
+        pageSize: effectivePaginationModel.pageSize,
+    });
+    const filteredRows        = rowPipeline.filteredRows        as R[];
+    const pinnedTopRows       = rowPipeline.pinnedTopRows       as R[];
+    const pinnedBottomRows    = rowPipeline.pinnedBottomRows    as R[];
+    const sortedUnpinnedRows  = rowPipeline.sortedUnpinnedRows  as R[];
+    const paginatedUnpinnedRows = rowPipeline.paginatedUnpinnedRows as R[];
+    const allRenderableRows   = rowPipeline.allRenderableRows   as R[];
 
     useEffect(() => {
         gridData.apiRef.current.getVisibleRows = () => pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
-        gridData.apiRef.current.getVisibleColumns = () => effectiveColumns as any[];
+        gridData.apiRef.current.getVisibleColumns = () => effectiveColumns as unknown as GridColDef[];
     }, [sortedUnpinnedRows, paginatedUnpinnedRows, pagination, effectiveColumns, gridData.apiRef]);
 
     const rowReorderHandlers = useRowReorder({
@@ -685,29 +453,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onRowOrderChange,
         rowReordering
     });
-
-    const allRenderableRows = useMemo(() => {
-
-        if (activeHierarchyHandlers) {
-            return unpinnedRows;
-        }
-        const centerRows = pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
-        const base = [...pinnedTopRows, ...centerRows, ...pinnedBottomRows];
-
-        // Append skeleton rows while an infinite-scroll fetch is in flight
-        if (paginationMode === 'infinite' && state.dataSource.loading && base.length > 0) {
-            const skeletonCount = Math.min(effectivePaginationModel.pageSize, 20);
-            const skeletons = Array.from({ length: skeletonCount }, (_, i) => ({
-                id: `__skeleton_${i}__`,
-                _isSkeleton: true,
-            }));
-            return [...base, ...skeletons] as typeof base;
-        }
-
-        return base;
-    }, [pinnedTopRows, paginatedUnpinnedRows, sortedUnpinnedRows, pinnedBottomRows, pagination,
-        activeHierarchyHandlers, unpinnedRows, paginationMode, state.dataSource.loading,
-        effectivePaginationModel.pageSize]);
 
     const spanning = useGridSpanning(
         allRenderableRows,
@@ -719,7 +464,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rows: filteredRows,
         aggregationModel,
         isServerSide: !!(dataSource && (paginationMode === 'server' || sortingMode === 'server')),
-        dataSource: dataSource as any,
+        dataSource,
         filterModel,
         sortModel,
         serverAggregationResults,
@@ -792,152 +537,20 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         };
     }, [layout, viewportRef, gridData.apiRef]);
 
-    const virtualization = useMemo(() => {
-        const {
-            unpinnedAccWidths,
-            unpinnedColsWithWidth,
-            leftPinnedCols,
-            rightPinnedCols,
-            totalWidth,
-            leftWidth,
-            rightWidth,
-            unpinnedTotalWidth,
-            systemColumnsWidth,
-            cumulativeHeights,
-            pinnedTopHeight,
-            pinnedBottomHeight,
-            unpinnedRowsHeight,
-            rowHeights,
-            unpinnedRowsLength
-        } = layout;
-
-        const scrollLeft = scrollPosRef.current.scrollLeft;
-        const scrollTop = scrollPosRef.current.scrollTop;
-        const viewportWidth = state.dimensions.viewportWidth || 1000;
-        const viewportHeight = autoHeight ? (pinnedTopHeight + unpinnedRowsHeight + pinnedBottomHeight + 50) : (state.dimensions.viewportHeight || 600);
-
-        const overscanCols = 6;
-
-        const visibleLocalStart = Math.max(0, scrollLeft - leftWidth);
-        const visibleLocalEnd = scrollLeft + viewportWidth - leftWidth;
-
-        let firstUnpinnedIndex = 0;
-        let lastUnpinnedIndex = unpinnedColsWithWidth.length - 1;
-
-        let low = 0, high = unpinnedAccWidths.length - 1;
-        while (low <= high) {
-            const mid = (low + high) >>> 1;
-            if (unpinnedAccWidths[mid] < visibleLocalStart) {
-                low = mid + 1;
-            } else {
-                high = mid - 1;
-            }
-        }
-        firstUnpinnedIndex = Math.max(0, low - overscanCols);
-
-        for (let i = firstUnpinnedIndex; i < unpinnedAccWidths.length; i++) {
-            if ((i === 0 ? 0 : unpinnedAccWidths[i - 1]) > visibleLocalEnd) {
-                lastUnpinnedIndex = Math.min(unpinnedColsWithWidth.length - 1, i + overscanCols);
-                break;
-            }
-            lastUnpinnedIndex = Math.min(unpinnedColsWithWidth.length - 1, i + overscanCols);
-        }
-
-        const leftSpacerWidth = firstUnpinnedIndex > 0 ? unpinnedAccWidths[firstUnpinnedIndex - 1] : 0;
-        const rightSpacerWidth = unpinnedTotalWidth - unpinnedAccWidths[lastUnpinnedIndex];
-
-        const virtualColumns: any[] = [
-            ...leftPinnedCols,
-            ...(leftSpacerWidth > 0 ? [{ field: '__spacer_left__', width: leftSpacerWidth, isSpacer: true }] : []),
-            ...unpinnedColsWithWidth.slice(firstUnpinnedIndex, lastUnpinnedIndex + 1),
-            ...(rightSpacerWidth > 0 ? [{ field: '__spacer_right__', width: rightSpacerWidth, isSpacer: true }] : []),
-            ...rightPinnedCols
-        ];
-
-        const hasHorizontalScroll = viewportWidth > 0 && totalWidth > viewportWidth;
-        const scrollbarBuffer = hasHorizontalScroll ? 16 : 0;
-        const totalHeight = pinnedTopHeight + unpinnedRowsHeight + pinnedBottomHeight + scrollbarBuffer + 2;
-
-        const overscanRows = 5;
-        let firstRowIndex = 0;
-        let lastRowIndex = unpinnedRowsLength - 1;
-        let offsetTop = 0;
-
-        let rLow = 0, rHigh = cumulativeHeights.length - 1;
-        while (rLow <= rHigh) {
-            const mid = (rLow + rHigh) >>> 1;
-            if (cumulativeHeights[mid] < scrollTop) {
-                rLow = mid + 1;
-            } else {
-                rHigh = mid - 1;
-            }
-        }
-        firstRowIndex = Math.max(0, rLow - overscanRows);
-        offsetTop = firstRowIndex > 0 ? cumulativeHeights[firstRowIndex - 1] : 0;
-
-        for (let i = firstRowIndex; i < cumulativeHeights.length; i++) {
-            if (cumulativeHeights[i] >= scrollTop + viewportHeight) {
-                lastRowIndex = Math.min(unpinnedRowsLength - 1, i + overscanRows);
-                break;
-            }
-        }
-
-        return {
-            renderContext: {
-                firstRowIndex,
-                lastRowIndex,
-                firstColumnIndex: firstUnpinnedIndex,
-                lastColumnIndex: lastUnpinnedIndex
-            },
-            offsetTop,
-            offsetLeft: 0,
-            totalHeight,
-            pinnedTopHeight,
-            pinnedBottomHeight,
-            totalWidth,
-            rowHeights,
-            cumulativeHeights,
-            virtualColumns,
-            columnMetrics: {
-                leftPinnedWidth: leftWidth,
-                rightPinnedWidth: rightWidth,
-                unpinnedAccWidths,
-                unpinnedCols: unpinnedColsWithWidth,
-                totalSpecialsWidth: systemColumnsWidth,
-                pinnedSpecialsWidth: (rowReordering ? 48 : 0) + (hasDetailPanel && pinExpandColumn ? 48 : 0) + (checkboxSelection && pinCheckboxColumn ? 48 : 0)
-            }
-        };
-    }, [
+    const virtualization = useGridVirtualization({
         layout,
-        scrollTick,
-        state.dimensions.viewportHeight,
-        state.dimensions.viewportWidth,
-        autoHeight
-    ]);
+        scrollTop,
+        scrollLeft,
+        viewportWidth: state.dimensions.viewportWidth,
+        viewportHeight: state.dimensions.viewportHeight,
+        autoHeight,
+        rowReordering,
+        hasDetailPanel,
+        checkboxSelection,
+        pinCheckboxColumn,
+        pinExpandColumn,
+    });
 
-    const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
-        const target = event.currentTarget;
-        scrollPosRef.current = { scrollTop: target.scrollTop, scrollLeft: target.scrollLeft };
-
-        if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
-        scrollRafRef.current = requestAnimationFrame(() => {
-            scrollRafRef.current = null;
-            setScrollTick(t => t + 1);
-        });
-
-        if (onRowsScrollEnd) {
-            const { scrollTop, scrollHeight, clientHeight } = target;
-            const scrollThreshold = 100;
-
-            if (scrollHeight - scrollTop - clientHeight < scrollThreshold) {
-                onRowsScrollEnd({
-                    visibleTop: scrollTop,
-                    visibleBottom: scrollTop + clientHeight,
-                    viewportHeight: clientHeight
-                });
-            }
-        }
-    }, [onRowsScrollEnd]);
 
     useEffect(() => {
         if (!viewportRef.current) return;
@@ -969,28 +582,28 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             setInternalRowSelectionModel(newSelectionArray);
         }
         onRowSelectionModelChange?.(newSelectionArray);
-    }, [selectedRowIds, isSelectionControlled, onRowSelectionModelChange]);
+    }, [selectedRowIds, isSelectionControlled, onRowSelectionModelChange, setInternalRowSelectionModel]);
 
     const handleSelectAll = useCallback((isSelected: boolean) => {
         let newSelection: GridRowId[] = [];
         if (isSelected) {
-            newSelection = baseRows.map(row => row.id);
+            newSelection = effectiveRows.map((row: GridRowModel) => row.id);
         }
 
         if (!isSelectionControlled) {
             setInternalRowSelectionModel(newSelection);
         }
         onRowSelectionModelChange?.(newSelection);
-    }, [rows, isSelectionControlled, onRowSelectionModelChange]);
+    }, [effectiveRows, isSelectionControlled, onRowSelectionModelChange, setInternalRowSelectionModel]);
 
     const handleSort = useCallback((field: string, direction: GridSortDirection) => {
         const newSortModel = direction ? [{ field, sort: direction }] : [];
 
         if (!isSortControlled) {
-            setInternalSortModel(newSortModel as any);
+            setInternalSortModel(newSortModel as GridSortItem[]);
         }
-        onSortModelChange?.(newSortModel as any);
-    }, [isSortControlled, onSortModelChange]);
+        onSortModelChange?.(newSortModel as GridSortItem[]);
+    }, [isSortControlled, onSortModelChange, setInternalSortModel]);
 
     const { focusedCell, setFocusedCell, handleFocus, handleBlur, handleKeyDown } = useGridKeyboardNavigation({
         allRenderableRows,
@@ -1031,44 +644,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         prevEditingCellRef.current = editingHandlers.editingCell;
     }, [editingHandlers.editingCell]);
 
-    const visibleRows = useMemo(() => {
-        const { firstRowIndex, lastRowIndex } = virtualization.renderContext;
-
-        const topPinnedCount = pinnedTopRows.length;
-
-        const topPinned = pinnedTopRows.map((row, index) => ({ row, rowIndex: index }));
-        const bottomPinned = pinnedBottomRows.map((row, index) => ({
-            row,
-            rowIndex: topPinnedCount + (pagination ? paginatedUnpinnedRows.length : sortedUnpinnedRows.length) + index
-        }));
-
-        const centerStartIndex = Math.max(0, firstRowIndex - topPinnedCount);
-        const centerEndIndex = Math.min(
-            pagination ? paginatedUnpinnedRows.length : sortedUnpinnedRows.length,
-            lastRowIndex - topPinnedCount + 1
-        );
-
-        const centerRows = (pagination ? paginatedUnpinnedRows : sortedUnpinnedRows)
-            .slice(centerStartIndex, centerEndIndex)
-            .map((row, index) => ({
-                row,
-                rowIndex: topPinnedCount + centerStartIndex + index
-            }));
-
-        const combined = [...topPinned, ...centerRows, ...bottomPinned];
-
-        const seenIds = new Set<GridRowId>();
-        const deduplicated = combined.filter(item => {
-            if (seenIds.has(item.row.id)) {
-                return false;
-            }
-            seenIds.add(item.row.id);
-            return true;
-        });
-
-        return deduplicated;
-    }, [virtualization.renderContext, pinnedTopRows, pinnedBottomRows, paginatedUnpinnedRows, sortedUnpinnedRows, pagination,
-        paginationMode, state.dataSource.loading, effectivePaginationModel.pageSize, rowHeight]);
+    const visibleRows = useGridVisibleRows<R>({
+        renderContext: virtualization.renderContext,
+        pinnedTopRows,
+        pinnedBottomRows,
+        paginatedUnpinnedRows,
+        sortedUnpinnedRows,
+        pagination,
+    });
 
 
     const allSelected = rows.length > 0 && selectedRowIds.size === rows.length;
@@ -1077,6 +660,51 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const hasRowSpanning = React.useMemo(() => effectiveColumns.some(c => !!c.rowSpan), [effectiveColumns]);
     const [columnsPanelOpen, setColumnsPanelOpen] = React.useState(false);
     const containerRef = React.useRef<HTMLDivElement>(null);
+
+    const toolbarProps = React.useMemo(() => {
+        if (!slots?.toolbar) return null;
+        const reorderHandler = disableColumnReorder
+            ? undefined
+            : (fromField: string, toField: string) => {
+                const currentOrder = [...effectiveColumnOrder];
+                const fromIdx = currentOrder.indexOf(fromField);
+                const toIdx = currentOrder.indexOf(toField);
+                if (fromIdx === -1 || toIdx === -1) return;
+                const newOrder = [...currentOrder];
+                newOrder.splice(fromIdx, 1);
+                newOrder.splice(toIdx, 0, fromField);
+                if (!columnOrder) setInternalColumnOrder(newOrder);
+                const col = effectiveColumns.find(c => c.field === fromField);
+                if (col) onColumnOrderChange?.({ oldIndex: fromIdx, targetIndex: toIdx, column: col as unknown as GridColDef });
+            };
+        return {
+            apiRef: gridData.apiRef,
+            columns: orderedColumns as unknown as GridColDef[],
+            baseColumns: columns as unknown as GridColDef[],
+            aggregationModel,
+            onAggregationModelChange: handleAggregationModelChange,
+            ...(pivotMode || propPivotModel || onPivotModelChange ? {
+                pivotModel: currentPivotModel,
+                onPivotModelChange: handlePivotModelChange,
+            } : {}),
+            filterModel,
+            onFilterModelChange,
+            columnVisibilityModel,
+            onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
+            onColumnReorder: reorderHandler,
+            onColumnOrderReset: disableColumnReorder ? undefined : () => setInternalColumnOrder(columns.map(c => c.field)),
+            forceColumnsOpen: columnsPanelOpen,
+            onColumnsPanelClose: () => setColumnsPanelOpen(false),
+            ...slotProps?.toolbar,
+        };
+    }, [
+        slots?.toolbar, disableColumnReorder, effectiveColumnOrder, orderedColumns, effectiveColumns,
+        columnOrder, onColumnOrderChange, setInternalColumnOrder, gridData.apiRef,
+        columns, aggregationModel, handleAggregationModelChange, pivotMode,
+        propPivotModel, onPivotModelChange, currentPivotModel, handlePivotModelChange,
+        filterModel, onFilterModelChange, columnVisibilityModel,
+        handleColumnVisibilityModelChange, columnsPanelOpen, slotProps?.toolbar,
+    ]);
 
     // Click-outside handler for standalone column panel
     useEffect(() => {
@@ -1100,188 +728,49 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 height: height ?? style?.height,
                 '--ogx-row-height': `${rowHeight}px`,
                 '--ogx-header-height': `${headerHeight}px`
-            } as any}
+            } as unknown as React.CSSProperties}
             aria-busy={effectiveLoading}
         >
-            { }
-            {slots?.toolbar && (() => {
-                const toolbarProps = {
-                    apiRef: gridData.apiRef,
-                    columns: effectiveColumns as unknown as GridColDef[],
-                    baseColumns: columns as unknown as GridColDef[],
-                    aggregationModel,
-                    onAggregationModelChange: handleAggregationModelChange,
+            {toolbarProps && <StableToolbar {...toolbarProps} />}
 
-                    ...(pivotMode || propPivotModel || onPivotModelChange ? {
-                        pivotModel: currentPivotModel,
-                        onPivotModelChange: handlePivotModelChange,
-                    } : {}),
-
-                    filterModel,
-                    onFilterModelChange,
-                    columnVisibilityModel,
-                    onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
-
-                    onColumnReorder: disableColumnReorder ? undefined : (fromField: string, toField: string) => {
-                        const currentOrder = [...effectiveColumnOrder];
-                        const fromIdx = currentOrder.indexOf(fromField);
-                        const toIdx = currentOrder.indexOf(toField);
-                        if (fromIdx === -1 || toIdx === -1) return;
-                        const newOrder = [...currentOrder];
-                        newOrder.splice(fromIdx, 1);
-                        newOrder.splice(toIdx, 0, fromField);
-                        if (!columnOrder) setInternalColumnOrder(newOrder);
-                        const col = effectiveColumns.find(c => c.field === fromField); if (col) onColumnOrderChange?.({ oldIndex: fromIdx, targetIndex: toIdx, column: col as any });
-                    },
-
-                    forceColumnsOpen: columnsPanelOpen,
-                    onColumnsPanelClose: () => setColumnsPanelOpen(false),
-
-                    ...slotProps?.toolbar,
-                };
-                return <StableToolbar {...toolbarProps} />;
-            })()}
-
-            {/* Fallback standalone column panel when no toolbar is present */}
-            {!slots?.toolbar && columnsPanelOpen && ReactDOM.createPortal(
-                <div
-                    id="ogx-standalone-col-panel"
-                    style={(() => {
-                        const rect = containerRef.current?.getBoundingClientRect();
-                        return {
-                            position: 'fixed',
-                            top: rect ? rect.top + 8 : 16,
-                            right: rect ? window.innerWidth - rect.right + 8 : 16,
-                            zIndex: 9999,
-                            display: 'inline-block',
-                        };
-                    })()}
-                >
-                    <button
-                        onClick={() => setColumnsPanelOpen(false)}
-                        style={{
-                            position: 'absolute',
-                            top: -12,
-                            right: -12,
-                            width: 24,
-                            height: 24,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: '#334155',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '50%',
-                            cursor: 'pointer',
-                            fontSize: 14,
-                            lineHeight: 1,
-                            zIndex: 1,
-                            boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                        }}
-                        aria-label="Close"
-                    >×</button>
-                    <ColumnVisibilityPanel
-                        columns={effectiveColumns}
-                        visibleColumns={new Set(
-                            effectiveColumns
-                                .filter(col => columnVisibilityModel[col.field] !== false)
-                                .map(col => col.field)
-                        )}
-                        onVisibilityChange={(field, isVisible) => {
-                            handleColumnVisibilityModelChange({ ...columnVisibilityModel, [field]: isVisible });
-                        }}
-                        onShowAll={() => {
-                            const next = { ...columnVisibilityModel };
-                            effectiveColumns.forEach(col => { if (col.hideable !== false) next[col.field] = true; });
-                            handleColumnVisibilityModelChange(next);
-                        }}
-                        onHideAll={() => {
-                            const next = { ...columnVisibilityModel };
-                            effectiveColumns.forEach(col => { if (col.hideable !== false) next[col.field] = false; });
-                            handleColumnVisibilityModelChange(next);
-                        }}
-                        onColumnReorder={disableColumnReorder ? undefined : (fromField, toField) => {
-                            const currentOrder = [...effectiveColumnOrder];
-                            const fromIdx = currentOrder.indexOf(fromField);
-                            const toIdx = currentOrder.indexOf(toField);
-                            if (fromIdx === -1 || toIdx === -1) return;
-                            const newOrder = [...currentOrder];
-                            newOrder.splice(fromIdx, 1);
-                            newOrder.splice(toIdx, 0, fromField);
-                            if (!columnOrder) {
-                                setInternalColumnOrder(newOrder);
-                            }
-                            onColumnOrderChange?.({ oldIndex: fromIdx, targetIndex: toIdx, column: effectiveColumns.find(c => c.field === fromField) as any });
-                        }}
-                    />
-                </div>,
-                containerRef.current?.closest('.ogx-theme-provider') || document.body
+            {!slots?.toolbar && (
+                <GridStandaloneColumnPanel<R>
+                    isOpen={columnsPanelOpen}
+                    containerRef={containerRef}
+                    effectiveColumns={effectiveColumns}
+                    columnVisibilityModel={columnVisibilityModel}
+                    effectiveColumnOrder={effectiveColumnOrder}
+                    columnOrder={columnOrder}
+                    disableColumnReorder={disableColumnReorder}
+                    onClose={() => setColumnsPanelOpen(false)}
+                    onColumnVisibilityChange={handleColumnVisibilityModelChange}
+                    onColumnOrderChange={onColumnOrderChange}
+                    setInternalColumnOrder={setInternalColumnOrder}
+                />
             )}
 
-            {/* ═══════════════════════════════════════════════════════════════
-                LIST VIEW — single-column card layout
-            ═══════════════════════════════════════════════════════════════ */}
             {listView && listViewColumn && (
-                <div
-                    className="ogx-list-view"
-                    role="grid"
-                    aria-label={ariaLabel || 'Data grid list view'}
-                    aria-rowcount={allRenderableRows.length + 1}
-                >
-                    {/* Info bar */}
-                    <div className="ogx-list-view__toolbar">
-                        <span>
-                            {filteredRows.length} {filteredRows.length === 1 ? 'item' : 'items'}
-                            {pagination ? ` · page ${effectivePaginationModel.page + 1} of ${Math.ceil(filteredRows.length / effectivePaginationModel.pageSize) || 1}` : ''}
-                            {selectedRowIds.size > 0 ? ` · ${selectedRowIds.size} selected` : ''}
-                        </span>
-                    </div>
-
-                    {/* Scrollable rows — pagination stays OUTSIDE this div */}
-                    <div className="ogx-list-view__rows">
-                        {allRenderableRows.length === 0 ? (
-                            <div className="ogx-list-view__empty" aria-live="polite" role="status">
-                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                                    <path d="M3 9h18M9 21V9" />
-                                </svg>
-                                {noRowsLabel}
-                            </div>
-                        ) : (
-                            allRenderableRows.map((row, idx) => (
-                                <ListViewRow<R>
-                                    key={row.id}
-                                    row={row as R}
-                                    rowIndex={idx}
-                                    listViewColumn={listViewColumn as any}
-                                    isSelected={selectedRowIds.has(row.id)}
-                                    checkboxSelection={checkboxSelection}
-                                    rowHeight={rowHeight}
-                                    onRowClick={(r) => handleRowClick({ row: r, id: r.id, rowIndex: idx })}
-                                    onSelectionChange={handleSelectionChange}
-                                />
-                            ))
-                        )}
-                    </div>
-
-                    {/* Pagination in list view — use filteredRows.length as total since state.pagination.rowCount is only set for server-side */}
-                    {pagination && (() => {
-                        const PaginationComponent = slots?.pagination || Pagination;
-                        const totalRowCount = (paginationMode === 'server' && dataSource)
-                            ? (state.pagination.rowCount || 0)
-                            : filteredRows.length;
-                        const paginationProps = {
-                            page: effectivePaginationModel.page,
-                            pageSize: effectivePaginationModel.pageSize,
-                            rowCount: totalRowCount,
-                            pageSizeOptions: pageSizeOptions,
-                            onPageChange: (newPage: number) => handlePaginationModelChange({ ...effectivePaginationModel, page: newPage }),
-                            onPageSizeChange: (newPageSize: number) => handlePaginationModelChange({ ...effectivePaginationModel, pageSize: newPageSize, page: 0 }),
-                            ...slotProps?.pagination
-                        };
-                        return <PaginationComponent {...paginationProps} />;
-                    })()}
-                </div>
+                <GridListView<R>
+                    ariaLabel={ariaLabel}
+                    allRenderableRows={allRenderableRows}
+                    filteredRows={filteredRows}
+                    pagination={pagination}
+                    effectivePaginationModel={effectivePaginationModel}
+                    pageSizeOptions={pageSizeOptions}
+                    selectedRowIds={selectedRowIds}
+                    listViewColumn={listViewColumn}
+                    noRowsLabel={noRowsLabel}
+                    rowHeight={rowHeight}
+                    checkboxSelection={checkboxSelection}
+                    paginationMode={paginationMode}
+                    dataSource={dataSource}
+                    serverRowCount={state.pagination.rowCount || 0}
+                    paginationSlot={slots?.pagination}
+                    paginationSlotProps={slotProps?.pagination}
+                    onRowClick={handleRowClick}
+                    onSelectionChange={handleSelectionChange}
+                    onPaginationModelChange={handlePaginationModelChange}
+                />
             )}
 
             {/* ══════════════════════════════════════════════════════════════
@@ -1323,7 +812,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                         { }
                         <Header
                             columns={virtualization.virtualColumns}
-                            allColumns={effectiveColumns as any}
+                            allColumns={effectiveColumns}
                             columnGroupingModel={columnGroupingModel}
                             checkboxSelection={checkboxSelection}
                             allSelected={allSelected}
@@ -1378,299 +867,135 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
                         {/* Empty State Overlay (Standard View) — showing after header */}
                         {!effectiveLoading && !state.dataSource.error && filteredRows.length === 0 && (
-                            <div className="ogx__empty" style={{ width: virtualization.totalWidth }}>
-                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                                    <path d="M3 9h18M9 21V9" />
-                                </svg>
-                                <span>{noRowsLabel}</span>
-                            </div>
+                            <GridEmptyState noRowsLabel={noRowsLabel} width={virtualization.totalWidth} />
                         )}
 
-                        { }
-                        {pinnedTopRows.length > 0 && (
-                            <div className="ogx__pinned-rows ogx__pinned-rows--top" role="rowgroup">
-                                {pinnedTopRows.map((row, index) => (
-                                    <Row
-                                        key={row.id}
-                                        row={row}
-                                        columns={virtualization.virtualColumns}
-                                        rowIndex={index}
-                                        isSelected={selectedRowIds.has(row.id)}
-                                        checkboxSelection={checkboxSelection}
-                                        onRowClick={handleRowClick}
-                                        onCellClick={handleCellClick}
-                                        onSelectionChange={handleSelectionChange}
-                                        columnWidths={columnWidths}
-                                        pinnedColumns={pinnedColumns}
-                                        pinnedRows={pinnedRows}
+                        <GridPinnedRows<R>
+                            rows={pinnedTopRows}
+                            position="top"
+                            columns={virtualization.virtualColumns}
+                            selectedRowIds={selectedRowIds}
+                            checkboxSelection={checkboxSelection}
+                            onRowClick={handleRowClick}
+                            onCellClick={handleCellClick}
+                            onSelectionChange={handleSelectionChange}
+                            columnWidths={columnWidths}
+                            pinnedColumns={pinnedColumns}
+                            pinnedRows={pinnedRows}
+                            hasDetailPanel={hasDetailPanel}
+                            expandedRowIds={expandedRowIds}
+                            getDetailPanelContent={getDetailPanelContent}
+                            getDetailPanelHeight={getDetailPanelHeight}
+                            onDetailPanelToggle={handleDetailPanelToggle}
+                            pinCheckboxColumn={pinCheckboxColumn}
+                            pinExpandColumn={pinExpandColumn}
+                            focusedCell={focusedCell}
+                            colspanMap={spanning.colspanMap}
+                            rowSpanningCaches={spanning.rowSpanningState.caches}
+                            rowHeight={rowHeight}
+                        />
 
-                                        hasDetailPanel={hasDetailPanel}
-                                        isDetailPanelExpanded={expandedRowIds.has(row.id)}
-                                        detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id: row.id, rowIndex: index }) : null}
-                                        detailPanelHeight={getDetailPanelHeight?.({ row, id: row.id, rowIndex: index }) || 200}
-                                        onDetailPanelToggle={handleDetailPanelToggle}
-                                        pinCheckboxColumn={pinCheckboxColumn}
-                                        pinExpandColumn={pinExpandColumn}
+                        <GridVirtualRows<R>
+                            virtualContainerHeight={virtualization.totalHeight - virtualization.pinnedTopHeight - virtualization.pinnedBottomHeight}
+                            offsetTop={virtualization.offsetTop}
+                            effectiveLoading={effectiveLoading}
+                            visibleRows={visibleRows}
+                            baseColumns={columns as unknown as GridColDef<R>[]}
+                            virtualColumns={virtualization.virtualColumns}
+                            viewportWidth={state.dimensions.viewportWidth}
+                            checkboxSelection={checkboxSelection}
+                            hasDetailPanel={hasDetailPanel}
+                            rowReordering={rowReordering}
+                            rowHeight={rowHeight}
+                            pinnedRows={pinnedRows}
+                            selectedRowIds={selectedRowIds}
+                            onRowClick={handleRowClick}
+                            onCellClick={handleCellClick}
+                            onSelectionChange={handleSelectionChange}
+                            columnWidths={columnWidths}
+                            pinnedColumns={pinnedColumns}
+                            expandedRowIds={expandedRowIds}
+                            getDetailPanelContent={getDetailPanelContent}
+                            getDetailPanelHeight={getDetailPanelHeight}
+                            onDetailPanelToggle={handleDetailPanelToggle}
+                            pinCheckboxColumn={pinCheckboxColumn}
+                            pinExpandColumn={pinExpandColumn}
+                            rowReorderHandlers={rowReorderHandlers}
+                            editingHandlers={editingHandlers}
+                            focusedCell={focusedCell}
+                            colspanMap={spanning.colspanMap}
+                            rowSpanningCaches={spanning.rowSpanningState.caches}
+                            paginationMode={paginationMode}
+                            dataSourceLoading={state.dataSource.loading}
+                            sortedUnpinnedRowCount={sortedUnpinnedRows.length}
+                            infiniteScrollSkeletonCount={Math.min(effectivePaginationModel.pageSize, 20)}
+                            unpinnedRowsLength={layout.unpinnedRowsLength}
+                        />
 
-                                        focusedCellField={focusedCell?.id === row.id ? focusedCell.field : null}
-
-                                        colspanMap={spanning.colspanMap}
-                                        rowSpanningCaches={spanning.rowSpanningState.caches}
-                                        rowHeight={rowHeight}
-                                    />
-                                ))}
-                            </div>
-                        )}
-
-                        { }
-                        <div
-                            className="ogx__virtual-container"
-                            style={{
-                                height: `${virtualization.totalHeight - virtualization.pinnedTopHeight - virtualization.pinnedBottomHeight}px`
-                            }}
-                            role="presentation"
-                        >
-                            { }
-                            <div
-                                className="ogx__rows"
-                                style={{
-                                    transform: `translateY(${virtualization.offsetTop}px)`
-                                }}
-                                role="rowgroup"
-                            >
-                                {effectiveLoading && visibleRows.length === 0 ? (
-
-                                    (() => {
-
-                                        const skeletonColumns = columns.length > 0
-                                            ? columns
-                                            : (() => {
-
-                                                const availableWidth = (state.dimensions.viewportWidth || 1000) -
-                                                    (checkboxSelection ? 48 : 0) -
-                                                    (getDetailPanelContent ? 48 : 0) -
-                                                    (rowReordering ? 48 : 0);
-
-                                                const columnWidth = 150;
-                                                const columnCount = Math.max(1, Math.ceil(availableWidth / columnWidth));
-
-                                                return Array.from({ length: columnCount }, (_, i) => ({
-                                                    field: `placeholder_${i}`,
-                                                    headerName: '',
-                                                    width: columnWidth
-                                                }));
-                                            })();
-
-                                        return Array.from({ length: 10 }).map((_, index) => (
-                                            <SkeletonRow
-                                                key={`skeleton-${index}`}
-                                                columns={skeletonColumns}
-                                                rowHeight={rowHeight}
-                                                checkboxSelection={checkboxSelection}
-                                                hasDetailPanel={!!getDetailPanelContent}
-                                                rowReordering={rowReordering}
-                                            />
-                                        ));
-                                    })()
-                                ) : (
-                                    visibleRows
-                                        .filter(({ row }) => !isRowPinned(row.id, pinnedRows))
-                                        // Defensive deduplication to prevent React key collision
-                                        .filter((item, index, self) =>
-                                            index === self.findIndex(t => t.row.id === item.row.id)
-                                        )
-                                        .map(({ row, rowIndex: actualIndex }) => {
-                                            return (
-                                                <Row
-                                                    key={row.id}
-                                                    row={row}
-                                                    columns={virtualization.virtualColumns}
-                                                    rowIndex={actualIndex}
-                                                    isSelected={selectedRowIds.has(row.id)}
-                                                    checkboxSelection={checkboxSelection}
-                                                    onRowClick={handleRowClick}
-                                                    onCellClick={handleCellClick}
-                                                    onSelectionChange={handleSelectionChange}
-                                                    columnWidths={columnWidths}
-                                                    pinnedColumns={pinnedColumns}
-                                                    pinnedRows={pinnedRows}
-                                                    // Detail Panel
-                                                    hasDetailPanel={hasDetailPanel}
-                                                    isDetailPanelExpanded={expandedRowIds.has(row.id)}
-                                                    detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id: row.id, rowIndex: actualIndex }) : null}
-                                                    detailPanelHeight={getDetailPanelHeight?.({ row, id: row.id, rowIndex: actualIndex }) || 200}
-                                                    onDetailPanelToggle={handleDetailPanelToggle}
-                                                    pinCheckboxColumn={pinCheckboxColumn}
-                                                    pinExpandColumn={pinExpandColumn}
-                                                    // Row Reordering
-                                                    rowReordering={rowReordering}
-                                                    onDragStart={rowReorderHandlers.onDragStart}
-                                                    onDragOver={rowReorderHandlers.onDragOver}
-                                                    onDragEnd={rowReorderHandlers.onDragEnd}
-                                                    onDrop={rowReorderHandlers.onDrop}
-                                                    isDragging={rowReorderHandlers.draggedRowId === row.id}
-                                                    isDragOver={rowReorderHandlers.dragOverRowId === row.id}
-                                                    // Editing
-                                                    editingCell={editingHandlers.editingCell}
-                                                    onEditStart={editingHandlers.startCellEdit}
-                                                    onEditStop={editingHandlers.stopCellEdit}
-                                                    onEditCellValueChange={editingHandlers.setEditCellValue}
-                                                    // Focus
-                                                    focusedCellField={focusedCell != null && focusedCell.id === row.id ? focusedCell.field : null}
-                                                    // Spanning
-                                                    colspanMap={spanning.colspanMap}
-                                                    rowSpanningCaches={spanning.rowSpanningState.caches}
-                                                    rowHeight={rowHeight}
-                                                />
-                                            );
-                                        })
-                                )}
-
-                                {/* Infinite Scroll Skeletons (Inline with flow, inside translateY container) */}
-                                {paginationMode === 'infinite' && state.dataSource.loading && sortedUnpinnedRows.length > 0 && (() => {
-                                    const skeletonCount = Math.min(effectivePaginationModel.pageSize, 20);
-                                    // The virtual container translates its children down by `firstRowIndex * rowHeight`. 
-                                    // Since these skeletons are at the VERY BOTTOM of all rows, their actual array index
-                                    // is precisely after the last real row.
-                                    const startIdx = layout.unpinnedRowsLength;
-
-                                    // However, they are rendered INSIDE the translateY block. The real rows handled this nicely
-                                    // because they just layout one after another. Skeletons can do exactly the same, EXCEPT we might
-                                    // need to offset them so they sit at the bottom.
-                                    return (
-                                        <div className="ogx__skeleton-group">
-                                            {Array.from({ length: skeletonCount }).map((_, i) => (
-                                                <Row
-                                                    key={`__skeleton_${i}__`}
-                                                    row={{ id: `__skeleton_${i}__`, _isSkeleton: true } as any}
-                                                    columns={virtualization.virtualColumns}
-                                                    rowIndex={startIdx + i}
-                                                    rowHeight={rowHeight}
-                                                />
-                                            ))}
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-
-                        </div>
-
-                        {/* Pinned Bottom Rows */}
-                        {pinnedBottomRows.length > 0 && (
-                            <div className="ogx__pinned-rows ogx__pinned-rows--bottom" role="rowgroup">
-                                {pinnedBottomRows.map((row, index) => (
-                                    <Row
-                                        key={row.id}
-                                        row={row}
-                                        columns={virtualization.virtualColumns}
-                                        rowIndex={index}
-                                        isSelected={selectedRowIds.has(row.id)}
-                                        checkboxSelection={checkboxSelection}
-                                        onRowClick={handleRowClick}
-                                        onCellClick={handleCellClick}
-                                        onSelectionChange={handleSelectionChange}
-                                        columnWidths={columnWidths}
-                                        pinnedColumns={pinnedColumns}
-                                        pinnedRows={pinnedRows}
-                                        // Detail Panel
-                                        hasDetailPanel={hasDetailPanel}
-                                        isDetailPanelExpanded={expandedRowIds.has(row.id)}
-                                        detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id: row.id, rowIndex: index }) : null}
-                                        detailPanelHeight={getDetailPanelHeight?.({ row, id: row.id, rowIndex: index }) || 200}
-                                        onDetailPanelToggle={handleDetailPanelToggle}
-                                        pinCheckboxColumn={pinCheckboxColumn}
-                                        pinExpandColumn={pinExpandColumn}
-                                        // Focus
-                                        focusedCellField={focusedCell?.id === row.id ? focusedCell.field : null}
-                                        // Spanning
-                                        colspanMap={spanning.colspanMap}
-                                        rowSpanningCaches={spanning.rowSpanningState.caches}
-                                        rowHeight={rowHeight}
-                                    />
-                                ))}
-                            </div>
-                        )}
+                        <GridPinnedRows<R>
+                            rows={pinnedBottomRows}
+                            position="bottom"
+                            columns={virtualization.virtualColumns}
+                            selectedRowIds={selectedRowIds}
+                            checkboxSelection={checkboxSelection}
+                            onRowClick={handleRowClick}
+                            onCellClick={handleCellClick}
+                            onSelectionChange={handleSelectionChange}
+                            columnWidths={columnWidths}
+                            pinnedColumns={pinnedColumns}
+                            pinnedRows={pinnedRows}
+                            hasDetailPanel={hasDetailPanel}
+                            expandedRowIds={expandedRowIds}
+                            getDetailPanelContent={getDetailPanelContent}
+                            getDetailPanelHeight={getDetailPanelHeight}
+                            onDetailPanelToggle={handleDetailPanelToggle}
+                            pinCheckboxColumn={pinCheckboxColumn}
+                            pinExpandColumn={pinExpandColumn}
+                            focusedCell={focusedCell}
+                            colspanMap={spanning.colspanMap}
+                            rowSpanningCaches={spanning.rowSpanningState.caches}
+                            rowHeight={rowHeight}
+                        />
 
                         {/* Aggregation Footer Row — suppressed in pivot mode because pivot rows
                              already contain pre-aggregated values with synthetic field keys
                              (e.g. 'Q1\u001frevenue\u001fsum') that don't match aggregationModel keys. */}
                         {hasAggregation && !pivotMode && (
-                            <div
-                                className="ogx__aggregation-footer"
-                                role="row"
-                                aria-label="Aggregation totals"
-                                aria-live="polite"
-                                style={{
-                                    minHeight: `${rowHeight}px`
-                                }}
-                            >
-                                {checkboxSelection && (
-                                    <div style={{ width: 48, flexShrink: 0 }} />
-                                )}
-                                {hasDetailPanel && (
-                                    <div style={{ width: 48, flexShrink: 0 }} />
-                                )}
-                                {rowReordering && (
-                                    <div style={{ width: 48, flexShrink: 0 }} />
-                                )}
-                                {orderedColumns.map((col) => {
-                                    const fnName = (aggregationModel as Record<string, string>)[col.field];
-                                    const rawValue = aggregationResult[col.field];
-                                    const colWidth = columnWidths[col.field] ?? (typeof col.width === 'number' ? col.width : 120);
-
-                                    return (
-                                        <div
-                                            key={col.field}
-                                            className="ogx__aggregation-cell"
-                                            role="gridcell"
-                                            style={{
-                                                width: colWidth,
-                                                minWidth: colWidth,
-                                                maxWidth: colWidth,
-                                                textAlign: (col.align as React.CSSProperties['textAlign']) || 'left',
-                                            }}
-                                        >
-                                            {fnName ? (
-                                                <>
-                                                    <span className="ogx__aggregation-label">
-                                                        {fnName}
-                                                    </span>
-                                                    <span className="ogx__aggregation-value">
-                                                        {formatAggregationValue(rawValue, fnName)}
-                                                    </span>
-                                                </>
-                                            ) : null}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                            <GridAggregationFooter
+                                columns={orderedColumns as unknown as GridColDef[]}
+                                aggregationModel={aggregationModel}
+                                aggregationResult={aggregationResult}
+                                columnWidths={columnWidths}
+                                rowHeight={rowHeight}
+                                checkboxSelection={checkboxSelection}
+                                hasDetailPanel={hasDetailPanel}
+                                rowReordering={rowReordering}
+                            />
                         )}
 
                     </div>
                 </div>
             )}
 
-            {/* Pagination — shared between grid and list view when not inside list view block */}
             {!listView && pagination && (() => {
                 const PaginationComponent = slots?.pagination || Pagination;
-                const paginationProps = {
-                    page: effectivePaginationModel.page,
-                    pageSize: effectivePaginationModel.pageSize,
-                    rowCount: state.pagination.rowCount,
-                    pageSizeOptions: pageSizeOptions,
-                    onPageChange: (newPage: number) => handlePaginationModelChange({ ...effectivePaginationModel, page: newPage }),
-                    onPageSizeChange: (newPageSize: number) => handlePaginationModelChange({ ...effectivePaginationModel, pageSize: newPageSize, page: 0 }),
-                    ...slotProps?.pagination
-                };
-
-                return <PaginationComponent {...paginationProps} />;
+                return (
+                    <PaginationComponent
+                        page={effectivePaginationModel.page}
+                        pageSize={effectivePaginationModel.pageSize}
+                        rowCount={state.pagination.rowCount}
+                        pageSizeOptions={pageSizeOptions}
+                        onPageChange={(newPage: number) => handlePaginationModelChange({ ...effectivePaginationModel, page: newPage })}
+                        onPageSizeChange={(newPageSize: number) => handlePaginationModelChange({ ...effectivePaginationModel, pageSize: newPageSize, page: 0 })}
+                        {...slotProps?.pagination}
+                    />
+                );
             })()}
 
             {/* Accessibility Live Region */}
             <div className="ogx-aria-live-status" role="status" aria-live="polite">
                 {effectiveLoading ? 'Loading data...' : ''}
-                {state.dataSource.error ? `Error: ${state.dataSource.error.message || 'Unknown error'}` : ''}
+                {state.dataSource.error ? `Error: ${state.dataSource.error instanceof Error ? state.dataSource.error.message : 'Unknown error'}` : ''}
                 {!loading && !state.dataSource.error && (
                     filteredRows.length === 0
                         ? noRowsLabel
@@ -1680,27 +1005,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 )}
             </div>
 
-            {state.dataSource.error && (
-                <div className="ogx-error-overlay" aria-live="assertive" role="alert">
-                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--ogx-color-error)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="12" y1="8" x2="12" y2="12" />
-                        <line x1="12" y1="16" x2="12.01" y2="16" />
-                    </svg>
-                    <div className="ogx-error-overlay__title">
-                        Oops! Something went wrong
-                    </div>
-                    <div className="ogx-error-overlay__message">
-                        {state.dataSource.error.message || 'An unexpected error occurred while loading the data.'}
-                    </div>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="ogx-button ogx-button--primary"
-                    >
-                        Retry
-                    </button>
-                </div>
-            )}
+            <GridErrorOverlay error={state.dataSource.error} />
         </div>
     );
 }

@@ -40,10 +40,10 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
     isDragging?: boolean;
     isDragOver?: boolean;
 
-    editingCell?: { id: GridRowId; field: string; value: any; } | null;
-    onEditStart?: (params: { id: GridRowId, field: string, value: any }) => void;
+    editingCell?: { id: GridRowId; field: string; value: unknown; } | null;
+    onEditStart?: (params: { id: GridRowId, field: string, value: unknown }) => void;
     onEditStop?: (params?: { cancel?: boolean }) => void;
-    onEditCellValueChange?: (params: { id: GridRowId, field: string, value: any }) => void;
+    onEditCellValueChange?: (params: { id: GridRowId, field: string, value: unknown }) => void;
 
     focusedCellField?: string | null;
     isFocusVisible?: boolean;
@@ -120,15 +120,15 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         );
     }, [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]);
 
-    const isGroupRow = (row as any)._hasChildren === true;
+    const isGroupRow = row._hasChildren === true;
 
-    const handleCellEditStart = React.useCallback((field: string, value: any) => {
+    const handleCellEditStart = React.useCallback((field: string, value: unknown) => {
         if (!isGroupRow) {
             onEditStart?.({ id: row.id, field, value });
         }
     }, [isGroupRow, row.id, onEditStart]);
 
-    const handleCellValueChange = React.useCallback((field: string, newValue: any) => {
+    const handleCellValueChange = React.useCallback((field: string, newValue: unknown) => {
         onEditCellValueChange?.({ id: row.id, field, value: newValue });
     }, [onEditCellValueChange, row.id]);
 
@@ -137,7 +137,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     }, [onEditStop]);
 
     // ── Skeleton row (shown during infinite-scroll fetch) ─────────────────────
-    if ((row as any)._isSkeleton) {
+    if (row._isSkeleton) {
         // Render shimmer placeholders — one per visible column, matching row height
         const cellCount = Math.max(columns.length, 5);
         return (
@@ -250,7 +250,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                                 row,
                                 field: '__expand_col__',
                                 value: isDetailPanelExpanded,
-                                colDef: { field: '__expand_col__', width: 48 } as any,
+                                colDef: { field: '__expand_col__', width: 48 } as unknown as GridColDef<R>,
                                 rowIndex,
                                 colIndex: -1
                             });
@@ -284,7 +284,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                                 row,
                                 field: '__checkbox_col__',
                                 value: isSelected,
-                                colDef: { field: '__checkbox_col__', width: 48 } as any,
+                                colDef: { field: '__checkbox_col__', width: 48 } as unknown as GridColDef<R>,
                                 rowIndex,
                                 colIndex: -1
                             });
@@ -305,7 +305,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
 
                 { }
                 {columns.map((colDef, colIndex) => {
-                    if ((colDef as any).isSpacer) {
+                    if (colDef.isSpacer) {
                         return (
                             <div
                                 key={colDef.field}

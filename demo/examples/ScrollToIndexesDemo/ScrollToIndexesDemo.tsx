@@ -2,6 +2,8 @@ import { useState, useRef } from 'react';
 import { DataGrid, useGridApiRef } from '@opencorestack/opengridx';
 import type { GridColDef } from '@opencorestack/opengridx';
 import './ScrollToIndexesDemo.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './ScrollToIndexesDemo.tsx?raw';
 
 const DEPARTMENTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'HR', 'Legal', 'Design', 'Operations'];
 const STATUSES = ['Active', 'On Leave', 'Remote', 'Contractor'];
@@ -68,13 +70,11 @@ export default function ScrollToIndexesDemo() {
     const targetCol = lastJump !== null ? columns[lastJump.col] : null;
 
     return (
-        <div className="scroll-demo-container">
-            <h1>scrollToIndexes</h1>
-            <p className="scroll-demo-desc">
-                Programmatically scroll the grid to any row/column by index.
-                Pinned columns are always visible and never need scrolling.
-            </p>
-
+        <DocsLayout
+            title="Scroll To Indexes"
+            description="Programmatically scroll the viewport to any row or column using apiRef.current.scrollToIndexes. Useful for search-result highlighting and navigation shortcuts."
+            sourceCode={sourceCode}
+        >
             <div className="scroll-demo-controls">
                 <label className="scroll-demo-field">
                     <span>Row index <em>(0 – {rows.length - 1})</em></span>
@@ -134,6 +134,6 @@ export default function ScrollToIndexesDemo() {
                     <li>Column index counts all visible data columns left-to-right. Pinned columns are skipped — they are always in view.</li>
                 </ul>
             </div>
-        </div>
+        </DocsLayout>
     );
 }

@@ -5,6 +5,49 @@
 
 ---
 
+## [1.0.0] — July 30, 2026 🚀
+
+First stable public release. All 32 demo pages ship with a live source viewer. npm publish workflow is live.
+
+### Added
+- **npm publish workflow**: GitHub Actions workflow (`.github/workflows/npm-publish.yml`) triggers on any `v*.*.*` tag push — runs lint, build, then `npm publish`. The package is now publicly available as `@opencorestack/opengridx` on the npm registry.
+- **Source viewer on all 32 demos**: Every demo page now uses `DocsLayout` with a collapsible "View Source" tab showing the full component source code. Previously only 7 of 32 demos had this; the remaining 25 have been migrated.
+
+### Changed
+- **Version**: `0.1.x` pre-release series → `1.0.0` stable. The public API (`DataGridProps`, `GridColDef`, `GridApi`, all hooks and types) is now considered stable.
+- **Demo consistency**: All 32 demos share the same `DocsLayout` shell — consistent title, description, live preview, and source viewer. Inline `<h1>` / `<h2>` + `<p>` manual headers removed from every migrated demo.
+
+### Fixed (during migration)
+- `PivotModeDemo` — `apiRef: any`, `fallbackRows: any[]`, `props: any` toolbar → fully typed
+- `InfiniteScrollDemo` — introduced `PersonRow` interface, all `any` in data source and sort params replaced
+- `ServerSideAggregationDemo` — `(a as any)[field]` field access → `keyof Employee` keyed access
+- `AggregationFooter` + `ServerSideAggregationDemo` — `valueFormatter: { value: any }` → `unknown` with narrowing
+- `SlotsDemo` — added `EmployeeRow` interface, `renderCell: (params: any)` × 2 replaced
+- `CRUDTutorial` — `renderCell: (params: any)` → `GridRenderCellParams<User>`
+- `RealEstatePortfolio` — `useState<any>` for pinnedColumns → `useState<GridColumnPinning>`
+- `ExportDemo` — `apiRef: any` → `ReturnType<typeof useGridApiRef>`, `rowsToPrint: any[]` → typed
+- `CustomPagination` — `(props: any)` component signature → explicit typed interface
+- `Editing` — `handleProcessRowUpdate = (newRow: any)` → `MockRow` inferred from data
+
+---
+
+## [0.1.10] — July 30, 2026 🐛🔒
+
+### Fixed
+- **`onRowClick` never fired when `onCellClick` was registered**: `Cell.tsx` was calling `e.stopPropagation()` inside its click handler whenever `onCellClick` was provided. This silently ate the event before it could bubble to the row's `onClick` handler, making `onRowClick` permanently unreachable from cell clicks. Removed the stopPropagation — both callbacks now fire in the natural bubble order (cell first, then row), matching standard data grid behavior.
+- **Column visibility panel list not updating after column reorder**: The toolbar was receiving `effectiveColumns` (the pre-ordering array, in original definition order) instead of `orderedColumns` (the reordered array). After a drag-reorder in the panel, the grid columns reordered correctly but the panel list stayed frozen in definition order. Fixed `toolbarProps.columns` to use `orderedColumns`.
+- **Reset button ignoring column sequence**: The Reset button in the column visibility panel called `onShowAll` only (restoring visibility), leaving any user-reordered sequence in place. Added `onColumnOrderReset` prop threaded from `ColumnVisibilityPanel` → `ColumnsPanelWrapper` → `GridToolbar` → `DataGrid`. DataGrid provides `() => setInternalColumnOrder(columns.map(c => c.field))` to restore original definition order on reset.
+- **`FilterPanelDemo` filter panel inaccessible**: The demo had no `slots={{ toolbar: GridToolbar }}`, so the toolbar never rendered and the filter icon never appeared. Added the toolbar slot and rewrote the demo to use `DocsLayout` (consistent with all other demos).
+- **`EventsDemo` event handlers never fired**: `onRowClick` was broken by the stopPropagation bug above. `onFilterModelChange` and `onColumnOrderChange` were dead — no toolbar existed to trigger them. Fixed by adding `slots={{ toolbar: GridToolbar }}`. Also replaced three `any`-typed handler signatures with `GridSortItem[]`, `GridFilterModel`, and `GridColumnOrderChangeParams`.
+- **`FilterPanel` debounce stale-closure bug**: The 300 ms debounce `useEffect` read `item`, `col.field`, and `currentOperator` directly from closure (stale values after operator or field changes), suppressed with `eslint-disable-next-line`. Replaced with a refs-sync pattern (`useLayoutEffect` writing `itemRef`, `colFieldRef`, `operatorRef` each render) so the effect reads current values without the lint suppression and without stale closures.
+
+### Changed
+- **Type safety — full `any` elimination**: Every `any` across `lib/` replaced with explicit types or `unknown`. Key changes: `GridRowModel` index signature `any → unknown` (with explicit internal row fields added to the type), all cell/value/error params typed as `unknown`, aggregation functions typed as `(values: unknown[]) => unknown`, `GridAggregationResult` typed as `Record<string, unknown>`, slot component types use `Record<string, unknown>`, export utilities narrowed with `instanceof Error` guards.
+- **No more lint suppressions**: Removed all `eslint-disable-next-line react-hooks/exhaustive-deps` comments — every case fixed at the root cause rather than suppressed. Methods include: state refactors (`scrollTick` anti-pattern → `scrollTop`/`scrollLeft` state), ref patterns for stable callbacks, and correct dep arrays.
+- **DataGrid.tsx continued decomposition**: Further hooks and components extracted — `useGridScrollSync` (RAF-batched scroll state), `useGridVirtualization`, `useGridVisibleRows`, `useGridColumns`, `GridAggregationFooter`, `GridEmptyState`, `GridErrorOverlay`, `GridVirtualRows`, `GridPinnedRows`, `GridStandaloneColumnPanel`, `GridListView`. Each module has a single clear responsibility and typed params/return interface.
+
+---
+
 ## [0.1.9] — July 29, 2026 🛠️✨
 
 ### Added

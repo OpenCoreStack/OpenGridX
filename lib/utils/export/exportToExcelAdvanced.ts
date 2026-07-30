@@ -63,7 +63,7 @@ export interface ExcelAdvancedExportOptions {
     /** Body font size (default: 10) */
     bodyFontSize?: number;
     /** Current aggregation result */
-    aggregationResult?: Record<string, any> | null;
+    aggregationResult?: Record<string, unknown> | null;
     /** Current aggregation model */
     aggregationModel?: GridAggregationModel | null;
     /** Currently selected row IDs */
@@ -72,7 +72,7 @@ export interface ExcelAdvancedExportOptions {
 
 // ─── Cell type inference ──────────────────────────────────────────────────────
 
-function inferCellType(colDef: GridColDef<any>, value: any): 'number' | 'boolean' | 'date' | 'string' {
+function inferCellType(colDef: GridColDef<GridRowModel>, value: unknown): 'number' | 'boolean' | 'date' | 'string' {
     if (colDef.type === 'number') return 'number';
     if (colDef.type === 'boolean') return 'boolean';
     if (colDef.type === 'date') return 'date';
@@ -84,7 +84,7 @@ function inferCellType(colDef: GridColDef<any>, value: any): 'number' | 'boolean
 
 // ─── Default numFmt per column type ──────────────────────────────────────────
 
-function defaultNumFmt(colDef: GridColDef<any>): string | undefined {
+function defaultNumFmt(colDef: GridColDef<GridRowModel>): string | undefined {
     if (colDef.type === 'number') return '#,##0.##';
     if (colDef.type === 'date') return 'yyyy-mm-dd';
     return undefined;
@@ -92,7 +92,7 @@ function defaultNumFmt(colDef: GridColDef<any>): string | undefined {
 
 // ─── Column display width (chars) ────────────────────────────────────────────
 
-function colWidth(colDef: GridColDef<any>, override?: number): number {
+function colWidth(colDef: GridColDef<GridRowModel>, override?: number): number {
     if (override != null) return override;
     const px = (colDef.width ?? 120) as number;
     return Math.min(60, Math.max(8, (px - 5) / 7));
@@ -195,18 +195,18 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
     workbook.creator = 'OpenGridX';
     workbook.created = new Date();
 
-    // Filter system columns — cast to GridColDef<any> to avoid generic covariance issues
-    const exportColumns: GridColDef<any>[] = (columns as GridColDef<any>[]).filter(col =>
+    // Filter system columns
+    const exportColumns: GridColDef<GridRowModel>[] = (columns as unknown as GridColDef<GridRowModel>[]).filter(col =>
         col.exportable !== false &&
         col.field !== '__check__' &&
         col.field !== '__actions__' &&
-        !(col as any).isSpacer
+        !col.isSpacer
     );
 
-    const allRows: any[] = rows as any[];
-    const sRows: any[] = (selectedRows && selectedRows.length > 0
+    const allRows: GridRowModel[] = rows as GridRowModel[];
+    const sRows: GridRowModel[] = (selectedRows && selectedRows.length > 0
         ? rows.filter(r => selectedRows.includes(r.id))
-        : rows) as any[];
+        : rows) as GridRowModel[];
 
     // Normalise sheet definitions
     const resolvedSheets: (ExcelSheetDefinition | { type: 'summary'; name?: string })[] =
@@ -279,7 +279,7 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
             const seen = new Set<string>();
             rowsToExport.forEach(row => {
                 imageColumns.forEach(col => {
-                    const val = (row as any)[col.field];
+                    const val = row[col.field];
                     if (typeof val === 'string' && val && !imageCache.has(val) && !seen.has(val)) {
                         urlsNeeded.push(val);
                         seen.add(val);
@@ -348,7 +348,7 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
                 // Image columns: write empty string; image placed below
                 if (columnStyles[col.field]?.embedImage) return '';
 
-                let value: any = (row as any)[col.field];
+                let value: unknown = row[col.field];
                 if (col.valueGetter) {
                     value = col.valueGetter({ row, field: col.field, value });
                 }
@@ -399,7 +399,7 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
 
                 imageColumns.forEach(col => {
                     const colIdx = exportColumns.indexOf(col);
-                    const url    = (row as any)[col.field];
+                    const url    = row[col.field];
                     const imgId  = typeof url === 'string' ? imageCache.get(url) : undefined;
 
                     if (imgId === undefined) {
@@ -433,7 +433,7 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
                         },
                         ext: { width: imgW, height: imgH },
                         editAs: 'oneCell',
-                    } as any);
+                    } as unknown as import('exceljs').ImageRange);
                 });
             } else {
                 dataRow.height = 16;

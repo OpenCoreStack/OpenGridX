@@ -2,36 +2,36 @@
 import type { GridRowModel, GridFilterItem, GridFilterModel, GridFilterGroup } from '../../types';
 
 export const FILTER_OPERATORS = {
-  contains: (value: any, filterValue: any): boolean => {
+  contains: (value: unknown, filterValue: unknown): boolean => {
     if (value == null || filterValue == null) return false;
     return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
   },
 
-  equals: (value: any, filterValue: any): boolean => {
+  equals: (value: unknown, filterValue: unknown): boolean => {
     if (value == null && filterValue == null) return true;
     if (value == null || filterValue == null) return false;
     return String(value).toLowerCase() === String(filterValue).toLowerCase();
   },
 
-  startsWith: (value: any, filterValue: any): boolean => {
+  startsWith: (value: unknown, filterValue: unknown): boolean => {
     if (value == null || filterValue == null) return false;
     return String(value).toLowerCase().startsWith(String(filterValue).toLowerCase());
   },
 
-  endsWith: (value: any, filterValue: any): boolean => {
+  endsWith: (value: unknown, filterValue: unknown): boolean => {
     if (value == null || filterValue == null) return false;
     return String(value).toLowerCase().endsWith(String(filterValue).toLowerCase());
   },
 
-  isEmpty: (value: any): boolean => {
+  isEmpty: (value: unknown): boolean => {
     return value == null || String(value).trim() === '';
   },
 
-  isNotEmpty: (value: any): boolean => {
+  isNotEmpty: (value: unknown): boolean => {
     return value != null && String(value).trim() !== '';
   },
 
-  '>': (value: any, filterValue: any): boolean => {
+  '>': (value: unknown, filterValue: unknown): boolean => {
     if (value == null || filterValue == null) return false;
     const numValue = Number(value);
     const numFilter = Number(filterValue);
@@ -39,7 +39,7 @@ export const FILTER_OPERATORS = {
     return numValue > numFilter;
   },
 
-  '>=': (value: any, filterValue: any): boolean => {
+  '>=': (value: unknown, filterValue: unknown): boolean => {
     if (value == null || filterValue == null) return false;
     const numValue = Number(value);
     const numFilter = Number(filterValue);
@@ -47,7 +47,7 @@ export const FILTER_OPERATORS = {
     return numValue >= numFilter;
   },
 
-  '<': (value: any, filterValue: any): boolean => {
+  '<': (value: unknown, filterValue: unknown): boolean => {
     if (value == null || filterValue == null) return false;
     const numValue = Number(value);
     const numFilter = Number(filterValue);
@@ -55,7 +55,7 @@ export const FILTER_OPERATORS = {
     return numValue < numFilter;
   },
 
-  '<=': (value: any, filterValue: any): boolean => {
+  '<=': (value: unknown, filterValue: unknown): boolean => {
     if (value == null || filterValue == null) return false;
     const numValue = Number(value);
     const numFilter = Number(filterValue);
@@ -63,7 +63,7 @@ export const FILTER_OPERATORS = {
     return numValue <= numFilter;
   },
 
-  '!=': (value: any, filterValue: any): boolean => {
+  '!=': (value: unknown, filterValue: unknown): boolean => {
     if (filterValue == null || filterValue === '') return true;
     // Numeric comparison if both are numbers, otherwise string
     const numV = Number(value);
@@ -72,28 +72,28 @@ export const FILTER_OPERATORS = {
     return String(value).toLowerCase() !== String(filterValue).toLowerCase();
   },
 
-  isAnyOf: (value: any, filterValue: any[]): boolean => {
+  isAnyOf: (value: unknown, filterValue: unknown[]): boolean => {
     if (value == null || !Array.isArray(filterValue)) return false;
-    return filterValue.some(v => 
+    return filterValue.some(v =>
       String(value).toLowerCase() === String(v).toLowerCase()
     );
   },
 
-  not: (value: any, filterValue: any): boolean => {
+  not: (value: unknown, filterValue: unknown): boolean => {
       if (value == null && filterValue == null) return false;
       if (value == null || filterValue == null) return true;
       return String(value).toLowerCase() !== String(filterValue).toLowerCase();
   },
 
   // Used by boolean and singleSelect — case-insensitive string comparison
-  is: (value: any, filterValue: any): boolean => {
+  is: (value: unknown, filterValue: unknown): boolean => {
       if (filterValue == null || filterValue === '') return true;
       const rowStr = String(value).toLowerCase();
       const filterStr = String(filterValue).toLowerCase();
       return rowStr === filterStr;
   },
 
-  '=': (value: any, filterValue: any): boolean => {
+  '=': (value: unknown, filterValue: unknown): boolean => {
       if (value == null || filterValue == null || filterValue === '') return false;
       return Number(value) === Number(filterValue);
   },
@@ -119,7 +119,7 @@ export function applyFilterItem<R extends GridRowModel>(
   }
 
   // Apply the operator
-  return operatorFn(rowValue, value);
+  return (operatorFn as (a: unknown, b: unknown) => boolean)(rowValue, value);
 }
 
 /**
@@ -155,9 +155,9 @@ export function isRowMatchingFilter<R extends GridRowModel>(
 ): boolean {
   // Normalize input: GridFilterModel matches GridFilterGroup shape largely, but let's be safe
 
-  const items = (filterModel as any).items || [];
-  const logicOperator = (filterModel as any).logicOperator || 'and';
-  const quickFilterValues = (filterModel as any).quickFilterValues || [];
+  const items = filterModel.items ?? [];
+  const logicOperator = filterModel.logicOperator ?? 'and';
+  const quickFilterValues = ('quickFilterValues' in filterModel ? filterModel.quickFilterValues : undefined) ?? [];
 
   if (quickFilterValues.length > 0 && !applyQuickFilter(row, quickFilterValues)) {
     return false;

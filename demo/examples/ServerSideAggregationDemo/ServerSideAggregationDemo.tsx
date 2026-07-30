@@ -11,6 +11,8 @@ import {
     GridAggregationResult,
 } from '@opencorestack/opengridx';
 import './ServerSideAggregationDemo.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './ServerSideAggregationDemo.tsx?raw';
 
 type Employee = {
     id: number;
@@ -68,8 +70,8 @@ const mockServer = {
         if (params.sortModel.length > 0) {
             const { field, sort } = params.sortModel[0];
             data.sort((a, b) => {
-                const av = (a as any)[field];
-                const bv = (b as any)[field];
+                const av = a[field as keyof Employee] as string | number;
+                const bv = b[field as keyof Employee] as string | number;
                 if (av < bv) return sort === 'asc' ? -1 : 1;
                 if (av > bv) return sort === 'asc' ? 1 : -1;
                 return 0;
@@ -81,7 +83,7 @@ const mockServer = {
         const aggregationResults: GridAggregationResult = {};
         if (params.aggregationModel) {
             for (const [field, fn] of Object.entries(params.aggregationModel)) {
-                const values = data.map((r) => (r as any)[field]).filter((v) => v != null);
+                const values = data.map((r) => r[field as keyof Employee]).filter((v) => v != null);
                 if (fn === 'sum') aggregationResults[field] = values.reduce((a, b) => a + Number(b), 0);
                 else if (fn === 'avg') aggregationResults[field] = values.length ? values.reduce((a, b) => a + Number(b), 0) / values.length : null;
                 else if (fn === 'count') aggregationResults[field] = values.length;
@@ -95,7 +97,7 @@ const mockServer = {
     },
 };
 
-const fmt$ = ({ value }: { value: any }) =>
+const fmt$ = ({ value }: { value: unknown }) =>
     typeof value === 'number' ? `$${Math.round(value).toLocaleString('en-US')}` : String(value ?? '');
 
 const columns: GridColDef<Employee>[] = [
@@ -197,33 +199,27 @@ export default function ServerSideAggregationDemo() {
     );
 
     return (
-        <div className="ss-agg-container">
-            <div className="ss-agg-header">
-                <h2>Server-Side Aggregation</h2>
-                <p>
-                    Aggregations are computed by the server over the <strong>full dataset</strong> (500 rows),
-                    not just the current page. Click the <strong>Σ icon</strong> in the toolbar to configure.
-                </p>
-            </div>
-
-            <div className="ss-agg-grid-wrapper">
-                <DataGrid<Employee>
-                    rows={[]}
-                    columns={columns}
-                    dataSource={dataSource}
-                    pagination
-                    paginationMode="server"
-                    sortingMode="server"
-                    paginationModel={paginationModel}
-                    onPaginationModelChange={setPaginationModel}
-                    pageSizeOptions={[10, 20, 50]}
-                    aggregationModel={aggregationModel}
-                    onAggregationModelChange={setAggregationModel}
-                    getAggregationPosition={() => 'footer'}
-                    slots={{ toolbar: GridToolbar }}
-                    height={520}
-                />
-            </div>
+        <DocsLayout
+            title="Server-Side Aggregation"
+            description="Aggregation computed server-side over the full dataset, bypassing client-side pagination. Results arrive via the dataSource and render in a sticky totals row."
+            sourceCode={sourceCode}
+        >
+            <DataGrid<Employee>
+                rows={[]}
+                columns={columns}
+                dataSource={dataSource}
+                pagination
+                paginationMode="server"
+                sortingMode="server"
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50]}
+                aggregationModel={aggregationModel}
+                onAggregationModelChange={setAggregationModel}
+                getAggregationPosition={() => 'footer'}
+                slots={{ toolbar: GridToolbar }}
+                height={520}
+            />
 
             <div className="ss-agg-info-box">
                 <strong>How it works:</strong> Each page request sends the <code>aggregationModel</code> to
@@ -231,6 +227,6 @@ export default function ServerSideAggregationDemo() {
                 <code>aggregationResults</code> — so the footer total is always accurate regardless of the
                 current page.
             </div>
-        </div>
+        </DocsLayout>
     );
 }

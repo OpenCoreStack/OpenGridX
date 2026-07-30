@@ -2,6 +2,8 @@
 import { useMemo, useState } from 'react';
 import { DataGrid, GridColDef, GridColumnGroupingModel } from '@opencorestack/opengridx';
 import './EmployeeCalendarDemo.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './EmployeeCalendarDemo.tsx?raw';
 
 // --- Mock Data ---
 
@@ -118,10 +120,11 @@ export default function EmployeeCalendarDemo() {
     const rows = useMemo(() => generateMockEmployees(), []);
 
     return (
-        <div className="calendar-demo-container">
-            <h2>Time Off Calendar</h2>
-            <p className="calendar-demo-description">A custom calendar using pinned columns and dense inline event cell rendering.</p>
-
+        <DocsLayout
+            title="Time Off Calendar"
+            description="A custom-renderer tutorial: employee time-off visualization using grid cells as calendar day blocks, with color-coded leave types and month navigation."
+            sourceCode={sourceCode}
+        >
             <div className="calendar-grid-wrapper">
                 {/* Custom Toolbar */}
                 <div className="calendar-toolbar">
@@ -155,6 +158,6 @@ export default function EmployeeCalendarDemo() {
                     />
                 </div>
             </div>
-        </div>
+        </DocsLayout>
     );
 }

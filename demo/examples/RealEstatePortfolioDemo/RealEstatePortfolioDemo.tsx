@@ -1,7 +1,9 @@
 
 import { useMemo, useState } from 'react';
-import { DataGrid, GridColDef, GridAggregationModel, GridToolbar, GridFilterModel } from '@opencorestack/opengridx';
+import { DataGrid, GridColDef, GridAggregationModel, GridToolbar, GridFilterModel, GridColumnPinning } from '@opencorestack/opengridx';
 import './RealEstatePortfolioDemo.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './RealEstatePortfolioDemo.tsx?raw';
 
 // --- Mock Data ---
 
@@ -194,7 +196,7 @@ export default function RealEstatePortfolioDemo() {
     const [filter, setFilter] = useState<'All' | 'Available' | 'Fully Occupied' | 'Under Maintenance'>('All');
     const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [], logicOperator: 'and' });
     const [columnVisibilityModel, setColumnVisibilityModel] = useState<Record<string, boolean>>({});
-    const [pinnedColumns, setPinnedColumns] = useState<any>({ left: ['propertyName'] });
+    const [pinnedColumns, setPinnedColumns] = useState<GridColumnPinning>({ left: ['propertyName'] });
 
     const filteredRows = useMemo(() => {
         if (filter === 'All') return mockProperties;
@@ -219,49 +221,48 @@ export default function RealEstatePortfolioDemo() {
     });
 
     return (
-        <div className="re-portfolio-container">
-            <h2>Real Estate Portfolio</h2>
-            <p className="re-portfolio-description">Custom cell renderers, master-detail panel for property units, and dynamic filtering.</p>
-
-            <div className="re-portfolio-grid-wrapper">
-                <DataGrid
-                    rows={filteredRows}
-                    columns={columns}
-                    rowHeight={64}
-                    headerHeight={56}
-                    autoHeight
-                    filterModel={filterModel}
-                    onFilterModelChange={setFilterModel}
-                    columnVisibilityModel={columnVisibilityModel}
-                    onColumnVisibilityModelChange={setColumnVisibilityModel}
-                    getDetailPanelContent={(params) => <DetailPanel row={params.row} />}
-                    aggregationModel={aggregationModel}
-                    onAggregationModelChange={setAggregationModel}
-                    pinExpandColumn
-                    pinnedColumns={pinnedColumns}
-                    onPinnedColumnsChange={setPinnedColumns}
-                    height={500}
-                    slots={{
-                        toolbar: (props) => (
-                            <div className="re-toolbar-wrapper">
-                                <GridToolbar {...props} style={{ borderRadius: '8px 8px 0 0' }}>
-                                    <div className="re-filter-btns">
-                                        {(['All', 'Available', 'Fully Occupied', 'Under Maintenance'] as const).map(opt => (
-                                            <button
-                                                key={opt}
-                                                onClick={() => setFilter(opt)}
-                                                className={`re-filter-btn ${filter === opt ? 'active' : ''}`}
-                                            >
-                                                {opt}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </GridToolbar>
-                            </div>
-                        )
-                    }}
-                />
-            </div>
-        </div>
+        <DocsLayout
+            title="Real Estate Portfolio"
+            description="A real-world tutorial: a property portfolio dashboard with custom cell renderers, status badges, price formatting, and aggregated portfolio totals."
+            sourceCode={sourceCode}
+        >
+            <DataGrid
+                rows={filteredRows}
+                columns={columns}
+                rowHeight={64}
+                headerHeight={56}
+                autoHeight
+                filterModel={filterModel}
+                onFilterModelChange={setFilterModel}
+                columnVisibilityModel={columnVisibilityModel}
+                onColumnVisibilityModelChange={setColumnVisibilityModel}
+                getDetailPanelContent={(params) => <DetailPanel row={params.row} />}
+                aggregationModel={aggregationModel}
+                onAggregationModelChange={setAggregationModel}
+                pinExpandColumn
+                pinnedColumns={pinnedColumns}
+                onPinnedColumnsChange={setPinnedColumns}
+                height={500}
+                slots={{
+                    toolbar: (props) => (
+                        <div className="re-toolbar-wrapper">
+                            <GridToolbar {...props} style={{ borderRadius: '8px 8px 0 0' }}>
+                                <div className="re-filter-btns">
+                                    {(['All', 'Available', 'Fully Occupied', 'Under Maintenance'] as const).map(opt => (
+                                        <button
+                                            key={opt}
+                                            onClick={() => setFilter(opt)}
+                                            className={`re-filter-btn ${filter === opt ? 'active' : ''}`}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </GridToolbar>
+                        </div>
+                    )
+                }}
+            />
+        </DocsLayout>
     );
 }

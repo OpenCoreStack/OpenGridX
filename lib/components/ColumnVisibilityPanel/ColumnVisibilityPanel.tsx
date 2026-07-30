@@ -10,6 +10,7 @@ export interface ColumnVisibilityPanelProps<R extends GridRowModel = GridRowMode
     onShowAll: () => void;
     onHideAll: () => void;
     onColumnReorder?: (fromField: string, toField: string) => void;
+    onColumnOrderReset?: () => void;
 }
 
 function SearchIcon() {
@@ -43,7 +44,7 @@ function DragHandleIcon() {
 export function ColumnVisibilityPanel<R extends GridRowModel = GridRowModel>(
     props: ColumnVisibilityPanelProps<R>
 ) {
-    const { columns, visibleColumns, onVisibilityChange, onShowAll, onHideAll, onColumnReorder } = props;
+    const { columns, visibleColumns, onVisibilityChange, onShowAll, onHideAll, onColumnReorder, onColumnOrderReset } = props;
     const [searchQuery, setSearchQuery] = useState('');
     const [dragOverField, setDragOverField] = useState<string | null>(null);
     const dragFieldRef = useRef<string | null>(null);
@@ -180,7 +181,7 @@ export function ColumnVisibilityPanel<R extends GridRowModel = GridRowModel>(
                 </label>
                 <button
                     className="ogx-column-visibility-panel__reset-btn"
-                    onClick={onShowAll}
+                    onClick={() => { onShowAll(); onColumnOrderReset?.(); }}
                 >
                     Reset
                 </button>

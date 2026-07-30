@@ -8,6 +8,8 @@ import type { GridColDef, GridRowModel, GridFilterModel, GridColumnPinning, Grid
 import '../../../lib/components/QuickFilter/QuickFilter.css';
 import '../../../lib/components/ColumnVisibilityPanel/ColumnVisibilityPanel.css';
 import './DataGridTest.css';
+import { DocsLayout } from '../../components/DocsLayout';
+import sourceCode from './DataGridTest.tsx?raw';
 
 interface Employee extends GridRowModel {
     id: number;
@@ -1653,12 +1655,11 @@ export function DataGridTest() {
     };
 
     return (
-        <div className="datagrid-test">
-            <div className="datagrid-test__header">
-                <h1>OpenGridX Test</h1>
-                <p>Zero-dependency DataGrid built from scratch</p>
-            </div>
-
+        <DocsLayout
+            title="Full Feature Test"
+            description="A comprehensive feature test page exercising every major OpenGridX capability in a single grid — virtualization, pinning, grouping, editing, export, and more."
+            sourceCode={sourceCode}
+        >
             <div className="datagrid-test__info">
                 <div className="datagrid-test__stat">
                     <strong>Total Rows:</strong> {rows.length}
@@ -1904,7 +1905,7 @@ export function DataGridTest() {
                 />
             </div>
 
-        </div>
+        </DocsLayout>
     );
 }
 
