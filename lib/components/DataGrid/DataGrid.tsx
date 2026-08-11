@@ -202,6 +202,18 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const defaultGetRowId = useCallback((row: R) => row.id, []);
     const effectiveGetRowId = getRowId || defaultGetRowId;
 
+    // Normalize rows so every row has `id === getRowId(row)`.
+    // createInitialState and SET_ROWS both key the internal store by row.id,
+    // so rows without a native id field collide on undefined without this.
+    // When getRowId is the default (row) => row.id this is a no-op per row.
+    const normalizedRows = useMemo(
+        () => activeRows.map(row => {
+            const id = effectiveGetRowId(row);
+            return id === row.id ? row : ({ ...row, id } as R);
+        }),
+        [activeRows, effectiveGetRowId]
+    );
+
     // Keyboard-mode flag: toggled via DOM classname — no React state needed
     // so the ring appears instantly without a re-render cycle.
     const setKeyboardMode = useCallback((on: boolean) => {
@@ -226,7 +238,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     }, [treeData]);
 
     const gridData = useDataGrid({
-        rows: activeRows,
+        rows: normalizedRows,
         columns: activeColumns,
         rowHeight,
         headerHeight,
@@ -358,9 +370,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     useEffect(() => {
         if (!dataSource) {
-            setRows(activeRows);
+            setRows(normalizedRows);
         }
-    }, [activeRows, setRows, dataSource]);
+    }, [normalizedRows, setRows, dataSource]);
 
     // ── Detail panel (hoisted — hasDetailPanel feeds into useGridColumns) ──────
     const hasDetailPanel = Boolean(getDetailPanelContent);

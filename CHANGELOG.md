@@ -5,6 +5,13 @@
 
 ---
 
+## [1.0.4] — July 30, 2026 🐛
+
+### Fixed
+- **`getRowId` not applied to internal row store**: `DataGrid` derived `effectiveGetRowId` correctly but never used it before rows entered the internal state. `createInitialState` and the `SET_ROWS` reducer both indexed by `row.id` directly, so any consumer passing rows without a native `id` field would silently collide all rows on `undefined` in the lookup map, produce `undefined` React keys, and trigger a "Each child in a list should have a unique key prop" warning. Fixed by normalizing `activeRows` through `effectiveGetRowId` into `normalizedRows` (via `useMemo`) immediately after `effectiveGetRowId` is derived. The normalization is a no-op when the default `(row) => row.id` is used, so there is no overhead for the common case.
+
+---
+
 ## [1.0.3] — July 30, 2026 📚
 
 ### Fixed
