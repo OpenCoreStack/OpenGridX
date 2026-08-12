@@ -5,6 +5,13 @@
 
 ---
 
+## [1.0.5] — August 12, 2026 🐛
+
+### Fixed
+- **Aggregation footer width misalignment with `flex` columns**: When a `GridColDef` used `flex` (with or without a `width` fallback), the aggregation footer cells used `columnWidths` to resolve rendered widths. That map is a user-resize override cache — it contains no entry for columns that have not been manually resized, so flex-columns fell back to their raw `col.width` prop value, producing cells that were narrower than the actual column. Fixed by computing `resolvedColumnWidths` in `DataGrid` that seeds from the layout-computed flex widths (`unpinnedColsWithWidth`, `leftPinnedCols`, `rightPinnedCols`) and then overlays any user-resize overrides. `GridAggregationFooter` now receives `resolvedColumnWidths` instead of `columnWidths`.
+
+---
+
 ## [1.0.4] — July 30, 2026 🐛
 
 ### Fixed

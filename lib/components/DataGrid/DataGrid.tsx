@@ -513,6 +513,19 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         pageSize: effectivePaginationModel.pageSize,
     });
 
+    // Merge layout-computed widths (which include flex resolution) with user-resize
+    // overrides. The footer and other consumers that receive `columnWidths` only get
+    // the resize-override map, which has no entry for flex columns that haven't been
+    // manually resized — causing them to fall back to the raw `col.width` prop instead
+    // of the actual rendered width.
+    const resolvedColumnWidths = useMemo(() => {
+        const result: Record<string, number> = {};
+        for (const col of [...layout.leftPinnedCols, ...layout.unpinnedColsWithWidth, ...layout.rightPinnedCols]) {
+            if (!col.isSpacer) result[col.field] = col.width;
+        }
+        return { ...result, ...columnWidths };
+    }, [layout.leftPinnedCols, layout.unpinnedColsWithWidth, layout.rightPinnedCols, columnWidths]);
+
     useEffect(() => {
         gridData.apiRef.current.scrollToIndexes = ({ rowIndex, colIndex }) => {
             const el = viewportRef.current;
@@ -977,7 +990,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                 columns={orderedColumns as unknown as GridColDef[]}
                                 aggregationModel={aggregationModel}
                                 aggregationResult={aggregationResult}
-                                columnWidths={columnWidths}
+                                columnWidths={resolvedColumnWidths}
                                 rowHeight={rowHeight}
                                 checkboxSelection={checkboxSelection}
                                 hasDetailPanel={hasDetailPanel}
