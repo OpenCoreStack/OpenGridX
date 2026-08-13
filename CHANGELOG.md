@@ -5,6 +5,21 @@
 
 ---
 
+## [1.0.6] — August 13, 2026 ✨
+
+### Added
+- **Toolbar render prop slots**: `GridToolbar` now accepts render props to replace individual toolbar controls without replacing the entire toolbar. All panels (columns, filters, aggregation) continue to open and close normally — only the trigger element is swapped.
+  - `renderColumnsButton(props)` — replace the Columns icon button
+  - `renderFilterButton(props)` — replace the Filters icon button; receives `activeCount`
+  - `renderAggregationButton(props)` — replace the Summaries icon button; receives `activeCount`
+  - `renderExportButton()` — inject an Export button after the Aggregation button (no built-in exists)
+  - `renderQuickFilter(props)` — replace the built-in `GlobalSearch` input; receives `value` and `onChange`
+- **`GridToolbar.className`**: Accepts an additional CSS class on the toolbar root `<div>` for full visual override without replacing the component.
+- **Exported types**: `ToolbarButtonRenderProps` and `ToolbarQuickFilterRenderProps` are now exported from the package for TypeScript consumers.
+- **Toolbar Customization demo**: new demo page at `/toolbar-customization` showing a branded dark toolbar and a plain light toolbar, each using all five render props.
+
+---
+
 ## [1.0.5] — August 12, 2026 🐛
 
 ### Fixed

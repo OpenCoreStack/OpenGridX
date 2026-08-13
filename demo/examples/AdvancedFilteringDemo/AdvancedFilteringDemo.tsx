@@ -1,15 +1,25 @@
 
 import { useState } from 'react';
-import { DataGrid, GridToolbar, GridColDef, GridFilterModel, GridTooltip, exportToCsv, exportToExcel, exportToJson, printGrid } from '@opencorestack/opengridx';
+import { DataGrid, GridToolbar, GridColDef, GridRowModel, GridFilterModel, GridTooltip, exportToCsv, exportToExcel, exportToJson, printGrid } from '@opencorestack/opengridx';
 import { DocsLayout } from '../../components/DocsLayout';
 import './AdvancedFilteringDemo.css';
 
 import sourceCode from './AdvancedFilteringDemo.tsx?raw';
 
+interface Employee extends GridRowModel {
+    id: number;
+    firstName: string;
+    lastName: string;
+    age: number;
+    department: string;
+    salary: number;
+    active: boolean;
+}
+
 interface ExportToolbarProps {
     apiRef?: any;
-    fallbackRows: any[];
-    fallbackColumns: GridColDef[];
+    fallbackRows: Employee[];
+    fallbackColumns: GridColDef<Employee>[];
 }
 
 function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarProps) {
@@ -113,7 +123,7 @@ function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarP
     );
 }
 
-const rows = [
+const rows: Employee[] = [
     { id: 1, firstName: 'Jon', lastName: 'Snow', age: 35, department: 'Engineering', salary: 95000, active: true },
     { id: 2, firstName: 'Cersei', lastName: 'Lannister', age: 42, department: 'Management', salary: 140000, active: false },
     { id: 3, firstName: 'Jaime', lastName: 'Lannister', age: 45, department: 'Security', salary: 88000, active: true },
@@ -141,9 +151,9 @@ const rows = [
     { id: 25, firstName: 'Tormund', lastName: 'Giantsbane', age: 38, department: 'Security', salary: 72000, active: true },
 ];
 
-const columns: GridColDef[] = [
+const columns: GridColDef<Employee>[] = [
     { field: 'id', headerName: 'ID', width: 70, type: 'number' },
-    { field: 'firstName', headerName: 'First Name', width: 140 },
+    { field: 'firstName', headerName: 'First Name', flex: 1, width: 100 },
     { field: 'lastName', headerName: 'Last Name', width: 150 },
     { field: 'age', headerName: 'Age', width: 90, type: 'number' },
     { field: 'department', headerName: 'Department', width: 150 },

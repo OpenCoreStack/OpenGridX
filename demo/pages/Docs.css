@@ -36,6 +36,13 @@
     gap: 12px;
 }
 
+.docs-h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 8px;
+}
+
 .docs-code-block {
     background: #f8fafc;
     border: 1px solid #e2e8f0;

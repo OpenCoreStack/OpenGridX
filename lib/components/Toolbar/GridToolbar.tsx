@@ -7,6 +7,24 @@ import { ColumnVisibilityPanel } from '../ColumnVisibilityPanel/ColumnVisibility
 import { FilterPanel } from '../FilterPanel/FilterPanel';
 import { GridTooltip } from '../Tooltip/Tooltip';
 
+/** Props passed to a custom toolbar button renderer. */
+export interface ToolbarButtonRenderProps {
+    /** Call this to toggle the associated panel open/closed. */
+    onClick: () => void;
+    /** Whether the associated panel is currently open. */
+    isOpen: boolean;
+    /** Number of active items (filters applied, aggregations configured, etc.). */
+    activeCount: number;
+}
+
+/** Props passed to a custom quick-filter renderer. */
+export interface ToolbarQuickFilterRenderProps {
+    /** Current search string. */
+    value: string;
+    /** Call with the new search string when the input changes. */
+    onChange: (value: string) => void;
+}
+
 export interface GridToolbarProps {
     columns?: GridColDef[];
     /** Original user-defined columns (before pivot transformation).
@@ -29,6 +47,33 @@ export interface GridToolbarProps {
     children?: React.ReactNode;
     rightContent?: React.ReactNode;
     style?: React.CSSProperties;
+    /**
+     * Replace the built-in Columns button. The columns panel still opens and
+     * closes normally — only the trigger element is replaced.
+     */
+    renderColumnsButton?: (props: ToolbarButtonRenderProps) => React.ReactNode;
+    /**
+     * Replace the built-in Filters button. The filter panel still opens and
+     * closes normally — only the trigger element is replaced.
+     */
+    renderFilterButton?: (props: ToolbarButtonRenderProps) => React.ReactNode;
+    /**
+     * Replace the built-in Aggregation/Summaries button. The aggregation panel
+     * still opens and closes normally — only the trigger element is replaced.
+     */
+    renderAggregationButton?: (props: ToolbarButtonRenderProps) => React.ReactNode;
+    /**
+     * Render an Export button. There is no built-in export button — this slot
+     * inserts your element after the Aggregation button in the toolbar action row.
+     */
+    renderExportButton?: () => React.ReactNode;
+    /**
+     * Replace the built-in quick-filter search bar. Receives the current search
+     * value and an onChange handler; connect them to your own input element.
+     */
+    renderQuickFilter?: (props: ToolbarQuickFilterRenderProps) => React.ReactNode;
+    /** Additional CSS class applied to the toolbar root element. */
+    className?: string;
 }
 
 const AGGREGATION_FUNCTIONS = ['none', 'sum', 'avg', 'count', 'min', 'max'] as const;
@@ -78,7 +123,7 @@ function AggregationPanel({
     onClose,
     activeCount,
 }: {
-    anchorRef: React.RefObject<HTMLButtonElement | null>;
+    anchorRef: React.RefObject<HTMLElement | null>;
     aggregationModel: GridAggregationModel;
     aggregableColumns: GridColDef[];
     onFunctionChange: (field: string, fn: string) => void;
@@ -205,7 +250,7 @@ function ColumnsPanelWrapper({
     onColumnOrderReset,
     onClose
 }: {
-    anchorRef: React.RefObject<HTMLButtonElement | null>;
+    anchorRef: React.RefObject<HTMLElement | null>;
     columns: GridColDef[];
     visibleColumns: Set<string>;
     onVisibilityChange: (field: string, isVisible: boolean) => void;
@@ -286,7 +331,7 @@ function FilterPanelWrapper({
     onFilterModelChange,
     onClose
 }: {
-    anchorRef: React.RefObject<HTMLButtonElement | null>;
+    anchorRef: React.RefObject<HTMLElement | null>;
     columns: GridColDef[];
     filterModel: GridFilterModel;
     onFilterModelChange: (model: GridFilterModel) => void;
@@ -413,6 +458,12 @@ export function GridToolbar({
     children,
     rightContent,
     style,
+    renderColumnsButton,
+    renderFilterButton,
+    renderAggregationButton,
+    renderExportButton,
+    renderQuickFilter,
+    className,
 }: GridToolbarProps) {
     const [aggOpen, setAggOpen] = useState(false);
     const [pivotOpen, setPivotOpen] = useState(false);
@@ -432,6 +483,12 @@ export function GridToolbar({
     const pivotButtonRef = useRef<HTMLButtonElement>(null);
     const colsButtonRef = useRef<HTMLButtonElement>(null);
     const filterButtonRef = useRef<HTMLButtonElement>(null);
+
+    // Wrapper div refs — used as panel anchors when a custom button renderer
+    // is provided (the custom element doesn't expose a ref to us).
+    const colsWrapperRef = useRef<HTMLDivElement>(null);
+    const filterWrapperRef = useRef<HTMLDivElement>(null);
+    const aggWrapperRef = useRef<HTMLDivElement>(null);
 
     const currentPivotModel = pivotModel ?? EMPTY_PIVOT;
     const pivotActive = currentPivotModel.rowFields.length > 0
@@ -512,7 +569,7 @@ export function GridToolbar({
     }, [columns, columnVisibilityModel, onColumnVisibilityModelChange]);
 
     return (
-        <div className="ogx-toolbar" role="toolbar" aria-label="Grid toolbar" style={style}>
+        <div className={['ogx-toolbar', className].filter(Boolean).join(' ')} role="toolbar" aria-label="Grid toolbar" style={style}>
             {/* Left slot — custom content */}
             {children && <div className="ogx-toolbar__left">{children}</div>}
 
@@ -523,35 +580,49 @@ export function GridToolbar({
             <div className="ogx-toolbar__actions">
                 {onFilterModelChange && (
                     <div className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
-                        <GlobalSearch
-                            value={searchValue}
-                            onChange={handleSearchChange}
-                            placeholder="Search..."
-                        />
+                        {renderQuickFilter
+                            ? renderQuickFilter({ value: searchValue, onChange: handleSearchChange })
+                            : (
+                                <GlobalSearch
+                                    value={searchValue}
+                                    onChange={handleSearchChange}
+                                    placeholder="Search..."
+                                />
+                            )
+                        }
                     </div>
                 )}
 
                 {/* Columns Button */}
                 {onColumnVisibilityModelChange && (
-                    <div className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
-                        <GridTooltip title="Columns">
-                            <button
-                                ref={colsButtonRef}
-                                className={`ogx-toolbar__icon-btn${colsOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
-                                aria-label="Manage columns"
-                                onClick={() => {
-                                    setColsOpen(!colsOpen);
-                                    setAggOpen(false);
-                                    setPivotOpen(false);
-                                    setFilterOpen(false);
-                                }}
-                            >
-                                <ViewColumnIcon />
-                            </button>
-                        </GridTooltip>
+                    <div ref={colsWrapperRef} className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
+                        {renderColumnsButton
+                            ? renderColumnsButton({
+                                onClick: () => { setColsOpen(o => !o); setAggOpen(false); setPivotOpen(false); setFilterOpen(false); },
+                                isOpen: colsOpen,
+                                activeCount: columns.length - visibleColumns.size,
+                            })
+                            : (
+                                <GridTooltip title="Columns">
+                                    <button
+                                        ref={colsButtonRef}
+                                        className={`ogx-toolbar__icon-btn${colsOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
+                                        aria-label="Manage columns"
+                                        onClick={() => {
+                                            setColsOpen(!colsOpen);
+                                            setAggOpen(false);
+                                            setPivotOpen(false);
+                                            setFilterOpen(false);
+                                        }}
+                                    >
+                                        <ViewColumnIcon />
+                                    </button>
+                                </GridTooltip>
+                            )
+                        }
                         {colsOpen && (
                             <ColumnsPanelWrapper
-                                anchorRef={colsButtonRef}
+                                anchorRef={renderColumnsButton ? colsWrapperRef : colsButtonRef}
                                 columns={columns}
                                 visibleColumns={visibleColumns}
                                 onVisibilityChange={handleVisibilityChange}
@@ -567,28 +638,37 @@ export function GridToolbar({
 
                 {/* Filters Button */}
                 {onFilterModelChange && (
-                    <div className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
-                        <GridTooltip title="Filters">
-                            <button
-                                ref={filterButtonRef}
-                                className={`ogx-toolbar__icon-btn${filterOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
-                                aria-label="Advanced filters"
-                                onClick={() => {
-                                    setFilterOpen(!filterOpen);
-                                    setAggOpen(false);
-                                    setPivotOpen(false);
-                                    setColsOpen(false);
-                                }}
-                            >
-                                <FilterIcon />
-                                {activeFilterCount > 0 && (
-                                    <span className="ogx-toolbar__dot" aria-label="Filters active" />
-                                )}
-                            </button>
-                        </GridTooltip>
+                    <div ref={filterWrapperRef} className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
+                        {renderFilterButton
+                            ? renderFilterButton({
+                                onClick: () => { setFilterOpen(o => !o); setAggOpen(false); setPivotOpen(false); setColsOpen(false); },
+                                isOpen: filterOpen,
+                                activeCount: activeFilterCount,
+                            })
+                            : (
+                                <GridTooltip title="Filters">
+                                    <button
+                                        ref={filterButtonRef}
+                                        className={`ogx-toolbar__icon-btn${filterOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
+                                        aria-label="Advanced filters"
+                                        onClick={() => {
+                                            setFilterOpen(!filterOpen);
+                                            setAggOpen(false);
+                                            setPivotOpen(false);
+                                            setColsOpen(false);
+                                        }}
+                                    >
+                                        <FilterIcon />
+                                        {activeFilterCount > 0 && (
+                                            <span className="ogx-toolbar__dot" aria-label="Filters active" />
+                                        )}
+                                    </button>
+                                </GridTooltip>
+                            )
+                        }
                         {filterOpen && (
                             <FilterPanelWrapper
-                                anchorRef={filterButtonRef}
+                                anchorRef={renderFilterButton ? filterWrapperRef : filterButtonRef}
                                 columns={columns}
                                 filterModel={filterModel || { items: [] }}
                                 onFilterModelChange={onFilterModelChange}
@@ -636,32 +716,41 @@ export function GridToolbar({
                 )}
 
                 {/* Summaries button */}
-                <div className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
-                    <GridTooltip title="Summaries">
-                        <button
-                            ref={aggButtonRef}
-                            id="ogx-aggregation-btn"
-                            className={`ogx-toolbar__icon-btn${aggOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
-                            aria-label="Configure summaries"
-                            aria-expanded={aggOpen}
-                            aria-controls="ogx-aggregation-panel"
-                            onClick={() => {
-                                setAggOpen(!aggOpen);
-                                setPivotOpen(false);
-                                setColsOpen(false);
-                                setFilterOpen(false);
-                            }}
-                        >
-                            <SigmaIcon />
-                            {activeCount > 0 && (
-                                <span className="ogx-toolbar__dot" aria-label={`${activeCount} active summaries`} />
-                            )}
-                        </button>
-                    </GridTooltip>
+                <div ref={aggWrapperRef} className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
+                    {renderAggregationButton
+                        ? renderAggregationButton({
+                            onClick: () => { setAggOpen(o => !o); setPivotOpen(false); setColsOpen(false); setFilterOpen(false); },
+                            isOpen: aggOpen,
+                            activeCount,
+                        })
+                        : (
+                            <GridTooltip title="Summaries">
+                                <button
+                                    ref={aggButtonRef}
+                                    id="ogx-aggregation-btn"
+                                    className={`ogx-toolbar__icon-btn${aggOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
+                                    aria-label="Configure summaries"
+                                    aria-expanded={aggOpen}
+                                    aria-controls="ogx-aggregation-panel"
+                                    onClick={() => {
+                                        setAggOpen(!aggOpen);
+                                        setPivotOpen(false);
+                                        setColsOpen(false);
+                                        setFilterOpen(false);
+                                    }}
+                                >
+                                    <SigmaIcon />
+                                    {activeCount > 0 && (
+                                        <span className="ogx-toolbar__dot" aria-label={`${activeCount} active summaries`} />
+                                    )}
+                                </button>
+                            </GridTooltip>
+                        )
+                    }
 
                     {aggOpen && (
                         <AggregationPanel
-                            anchorRef={aggButtonRef}
+                            anchorRef={renderAggregationButton ? aggWrapperRef : aggButtonRef}
                             aggregationModel={aggregationModel}
                             aggregableColumns={aggregableColumns}
                             onFunctionChange={handleFunctionChange}
@@ -671,6 +760,9 @@ export function GridToolbar({
                         />
                     )}
                 </div>
+
+                {/* Export button slot */}
+                {renderExportButton && renderExportButton()}
 
                 {rightContent}
             </div>

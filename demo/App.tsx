@@ -34,6 +34,7 @@ const RealEstatePortfolioDemo = lazy(() => import('./examples/RealEstatePortfoli
 const EmployeeCalendarDemo = lazy(() => import('./examples/EmployeeCalendarDemo/EmployeeCalendarDemo'));
 const LoadingStatesDemo = lazy(() => import('./examples/LoadingStatesDemo/LoadingStatesDemo'));
 const ToolbarDemo = lazy(() => import('./examples/ToolbarDemo/ToolbarDemo'));
+const ToolbarCustomizationDemo = lazy(() => import('./examples/ToolbarCustomizationDemo/ToolbarCustomizationDemo'));
 const FilterPanelDemo = lazy(() => import('./examples/FilterPanelDemo/FilterPanelDemo'));
 const SlotsDemo = lazy(() => import('./examples/SlotsDemo/SlotsDemo'));
 const CRUDTutorial = lazy(() => import('./examples/CRUDTutorial/CRUDTutorial'));
@@ -78,6 +79,7 @@ const examplesConfig = [
 
     // Components
     { path: '/toolbar', name: 'Toolbar', component: ToolbarDemo, category: 'Components' },
+    { path: '/toolbar-customization', name: 'Toolbar Customization', component: ToolbarCustomizationDemo, category: 'Components' },
     { path: '/filter-panel', name: 'Filter Panel', component: FilterPanelDemo, category: 'Components' },
 
     // Customization
@@ -135,7 +137,7 @@ export default function App() {
                         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="OpenGridX Logo" className="app-logo" />
                         <h2 className="app-title">
                             OpenGridX
-                            <span className="app-version">v1.0.5</span>
+                            <span className="app-version">v1.0.6</span>
                         </h2>
                     </div>
 

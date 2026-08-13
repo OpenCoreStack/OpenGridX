@@ -39,7 +39,7 @@
 }
 
 .filtering-export-btn {
-    color: #4b5563;
+    color: #fff;
 }
 
 .filtering-export-btn--disabled {
@@ -49,7 +49,7 @@
 /* Toolbar Export Spinner */
 .toolbar-spinner {
     animation: ogx-spin 1s linear infinite;
-    border: 2px solid rgba(0,0,0,0.1);
+    border: 2px solid rgba(0, 0, 0, 0.1);
     border-top: 2px solid #6b7280;
     border-radius: 50%;
     width: 16px;
@@ -58,5 +58,7 @@
 }
 
 @keyframes ogx-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }

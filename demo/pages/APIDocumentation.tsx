@@ -126,6 +126,41 @@ export default function APIDocumentation() {
         { name: 'zIndex', type: 'number', default: '—', desc: 'Override the CSS z-index for this column (useful with pinning).' },
     ];
 
+    const toolbarProps = [
+        { name: 'columns', type: 'GridColDef[]', default: '[]', desc: 'Column definitions — injected automatically when used via slots.' },
+        { name: 'baseColumns', type: 'GridColDef[]', default: '—', desc: 'Pre-pivot columns shown in the Pivot panel instead of synthetic pivot columns.' },
+        { name: 'aggregationModel', type: 'GridAggregationModel', default: '{}', desc: 'Current aggregation configuration.' },
+        { name: 'onAggregationModelChange', type: '(model) => void', default: '—', desc: 'Called when the user changes aggregation settings.' },
+        { name: 'pivotModel', type: 'GridPivotModel', default: '—', desc: 'Current pivot configuration. Presence of this prop renders the Pivot button.' },
+        { name: 'onPivotModelChange', type: '(model) => void', default: '—', desc: 'Called when the user changes pivot settings.' },
+        { name: 'filterModel', type: 'GridFilterModel', default: '—', desc: 'Current filter model. Presence renders the search bar and Filter button.' },
+        { name: 'onFilterModelChange', type: '(model) => void', default: '—', desc: 'Called when the user changes filters or the quick-search value.' },
+        { name: 'columnVisibilityModel', type: 'Record<string, boolean>', default: '{}', desc: 'Current column visibility map. Presence renders the Columns button.' },
+        { name: 'onColumnVisibilityModelChange', type: '(model) => void', default: '—', desc: 'Called when the user shows or hides a column.' },
+        { name: 'onColumnReorder', type: '(from, to) => void', default: '—', desc: 'Called when the user drags a column in the Columns panel.' },
+        { name: 'onColumnOrderReset', type: '() => void', default: '—', desc: 'Called when the user clicks Reset order in the Columns panel.' },
+        { name: 'children', type: 'ReactNode', default: '—', desc: 'Content rendered on the left side of the toolbar, before the spacer.' },
+        { name: 'rightContent', type: 'ReactNode', default: '—', desc: 'Content rendered on the right side, after all built-in buttons.' },
+        { name: 'className', type: 'string', default: '—', desc: 'Additional CSS class on the toolbar root <div> for theme overrides.' },
+        { name: 'style', type: 'CSSProperties', default: '—', desc: 'Inline styles on the toolbar root.' },
+        { name: 'renderColumnsButton', type: '(props: ToolbarButtonRenderProps) => ReactNode', default: '—', desc: 'Replace the built-in Columns toggle button. The Columns panel still works.' },
+        { name: 'renderFilterButton', type: '(props: ToolbarButtonRenderProps) => ReactNode', default: '—', desc: 'Replace the built-in Filters toggle button. The Filter panel still works.' },
+        { name: 'renderAggregationButton', type: '(props: ToolbarButtonRenderProps) => ReactNode', default: '—', desc: 'Replace the built-in Summaries toggle button. The Aggregation panel still works.' },
+        { name: 'renderExportButton', type: '() => ReactNode', default: '—', desc: 'Inject an Export button after the Aggregation button. No built-in export button exists.' },
+        { name: 'renderQuickFilter', type: '(props: ToolbarQuickFilterRenderProps) => ReactNode', default: '—', desc: 'Replace the built-in quick-filter search input with your own component.' },
+    ];
+
+    const toolbarButtonProps = [
+        { name: 'onClick', type: '() => void', desc: 'Toggle the associated panel open or closed.' },
+        { name: 'isOpen', type: 'boolean', desc: 'Whether the associated panel is currently open.' },
+        { name: 'activeCount', type: 'number', desc: 'Active items: hidden columns (Columns), applied filters (Filter), configured aggregations (Summaries).' },
+    ];
+
+    const toolbarQuickFilterProps = [
+        { name: 'value', type: 'string', desc: 'Current search string.' },
+        { name: 'onChange', type: '(value: string) => void', desc: 'Call with the updated string when the input changes.' },
+    ];
+
     return (
         <div className="docs-container" style={{ maxWidth: '1200px' }}>
             <h1 className="docs-title">📖 API Reference</h1>
@@ -201,6 +236,74 @@ export default function APIDocumentation() {
                                     <td><span className="docs-prop-type">{c.type}</span></td>
                                     <td><code>{c.default}</code></td>
                                     <td>{c.desc}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section className="docs-section">
+                <h2 className="docs-h2">🛠️ GridToolbar Props</h2>
+                <p>
+                    Pass via <code>slotProps.toolbar</code> when using <code>{'slots={{ toolbar: GridToolbar }}'}</code>.
+                    Each feature button is hidden when its callback prop is absent.
+                </p>
+                <div className="docs-table-wrapper">
+                    <table className="docs-table">
+                        <thead>
+                            <tr>
+                                <th>Prop</th>
+                                <th>Type</th>
+                                <th>Default</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {toolbarProps.map(p => (
+                                <tr key={p.name}>
+                                    <td><span className="docs-prop-name text-nowrap">{p.name}</span></td>
+                                    <td><span className="docs-prop-type">{p.type}</span></td>
+                                    <td><code>{p.default}</code></td>
+                                    <td>{p.desc}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 className="docs-h3" style={{ marginTop: '24px' }}>ToolbarButtonRenderProps</h3>
+                <p>Passed to <code>renderColumnsButton</code>, <code>renderFilterButton</code>, and <code>renderAggregationButton</code>.</p>
+                <div className="docs-table-wrapper">
+                    <table className="docs-table">
+                        <thead>
+                            <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+                        </thead>
+                        <tbody>
+                            {toolbarButtonProps.map(p => (
+                                <tr key={p.name}>
+                                    <td><span className="docs-prop-name">{p.name}</span></td>
+                                    <td><span className="docs-prop-type">{p.type}</span></td>
+                                    <td>{p.desc}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 className="docs-h3" style={{ marginTop: '24px' }}>ToolbarQuickFilterRenderProps</h3>
+                <p>Passed to <code>renderQuickFilter</code>.</p>
+                <div className="docs-table-wrapper">
+                    <table className="docs-table">
+                        <thead>
+                            <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+                        </thead>
+                        <tbody>
+                            {toolbarQuickFilterProps.map(p => (
+                                <tr key={p.name}>
+                                    <td><span className="docs-prop-name">{p.name}</span></td>
+                                    <td><span className="docs-prop-type">{p.type}</span></td>
+                                    <td>{p.desc}</td>
                                 </tr>
                             ))}
                         </tbody>

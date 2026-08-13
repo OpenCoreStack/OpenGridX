@@ -339,11 +339,58 @@ import { DataGrid, GridToolbar } from '@opencorestack/opengridx';
 <DataGrid
   rows={rows}
   columns={columns}
+  filterModel={filterModel}
+  onFilterModelChange={setFilterModel}
+  columnVisibilityModel={columnVisibilityModel}
+  onColumnVisibilityModelChange={setColumnVisibilityModel}
   slots={{ toolbar: GridToolbar }}
 />
 ```
 
-`GridToolbar` provides global search, column visibility panel, filter panel, and export controls out of the box.
+`GridToolbar` provides global search, column visibility management, advanced filters, and aggregation controls. Each feature button is automatically hidden if its callback prop is not provided.
+
+#### Customizing individual toolbar controls
+
+Replace any single control using render props — the panels remain fully functional:
+
+| Prop | What it replaces |
+|------|-----------------|
+| `renderQuickFilter(props)` | The search input. Receives `{ value, onChange }`. |
+| `renderColumnsButton(props)` | The Columns toggle button. Receives `{ onClick, isOpen, activeCount }`. |
+| `renderFilterButton(props)` | The Filters toggle button. Receives `{ onClick, isOpen, activeCount }`. |
+| `renderAggregationButton(props)` | The Summaries toggle button. Receives `{ onClick, isOpen, activeCount }`. |
+| `renderExportButton()` | Inserts an Export button slot (no built-in exists). |
+| `className` | CSS class on the toolbar root for theme overrides. |
+
+```tsx
+import { GridToolbar, exportToCsv, useGridApiRef,
+         type ToolbarButtonRenderProps, type ToolbarQuickFilterRenderProps } from '@opencorestack/opengridx';
+
+const apiRef = useGridApiRef();
+
+<DataGrid
+  apiRef={apiRef}
+  slots={{ toolbar: GridToolbar }}
+  slotProps={{
+    toolbar: {
+      className: 'my-branded-toolbar',
+      renderQuickFilter: ({ value, onChange }: ToolbarQuickFilterRenderProps) => (
+        <input className="my-search" value={value} onChange={e => onChange(e.target.value)} />
+      ),
+      renderFilterButton: ({ onClick, isOpen, activeCount }: ToolbarButtonRenderProps) => (
+        <button className={isOpen ? 'active' : ''} onClick={onClick}>
+          Filters {activeCount > 0 && <span>{activeCount}</span>}
+        </button>
+      ),
+      renderExportButton: () => (
+        <button onClick={() => exportToCsv(apiRef.current.getAllRows(), columns)}>
+          Export CSV
+        </button>
+      ),
+    },
+  }}
+/>
+```
 
 ### Export Functionality
 

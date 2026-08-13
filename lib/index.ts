@@ -9,7 +9,7 @@ export { Header } from './components/Header/Header';
 export { Skeleton } from './components/Skeleton/Skeleton';
 export { FilterPanel } from './components/FilterPanel';
 export { GridToolbar } from './components/Toolbar/GridToolbar';
-export type { GridToolbarProps } from './components/Toolbar/GridToolbar';
+export type { GridToolbarProps, ToolbarButtonRenderProps, ToolbarQuickFilterRenderProps } from './components/Toolbar/GridToolbar';
 export { GridTooltip } from './components/Tooltip/Tooltip';
 
 export { useGridApiRef } from './hooks/core/useGridApiRef';

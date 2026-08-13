@@ -164,6 +164,59 @@ The main component for displaying and interacting with data.
 
 ---
 
+## 🛠️ `GridToolbar`
+
+The built-in toolbar component. Mount it via `slots={{ toolbar: GridToolbar }}`. All props below are passed through `slotProps.toolbar` (or directly when building a custom wrapper).
+
+### `GridToolbarProps`
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `columns` | `GridColDef[]` | `[]` | Column definitions — injected automatically when used via `slots`. |
+| `baseColumns` | `GridColDef[]` | — | Pre-pivot columns shown in the Pivot panel instead of synthetic pivot columns. |
+| `aggregationModel` | `GridAggregationModel` | `{}` | Current aggregation configuration. |
+| `onAggregationModelChange` | `(model: GridAggregationModel) => void` | — | Called when the user changes aggregation settings. |
+| `pivotModel` | `GridPivotModel` | — | Current pivot configuration. Presence of this prop renders the Pivot button. |
+| `onPivotModelChange` | `(model: GridPivotModel) => void` | — | Called when the user changes pivot settings. |
+| `filterModel` | `GridFilterModel` | — | Current filter model. Presence of this prop renders the search bar and Filter button. |
+| `onFilterModelChange` | `(model: GridFilterModel) => void` | — | Called when the user changes filters or the quick-search value. |
+| `columnVisibilityModel` | `Record<string, boolean>` | `{}` | Current column visibility map. |
+| `onColumnVisibilityModelChange` | `(model: Record<string, boolean>) => void` | — | Called when the user shows or hides a column. Presence renders the Columns button. |
+| `onColumnReorder` | `(from: string, to: string) => void` | — | Called when the user drags a column in the Columns panel. |
+| `onColumnOrderReset` | `() => void` | — | Called when the user clicks "Reset order" in the Columns panel. |
+| `forceColumnsOpen` | `boolean` | — | Forces the Columns panel open (used internally by the column header context menu). |
+| `onColumnsPanelClose` | `() => void` | — | Called when the Columns panel closes after a `forceColumnsOpen`. |
+| `children` | `ReactNode` | — | Content rendered on the **left** side of the toolbar, before the spacer. |
+| `rightContent` | `ReactNode` | — | Content rendered on the **right** side, after all built-in buttons. |
+| `className` | `string` | — | Additional CSS class on the toolbar root `<div>`. Use for visual theme overrides. |
+| `style` | `CSSProperties` | — | Inline styles on the toolbar root. |
+| `renderColumnsButton` | `(props: ToolbarButtonRenderProps) => ReactNode` | — | Replace the built-in Columns toggle button. The Columns panel still functions normally. |
+| `renderFilterButton` | `(props: ToolbarButtonRenderProps) => ReactNode` | — | Replace the built-in Filters toggle button. The Filter panel still functions normally. |
+| `renderAggregationButton` | `(props: ToolbarButtonRenderProps) => ReactNode` | — | Replace the built-in Summaries toggle button. The Aggregation panel still functions normally. |
+| `renderExportButton` | `() => ReactNode` | — | Inject an Export button after the Aggregation button. No built-in export button exists. |
+| `renderQuickFilter` | `(props: ToolbarQuickFilterRenderProps) => ReactNode` | — | Replace the built-in `GlobalSearch` input with your own component. |
+
+### `ToolbarButtonRenderProps`
+
+Passed to `renderColumnsButton`, `renderFilterButton`, and `renderAggregationButton`.
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `onClick` | `() => void` | Toggle the associated panel open or closed. |
+| `isOpen` | `boolean` | Whether the associated panel is currently open. |
+| `activeCount` | `number` | Active items: hidden columns for Columns, applied filters for Filter, configured aggregations for Summaries. |
+
+### `ToolbarQuickFilterRenderProps`
+
+Passed to `renderQuickFilter`.
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `value` | `string` | Current search string. |
+| `onChange` | `(value: string) => void` | Call with the updated string when the input changes. |
+
+---
+
 ## 🕹️ Imperative API (`GridApi`)
 
 Access these methods via the `apiRef` prop.
