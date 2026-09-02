@@ -146,8 +146,6 @@ export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', 
             </div>
             <input
                 ref={inputRef}
-                id="ogx-global-search-input"
-                name="ogx-global-search"
                 className="ogx-global-search__input"
                 value={localValue}
                 onChange={(e) => setLocalValue(e.target.value)}

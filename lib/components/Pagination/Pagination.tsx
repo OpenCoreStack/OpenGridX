@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useId } from 'react';
 import { Button } from '../ui/Button';
 
 export interface PaginationProps {
@@ -14,6 +14,7 @@ export interface PaginationProps {
 }
 
 export function Pagination(props: PaginationProps) {
+    const pageSizeId = useId();
     const {
         page,
         pageSize,
@@ -61,11 +62,11 @@ export function Pagination(props: PaginationProps) {
         <div className="ogx-pagination" role="navigation" aria-label="Pagination">
             { }
             <div className="ogx-pagination__page-size">
-                <label htmlFor="page-size-select" className="ogx-pagination__label">
+                <label htmlFor={pageSizeId} className="ogx-pagination__label">
                     Rows per page:
                 </label>
                 <select
-                    id="page-size-select"
+                    id={pageSizeId}
                     className="ogx-pagination__select"
                     value={pageSize}
                     onChange={handlePageSizeChange}

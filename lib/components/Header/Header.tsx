@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { Checkbox } from '../ui/Checkbox';
 import { ColumnResizeHandle } from '../ColumnResizeHandle/ColumnResizeHandle';
 import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning, GridAggregationModel, GridColumnGroup, GridColumnGroupingModel } from '../../types';
@@ -171,6 +171,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         onManageColumns,
     } = props;
 
+    const selectAllId = useId();
     const cellRefs = React.useRef<Record<string, HTMLElement | null>>({});
     const [menuOpenParams, setMenuOpenParams] = React.useState<{ colDef: GridColDef<R>; anchorEl: HTMLElement } | null>(null);
 
@@ -340,8 +341,8 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         }}
                     >
                         <Checkbox
-                            id="ogx-select-all"
-                            name="ogx-select-all"
+                            id={selectAllId}
+                            name={selectAllId}
                             checked={allSelected}
                             indeterminate={someSelected}
                             onChange={(e) => onSelectAll?.(e.target.checked)}

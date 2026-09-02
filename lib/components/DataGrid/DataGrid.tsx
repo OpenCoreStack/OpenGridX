@@ -685,6 +685,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const hasRowSpanning = React.useMemo(() => effectiveColumns.some(c => !!c.rowSpan), [effectiveColumns]);
     const [columnsPanelOpen, setColumnsPanelOpen] = React.useState(false);
     const containerRef = React.useRef<HTMLDivElement>(null);
+    const standalonePanelRef = React.useRef<HTMLDivElement>(null);
 
     const toolbarProps = React.useMemo(() => {
         if (!slots?.toolbar) return null;
@@ -735,8 +736,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     useEffect(() => {
         if (!columnsPanelOpen || slots?.toolbar) return;
         function handleClickOutside(e: MouseEvent) {
-            const panel = document.getElementById('ogx-standalone-col-panel');
-            if (panel && !panel.contains(e.target as Node)) {
+            if (standalonePanelRef.current && !standalonePanelRef.current.contains(e.target as Node)) {
                 setColumnsPanelOpen(false);
             }
         }
@@ -762,6 +762,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 <GridStandaloneColumnPanel<R>
                     isOpen={columnsPanelOpen}
                     containerRef={containerRef}
+                    panelRef={standalonePanelRef}
                     effectiveColumns={effectiveColumns}
                     columnVisibilityModel={columnVisibilityModel}
                     effectiveColumnOrder={effectiveColumnOrder}
@@ -995,6 +996,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                 checkboxSelection={checkboxSelection}
                                 hasDetailPanel={hasDetailPanel}
                                 rowReordering={rowReordering}
+                                pinnedColumns={pinnedColumns}
                             />
                         )}
 

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useId } from 'react';
 import { Cell } from '../Cell/Cell';
 import { Checkbox } from '../ui/Checkbox';
 import { ExpandIcon } from '../ui/ExpandIcon';
@@ -94,6 +94,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         rowHeight = 52
     } = props;
 
+    const checkboxId = useId();
     const expandCellRef = React.useRef<HTMLDivElement>(null);
     const checkboxCellRef = React.useRef<HTMLDivElement>(null);
 
@@ -291,7 +292,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         }}
                     >
                         <Checkbox
-                            id={`ogx-select-row-${row.id}`}
+                            id={checkboxId}
                             name={`ogx-select-row-${row.id}`}
                             checked={isSelected}
                             onChange={handleCheckboxChange}

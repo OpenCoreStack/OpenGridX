@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type {
     GridFilterModel,
     GridFilterItem,
@@ -25,6 +25,7 @@ const FilterRow: React.FC<{
     item: GridFilterItem | undefined;
     onChange: (item: GridFilterItem | null) => void;
 }> = ({ col, item, onChange }) => {
+    const filterId = useId();
     const operators = getOperatorsForType(col.type);
     const isActive = !!item;
     const currentOperator = item?.operator ?? operators[0];
@@ -99,7 +100,7 @@ const FilterRow: React.FC<{
             <div className="ogx-filter__controls">
                 { }
                 <select
-                    id={`ogx-filter-op-${col.field}`}
+                    id={`${filterId}-op`}
                     name={`filter-op-${col.field}`}
                     className={`ogx-filter__op-select${isActive ? ' ogx-filter__op-select--active' : ''}`}
                     value={String(currentOperator)}
@@ -114,7 +115,7 @@ const FilterRow: React.FC<{
                 { }
                 {showValue && isBoolean && (
                     <select
-                        id={`ogx-filter-val-${col.field}`}
+                        id={`${filterId}-val`}
                         name={`filter-val-${col.field}`}
                         className={`ogx-filter__value-input ogx-filter__value-select${isActive ? ' ogx-filter__value-input--active' : ''}`}
                         value={String(item?.value ?? 'true')}
@@ -136,7 +137,7 @@ const FilterRow: React.FC<{
 
                 {showValue && !isBoolean && (
                     <input
-                        id={`ogx-filter-val-${col.field}`}
+                        id={`${filterId}-val`}
                         name={`filter-val-${col.field}`}
                         className={`ogx-filter__value-input${isActive ? ' ogx-filter__value-input--active' : ''}`}
                         type="text"

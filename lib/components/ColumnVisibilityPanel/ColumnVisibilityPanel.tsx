@@ -109,8 +109,6 @@ export function ColumnVisibilityPanel<R extends GridRowModel = GridRowModel>(
                 <div className="ogx-column-visibility-panel__search-container">
                     <SearchIcon />
                     <input
-                        id="ogx-column-search"
-                        name="ogx-column-search"
                         autoComplete="off"
                         className="ogx-column-visibility-panel__search-input"
                         placeholder="Search"

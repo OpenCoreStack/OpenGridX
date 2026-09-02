@@ -6,6 +6,7 @@ import type { GridColDef, GridRowModel, GridColumnOrderChangeParams } from '../.
 export interface GridStandaloneColumnPanelProps<R extends GridRowModel> {
     isOpen: boolean;
     containerRef: React.RefObject<HTMLDivElement | null>;
+    panelRef?: React.RefObject<HTMLDivElement | null>;
     effectiveColumns: GridColDef<R>[];
     columnVisibilityModel: Record<string, boolean>;
     effectiveColumnOrder: string[];
@@ -20,6 +21,7 @@ export interface GridStandaloneColumnPanelProps<R extends GridRowModel> {
 export function GridStandaloneColumnPanel<R extends GridRowModel>({
     isOpen,
     containerRef,
+    panelRef,
     effectiveColumns,
     columnVisibilityModel,
     effectiveColumnOrder,
@@ -64,7 +66,7 @@ export function GridStandaloneColumnPanel<R extends GridRowModel>({
 
     return ReactDOM.createPortal(
         <div
-            id="ogx-standalone-col-panel"
+            ref={panelRef}
             style={{
                 position: 'fixed',
                 top: panelTop,

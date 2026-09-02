@@ -684,11 +684,9 @@ export function GridToolbar({
                         <GridTooltip title="Pivot">
                             <button
                                 ref={pivotButtonRef}
-                                id="ogx-pivot-btn"
                                 className={`ogx-toolbar__icon-btn${pivotOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
                                 aria-label="Configure pivot"
                                 aria-expanded={pivotOpen}
-                                aria-controls="ogx-pivot-panel"
                                 onClick={() => {
                                     setPivotOpen(!pivotOpen);
                                     setAggOpen(false);
@@ -727,11 +725,9 @@ export function GridToolbar({
                             <GridTooltip title="Summaries">
                                 <button
                                     ref={aggButtonRef}
-                                    id="ogx-aggregation-btn"
                                     className={`ogx-toolbar__icon-btn${aggOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
                                     aria-label="Configure summaries"
                                     aria-expanded={aggOpen}
-                                    aria-controls="ogx-aggregation-panel"
                                     onClick={() => {
                                         setAggOpen(!aggOpen);
                                         setPivotOpen(false);
