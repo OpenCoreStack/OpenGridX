@@ -49,12 +49,6 @@ export default function Home(_props: HomeProps) {
         { icon: '📤', name: 'ExcelJS Integration', desc: 'Export multi-sheet, styled, and formula-aware XLSX files.' }
     ];
 
-    const comingSoon = [
-        { badge: 'Q1 2027', name: 'Advanced Charts Integration', desc: 'Native sparklines and trend charts directly inside grid cells.' },
-        { badge: 'Q3 2026', name: 'Interactive Pivot Builder', desc: 'Intuitive drag-and-drop interface for end-user analytics.' },
-        { badge: 'Q4 2026', name: 'Native PDF Reporting', desc: 'Automated PDF generation with customizable layouts.' }
-    ];
-
     const browsers = [
         { icon: '🌐', name: 'Chrome 60+' },
         { icon: '🧭', name: 'Safari 12+' },
@@ -162,18 +156,6 @@ export default function Home(_props: HomeProps) {
                 </div>
             </section>
 
-            <section className="home-section">
-                <h2 className="home-section-title">🚧 Coming Soon</h2>
-                <div className="coming-soon-list">
-                    {comingSoon.map((p, i) => (
-                        <div key={i} className="coming-soon-card">
-                            <span className="soon-badge">{p.badge}</span>
-                            <h4 className="feature-name" style={{ margin: '8px 0' }}>{p.name}</h4>
-                            <p className="feature-desc">{p.desc}</p>
-                        </div>
-                    ))}
-                </div>
-            </section>
         </div>
     );
 }
