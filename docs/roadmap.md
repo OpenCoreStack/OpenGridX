@@ -86,5 +86,13 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 *   **GitHub Pages deployment**: CI/CD via GitHub Actions (`base: '/OpenGridX/'` already configured in `vite.config.js`).
 
 ## ✅ Implemented Features (Recent)
+
+### Library Hardening *(completed 2026-09-02)*
+- **`GridRowMeta`**: Hierarchy metadata (`hasChildren`, `treeDepth`, `groupingField`, `groupingValue`, `descendantCount`, `isExpanded`, `isGroupRow`) moved from `GridRowModel` into a separate `Map<GridRowId, GridRowMeta>`. Exposed as `params.rowMeta` in `renderCell`. Runtime shim maintains backward compatibility; removed in v2.0.
+- **`CellErrorBoundary`**: Custom `renderCell` errors are now caught per-cell. Failing cells show a `⚠` indicator with the error as a tooltip; the rest of the grid renders normally.
+- **`GridLocaleText` / `localeText` prop**: All user-visible pagination strings (`paginationRowsPerPage`, `paginationOf`, `paginationPage`, `noRowsLabel`) are now overrideable for internationalisation.
+- **Core hook tests**: `useGridRowPipeline`, `useGridControlledState`, `useGridKeyboardNavigation` now have full test coverage (25 new tests).
+- **`CLAUDE.md`**: Root-level AI context file auto-loaded by Claude Code and other AI coding assistants.
+
 *   **Demo app (partial)**: 32 interactive examples across 6 categories (Main features, Advanced features, Components, Customization, Tutorials, Resources) with categorized sidebar navigation and per-page Table of Contents. Source code viewer present on 6 of 32 examples. Syntax highlighting and public deployment are in the upcoming Demo Site section above.
 *   **Quickstart & Installation Guides**: Comprehensive onboarding documentation for developers.
