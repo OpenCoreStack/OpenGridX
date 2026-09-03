@@ -123,7 +123,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         );
     }, [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]);
 
-    const isGroupRow = (row as Record<string, unknown>)._hasChildren === true;
+    const isGroupRow = rowMeta?.hasChildren === true;
 
     const handleCellEditStart = React.useCallback((field: string, value: unknown) => {
         if (!isGroupRow) {
