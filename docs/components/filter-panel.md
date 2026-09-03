@@ -9,6 +9,19 @@ The Filter Panel allows users to define a list of `GridFilterItem` objects. Each
 - **Operator**: How to compare (e.g., `contains`, `equals`, `>`, `is empty`).
 - **Value**: The target value for comparison.
 
+### Hierarchy-aware custom cells
+
+When a column has a custom `renderCell` and the grid is in tree-data or row-grouping mode, use `params.rowMeta` to access hierarchy context:
+
+```tsx
+renderCell: (params) => {
+  if (params.rowMeta?.hasChildren) {
+    return <strong>{params.value}</strong>;
+  }
+  return params.value;
+}
+```
+
 ## 🔌 Integration
 
 The `<DataGrid />` manages the visibility of the Filter Panel via its internal state. It is usually triggered from the Column Menu or the Toolbar.

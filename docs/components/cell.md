@@ -42,3 +42,17 @@ const columns: GridColDef[] = [
   }
 ];
 ```
+
+## 🛡️ Error containment
+
+Custom `renderCell` callbacks are wrapped in a `CellErrorBoundary`. If a renderCell throws during render, that single cell shows a `⚠` indicator (CSS class `ogx__cell-error`) with the error message as a tooltip. The rest of the grid continues rendering normally.
+
+Default cell display (no `renderCell`) does not go through the boundary — it cannot throw.
+
+To style the error indicator:
+
+```css
+.ogx__cell-error {
+  color: red; /* override the default */
+}
+```

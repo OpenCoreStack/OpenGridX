@@ -32,3 +32,29 @@ You can replace the internal pagination UI using the `pagination` slot:
   }}
 />
 ```
+
+## 🌍 Internationalisation
+
+Pass `localeText` on `<DataGrid />` to override all user-visible strings in the Pagination component:
+
+| Key | Type | Default |
+| :--- | :--- | :--- |
+| `paginationRowsPerPage` | `string` | `"Rows per page:"` |
+| `paginationOf` | `(from, to, count) => string` | `` `${from}–${to} of ${count}` `` |
+| `paginationPage` | `(page, pageCount) => string` | `` `Page ${page} of ${pageCount}` `` |
+| `noRowsLabel` | `string` | `"No Data"` |
+
+**Example — French locale:**
+
+```tsx
+<DataGrid
+  localeText={{
+    paginationRowsPerPage: 'Lignes par page :',
+    paginationOf: (from, to, count) => `${from}–${to} sur ${count}`,
+    paginationPage: (page, pageCount) => `Page ${page} sur ${pageCount}`,
+    noRowsLabel: 'Aucune donnée',
+  }}
+  rows={rows}
+  columns={columns}
+/>
+```

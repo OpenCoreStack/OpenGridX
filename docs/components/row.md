@@ -29,3 +29,28 @@ The grid supports "Zebra" striping via CSS:
 ## 📋 Detail Panel
 
 When `getDetailPanelContent` is provided, the `<Row />` renders an expandable container below itself to show supplemental data.
+
+## ⚠️ v1.1 — Hierarchy Field Deprecation
+
+The internal hierarchy fields (`_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount`, `_isGroupRow`) are no longer typed on `GridRowModel`. They will be removed from the runtime row object in v2.0.
+
+**Before (still works at runtime in v1.1, TypeScript compile error in strict mode):**
+
+```tsx
+renderCell: (params) => {
+  const hasChildren = (params.row as any)._hasChildren;
+  return hasChildren ? <GroupIcon /> : params.value;
+}
+```
+
+**After (v1.1+):**
+
+```tsx
+renderCell: (params) => {
+  const hasChildren = params.rowMeta?.hasChildren;
+  return hasChildren ? <GroupIcon /> : params.value;
+}
+```
+
+`params.rowMeta` is `undefined` for flat rows with no active tree-data or row-grouping.
+See [`GridRowMeta` architecture doc](../architecture/grid-row-meta.md) for the full data flow.
