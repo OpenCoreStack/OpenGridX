@@ -105,4 +105,5 @@ export type {
     GridDetailPanelParams,
     GridRowMeta,
     GridLocaleText,
+    PdfExportOptions,
 } from './types';

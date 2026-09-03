@@ -78,11 +78,19 @@
   },
   "peerDependencies": {
     "exceljs": ">=4.0.0",
+    "jspdf": ">=2.5.0",
+    "jspdf-autotable": ">=3.8.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0"
   },
   "peerDependenciesMeta": {
     "exceljs": {
+      "optional": true
+    },
+    "jspdf": {
+      "optional": true
+    },
+    "jspdf-autotable": {
       "optional": true
     }
   },

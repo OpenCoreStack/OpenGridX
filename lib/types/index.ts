@@ -309,6 +309,75 @@ export interface GridFilterModel {
   quickFilterValues?: string[];
 }
 
+/**
+ * Configuration options for exporting the DataGrid to PDF format.
+ * Requires jspdf and jspdf-autotable peer dependencies.
+ */
+export interface PdfExportOptions {
+  /**
+   * Output filename without extension. Default: 'export'
+   */
+  fileName?: string;
+
+  /**
+   * Title text displayed in the document header.
+   * When omitted, no header block is rendered.
+   */
+  title?: string;
+
+  /**
+   * URL or data URI of a logo image rendered left of the title.
+   * Only used when `title` is also set. Default: none
+   */
+  logoUrl?: string;
+
+  /**
+   * Page orientation. Default: 'landscape'
+   */
+  orientation?: 'portrait' | 'landscape';
+
+  /**
+   * If provided, only rows whose id is in this array are exported.
+   */
+  selectedRows?: (string | number)[];
+
+  /**
+   * Aggregation result from apiRef.current.getAggregationResult().
+   * When provided alongside aggregationModel, appends a footer row.
+   */
+  aggregationResult?: Record<string, unknown> | null;
+
+  /**
+   * Aggregation model from apiRef.current.getAggregationModel().
+   */
+  aggregationModel?: GridAggregationModel | null;
+
+  /**
+   * Active filter model. When provided, a filter summary is shown in the header.
+   */
+  filterModel?: GridFilterModel | null;
+
+  /**
+   * Whether to apply alternating row shading. Default: true
+   */
+  alternateRowColor?: boolean;
+
+  /**
+   * Column header background color (hex). Default: '#4f46e5'
+   */
+  headerBackgroundColor?: string;
+
+  /**
+   * Column header text color (hex). Default: '#ffffff'
+   */
+  headerTextColor?: string;
+
+  /**
+   * Base font size in points for table body. Default: 9
+   */
+  fontSize?: number;
+}
+
 export type GridPinnedPosition = 'left' | 'right';
 
 export type GridColumnVisibilityModel = Record<string, boolean>;
