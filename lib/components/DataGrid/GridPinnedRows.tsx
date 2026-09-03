@@ -10,6 +10,7 @@ import type {
     GridRowPinning,
     GridDetailPanelParams,
     GridDetailPanelHeight,
+    GridRowMeta,
 } from '../../types';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
 
@@ -36,6 +37,7 @@ export interface GridPinnedRowsProps<R extends GridRowModel> {
     colspanMap?: Map<GridRowId, Record<string, CellColSpanInfo>>;
     rowSpanningCaches?: RowSpanningCaches;
     rowHeight: number;
+    rowMetaMap: Map<GridRowId, GridRowMeta>;
 }
 
 export function GridPinnedRows<R extends GridRowModel>({
@@ -61,6 +63,7 @@ export function GridPinnedRows<R extends GridRowModel>({
     colspanMap,
     rowSpanningCaches,
     rowHeight,
+    rowMetaMap,
 }: GridPinnedRowsProps<R>) {
     if (rows.length === 0) return null;
 
@@ -91,6 +94,7 @@ export function GridPinnedRows<R extends GridRowModel>({
                     colspanMap={colspanMap}
                     rowSpanningCaches={rowSpanningCaches}
                     rowHeight={rowHeight}
+                    rowMeta={rowMetaMap.get(row.id)}
                 />
             ))}
         </div>

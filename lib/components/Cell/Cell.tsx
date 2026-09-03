@@ -1,6 +1,6 @@
 
 import React from 'react';
-import type { GridColDef, GridRowModel, GridPinnedPosition, GridCellParams } from '../../types';
+import type { GridColDef, GridRowModel, GridPinnedPosition, GridCellParams, GridRowMeta } from '../../types';
 import type { CellColSpanInfo } from '../../hooks/features/useGridSpanning';
 
 import { GridEditInputCell } from './GridEditInputCell';
@@ -32,6 +32,7 @@ export interface CellProps<R extends GridRowModel = GridRowModel> {
     colSpanInfo?: CellColSpanInfo;
     rowSpan?: number;
     isHiddenByRowSpan?: boolean;
+    rowMeta?: GridRowMeta;
 }
 
 function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
@@ -59,7 +60,8 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
 
         colSpanInfo,
         rowSpan: rowSpanProp,
-        isHiddenByRowSpan
+        isHiddenByRowSpan,
+        rowMeta
     } = props;
 
     // All hooks must come before any early returns (Rules of Hooks)
@@ -121,12 +123,13 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                 field: colDef.field,
                 colDef,
                 rowIndex,
-                colIndex
+                colIndex,
+                rowMeta
             });
         }
 
         return formattedValue;
-    }, [value, row, colDef, rowIndex, colIndex, formattedValue, isEditing, handleValueChange, onEditStop, onCellValueChange, onValueChange]);
+    }, [value, row, colDef, rowIndex, colIndex, formattedValue, isEditing, handleValueChange, onEditStop, onCellValueChange, onValueChange, rowMeta]);
 
     const resolvedCellClassName = React.useMemo(() => {
         if (!colDef.cellClassName) return '';

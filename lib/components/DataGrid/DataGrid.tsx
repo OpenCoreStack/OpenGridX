@@ -27,7 +27,7 @@ import { GridListView } from './GridListView';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
-import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridAggregationResult, GridFilterModel, GridTreeNode, GridSortItem } from '../../types';
+import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridAggregationResult, GridFilterModel, GridTreeNode, GridSortItem, GridRowMeta } from '../../types';
 
 export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridProps<R>) {
     const {
@@ -336,6 +336,12 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const isHierarchyEnabled = isTreeData || isRowGrouping;
     const activeHierarchyHandlers = isTreeData ? treeDataHandlers : (isRowGrouping ? rowGroupingHandlers : null);
 
+    const rowMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
+        if (isTreeData) return treeDataHandlers.rowMetaMap;
+        if (isRowGrouping) return rowGroupingHandlers.rowMetaMap;
+        return new Map();
+    }, [isTreeData, treeDataHandlers.rowMetaMap, isRowGrouping, rowGroupingHandlers.rowMetaMap]);
+
     const pagination = propPagination && !isRowGrouping;
 
     const handleRowClick = useCallback((params: GridRowParams<R>) => {
@@ -422,6 +428,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowReordering,
         initialState,
         setColumns,
+        rowMetaMap,
     });
 
     useGridStateSnapshot({
@@ -922,6 +929,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             colspanMap={spanning.colspanMap}
                             rowSpanningCaches={spanning.rowSpanningState.caches}
                             rowHeight={rowHeight}
+                            rowMetaMap={rowMetaMap}
                         />
 
                         <GridVirtualRows<R>
@@ -959,6 +967,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             sortedUnpinnedRowCount={sortedUnpinnedRows.length}
                             infiniteScrollSkeletonCount={Math.min(effectivePaginationModel.pageSize, 20)}
                             unpinnedRowsLength={layout.unpinnedRowsLength}
+                            rowMetaMap={rowMetaMap}
                         />
 
                         <GridPinnedRows<R>
@@ -984,6 +993,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             colspanMap={spanning.colspanMap}
                             rowSpanningCaches={spanning.rowSpanningState.caches}
                             rowHeight={rowHeight}
+                            rowMetaMap={rowMetaMap}
                         />
 
                         {/* Aggregation Footer Row — suppressed in pivot mode because pivot rows

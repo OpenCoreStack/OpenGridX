@@ -7,6 +7,7 @@ import type {
     GridRowId,
     GridColumnOrderChangeParams,
     GridRenderCellParams,
+    GridRowMeta,
 } from '../../types';
 import type { GridInitialState } from '../../state/types';
 
@@ -30,6 +31,7 @@ export interface UseGridColumnsParams<R extends GridRowModel> {
     rowReordering: boolean;
     initialState?: GridInitialState;
     setColumns: (cols: GridColDef[]) => void;
+    rowMetaMap: Map<GridRowId, GridRowMeta>;
 }
 
 export interface UseGridColumnsResult<R extends GridRowModel> {
@@ -63,6 +65,7 @@ export function useGridColumns<R extends GridRowModel>(
         rowReordering,
         initialState,
         setColumns,
+        rowMetaMap,
     } = params;
 
     // ── Effective columns (hierarchy cell renderer injection) ─────────────────
@@ -74,14 +77,14 @@ export function useGridColumns<R extends GridRowModel>(
                 return {
                     ...col,
                     renderCell: (cellParams: GridRenderCellParams<R>) => {
-                        const r = cellParams.row as Record<string, unknown>;
-                        const depth = typeof r._treeDepth === 'number' ? r._treeDepth : 0;
-                        const hasChildren = Boolean(r._hasChildren);
-                        const isExpanded = Boolean(r._isExpanded);
-                        const groupingField = typeof r._groupingField === 'string' ? r._groupingField : undefined;
-                        const groupingValue = r._groupingValue;
-                        const descendantCount = typeof r._descendantCount === 'number' ? r._descendantCount : undefined;
-                        const isGroupRow = Boolean(r._isGroupRow);
+                        const meta = rowMetaMap.get(cellParams.row.id);
+                        const depth = meta?.treeDepth ?? 0;
+                        const hasChildren = Boolean(meta?.hasChildren);
+                        const isExpanded = Boolean(meta?.isExpanded);
+                        const groupingField = meta?.groupingField;
+                        const groupingValue = meta?.groupingValue;
+                        const descendantCount = meta?.descendantCount;
+                        const isGroupRow = Boolean(meta?.isGroupRow);
 
                         let content: React.ReactNode = col.renderCell ? col.renderCell(cellParams) : cellParams.value as React.ReactNode;
 
@@ -130,9 +133,9 @@ export function useGridColumns<R extends GridRowModel>(
             return {
                 ...col,
                 renderCell: (cellParams: GridRenderCellParams<R>) => {
-                    const r = cellParams.row as Record<string, unknown>;
-                    const hasChildren = Boolean(r._hasChildren);
-                    const groupingField = typeof r._groupingField === 'string' ? r._groupingField : undefined;
+                    const meta = rowMetaMap.get(cellParams.row.id);
+                    const hasChildren = Boolean(meta?.hasChildren);
+                    const groupingField = meta?.groupingField;
 
                     if (isRowGrouping && hasChildren) {
                         if (col.field === groupingField) return null;
@@ -146,7 +149,7 @@ export function useGridColumns<R extends GridRowModel>(
                 }
             };
         }) as GridColDef<R>[];
-    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers]);
+    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers, rowMetaMap]);
 
     // ── Column widths ─────────────────────────────────────────────────────────
     const [columnWidths, setColumnWidths] = useState<Record<string, number>>(

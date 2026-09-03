@@ -5,7 +5,7 @@ import { Checkbox } from '../ui/Checkbox';
 import { ExpandIcon } from '../ui/ExpandIcon';
 import { DragHandleIcon } from '../ui/DragHandleIcon';
 import { DetailPanel } from '../DetailPanel/DetailPanel';
-import type { GridRowModel, GridColDef, GridRowId, GridColumnPinning, GridRowPinning, GridRowParams, GridCellParams, GridDetailPanelHeight } from '../../types';
+import type { GridRowModel, GridColDef, GridRowId, GridColumnPinning, GridRowPinning, GridRowParams, GridCellParams, GridDetailPanelHeight, GridRowMeta } from '../../types';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
 import { isColumnPinned, calculatePinnedPositions, isRowPinned } from '../../utils/pinning';
 
@@ -51,6 +51,7 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
     colspanMap?: Map<GridRowId, Record<string, CellColSpanInfo>>;
     rowSpanningCaches?: RowSpanningCaches;
     rowHeight?: number;
+    rowMeta?: GridRowMeta;
 }
 
 export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
@@ -91,7 +92,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
 
         colspanMap,
         rowSpanningCaches,
-        rowHeight = 52
+        rowHeight = 52,
+        rowMeta
     } = props;
 
     const checkboxId = useId();
@@ -358,6 +360,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             colSpanInfo={colSpanInfo}
                             rowSpan={rowSpan}
                             isHiddenByRowSpan={isHiddenByRowSpan}
+                            rowMeta={rowMeta}
                         />
                     );
                 })}

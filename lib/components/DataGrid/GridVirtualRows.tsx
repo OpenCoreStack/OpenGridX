@@ -12,6 +12,7 @@ import type {
     GridRowPinning,
     GridDetailPanelParams,
     GridDetailPanelHeight,
+    GridRowMeta,
 } from '../../types';
 import type { GridVisibleRow } from '../../hooks/core/useGridVisibleRows';
 import type { UseRowReorderReturn } from '../../hooks/useRowReorder';
@@ -60,6 +61,7 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     sortedUnpinnedRowCount: number;
     infiniteScrollSkeletonCount: number;
     unpinnedRowsLength: number;
+    rowMetaMap: Map<GridRowId, GridRowMeta>;
 }
 
 export function GridVirtualRows<R extends GridRowModel>({
@@ -97,6 +99,7 @@ export function GridVirtualRows<R extends GridRowModel>({
     sortedUnpinnedRowCount,
     infiniteScrollSkeletonCount,
     unpinnedRowsLength,
+    rowMetaMap,
 }: GridVirtualRowsProps<R>) {
     const skeletonColumns: GridColDef<R>[] = baseColumns.length > 0
         ? baseColumns
@@ -179,6 +182,7 @@ export function GridVirtualRows<R extends GridRowModel>({
                             colspanMap={colspanMap}
                             rowSpanningCaches={rowSpanningCaches}
                             rowHeight={rowHeight}
+                            rowMeta={rowMetaMap.get(row.id)}
                         />
                     ))
                 )}
