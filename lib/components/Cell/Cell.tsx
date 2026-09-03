@@ -4,6 +4,7 @@ import type { GridColDef, GridRowModel, GridPinnedPosition, GridCellParams, Grid
 import type { CellColSpanInfo } from '../../hooks/features/useGridSpanning';
 
 import { GridEditInputCell } from './GridEditInputCell';
+import { CellErrorBoundary } from './CellErrorBoundary';
 
 export interface CellProps<R extends GridRowModel = GridRowModel> {
     onCellClick?: (params: GridCellParams<R>) => void;
@@ -88,48 +89,6 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
 
         return String(value);
     }, [value, row, colDef]);
-
-    const cellContent = React.useMemo(() => {
-        if (isEditing && (onCellValueChange || onValueChange) && onEditStop) {
-            if (colDef.renderEditCell) {
-                return colDef.renderEditCell({
-                    value,
-                    row,
-                    field: colDef.field,
-                    colDef,
-                    rowIndex,
-                    colIndex
-                });
-            }
-            return (
-                <GridEditInputCell
-                    value={value}
-                    row={row}
-                    field={colDef.field}
-                    colDef={colDef as unknown as GridColDef}
-                    rowIndex={rowIndex}
-                    colIndex={colIndex}
-                    onValueChange={handleValueChange}
-                    onCommit={() => onEditStop()}
-                    onCancel={() => onEditStop(true)}
-                />
-            );
-        }
-
-        if (colDef.renderCell) {
-            return colDef.renderCell({
-                value,
-                row,
-                field: colDef.field,
-                colDef,
-                rowIndex,
-                colIndex,
-                rowMeta
-            });
-        }
-
-        return formattedValue;
-    }, [value, row, colDef, rowIndex, colIndex, formattedValue, isEditing, handleValueChange, onEditStop, onCellValueChange, onValueChange, rowMeta]);
 
     const resolvedCellClassName = React.useMemo(() => {
         if (!colDef.cellClassName) return '';
@@ -255,7 +214,44 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
             {...(rowSpan > 1 ? { 'aria-rowspan': rowSpan } : {})}
         >
             <div className="ogx__cell-content">
-                {cellContent}
+                {isEditing && (onCellValueChange || onValueChange) && onEditStop ? (
+                    colDef.renderEditCell ? (
+                        colDef.renderEditCell({
+                            value,
+                            row,
+                            field: colDef.field,
+                            colDef,
+                            rowIndex,
+                            colIndex
+                        }) as React.ReactNode
+                    ) : (
+                        <GridEditInputCell
+                            value={value}
+                            row={row}
+                            field={colDef.field}
+                            colDef={colDef as unknown as GridColDef}
+                            rowIndex={rowIndex}
+                            colIndex={colIndex}
+                            onValueChange={handleValueChange}
+                            onCommit={() => onEditStop()}
+                            onCancel={() => onEditStop(true)}
+                        />
+                    )
+                ) : colDef.renderCell ? (
+                    <CellErrorBoundary field={colDef.field}>
+                        {colDef.renderCell({
+                            value,
+                            row,
+                            field: colDef.field,
+                            colDef,
+                            rowIndex,
+                            colIndex,
+                            rowMeta,
+                        }) as React.ReactNode}
+                    </CellErrorBoundary>
+                ) : (
+                    formattedValue as React.ReactNode
+                )}
             </div>
         </div>
     );
