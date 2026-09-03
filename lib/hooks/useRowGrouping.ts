@@ -28,12 +28,18 @@ const defaultGetAggregationPosition = (groupNode: GridTreeNode | null): 'inline'
     return groupNode?.depth === -1 ? 'footer' : 'inline';
 };
 
+// Stable empty defaults — module-level constants prevent new object identity
+// on every render, which would otherwise invalidate useMemo deps and cause
+// infinite re-render loops when callers omit optional params.
+const EMPTY_ROW_GROUPING_MODEL: GridRowGroupingModel = [];
+const EMPTY_AGGREGATION_MODEL: GridAggregationModel = {};
+
 export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingParams<R>) {
-    const { 
-        rows, 
-        getRowId, 
-        rowGroupingModel = [], 
-        aggregationModel = {}, 
+    const {
+        rows,
+        getRowId,
+        rowGroupingModel = EMPTY_ROW_GROUPING_MODEL,
+        aggregationModel = EMPTY_AGGREGATION_MODEL,
         defaultGroupingExpansionDepth = 0,
         filterModel,
         sortModel,
@@ -295,16 +301,16 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
     const rowMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
         const map = new Map<GridRowId, GridRowMeta>();
         treeNodes.forEach((node, id) => {
-            if (node.children && node.children.length > 0) {
-                map.set(id, {
-                    hasChildren: true,
-                    groupingField: node.groupingField,
-                    groupingValue: node.groupingValue,
-                    descendantCount: node.descendantCount,
-                    isGroupRow: true,
-                    isExpanded: expandedGroupIds.has(id),
-                });
-            }
+            const isGroup = Boolean(node.children && node.children.length > 0);
+            map.set(id, {
+                hasChildren: isGroup,
+                treeDepth: node.depth,
+                groupingField: node.groupingField,
+                groupingValue: node.groupingValue,
+                descendantCount: node.descendantCount,
+                isGroupRow: isGroup,
+                isExpanded: isGroup ? expandedGroupIds.has(id) : undefined,
+            });
         });
         return map;
     }, [treeNodes, expandedGroupIds]);

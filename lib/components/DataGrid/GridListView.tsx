@@ -8,6 +8,7 @@ import type {
     GridListViewColDef,
     GridPaginationModel,
     GridDataSource,
+    GridLocaleText,
 } from '../../types';
 
 export interface GridListViewProps<R extends GridRowModel> {
@@ -27,6 +28,7 @@ export interface GridListViewProps<R extends GridRowModel> {
     serverRowCount: number;
     paginationSlot?: React.ComponentType<Record<string, unknown>>;
     paginationSlotProps?: Record<string, unknown>;
+    localeText?: Pick<GridLocaleText, 'paginationRowsPerPage' | 'paginationOf' | 'paginationPage'>;
     onRowClick: (params: GridRowParams<R>) => void;
     onSelectionChange: (rowId: GridRowId, isSelected: boolean) => void;
     onPaginationModelChange: (model: GridPaginationModel) => void;
@@ -49,6 +51,7 @@ export function GridListView<R extends GridRowModel>({
     serverRowCount,
     paginationSlot,
     paginationSlotProps,
+    localeText,
     onRowClick,
     onSelectionChange,
     onPaginationModelChange,
@@ -108,6 +111,7 @@ export function GridListView<R extends GridRowModel>({
                     pageSizeOptions={pageSizeOptions}
                     onPageChange={(newPage: number) => onPaginationModelChange({ ...effectivePaginationModel, page: newPage })}
                     onPageSizeChange={(newPageSize: number) => onPaginationModelChange({ ...effectivePaginationModel, pageSize: newPageSize, page: 0 })}
+                    localeText={localeText}
                     {...paginationSlotProps}
                 />
             )}

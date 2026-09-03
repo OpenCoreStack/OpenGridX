@@ -347,13 +347,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const handleRowClick = useCallback((params: GridRowParams<R>) => {
         const { row, id } = params;
 
-        if (isHierarchyEnabled && (row as Record<string, unknown>)._hasChildren) {
+        if (isHierarchyEnabled && rowMetaMap.get(row.id)?.hasChildren) {
             activeHierarchyHandlers?.toggleExpansion(id);
             return;
         }
 
         onRowClick?.(params);
-    }, [isHierarchyEnabled, activeHierarchyHandlers, onRowClick]);
+    }, [isHierarchyEnabled, activeHierarchyHandlers, onRowClick, rowMetaMap]);
 
     const dataSourceHandlers = useGridDataSource({
         dataSource,
@@ -428,7 +428,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowReordering,
         initialState,
         setColumns,
-        rowMetaMap,
     });
 
     useGridStateSnapshot({
@@ -803,6 +802,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     serverRowCount={state.pagination.rowCount || 0}
                     paginationSlot={slots?.pagination}
                     paginationSlotProps={slotProps?.pagination}
+                    localeText={localeText ? {
+                        paginationRowsPerPage: localeText.paginationRowsPerPage,
+                        paginationOf: localeText.paginationOf,
+                        paginationPage: localeText.paginationPage,
+                    } : undefined}
                     onRowClick={handleRowClick}
                     onSelectionChange={handleSelectionChange}
                     onPaginationModelChange={handlePaginationModelChange}

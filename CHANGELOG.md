@@ -5,6 +5,24 @@
 
 ---
 
+## [1.1.0] — 2026-09-02
+
+### Added
+- `GridRowMeta` interface — hierarchy metadata (`hasChildren`, `treeDepth`, `isExpanded`, etc.) now available via `params.rowMeta` in `renderCell`. See `docs/architecture/grid-row-meta.md`.
+- `GridLocaleText` interface and `localeText` prop on `DataGrid` — override all pagination strings for i18n.
+- `CellErrorBoundary` — `renderCell` errors are now caught per-cell; the grid continues rendering. Fallback shows `⚠` in the affected cell.
+- 25 new unit tests for `useGridRowPipeline`, `useGridControlledState`, and `useGridKeyboardNavigation`.
+- `CLAUDE.md` at project root — AI coding assistant context file.
+- `docs/architecture/grid-row-meta.md` — architecture doc for `GridRowMeta` and `rowMetaMap` data flow.
+
+### Changed
+- `GridRowModel` no longer declares `_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount` as typed properties. These fields remain on the row object at runtime (backward-compat shim, removed in v2.0). Access hierarchy metadata via `params.rowMeta` instead.
+
+### Deprecated
+- `params.row._hasChildren` etc. — use `params.rowMeta?.hasChildren`. Runtime shim removed in v2.0.
+
+---
+
 ## [1.0.6] — August 13, 2026 ✨
 
 ### Added

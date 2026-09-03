@@ -37,11 +37,9 @@ export function Pagination(props: PaginationProps) {
     const displayedRows = rowCount === 0 ? 0 : `${firstRowIndex + 1}–${lastRowIndex}`;
 
     const rowsPerPageLabel = localeText?.paginationRowsPerPage ?? 'Rows per page:';
-    const ofLabel = rowCount === 0
-        ? '0'
-        : localeText?.paginationOf
-            ? localeText.paginationOf(firstRowIndex + 1, lastRowIndex, rowCount)
-            : `${displayedRows} of ${rowCount}`;
+    const ofLabel = localeText?.paginationOf
+        ? localeText.paginationOf(rowCount === 0 ? 0 : firstRowIndex + 1, lastRowIndex, rowCount)
+        : `${displayedRows} of ${rowCount}`;
     const pageLabel = localeText?.paginationPage
         ? localeText.paginationPage(currentPage + 1, pageCount)
         : `Page ${currentPage + 1} of ${pageCount}`;

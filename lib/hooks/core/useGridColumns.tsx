@@ -7,7 +7,6 @@ import type {
     GridRowId,
     GridColumnOrderChangeParams,
     GridRenderCellParams,
-    GridRowMeta,
 } from '../../types';
 import type { GridInitialState } from '../../state/types';
 
@@ -31,7 +30,6 @@ export interface UseGridColumnsParams<R extends GridRowModel> {
     rowReordering: boolean;
     initialState?: GridInitialState;
     setColumns: (cols: GridColDef[]) => void;
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
 }
 
 export interface UseGridColumnsResult<R extends GridRowModel> {
@@ -65,7 +63,6 @@ export function useGridColumns<R extends GridRowModel>(
         rowReordering,
         initialState,
         setColumns,
-        rowMetaMap,
     } = params;
 
     // ── Effective columns (hierarchy cell renderer injection) ─────────────────
@@ -77,7 +74,7 @@ export function useGridColumns<R extends GridRowModel>(
                 return {
                     ...col,
                     renderCell: (cellParams: GridRenderCellParams<R>) => {
-                        const meta = rowMetaMap.get(cellParams.row.id);
+                        const meta = cellParams.rowMeta;
                         const depth = meta?.treeDepth ?? 0;
                         const hasChildren = Boolean(meta?.hasChildren);
                         const isExpanded = Boolean(meta?.isExpanded);
@@ -133,7 +130,7 @@ export function useGridColumns<R extends GridRowModel>(
             return {
                 ...col,
                 renderCell: (cellParams: GridRenderCellParams<R>) => {
-                    const meta = rowMetaMap.get(cellParams.row.id);
+                    const meta = cellParams.rowMeta;
                     const hasChildren = Boolean(meta?.hasChildren);
                     const groupingField = meta?.groupingField;
 
@@ -149,7 +146,7 @@ export function useGridColumns<R extends GridRowModel>(
                 }
             };
         }) as GridColDef<R>[];
-    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers, rowMetaMap]);
+    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers]);
 
     // ── Column widths ─────────────────────────────────────────────────────────
     const [columnWidths, setColumnWidths] = useState<Record<string, number>>(

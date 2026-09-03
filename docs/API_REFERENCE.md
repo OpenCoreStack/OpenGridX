@@ -143,6 +143,12 @@ The main component for displaying and interacting with data.
 | `className` | `string` | — | Additional CSS class applied to the outermost grid wrapper element. |
 | `style` | `React.CSSProperties` | — | Inline styles applied to the grid wrapper element. |
 
+#### Localization
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `localeText` | `GridLocaleText` | — | Override user-visible strings in the Pagination component. See `GridLocaleText` for the full interface. |
+
 #### Imperative Ref
 
 | Prop | Type | Default | Description |
@@ -561,6 +567,35 @@ interface GridPivotModel {
   rowFields: string[];
   columnFields: string[];
   valueFields: { field: string; aggFn: string; headerName?: string }[];
+}
+```
+
+### `GridLocaleText`
+
+Override user-visible strings in the Pagination component. All fields are optional.
+
+```typescript
+interface GridLocaleText {
+  paginationRowsPerPage?: string;
+  paginationOf?: (from: number, to: number, count: number) => string;
+  paginationPage?: (page: number, pageCount: number) => string;
+  noRowsLabel?: string;
+}
+```
+
+### `GridRowMeta`
+
+Available via `params.rowMeta` in `renderCell`. Undefined for non-hierarchy rows.
+
+```typescript
+interface GridRowMeta {
+  hasChildren?: boolean;
+  treeDepth?: number;
+  groupingField?: string;
+  groupingValue?: unknown;
+  descendantCount?: number;
+  isExpanded?: boolean;
+  isGroupRow?: boolean;
 }
 ```
 

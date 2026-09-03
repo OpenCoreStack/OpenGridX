@@ -103,4 +103,6 @@ export type {
     GridApi,
     GridTreeNode,
     GridDetailPanelParams,
+    GridRowMeta,
+    GridLocaleText,
 } from './types';
