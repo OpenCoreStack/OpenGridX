@@ -324,10 +324,11 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
                 treeDepth: node.depth,
                 descendantCount: node.children ? node.children.length : undefined,
                 isGroupRow: groupRowIds.has(id),
+                isExpanded: expandedGroupIds.has(id),
             });
         });
         return map;
-    }, [treeNodes, groupingRows]);
+    }, [treeNodes, groupingRows, expandedGroupIds]);
 
     return useMemo(() => ({
         treeNodes,

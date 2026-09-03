@@ -302,11 +302,12 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                     groupingValue: node.groupingValue,
                     descendantCount: node.descendantCount,
                     isGroupRow: true,
+                    isExpanded: expandedGroupIds.has(id),
                 });
             }
         });
         return map;
-    }, [treeNodes]);
+    }, [treeNodes, expandedGroupIds]);
 
     return useMemo(() => ({
         treeNodes,
