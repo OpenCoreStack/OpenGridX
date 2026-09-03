@@ -39,6 +39,8 @@ const FilterPanelDemo = lazy(() => import('./examples/FilterPanelDemo/FilterPane
 const SlotsDemo = lazy(() => import('./examples/SlotsDemo/SlotsDemo'));
 const CRUDTutorial = lazy(() => import('./examples/CRUDTutorial/CRUDTutorial'));
 const ScrollToIndexesDemo = lazy(() => import('./examples/ScrollToIndexesDemo/ScrollToIndexesDemo'));
+const LocaleTextDemo = lazy(() => import('./examples/LocaleTextDemo/LocaleTextDemo'));
+const CellErrorBoundaryDemo = lazy(() => import('./examples/CellErrorBoundaryDemo/CellErrorBoundaryDemo'));
 
 const examplesConfig = [
     // Resources
@@ -52,6 +54,7 @@ const examplesConfig = [
     // Main Features
     { path: '/basic', name: 'Basic Usage', component: BasicExample, category: 'Main features' },
     { path: '/loading', name: 'Loading States', component: LoadingStatesDemo, category: 'Main features' },
+    { path: '/cell-error-boundary', name: 'Cell Error Boundary', component: CellErrorBoundaryDemo, category: 'Main features' },
     { path: '/export', name: 'Export Data', component: ExportDemo, category: 'Main features' },
     { path: '/clipboard', name: 'Clipboard Copy', component: ClipboardDemo, category: 'Main features' },
     { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
@@ -83,6 +86,7 @@ const examplesConfig = [
     { path: '/filter-panel', name: 'Filter Panel', component: FilterPanelDemo, category: 'Components' },
 
     // Customization
+    { path: '/locale-text', name: 'Locale Text (i18n)', component: LocaleTextDemo, category: 'Customization' },
     { path: '/theming', name: 'Theming', component: ThemingDemo, category: 'Customization' },
     { path: '/list-view', name: 'List View', component: ListViewDemo, category: 'Customization' },
     { path: '/slots', name: 'Slots & Renderers', component: SlotsDemo, category: 'Customization' },
