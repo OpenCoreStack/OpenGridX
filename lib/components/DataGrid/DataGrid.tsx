@@ -109,8 +109,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         listViewColumn,
         columnGroupingModel,
         noRowsLabel = 'No Data',
+        localeText,
         apiRef: propApiRef,
     } = props;
+
+    const effectiveNoRowsLabel = localeText?.noRowsLabel ?? noRowsLabel;
 
     // Stable defaults
     const defaultFilterModel: GridFilterModel = useMemo(() => ({ items: [] }), []);
@@ -785,7 +788,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     pageSizeOptions={pageSizeOptions}
                     selectedRowIds={selectedRowIds}
                     listViewColumn={listViewColumn}
-                    noRowsLabel={noRowsLabel}
+                    noRowsLabel={effectiveNoRowsLabel}
                     rowHeight={rowHeight}
                     checkboxSelection={checkboxSelection}
                     paginationMode={paginationMode}
@@ -893,7 +896,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
                         {/* Empty State Overlay (Standard View) — showing after header */}
                         {!effectiveLoading && !state.dataSource.error && filteredRows.length === 0 && (
-                            <GridEmptyState noRowsLabel={noRowsLabel} width={virtualization.totalWidth} />
+                            <GridEmptyState noRowsLabel={effectiveNoRowsLabel} width={virtualization.totalWidth} />
                         )}
 
                         <GridPinnedRows<R>
@@ -1014,6 +1017,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                         pageSizeOptions={pageSizeOptions}
                         onPageChange={(newPage: number) => handlePaginationModelChange({ ...effectivePaginationModel, page: newPage })}
                         onPageSizeChange={(newPageSize: number) => handlePaginationModelChange({ ...effectivePaginationModel, pageSize: newPageSize, page: 0 })}
+                        localeText={localeText ? {
+                            paginationRowsPerPage: localeText.paginationRowsPerPage,
+                            paginationOf: localeText.paginationOf,
+                            paginationPage: localeText.paginationPage,
+                        } : undefined}
                         {...slotProps?.pagination}
                     />
                 );
@@ -1025,7 +1033,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 {state.dataSource.error ? `Error: ${state.dataSource.error instanceof Error ? state.dataSource.error.message : 'Unknown error'}` : ''}
                 {!loading && !state.dataSource.error && (
                     filteredRows.length === 0
-                        ? noRowsLabel
+                        ? effectiveNoRowsLabel
                         : (filterModel && ((filterModel.quickFilterValues?.length || 0) > 0 || (filterModel.items?.length || 0) > 0))
                             ? `${filteredRows.length} ${filteredRows.length === 1 ? 'row' : 'rows'} found`
                             : ''

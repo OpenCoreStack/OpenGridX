@@ -1,6 +1,7 @@
 
 import React, { useId } from 'react';
 import { Button } from '../ui/Button';
+import type { GridLocaleText } from '../../types';
 
 export interface PaginationProps {
     page: number;
@@ -11,6 +12,7 @@ export interface PaginationProps {
     pageSizeOptions?: number[];
     showFirstButton?: boolean;
     showLastButton?: boolean;
+    localeText?: Pick<GridLocaleText, 'paginationRowsPerPage' | 'paginationOf' | 'paginationPage'>;
 }
 
 export function Pagination(props: PaginationProps) {
@@ -23,7 +25,8 @@ export function Pagination(props: PaginationProps) {
         onPageSizeChange,
         pageSizeOptions = [10, 25, 50, 100],
         showFirstButton = true,
-        showLastButton = true
+        showLastButton = true,
+        localeText,
     } = props;
 
     const pageCount = Math.max(1, Math.ceil(rowCount / pageSize));
@@ -32,6 +35,16 @@ export function Pagination(props: PaginationProps) {
     const firstRowIndex = currentPage * pageSize;
     const lastRowIndex = Math.min(firstRowIndex + pageSize, rowCount);
     const displayedRows = rowCount === 0 ? 0 : `${firstRowIndex + 1}–${lastRowIndex}`;
+
+    const rowsPerPageLabel = localeText?.paginationRowsPerPage ?? 'Rows per page:';
+    const ofLabel = rowCount === 0
+        ? '0'
+        : localeText?.paginationOf
+            ? localeText.paginationOf(firstRowIndex + 1, lastRowIndex, rowCount)
+            : `${displayedRows} of ${rowCount}`;
+    const pageLabel = localeText?.paginationPage
+        ? localeText.paginationPage(currentPage + 1, pageCount)
+        : `Page ${currentPage + 1} of ${pageCount}`;
 
     const handleFirstPage = () => {
         onPageChange(0);
@@ -63,7 +76,7 @@ export function Pagination(props: PaginationProps) {
             { }
             <div className="ogx-pagination__page-size">
                 <label htmlFor={pageSizeId} className="ogx-pagination__label">
-                    Rows per page:
+                    {rowsPerPageLabel}
                 </label>
                 <select
                     id={pageSizeId}
@@ -82,7 +95,7 @@ export function Pagination(props: PaginationProps) {
 
             { }
             <div className="ogx-pagination__info" aria-live="polite" aria-atomic="true">
-                {displayedRows} of {rowCount}
+                {ofLabel}
             </div>
 
             { }
@@ -116,7 +129,7 @@ export function Pagination(props: PaginationProps) {
                 </Button>
 
                 <div className="ogx-pagination__page-info" aria-current="page">
-                    Page {currentPage + 1} of {pageCount}
+                    {pageLabel}
                 </div>
 
                 <Button

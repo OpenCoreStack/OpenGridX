@@ -463,6 +463,18 @@ export interface GridRowScrollEndParams {
   viewportHeight: number;
 }
 
+/** Overrideable user-visible strings for internationalisation. All fields are optional; defaults match the built-in English strings. */
+export interface GridLocaleText {
+    /** Label before the rows-per-page select. Default: `"Rows per page:"` */
+    paginationRowsPerPage?: string;
+    /** Range label. Receives (from, to, count). Default: `` (f, t, c) => `${f}–${t} of ${c}` `` */
+    paginationOf?: (from: number, to: number, count: number) => string;
+    /** Page counter label. Receives (page, pageCount). Default: `` (p, pc) => `Page ${p} of ${pc}` `` */
+    paginationPage?: (page: number, pageCount: number) => string;
+    /** Empty-state label. When set, overrides the `noRowsLabel` prop on DataGrid. Default: `"No Data"` */
+    noRowsLabel?: string;
+}
+
 /**
  * Main properties for the DataGrid component.
  */
@@ -555,6 +567,8 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   ariaLabel?: string;
   /** Message displayed when there are no rows to show. */
   noRowsLabel?: string;
+  /** Overrides for user-visible strings (i18n). All fields are optional. */
+  localeText?: Partial<GridLocaleText>;
 
   /** Advanced: The starting internal state of the grid. */
   initialState?: import('../state/types').GridInitialState;
