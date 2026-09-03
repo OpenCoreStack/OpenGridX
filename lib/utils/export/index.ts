@@ -553,3 +553,6 @@ function downloadFile(content: string, fileName: string, mimeType: string): void
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 }
+
+export { exportToPdf } from './exportToPdf';
+export type { PdfExportOptions } from '../../types';

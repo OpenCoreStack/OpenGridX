@@ -19,7 +19,8 @@ export {
     exportToCsv,
     exportToExcel,
     exportToJson,
-    printGrid
+    printGrid,
+    exportToPdf
 } from './utils/export/index';
 
 export { exportToExcelAdvanced } from './utils/export/exportToExcelAdvanced';
