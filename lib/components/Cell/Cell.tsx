@@ -222,8 +222,9 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                             field: colDef.field,
                             colDef,
                             rowIndex,
-                            colIndex
-                        }) as React.ReactNode
+                            colIndex,
+                            rowMeta,
+                        })
                     ) : (
                         <GridEditInputCell
                             value={value}
@@ -247,10 +248,10 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                             rowIndex,
                             colIndex,
                             rowMeta,
-                        }) as React.ReactNode}
+                        })}
                     </CellErrorBoundary>
                 ) : (
-                    formattedValue as React.ReactNode
+                    formattedValue
                 )}
             </div>
         </div>

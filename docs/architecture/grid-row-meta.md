@@ -66,7 +66,7 @@ renderCell: (params) => {
 
 ## Runtime shim (v1.1 only)
 
-The underscore fields (`_hasChildren`, `_treeDepth`, etc.) continue to be injected onto the row object at runtime in v1.1. They are no longer declared on `GridRowModel`, so TypeScript strict-mode users get a compile error when accessing them. JS users or users who cast with `as any` see no change.
+The underscore fields (`_hasChildren`, `_treeDepth`, etc.) continue to be injected onto the row object at runtime in v1.1. They are no longer declared on `GridRowModel`; because `GridRowModel` retains `[key: string]: unknown`, accessing `params.row._hasChildren` resolves to `unknown` rather than producing a TypeScript compile error. Assignment to a typed variable (e.g. `const x: boolean = params.row._hasChildren`) and arithmetic will error; truthiness checks will not. Migrate to `params.rowMeta?.hasChildren` for the typed path.
 
 **The runtime injection will be removed in v2.0.** Migrate to `params.rowMeta` before upgrading to v2.
 

@@ -29,6 +29,8 @@ import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
 import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridAggregationResult, GridFilterModel, GridTreeNode, GridSortItem, GridRowMeta } from '../../types';
 
+const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
+
 export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridProps<R>) {
     const {
         rows,
@@ -339,7 +341,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const rowMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
         if (isTreeData) return treeDataHandlers.rowMetaMap;
         if (isRowGrouping) return rowGroupingHandlers.rowMetaMap;
-        return new Map();
+        return EMPTY_ROW_META_MAP;
     }, [isTreeData, treeDataHandlers.rowMetaMap, isRowGrouping, rowGroupingHandlers.rowMetaMap]);
 
     const pagination = propPagination && !isRowGrouping;

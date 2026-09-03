@@ -40,7 +40,7 @@ export class CellErrorBoundary extends React.Component<CellErrorBoundaryProps, C
             return (
                 <div
                     className="ogx__cell-error"
-                    role="alert"
+                    role="status"
                     aria-label={`Error in cell: ${this.props.field}`}
                     title={this.state.error?.message ?? 'Render error'}
                 >

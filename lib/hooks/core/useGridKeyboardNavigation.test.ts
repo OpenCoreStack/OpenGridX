@@ -86,6 +86,15 @@ describe('useGridKeyboardNavigation — arrow keys', () => {
         expect(result.current.focusedCell?.id).toBe('HEADER');
     });
 
+    it('ArrowDown at last row — no change', () => {
+        const { result } = renderHook(() => useGridKeyboardNavigation(BASE_PARAMS));
+        // ROWS has 3 entries; last row id is 3
+        const lastRow = ROWS[ROWS.length - 1];
+        act(() => { result.current.setFocusedCell({ id: lastRow.id, field: 'name' }); });
+        act(() => { result.current.handleKeyDown(keyEvent('ArrowDown')); });
+        expect(result.current.focusedCell?.id).toBe(lastRow.id);
+    });
+
     it('ArrowRight moves focusedCell to next column', () => {
         const { result } = renderHook(() => useGridKeyboardNavigation(BASE_PARAMS));
         act(() => { result.current.setFocusedCell({ id: 1, field: 'name' }); });

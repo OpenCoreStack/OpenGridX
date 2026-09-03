@@ -50,7 +50,7 @@ export default function Home(_props: HomeProps) {
     ];
 
     const comingSoon = [
-        { badge: 'Q2 2026', name: 'Advanced Charts Integration', desc: 'Native sparklines and trend charts directly inside grid cells.' },
+        { badge: 'Q1 2027', name: 'Advanced Charts Integration', desc: 'Native sparklines and trend charts directly inside grid cells.' },
         { badge: 'Q3 2026', name: 'Interactive Pivot Builder', desc: 'Intuitive drag-and-drop interface for end-user analytics.' },
         { badge: 'Q4 2026', name: 'Native PDF Reporting', desc: 'Automated PDF generation with customizable layouts.' }
     ];

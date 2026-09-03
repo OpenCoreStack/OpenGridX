@@ -580,7 +580,7 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   /** Message displayed when there are no rows to show. */
   noRowsLabel?: string;
   /** Overrides for user-visible strings (i18n). All fields are optional. */
-  localeText?: Partial<GridLocaleText>;
+  localeText?: GridLocaleText;
 
   /** Advanced: The starting internal state of the grid. */
   initialState?: import('../state/types').GridInitialState;

@@ -34,11 +34,12 @@ When `getDetailPanelContent` is provided, the `<Row />` renders an expandable co
 
 The internal hierarchy fields (`_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount`, `_isGroupRow`) are no longer typed on `GridRowModel`. They will be removed from the runtime row object in v2.0.
 
-**Before (still works at runtime in v1.1, TypeScript compile error in strict mode):**
+**Before (still works at runtime in v1.1 — `params.row._hasChildren` is `unknown`, not `boolean`; assignment to typed variables and arithmetic will error, truthiness checks will not):**
 
 ```tsx
 renderCell: (params) => {
-  const hasChildren = (params.row as any)._hasChildren;
+  // v1.1 accepts this at runtime; _hasChildren resolves to unknown via [key: string]: unknown
+  const hasChildren = (params.row as Record<string, unknown>)._hasChildren;
   return hasChildren ? <GroupIcon /> : params.value;
 }
 ```

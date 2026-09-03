@@ -35,7 +35,7 @@ You can replace the internal pagination UI using the `pagination` slot:
 
 ## 🌍 Internationalisation
 
-Pass `localeText` on `<DataGrid />` to override all user-visible strings in the Pagination component:
+Pass `localeText` on `<DataGrid />` to override the text labels in the Pagination component (rows-per-page, range, and page-counter labels). Note: ARIA labels (`aria-label="Pagination"`, `aria-label="Rows per page"`) and button titles (`title="Previous page"`, `title="Next page"`) are currently hardcoded and not overrideable via `localeText`.
 
 | Key | Type | Default |
 | :--- | :--- | :--- |
