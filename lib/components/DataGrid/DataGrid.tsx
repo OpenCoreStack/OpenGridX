@@ -341,7 +341,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const handleRowClick = useCallback((params: GridRowParams<R>) => {
         const { row, id } = params;
 
-        if (isHierarchyEnabled && row._hasChildren) {
+        if (isHierarchyEnabled && (row as Record<string, unknown>)._hasChildren) {
             activeHierarchyHandlers?.toggleExpansion(id);
             return;
         }

@@ -7,24 +7,31 @@ export type GridRowId = string | number;
 export interface GridRowModel {
   /** Uniquely identifies the row. */
   id: GridRowId;
-  /** Internal: row has child nodes (tree data / row grouping). */
-  _hasChildren?: boolean;
   /** Internal: row is a skeleton placeholder during infinite-scroll loading. */
   _isSkeleton?: boolean;
-  /** Internal: depth in the tree or grouping hierarchy. */
-  _treeDepth?: number;
-  /** Internal: whether the group/tree node is currently expanded. */
-  _isExpanded?: boolean;
-  /** Internal: field used for grouping at this level. */
-  _groupingField?: string;
-  /** Internal: grouping field value at this level. */
-  _groupingValue?: unknown;
-  /** Internal: total descendant count for tree/grouping nodes. */
-  _descendantCount?: number;
   /** Internal: server-reported child count for lazy-loaded tree nodes. */
   serverChildrenCount?: number;
   /** Any other dynamic row properties. */
   [key: string]: unknown;
+}
+
+/**
+ * Internal hierarchy metadata for a row. Exposed via `params.rowMeta` in `renderCell`.
+ * Not present (`undefined`) for flat rows with no active tree-data or row-grouping.
+ *
+ * @since v1.1 — replaces the `_hasChildren` / `_treeDepth` / `_groupingField` etc.
+ * properties that were previously (and incorrectly) typed on `GridRowModel`.
+ * Those underscore fields remain on the row object at runtime in v1.1 for
+ * backward compatibility; they will be removed from the runtime in v2.0.
+ */
+export interface GridRowMeta {
+    hasChildren?: boolean;
+    treeDepth?: number;
+    groupingField?: string;
+    groupingValue?: unknown;
+    descendantCount?: number;
+    isExpanded?: boolean;
+    isGroupRow?: boolean;
 }
 
 export type GridAlignment = 'left' | 'center' | 'right';
@@ -231,6 +238,11 @@ export interface GridRenderCellParams<R extends GridRowModel = GridRowModel> {
   rowIndex: number;
   /** The index of the column. */
   colIndex: number;
+  /**
+   * Hierarchy metadata for this row. `undefined` for flat rows (no tree-data or row-grouping active).
+   * @since v1.1
+   */
+  rowMeta?: GridRowMeta;
 }
 
 export interface GridRenderHeaderParams {

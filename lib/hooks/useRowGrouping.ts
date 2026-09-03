@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import type { 
-    GridRowModel, 
-    GridRowId, 
-    GridRowGroupingModel, 
-    GridAggregationModel, 
+import type {
+    GridRowModel,
+    GridRowId,
+    GridRowGroupingModel,
+    GridAggregationModel,
     GridTreeNode,
     GridFilterModel,
-    GridSortItem
+    GridSortItem,
+    GridRowMeta
 } from '../types';
 import { isRowMatchingFilter } from '../utils/filtering';
 import { compareValues } from '../utils/sorting';
@@ -291,12 +292,29 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
     const getNode = useCallback((id: GridRowId) => treeNodes.get(id), [treeNodes]);
 
+    const rowMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
+        const map = new Map<GridRowId, GridRowMeta>();
+        treeNodes.forEach((node, id) => {
+            if (node.children && node.children.length > 0) {
+                map.set(id, {
+                    hasChildren: true,
+                    groupingField: node.groupingField,
+                    groupingValue: node.groupingValue,
+                    descendantCount: node.descendantCount,
+                    isGroupRow: true,
+                });
+            }
+        });
+        return map;
+    }, [treeNodes]);
+
     return useMemo(() => ({
         treeNodes,
         groupingRows,
         toggleExpansion,
         isGroupExpanded,
         getVisibleRows,
-        getNode
-    }), [treeNodes, groupingRows, toggleExpansion, isGroupExpanded, getVisibleRows, getNode]);
+        getNode,
+        rowMetaMap,
+    }), [treeNodes, groupingRows, toggleExpansion, isGroupExpanded, getVisibleRows, getNode, rowMetaMap]);
 }
