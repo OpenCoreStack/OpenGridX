@@ -114,7 +114,7 @@ export async function exportToPdf<R extends GridRowModel>(
     let JsPDF: new (opts: Record<string, unknown>) => JsPDFDoc;
     try {
         const mod = await import('jspdf');
-        JsPDF = mod.default as new (opts: Record<string, unknown>) => JsPDFDoc;
+        JsPDF = mod.default as unknown as new (opts: Record<string, unknown>) => JsPDFDoc;
         await import('jspdf-autotable');
     } catch {
         throw new Error(

@@ -13,7 +13,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Tests:** Vitest 4 + `@testing-library/react` (`renderHook` for hooks, component tests for UI)
 - **Build:** Vite (library mode). `npm run build` produces `dist/opengridx.es.js` and `dist/opengridx.umd.js`.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 1.1.0
+- **Current version:** 1.2.0
 
 ---
 
@@ -124,6 +124,15 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Zero `eslint-disable` or `@ts-ignore` — fix the root cause
 - Zero `any` — use `unknown` or explicit interfaces
 - Never add `Co-Authored-By` AI attribution to commit messages
+
+---
+
+## v1.2.0 — significant changes
+
+- **`exportToPdf`** — native PDF export via optional peer deps `jspdf` + `jspdf-autotable`; lazy-loaded, zero bundle impact for non-PDF consumers
+- **`PdfExportOptions`** — 12-field interface: fileName, title, logoUrl, orientation, selectedRows, aggregationResult, aggregationModel, filterModel, alternateRowColor, headerBackgroundColor, headerTextColor, fontSize
+- **`CellErrorBoundary` fix** — changed to `renderFn` prop so the boundary calls `renderCell` inside its own `render()`; previously the throw occurred in the parent before the boundary could catch it
+- **GitHub Pages SPA routing** — deploy workflow now copies `404.html` so direct URL access to demo routes works
 
 ---
 

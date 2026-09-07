@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface CellErrorBoundaryProps {
-    children: React.ReactNode;
+    renderFn: () => React.ReactNode;
     field: string;
     resetKey?: unknown;
 }
@@ -48,6 +48,6 @@ export class CellErrorBoundary extends React.Component<CellErrorBoundaryProps, C
                 </div>
             );
         }
-        return this.props.children;
+        return this.props.renderFn();
     }
 }

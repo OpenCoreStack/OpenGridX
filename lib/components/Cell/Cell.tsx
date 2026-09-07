@@ -239,8 +239,10 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                         />
                     )
                 ) : colDef.renderCell ? (
-                    <CellErrorBoundary field={colDef.field} resetKey={value}>
-                        {colDef.renderCell({
+                    <CellErrorBoundary
+                        field={colDef.field}
+                        resetKey={value}
+                        renderFn={() => colDef.renderCell!({
                             value,
                             row,
                             field: colDef.field,
@@ -249,7 +251,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                             colIndex,
                             rowMeta,
                         })}
-                    </CellErrorBoundary>
+                    />
                 ) : (
                     formattedValue
                 )}
