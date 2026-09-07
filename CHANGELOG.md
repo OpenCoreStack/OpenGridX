@@ -5,6 +5,23 @@
 
 ---
 
+## [1.2.1] — 2026-09-07
+
+### Fixed
+- `CellErrorBoundary` now accepts a `renderFn: () => React.ReactNode` prop and calls it
+  inside its own `render()`, so React correctly catches thrown errors from `renderCell`.
+  Previously the call happened in the parent's render phase — before the boundary — causing
+  the entire app to crash instead of showing a per-cell error indicator.
+- `exportToPdf` double-cast through `unknown` to satisfy the installed `jspdf` TypeScript
+  types (the library's class does not expose `autoTable`/`lastAutoTable` in its official
+  type definitions).
+- Added `jspdf` and `jspdf-autotable` to `devDependencies` so local development and demo
+  builds work without a manual `npm install`.
+- Deploy workflow now copies `index.html` → `404.html` so GitHub Pages serves the SPA for
+  direct URL access to any demo route.
+
+---
+
 ## [1.2.0] — 2026-09-03
 
 ### Added

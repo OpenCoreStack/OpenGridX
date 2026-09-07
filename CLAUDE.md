@@ -13,7 +13,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Tests:** Vitest 4 + `@testing-library/react` (`renderHook` for hooks, component tests for UI)
 - **Build:** Vite (library mode). `npm run build` produces `dist/opengridx.es.js` and `dist/opengridx.umd.js`.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 1.2.0
+- **Current version:** 1.2.1
 
 ---
 
@@ -127,7 +127,7 @@ Full doc: `docs/architecture/grid-row-meta.md`
 
 ---
 
-## v1.2.0 — significant changes
+## v1.2.1 — significant changes
 
 - **`exportToPdf`** — native PDF export via optional peer deps `jspdf` + `jspdf-autotable`; lazy-loaded, zero bundle impact for non-PDF consumers
 - **`PdfExportOptions`** — 12-field interface: fileName, title, logoUrl, orientation, selectedRows, aggregationResult, aggregationModel, filterModel, alternateRowColor, headerBackgroundColor, headerTextColor, fontSize

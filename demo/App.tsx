@@ -143,7 +143,7 @@ export default function App() {
                         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="OpenGridX Logo" className="app-logo" />
                         <h2 className="app-title">
                             OpenGridX
-                            <span className="app-version">v1.2.0</span>
+                            <span className="app-version">v1.2.1</span>
                         </h2>
                     </div>
 
