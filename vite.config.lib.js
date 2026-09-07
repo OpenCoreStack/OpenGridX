@@ -9,7 +9,7 @@ export default defineConfig({
         react(),
         dts({
             include: ['lib'],
-            exclude: ['**/*.test.ts', '**/*.test.tsx'],
+            exclude: ['**/*.test.ts', '**/*.test.tsx', 'lib/utils/export/pdf-types.d.ts'],
             outDir: 'dist',
             rollupTypes: true
         })
@@ -22,12 +22,14 @@ export default defineConfig({
             fileName: (format) => `opengridx.${format}.js`
         },
         rollupOptions: {
-            external: ['react', 'react-dom', 'exceljs'],
+            external: ['react', 'react-dom', 'exceljs', 'jspdf', 'jspdf-autotable'],
             output: {
                 globals: {
                     react: 'React',
                     'react-dom': 'ReactDOM',
-                    exceljs: 'ExcelJS'
+                    exceljs: 'ExcelJS',
+                    'jspdf': 'jsPDF',
+                    'jspdf-autotable': 'jspdfAutotable',
                 }
             }
         },

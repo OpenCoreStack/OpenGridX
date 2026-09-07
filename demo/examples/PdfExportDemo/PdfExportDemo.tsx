@@ -47,12 +47,12 @@ export default function PdfExportDemo() {
         if (!apiRef.current) return;
         setIsExporting(true);
         try {
-            const rows = apiRef.current.getAllRows();
+            const rows = apiRef.current.getVisibleRows();
             const columns = apiRef.current.getVisibleColumns();
             const aggResult = includeAgg ? (apiRef.current.getAggregationResult?.() ?? null) : null;
             const aggModel = includeAgg ? (apiRef.current.getAggregationModel?.() ?? null) : null;
             const filterModel = includeFilters ? (apiRef.current.getFilterModel?.() ?? null) : null;
-            const selected = selectedOnly ? apiRef.current.getSelectedRows().map(r => r.id as string | number) : undefined;
+            const selected = selectedOnly ? (apiRef.current.getSelectedRows?.() ?? []) as (string | number)[] : undefined;
 
             await exportToPdf(rows, columns, {
                 fileName: 'employee-report',

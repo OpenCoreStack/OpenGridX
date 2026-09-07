@@ -20,7 +20,7 @@ function MyGrid() {
 
     const handleExport = async () => {
         await exportToPdf(
-            apiRef.current.getAllRows(),
+            apiRef.current.getVisibleRows(),
             apiRef.current.getVisibleColumns(),
             { fileName: 'my-report', title: 'Sales Report' }
         );
@@ -49,7 +49,7 @@ function MyGrid() {
 
 ```tsx
 await exportToPdf(
-    apiRef.current.getAllRows(),
+    apiRef.current.getVisibleRows(),
     apiRef.current.getVisibleColumns(),
     {
         fileName: 'employee-report',
@@ -59,7 +59,7 @@ await exportToPdf(
         aggregationResult: apiRef.current.getAggregationResult(),
         aggregationModel: apiRef.current.getAggregationModel(),
         filterModel: apiRef.current.getFilterModel(),
-        selectedRows: apiRef.current.getSelectedRows().map(r => r.id),
+        selectedRows: apiRef.current.getSelectedRows(),  // already GridRowId[]
         alternateRowColor: true,
         headerBackgroundColor: '#1e40af',
         headerTextColor: '#ffffff',
@@ -104,3 +104,7 @@ Run: `npm install jspdf jspdf-autotable`
 **Logo not appearing**
 
 Ensure `logoUrl` is a data URI (base64-encoded) or an absolute URL that is CORS-accessible. Relative paths may fail in some environments.
+
+## Exporting unfiltered data
+
+`getVisibleRows()` returns only rows that pass the current filter. Use `getAllRows()` if you want to export all data regardless of active filters.

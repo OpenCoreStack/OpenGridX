@@ -1233,7 +1233,7 @@ function exportToPdf<R extends GridRowModel>(
 ): Promise<void>
 ```
 
-Generates a styled PDF report and triggers a browser download. Requires peer deps `jspdf` and `jspdf-autotable`. See [docs/features/pdf-export.md](../features/pdf-export.md) for full usage.
+Generates a styled PDF report and triggers a browser download. Requires peer deps `jspdf` and `jspdf-autotable`. See [docs/features/pdf-export.md](./features/pdf-export.md) for full usage.
 
 ### `PdfExportOptions`
 
@@ -1268,4 +1268,3 @@ interface PdfExportOptions {
 | `headerBackgroundColor` | `string` | `'#4f46e5'` | Column header cell background (hex) |
 | `headerTextColor` | `string` | `'#ffffff'` | Column header cell text color (hex) |
 | `fontSize` | `number` | `9` | Body cell font size in points |
-```

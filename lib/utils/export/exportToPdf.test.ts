@@ -12,6 +12,7 @@ const mockLine = vi.fn();
 const mockSetDrawColor = vi.fn();
 const mockSetLineWidth = vi.fn();
 const mockAddImage = vi.fn();
+const mockSetPage = vi.fn();
 
 class MockJsPDF {
     autoTable = mockAutoTable;
@@ -24,6 +25,7 @@ class MockJsPDF {
     setDrawColor = mockSetDrawColor;
     setLineWidth = mockSetLineWidth;
     addImage = mockAddImage;
+    setPage = mockSetPage;
     lastAutoTable = { finalY: 50 };
     internal = {
         pageSize: { getWidth: () => 297, getHeight: () => 210 },

@@ -2,6 +2,8 @@
 // These packages are listed in peerDependenciesMeta as optional and are NOT
 // installed in devDependencies. The declarations here let TypeScript accept
 // the dynamic imports without requiring the packages at build time.
+// This file is excluded from the shipped .d.ts rollup so it does not
+// conflict with a consumer's real jspdf types.
 
 declare module 'jspdf' {
     // Minimal shape — exportToPdf.ts only uses the JsPDFDoc interface it defines.

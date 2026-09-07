@@ -18,6 +18,7 @@ interface JsPDFDoc {
     line: (x1: number, y1: number, x2: number, y2: number) => void;
     setDrawColor: (r: number, g: number, b: number) => void;
     setLineWidth: (w: number) => void;
+    setPage: (page: number) => void;
     lastAutoTable: { finalY: number };
     internal: {
         pageSize: { getWidth: () => number; getHeight: () => number };
@@ -38,7 +39,6 @@ interface AutoTableOptions {
     columnStyles?: Record<number, { cellWidth: number }>;
     showFoot?: string;
     showHead?: string;
-    didDrawPage?: (data: { pageNumber: number }) => void;
     margin?: { top: number; left: number; right: number; bottom: number };
 }
 
@@ -115,12 +115,12 @@ export async function exportToPdf<R extends GridRowModel>(
     try {
         const mod = await import('jspdf');
         JsPDF = mod.default as new (opts: Record<string, unknown>) => JsPDFDoc;
+        await import('jspdf-autotable');
     } catch {
         throw new Error(
             "exportToPdf requires 'jspdf' and 'jspdf-autotable'. Run: npm install jspdf jspdf-autotable"
         );
     }
-    await import('jspdf-autotable');
 
     const {
         fileName = 'export',
@@ -232,19 +232,6 @@ export async function exportToPdf<R extends GridRowModel>(
     // --- Column widths ---
     const columnStyles = computeColumnStyles(exportColumns, usableWidth);
 
-    // --- Page number callback ---
-    const addPageNumber = (data: { pageNumber: number }) => {
-        const total = doc.getNumberOfPages();
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(
-            `Page ${data.pageNumber} of ${total}`,
-            pageWidth - MARGIN,
-            pageHeight - 8,
-            { align: 'right' }
-        );
-    };
-
     const [hr, hg, hb] = hexToRgb(headerBackgroundColor);
     const [tr, tg, tb] = hexToRgb(headerTextColor);
 
@@ -268,9 +255,23 @@ export async function exportToPdf<R extends GridRowModel>(
         columnStyles,
         showFoot: foot ? 'lastPage' : 'never',
         showHead: 'everyPage',
-        didDrawPage: addPageNumber,
         margin: { top: MARGIN, left: MARGIN, right: MARGIN, bottom: MARGIN + 6 },
     });
+
+    // Two-pass page numbering — stamp all pages after the table is fully rendered
+    // so each stamp reads the correct final total (not the running count during draw)
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(
+            `Page ${i} of ${totalPages}`,
+            pageWidth - MARGIN,
+            pageHeight - 8,
+            { align: 'right' }
+        );
+    }
 
     doc.save(`${fileName}.pdf`);
 }
