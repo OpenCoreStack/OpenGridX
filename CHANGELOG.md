@@ -5,6 +5,18 @@
 
 ---
 
+## [1.2.0] — 2026-09-03
+
+### Added
+- `exportToPdf(rows, columns, options?)` — generate a styled PDF report from grid data.
+  Optional peer deps required: `npm install jspdf jspdf-autotable`.
+  Features: optional branded header (logo, title, filter summary, row count), multi-page
+  data table with repeating column headers, alternating row shading, aggregation footer row.
+  See `docs/features/pdf-export.md`.
+- New exported type: `PdfExportOptions`
+
+---
+
 ## [1.1.0] — 2026-09-02
 
 ### Added

@@ -1218,3 +1218,54 @@ export default function MobileGrid() {
   );
 }
 ```
+
+---
+
+## 🔧 Utilities
+
+### `exportToPdf`
+
+```ts
+function exportToPdf<R extends GridRowModel>(
+    rows: R[],
+    columns: GridColDef<R>[],
+    options?: PdfExportOptions
+): Promise<void>
+```
+
+Generates a styled PDF report and triggers a browser download. Requires peer deps `jspdf` and `jspdf-autotable`. See [docs/features/pdf-export.md](../features/pdf-export.md) for full usage.
+
+### `PdfExportOptions`
+
+```ts
+interface PdfExportOptions {
+    fileName?: string;
+    title?: string;
+    logoUrl?: string;
+    orientation?: 'portrait' | 'landscape';
+    selectedRows?: (string | number)[];
+    aggregationResult?: Record<string, unknown> | null;
+    aggregationModel?: GridAggregationModel | null;
+    filterModel?: GridFilterModel | null;
+    alternateRowColor?: boolean;
+    headerBackgroundColor?: string;
+    headerTextColor?: string;
+    fontSize?: number;
+}
+```
+
+| Property | Type | Default | Description |
+|:---|:---|:---|:---|
+| `fileName` | `string` | `'export'` | Output filename without `.pdf` extension |
+| `title` | `string` | — | Adds a branded header block above the table |
+| `logoUrl` | `string` | — | Data URI or URL for a logo image (requires `title`) |
+| `orientation` | `'portrait' \| 'landscape'` | `'landscape'` | Page orientation |
+| `selectedRows` | `(string \| number)[]` | — | Export only rows with these IDs |
+| `aggregationResult` | `Record<string, unknown>` | — | From `apiRef.current.getAggregationResult()` |
+| `aggregationModel` | `GridAggregationModel` | — | From `apiRef.current.getAggregationModel()` |
+| `filterModel` | `GridFilterModel` | — | From `apiRef.current.getFilterModel()` |
+| `alternateRowColor` | `boolean` | `true` | Alternating row background shading |
+| `headerBackgroundColor` | `string` | `'#4f46e5'` | Column header cell background (hex) |
+| `headerTextColor` | `string` | `'#ffffff'` | Column header cell text color (hex) |
+| `fontSize` | `number` | `9` | Body cell font size in points |
+```
