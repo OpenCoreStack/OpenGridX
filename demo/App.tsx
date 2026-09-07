@@ -41,6 +41,7 @@ const CRUDTutorial = lazy(() => import('./examples/CRUDTutorial/CRUDTutorial'));
 const ScrollToIndexesDemo = lazy(() => import('./examples/ScrollToIndexesDemo/ScrollToIndexesDemo'));
 const LocaleTextDemo = lazy(() => import('./examples/LocaleTextDemo/LocaleTextDemo'));
 const CellErrorBoundaryDemo = lazy(() => import('./examples/CellErrorBoundaryDemo/CellErrorBoundaryDemo'));
+const PdfExportDemo = lazy(() => import('./examples/PdfExportDemo/PdfExportDemo'));
 
 const examplesConfig = [
     // Resources
@@ -55,6 +56,7 @@ const examplesConfig = [
     { path: '/basic', name: 'Basic Usage', component: BasicExample, category: 'Main features' },
     { path: '/loading', name: 'Loading States', component: LoadingStatesDemo, category: 'Main features' },
     { path: '/cell-error-boundary', name: 'Cell Error Boundary', component: CellErrorBoundaryDemo, category: 'Main features' },
+    { path: '/pdf-export', name: 'PDF Export', component: PdfExportDemo, category: 'Main features' },
     { path: '/export', name: 'Export Data', component: ExportDemo, category: 'Main features' },
     { path: '/clipboard', name: 'Clipboard Copy', component: ClipboardDemo, category: 'Main features' },
     { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
@@ -141,7 +143,7 @@ export default function App() {
                         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="OpenGridX Logo" className="app-logo" />
                         <h2 className="app-title">
                             OpenGridX
-                            <span className="app-version">v1.1.0</span>
+                            <span className="app-version">v1.2.0</span>
                         </h2>
                     </div>
 
