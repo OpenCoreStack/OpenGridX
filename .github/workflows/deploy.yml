@@ -34,6 +34,7 @@ jobs:
           mkdir -p deploy-out
           cp -r demo/dist/* deploy-out/
           cp deploy-out/index.html deploy-out/404.html
+          cp llms.txt deploy-out/
           touch deploy-out/.nojekyll
 
       - name: Deploy to GitHub Pages 🚀
