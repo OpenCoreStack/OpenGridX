@@ -5,6 +5,17 @@
 
 ---
 
+## [2.0.1] — 2026-09-08
+
+### Documentation
+
+- **`unique` aggregation function documented in changelog** — `unique` (count of distinct non-null
+  values via `Set`) has been a built-in aggregation function since v1. The v2.0.0 changelog entry
+  for `availableAggregationFunctions` now explicitly lists all six built-in names: `sum`, `avg`,
+  `count`, `min`, `max`, `unique`.
+
+---
+
 ## [2.0.0] — 2026-09-08
 
 ### Breaking
@@ -34,7 +45,8 @@
   `GridRowMeta.groupLabel`. Falls back to `"${field}: ${value}"` when omitted.
 - **`availableAggregationFunctions` honored** — per-column `availableAggregationFunctions?: string[]`
   now gates which aggregation functions are computed in `useAggregation`. Functions not in the
-  allowed list are skipped for that field.
+  allowed list are skipped for that field. Built-in function names (all available since v1):
+  `sum`, `avg`, `count`, `min`, `max`, `unique` (count of distinct non-null values).
 - **`multiSort` prop** — new `multiSort?: boolean` on `DataGrid`. When `true`, every click on a
   sortable column header appends/cycles that column in the sort model instead of replacing it — no
   Shift key required. Shift+click continues to work as an append gesture regardless of this prop.
