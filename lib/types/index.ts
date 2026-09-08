@@ -817,6 +817,8 @@ export interface GridApi {
   getAllRows: () => GridRowModel[];
   /** Returns all rows currently visible after filtering and sorting. */
   getVisibleRows: () => GridRowModel[];
+  /** Returns all filtered and sorted rows, ignoring pagination. Use this for full-dataset exports. */
+  getAllFilteredRows: () => GridRowModel[];
   /** Returns the current aggregation results. */
   getAggregationResult: () => Record<string, unknown> | null;
   /** Returns the active aggregation configuration. */

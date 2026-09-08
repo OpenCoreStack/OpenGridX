@@ -12,20 +12,23 @@ interface Product {
     rating: number;
 }
 
-const baseRows: Product[] = [
-    { id: 1, name: 'Widget Alpha',  price: 29.99,  rating: 4 },
-    { id: 2, name: 'Gadget Beta',   price: 49.99,  rating: 3 },
-    { id: 3, name: 'Device Gamma',  price: 99.99,  rating: 5 },
-    { id: 4, name: 'Tool Delta',    price: 19.99,  rating: 2 },
-    { id: 5, name: 'Unit Epsilon',  price: 74.99,  rating: 4 },
-    { id: 6, name: 'Module Zeta',   price: 39.99,  rating: 5 },
-    { id: 7, name: 'Part Eta',      price: 14.99,  rating: 3 },
-    { id: 8, name: 'Block Theta',   price: 59.99,  rating: 1 },
-];
+const NAMES = ['Widget Alpha', 'Gadget Beta', 'Device Gamma', 'Tool Delta', 'Unit Epsilon',
+    'Module Zeta', 'Part Eta', 'Block Theta', 'Core Iota', 'Chip Kappa'];
+
+function makeRows(): Product[] {
+    return Array.from({ length: 100 }, (_, i) => ({
+        id: i + 1,
+        name: `${NAMES[i % NAMES.length]} ${i + 1}`,
+        price: parseFloat((9.99 + (i % 20) * 5).toFixed(2)),
+        rating: (i % 5) + 1,
+    }));
+}
+
+const THROW_IDS = new Set([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
 
 const staticColumns: GridColDef<Product>[] = [
     { field: 'id',    headerName: 'ID',    width: 70,  type: 'number' },
-    { field: 'name',  headerName: 'Name',  width: 200 },
+    { field: 'name',  headerName: 'Name',  width: 220 },
     {
         field: 'price',
         headerName: 'Price',
@@ -38,9 +41,8 @@ const staticColumns: GridColDef<Product>[] = [
 ];
 
 export default function CellErrorBoundaryDemo() {
-    const [forceThrow, setForceThrow] = useState(false);
-    // Changing rows reference resets the per-cell error boundaries (resetKey).
-    const [rows, setRows] = useState<Product[]>(baseRows);
+    const [throwingIds, setThrowingIds] = useState<Set<number>>(new Set());
+    const [rows, setRows] = useState<Product[]>(makeRows);
 
     const columns = useMemo<GridColDef<Product>[]>(() => [
         ...staticColumns,
@@ -49,7 +51,7 @@ export default function CellErrorBoundaryDemo() {
             headerName: 'Rating',
             width: 160,
             renderCell: (params) => {
-                if (forceThrow || params.row.id % 3 === 0) {
+                if (throwingIds.has(params.row.id)) {
                     throw new Error(`Cannot render rating for row ${params.row.id}`);
                 }
                 const rating = params.value as number;
@@ -60,54 +62,60 @@ export default function CellErrorBoundaryDemo() {
                 );
             },
         },
-    ], [forceThrow]);
+    ], [throwingIds]);
 
-    const handleToggle = () => {
-        const next = !forceThrow;
-        setForceThrow(next);
-        // Produce a new rows array so the grid sees fresh data and resets boundaries.
-        setRows(baseRows.map((r) => ({ ...r })));
+    const handleMakeThrow = () => {
+        setThrowingIds(THROW_IDS);
+        setRows(r => r.map(row => ({ ...row })));
     };
+
+    const handleRestore = () => {
+        setThrowingIds(new Set());
+        // New row object references are required — resetKey={row} in Cell.tsx resets
+        // the per-cell error boundary only when the row object reference changes.
+        setRows(makeRows());
+    };
+
+    const isThrowActive = throwingIds.size > 0;
 
     return (
         <DocsLayout
             title="Cell Error Boundary"
-            description="A renderCell that throws is caught per-cell by CellErrorBoundary (v1.1.0) — the rest of the grid continues rendering normally. When data changes the boundary auto-recovers."
+            description="A renderCell that throws is caught per-cell — the rest of the grid continues rendering normally. Click 'Make 10 rows throw' to trigger errors, then 'Restore' to watch auto-recovery."
             sourceCode={sourceCode}
         >
             <p style={{ marginBottom: 12, color: '#475569', fontSize: '0.875rem' }}>
-                Rows 3 and 6 have a <code>renderCell</code> that throws. The{' '}
-                <strong>CellErrorBoundary</strong> (v1.1.0) catches the error and shows ⚠ in that cell
-                only — the rest of the grid keeps rendering. Click &quot;Make all rows throw&quot; to see
-                every rating cell fail, then &quot;Restore&quot; to watch the auto-recovery via the
-                internal <code>resetKey</code>.
+                Rows 10, 20, 30 … 100 have a <code>renderCell</code> that throws.{' '}
+                <strong>CellErrorBoundary</strong> catches each throw and shows ⚠ in that cell
+                only — the rest of the grid keeps rendering. Click <strong>Restore</strong> to
+                reset all boundaries by providing fresh row references.
             </p>
 
             <div style={{ marginBottom: 16 }}>
                 <button
-                    onClick={handleToggle}
+                    onClick={isThrowActive ? handleRestore : handleMakeThrow}
                     style={{
                         padding: '6px 16px',
                         borderRadius: 6,
                         border: '1px solid #e2e8f0',
-                        background: forceThrow ? '#ef4444' : '#fff',
-                        color:      forceThrow ? '#fff' : '#374151',
+                        background: isThrowActive ? '#ef4444' : '#fff',
+                        color:      isThrowActive ? '#fff' : '#374151',
                         cursor: 'pointer',
                         fontSize: '0.875rem',
-                        fontWeight: forceThrow ? 600 : 400,
+                        fontWeight: isThrowActive ? 600 : 400,
                     }}
                 >
-                    {forceThrow ? 'Restore' : 'Make all rows throw'}
+                    {isThrowActive ? 'Restore' : 'Make 10 rows throw'}
                 </button>
             </div>
 
             <DataGrid
                 rows={rows}
                 columns={columns}
-                height={400}
+                height={460}
                 pagination
-                pageSizeOptions={[8, 25]}
-                initialState={{ pagination: { paginationModel: { pageSize: 8, page: 0 } } }}
+                pageSizeOptions={[10, 25, 50]}
+                initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
             />
         </DocsLayout>
     );

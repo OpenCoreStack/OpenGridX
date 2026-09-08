@@ -467,6 +467,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     useEffect(() => {
         gridData.apiRef.current.getVisibleRows = () => pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
+        gridData.apiRef.current.getAllFilteredRows = () => sortedUnpinnedRows;
         gridData.apiRef.current.getVisibleColumns = () => effectiveColumns as unknown as GridColDef[];
     }, [sortedUnpinnedRows, paginatedUnpinnedRows, pagination, effectiveColumns, gridData.apiRef]);
 

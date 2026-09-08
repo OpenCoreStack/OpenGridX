@@ -15,7 +15,6 @@ const mockAddImage = vi.fn();
 const mockSetPage = vi.fn();
 
 class MockJsPDF {
-    autoTable = mockAutoTable;
     save = mockSave;
     setFontSize = mockSetFontSize;
     setFont = mockSetFont;
@@ -35,7 +34,7 @@ class MockJsPDF {
 }
 
 vi.mock('jspdf', () => ({ default: MockJsPDF }));
-vi.mock('jspdf-autotable', () => ({}));
+vi.mock('jspdf-autotable', () => ({ default: mockAutoTable }));
 
 const sampleColumns: GridColDef[] = [
     { field: 'name', headerName: 'Name', width: 150 },
@@ -72,7 +71,7 @@ describe('exportToPdf', () => {
     it('excludes columns with exportable: false and system columns', async () => {
         const { exportToPdf } = await import('./exportToPdf');
         await exportToPdf(sampleRows, sampleColumns);
-        const call = mockAutoTable.mock.calls[0][0];
+        const call = mockAutoTable.mock.calls[0][1];
         // head should only have Name and Salary — not Hidden or __check__
         expect(call.head[0]).toEqual(['Name', 'Salary']);
     });
@@ -80,7 +79,7 @@ describe('exportToPdf', () => {
     it('applies valueFormatter to cell values', async () => {
         const { exportToPdf } = await import('./exportToPdf');
         await exportToPdf(sampleRows, sampleColumns);
-        const call = mockAutoTable.mock.calls[0][0];
+        const call = mockAutoTable.mock.calls[0][1];
         // salary column should be formatted
         expect(call.body[0][1]).toBe('$90000');
         expect(call.body[1][1]).toBe('$80000');
@@ -89,7 +88,7 @@ describe('exportToPdf', () => {
     it('filters to selectedRows when provided', async () => {
         const { exportToPdf } = await import('./exportToPdf');
         await exportToPdf(sampleRows, sampleColumns, { selectedRows: [1] });
-        const call = mockAutoTable.mock.calls[0][0];
+        const call = mockAutoTable.mock.calls[0][1];
         expect(call.body).toHaveLength(1);
         expect(call.body[0][0]).toBe('Alice');
     });
@@ -100,7 +99,7 @@ describe('exportToPdf', () => {
             aggregationResult: { salary: 170000 },
             aggregationModel: { salary: 'sum' },
         });
-        const call = mockAutoTable.mock.calls[0][0];
+        const call = mockAutoTable.mock.calls[0][1];
         expect(call.foot).toBeDefined();
         expect(call.foot[0][1]).toBe('$170000');
     });

@@ -13,7 +13,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Tests:** Vitest 4 + `@testing-library/react` (`renderHook` for hooks, component tests for UI)
 - **Build:** Vite (library mode). `npm run build` produces `dist/opengridx.es.js` and `dist/opengridx.umd.js`.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 1.2.1
+- **Current version:** 1.2.2
 
 ---
 
@@ -124,6 +124,17 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Zero `eslint-disable` or `@ts-ignore` — fix the root cause
 - Zero `any` — use `unknown` or explicit interfaces
 - Never add `Co-Authored-By` AI attribution to commit messages
+
+---
+
+## v1.2.2 — significant changes
+
+- **`CellErrorBoundary` CellRenderTarget pattern** — `renderFn` is now called inside a module-scope `CellRenderTarget` child component so the throw happens in a descendant; boundaries cannot catch errors in their own `render()`
+- **`resetKey={row}`** — error boundary resets when the row object reference changes (not just the cell value), so "Restore" correctly clears error state after fresh row objects are provided
+- **`getAllFilteredRows()` API** — new `GridApi` method returning all filtered+sorted rows regardless of pagination; use for full-dataset exports
+- **PDF aggregation footer** — `PdfExportDemo` now computes the aggregation directly from exported rows (bypasses `useEffect`-based `getAggregationResult`); footer now reliably appears with correct values
+- **PDF footer text color** — aggregation footer row text is now explicitly black (`[0,0,0]`) instead of inheriting the default (which could render invisible against the light gray fill)
+- **`exportToPdf` standalone API** — uses `autoTable(doc, opts)` standalone function instead of `doc.autoTable(opts)` to avoid unreliable ESM prototype patching
 
 ---
 

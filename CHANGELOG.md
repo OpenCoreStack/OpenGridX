@@ -5,6 +5,31 @@
 
 ---
 
+## [1.2.2] — 2026-09-08
+
+### Fixed
+- `CellErrorBoundary` — moved `renderFn()` call into a module-scope `CellRenderTarget`
+  child component so the throw happens in a descendant; a boundary cannot catch errors
+  thrown inside its own `render()`.
+- `CellErrorBoundary` — changed `resetKey` from `value` to `row` object reference so the
+  boundary resets whenever fresh row objects are provided, not just when the cell value
+  changes. Enables "Restore" to clear error state correctly.
+- `exportToPdf` — aggregation footer now computed directly from the exported rows in the
+  demo, bypassing the `useEffect`-based `getAggregationResult()` path that could silently
+  return `null` due to stale closures.
+- `exportToPdf` — aggregation footer text color is now explicitly `[0, 0, 0]` (black) to
+  prevent text from appearing invisible against the light gray footer background.
+- `exportToPdf` — switched to standalone `autoTable(doc, opts)` function to avoid
+  unreliable ESM prototype patching in Vite dynamic imports.
+
+### Added
+- `GridApi.getAllFilteredRows()` — returns all filtered and sorted rows regardless of
+  pagination. Use this in export handlers to include every row, not just the current page.
+- `CellErrorBoundaryDemo` — 100 rows, 10 specific rows throw on demand (rows 10, 20 … 100),
+  with correct Restore behaviour.
+
+---
+
 ## [1.2.1] — 2026-09-07
 
 ### Fixed

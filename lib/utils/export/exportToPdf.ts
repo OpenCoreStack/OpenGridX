@@ -6,9 +6,7 @@ import type {
 } from '../../types';
 import { formatAggregationValue } from '../../hooks/features/useAggregation';
 
-// jsPDF plugin augments the jsPDF prototype — we type only what we use
 interface JsPDFDoc {
-    autoTable: (opts: AutoTableOptions) => void;
     save: (filename: string) => void;
     setFontSize: (size: number) => void;
     setFont: (name: string, style: string) => void;
@@ -112,10 +110,14 @@ export async function exportToPdf<R extends GridRowModel>(
 ): Promise<void> {
     // Lazy-load peer deps — provides a clear error if not installed
     let JsPDF: new (opts: Record<string, unknown>) => JsPDFDoc;
+    let autoTable: (doc: JsPDFDoc, opts: AutoTableOptions) => void;
     try {
-        const mod = await import('jspdf');
-        JsPDF = mod.default as unknown as new (opts: Record<string, unknown>) => JsPDFDoc;
-        await import('jspdf-autotable');
+        const [jspdfMod, autoTableMod] = await Promise.all([
+            import('jspdf'),
+            import('jspdf-autotable'),
+        ]);
+        JsPDF = jspdfMod.default as unknown as new (opts: Record<string, unknown>) => JsPDFDoc;
+        autoTable = autoTableMod.default as unknown as (doc: JsPDFDoc, opts: AutoTableOptions) => void;
     } catch {
         throw new Error(
             "exportToPdf requires 'jspdf' and 'jspdf-autotable'. Run: npm install jspdf jspdf-autotable"
@@ -235,7 +237,7 @@ export async function exportToPdf<R extends GridRowModel>(
     const [hr, hg, hb] = hexToRgb(headerBackgroundColor);
     const [tr, tg, tb] = hexToRgb(headerTextColor);
 
-    doc.autoTable({
+    autoTable(doc, {
         head,
         body,
         ...(foot ? { foot } : {}),
@@ -250,7 +252,7 @@ export async function exportToPdf<R extends GridRowModel>(
             ? { alternateRowStyles: { fillColor: [248, 250, 252] } }
             : {}),
         ...(foot
-            ? { footStyles: { fillColor: [241, 245, 249], fontStyle: 'bold' } }
+            ? { footStyles: { fillColor: [241, 245, 249], fontStyle: 'bold', textColor: [0, 0, 0] } }
             : {}),
         columnStyles,
         showFoot: foot ? 'lastPage' : 'never',
