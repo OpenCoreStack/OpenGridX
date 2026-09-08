@@ -13,7 +13,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Tests:** Vitest 4 + `@testing-library/react` (`renderHook` for hooks, component tests for UI)
 - **Build:** Vite (library mode). `npm run build` produces `dist/opengridx.es.js` and `dist/opengridx.umd.js`.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 1.2.2
+- **Current version:** 1.2.3
 
 ---
 
@@ -124,6 +124,13 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Zero `eslint-disable` or `@ts-ignore` — fix the root cause
 - Zero `any` — use `unknown` or explicit interfaces
 - Never add `Co-Authored-By` AI attribution to commit messages
+
+---
+
+## v1.2.3 — significant changes
+
+- **`hideable: false` columns excluded from Columns panel** — `ColumnVisibilityPanel` now filters out columns with `hideable: false` by default, removing the permanently-disabled rows that added visual noise. Columns still render in the grid body and exports unchanged.
+- **`GridToolbarProps.showNonHideableColumns`** — new optional boolean prop. Pass `true` to restore the old behavior (show non-hideable columns as disabled rows in the panel). Default: `false`.
 
 ---
 

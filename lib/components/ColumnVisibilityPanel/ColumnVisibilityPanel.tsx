@@ -11,6 +11,8 @@ export interface ColumnVisibilityPanelProps<R extends GridRowModel = GridRowMode
     onHideAll: () => void;
     onColumnReorder?: (fromField: string, toField: string) => void;
     onColumnOrderReset?: () => void;
+    /** Show columns with `hideable: false` in the panel as disabled rows. Default: false. */
+    showNonHideableColumns?: boolean;
 }
 
 function SearchIcon() {
@@ -44,7 +46,7 @@ function DragHandleIcon() {
 export function ColumnVisibilityPanel<R extends GridRowModel = GridRowModel>(
     props: ColumnVisibilityPanelProps<R>
 ) {
-    const { columns, visibleColumns, onVisibilityChange, onShowAll, onHideAll, onColumnReorder, onColumnOrderReset } = props;
+    const { columns, visibleColumns, onVisibilityChange, onShowAll, onHideAll, onColumnReorder, onColumnOrderReset, showNonHideableColumns } = props;
     const [searchQuery, setSearchQuery] = useState('');
     const [dragOverField, setDragOverField] = useState<string | null>(null);
     const dragFieldRef = useRef<string | null>(null);
@@ -53,12 +55,13 @@ export function ColumnVisibilityPanel<R extends GridRowModel = GridRowModel>(
     const allVisible = hideableColumns.every(col => visibleColumns.has(col.field));
 
     const filteredColumns = useMemo(() => {
-        if (!searchQuery) return columns;
+        const base = showNonHideableColumns ? columns : hideableColumns;
+        if (!searchQuery) return base;
         const lowerQuery = searchQuery.toLowerCase();
-        return columns.filter(col =>
+        return base.filter(col =>
             (col.headerName || col.field).toLowerCase().includes(lowerQuery)
         );
-    }, [columns, searchQuery]);
+    }, [columns, hideableColumns, searchQuery, showNonHideableColumns]);
 
     const handleToggleAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {

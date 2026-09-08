@@ -74,6 +74,8 @@ export interface GridToolbarProps {
     renderQuickFilter?: (props: ToolbarQuickFilterRenderProps) => React.ReactNode;
     /** Additional CSS class applied to the toolbar root element. */
     className?: string;
+    /** Show columns with `hideable: false` in the Columns panel as disabled rows. Default: false. */
+    showNonHideableColumns?: boolean;
 }
 
 const AGGREGATION_FUNCTIONS = ['none', 'sum', 'avg', 'count', 'min', 'max'] as const;
@@ -248,7 +250,8 @@ function ColumnsPanelWrapper({
     onHideAll,
     onColumnReorder,
     onColumnOrderReset,
-    onClose
+    onClose,
+    showNonHideableColumns,
 }: {
     anchorRef: React.RefObject<HTMLElement | null>;
     columns: GridColDef[];
@@ -259,6 +262,7 @@ function ColumnsPanelWrapper({
     onColumnReorder?: (fromField: string, toField: string) => void;
     onColumnOrderReset?: () => void;
     onClose: () => void;
+    showNonHideableColumns?: boolean;
 }) {
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<PanelPosition>({ top: 0, right: 0 });
@@ -317,6 +321,7 @@ function ColumnsPanelWrapper({
                 onHideAll={onHideAll}
                 onColumnReorder={onColumnReorder}
                 onColumnOrderReset={onColumnOrderReset}
+                showNonHideableColumns={showNonHideableColumns}
             />
         </div>
     );
@@ -464,6 +469,7 @@ export function GridToolbar({
     renderExportButton,
     renderQuickFilter,
     className,
+    showNonHideableColumns,
 }: GridToolbarProps) {
     const [aggOpen, setAggOpen] = useState(false);
     const [pivotOpen, setPivotOpen] = useState(false);
@@ -631,6 +637,7 @@ export function GridToolbar({
                                 onColumnReorder={onColumnReorder}
                                 onColumnOrderReset={onColumnOrderReset}
                                 onClose={() => { setColsOpen(false); onColumnsPanelClose?.(); }}
+                                showNonHideableColumns={showNonHideableColumns}
                             />
                         )}
                     </div>

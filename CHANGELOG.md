@@ -5,6 +5,22 @@
 
 ---
 
+## [1.2.3] — 2026-09-08
+
+### Fixed
+- `GridToolbar` Columns panel — columns with `hideable: false` are now excluded from
+  the panel list by default. Previously they appeared as permanently disabled rows,
+  adding visual noise for no benefit (users can never toggle them). The column still
+  renders normally in the grid body and in exports — only the Columns panel list changes.
+
+### Added
+- `GridToolbarProps.showNonHideableColumns?: boolean` — opt-out prop. Set to `true` to
+  restore the old behavior and show `hideable: false` columns in the panel as disabled
+  rows. Default: `false`. No other API surface changed; this is a backward-compatible
+  addition.
+
+---
+
 ## [1.2.2] — 2026-09-08
 
 ### Fixed
