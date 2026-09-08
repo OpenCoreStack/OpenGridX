@@ -85,6 +85,7 @@ export default function PdfExportDemo() {
     const [includeAgg, setIncludeAgg] = useState(true);
     const [selectedOnly, setSelectedOnly] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
 
     const handleExport = useCallback(async () => {
         if (!apiRef.current) return;
@@ -241,7 +242,8 @@ export default function PdfExportDemo() {
                 rows={ALL_ROWS}
                 columns={COLUMNS}
                 pagination
-                paginationModel={{ page: 0, pageSize: 10 }}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
                 checkboxSelection
                 aggregationModel={aggregationModel}
                 onAggregationModelChange={setAggregationModel}
