@@ -95,10 +95,10 @@ export function useGridColumns<R extends GridRowModel>(
                         }
 
                         if (isRowGrouping && hasChildren && groupingField) {
+                            const groupLabel = meta?.groupLabel ?? `${groupingField}: ${String(groupingValue)}`;
                             content = (
                                 <div className="ogx__group-cell-content">
-                                    {col.field === groupingField ? '' : `${groupingField}: `}
-                                    {String(groupingValue)}
+                                    {groupLabel}
                                     {descendantCount !== undefined ? ` (${descendantCount})` : ''}
                                 </div>
                             );

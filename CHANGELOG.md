@@ -5,6 +5,47 @@
 
 ---
 
+## [2.0.0] — 2026-09-08
+
+### Breaking
+
+- **Removed dead public API:** `onPinnedRowsChange` and `onRowGroupingModelChange` are removed from
+  `DataGridProps`. Both props accepted callbacks that were never invoked — no pin/unpin-row UI and no
+  drag-to-group UI exist. Callers that passed these callbacks should simply remove them; grid
+  behavior is unchanged.
+
+### Added
+
+- **`density` wired** — `density?: 'compact' | 'standard' | 'comfortable'` now sets the
+  `--ogx-row-height` CSS variable (compact = 32 px, standard = `rowHeight`, comfortable = 72 px).
+  Previously accepted but silently discarded.
+- **`disableRowSelectionOnClick`** — clicking a row no longer triggers selection when this prop is
+  `true`. Previously wired to internal state only; `onRowSelectionModelChange` is now also fired.
+- **`disableMultipleRowSelection`** — clicking a row while this prop is `true` caps selection to
+  that single row (deselects others). Clicking an already-selected row deselects it.
+- **`groupingColDef` implemented** — passing `groupingColDef` when `rowGroupingModel` is active now
+  creates a dedicated `__group__` column at position 0, auto-pinned left. Previously the prop was
+  accepted but had no runtime effect.
+- **`groupable: false` honored** — columns with `groupable: false` are now skipped when building the
+  grouping tree in `useRowGrouping`. Previously this flag was silently ignored.
+- **`groupingValueFormatter` on `GridColDef`** — new optional field
+  `groupingValueFormatter?: (params: { field: string; value: unknown }) => string` customizes the
+  label shown for group-header rows at that level. The formatted string flows through
+  `GridRowMeta.groupLabel`. Falls back to `"${field}: ${value}"` when omitted.
+- **`availableAggregationFunctions` honored** — per-column `availableAggregationFunctions?: string[]`
+  now gates which aggregation functions are computed in `useAggregation`. Functions not in the
+  allowed list are skipped for that field.
+- **`multiSort` prop** — new `multiSort?: boolean` on `DataGrid`. When `true`, every click on a
+  sortable column header appends/cycles that column in the sort model instead of replacing it — no
+  Shift key required. Shift+click continues to work as an append gesture regardless of this prop.
+- **Multi-sort shift-click** — shift-clicking a column header appends the column to `sortModel`
+  rather than replacing it. A numbered priority badge appears next to the sort arrow when more than
+  one sort key is active. Plain click still replaces with a single-key sort (unless `multiSort` is set).
+- **`description` tooltip** — `description?: string` on `GridColDef` now renders as the native
+  `title` attribute on the header cell, providing a browser tooltip on hover.
+
+---
+
 ## [1.3.0] — 2026-09-08
 
 ### Added

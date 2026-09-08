@@ -81,4 +81,57 @@ describe('useRowGrouping — rowMetaMap', () => {
             }
         });
     });
+
+    it('populates groupLabel from groupingValueFormatter when provided', () => {
+        const formatter = ({ field, value }: { field: string; value: unknown }) =>
+            `${String(field).toUpperCase()}: ${String(value)}`;
+        const columns = [{ field: 'dept', groupingValueFormatter: formatter }];
+        const { result } = renderHook(() =>
+            useRowGrouping({ ...BASE_PARAMS, columns })
+        );
+        const map = result.current.rowMetaMap;
+        let foundFormatted = false;
+        map.forEach((meta) => {
+            if (meta.isGroupRow) {
+                expect(meta.groupLabel).toMatch(/^DEPT:/);
+                foundFormatted = true;
+            }
+        });
+        expect(foundFormatted).toBe(true);
+    });
+
+    it('uses default field: value label when groupingValueFormatter is absent', () => {
+        const { result } = renderHook(() => useRowGrouping(BASE_PARAMS));
+        const map = result.current.rowMetaMap;
+        map.forEach((meta) => {
+            if (meta.isGroupRow) {
+                expect(meta.groupLabel).toMatch(/^dept:/);
+            }
+        });
+    });
+});
+
+describe('useRowGrouping — groupable: false', () => {
+    it('skips a column with groupable:false — no group rows created for that field', () => {
+        const columns = [{ field: 'dept', groupable: false as const }];
+        const { result } = renderHook(() =>
+            useRowGrouping({ ...BASE_PARAMS, columns })
+        );
+        const map = result.current.rowMetaMap;
+        // With groupable:false on 'dept', no group rows should exist
+        let groupCount = 0;
+        map.forEach((meta) => { if (meta.isGroupRow) groupCount++; });
+        expect(groupCount).toBe(0);
+    });
+
+    it('still groups when groupable is true (explicit)', () => {
+        const columns = [{ field: 'dept', groupable: true as const }];
+        const { result } = renderHook(() =>
+            useRowGrouping({ ...BASE_PARAMS, columns })
+        );
+        const map = result.current.rowMetaMap;
+        let groupCount = 0;
+        map.forEach((meta) => { if (meta.isGroupRow) groupCount++; });
+        expect(groupCount).toBe(2);
+    });
 });

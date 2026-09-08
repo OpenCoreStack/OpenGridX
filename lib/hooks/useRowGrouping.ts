@@ -7,7 +7,8 @@ import type {
     GridTreeNode,
     GridFilterModel,
     GridSortItem,
-    GridRowMeta
+    GridRowMeta,
+    GridColDef
 } from '../types';
 import { isRowMatchingFilter } from '../utils/filtering';
 import { compareValues } from '../utils/sorting';
@@ -15,6 +16,7 @@ import { compareValues } from '../utils/sorting';
 export interface UseRowGroupingParams<R extends GridRowModel> {
     rows: R[];
     getRowId: (row: R) => GridRowId;
+    columns?: GridColDef<R>[];
     rowGroupingModel?: GridRowGroupingModel;
     aggregationModel?: GridAggregationModel;
     defaultGroupingExpansionDepth?: number;
@@ -38,6 +40,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
     const {
         rows,
         getRowId,
+        columns,
         rowGroupingModel = EMPTY_ROW_GROUPING_MODEL,
         aggregationModel = EMPTY_AGGREGATION_MODEL,
         defaultGroupingExpansionDepth = 0,
@@ -45,6 +48,12 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
         sortModel,
         getAggregationPosition = defaultGetAggregationPosition
     } = params;
+
+    const columnsLookup = useMemo(() => {
+        const map = new Map<string, GridColDef<R>>();
+        (columns ?? []).forEach(col => map.set(col.field, col));
+        return map;
+    }, [columns]);
 
     const [expandedGroupIds, setExpandedGroupIds] = useState<Set<GridRowId>>(new Set());
 
@@ -82,6 +91,13 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
             }
 
             const field = rowGroupingModel[depth];
+
+            // Skip fields where the column has explicitly opted out of grouping.
+            const colDef = columnsLookup.get(field);
+            if (colDef && colDef.groupable === false) {
+                return groupRows(currentRows, depth + 1, parentId);
+            }
+
             const groups = new Map<string, R[]>();
 
             // Group current rows by value of the current field
@@ -143,7 +159,9 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                     aggregatedValues,
                     isExpanded: false,
                     children: [], 
-                    label: `${field}: ${String(rawValue)}` 
+                    label: colDef?.groupingValueFormatter
+                        ? colDef.groupingValueFormatter({ field, value: rawValue })
+                        : `${field}: ${String(rawValue)}` 
                 };
 
                 treeNode.aggregationPosition = getAggregationPosition(treeNode);
@@ -165,7 +183,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
         return { treeNodes, rootIds, groupingRows };
 
-    }, [rows, rowGroupingModel, aggregationModel, getRowId, getAggregationPosition]);
+    }, [rows, rowGroupingModel, aggregationModel, getRowId, getAggregationPosition, columnsLookup]);
 
     useEffect(() => {
         if (defaultGroupingExpansionDepth === -1) {
@@ -307,6 +325,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                 treeDepth: node.depth,
                 groupingField: node.groupingField,
                 groupingValue: node.groupingValue,
+                groupLabel: node.label,
                 descendantCount: node.descendantCount,
                 isGroupRow: isGroup,
                 isExpanded: isGroup ? expandedGroupIds.has(id) : undefined,

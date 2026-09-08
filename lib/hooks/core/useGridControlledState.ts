@@ -81,7 +81,7 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
         onPinnedColumnsChange,
         pivotModel: propPivotModel,
         onPivotModelChange,
-        paginationModel: propPaginationModel = { page: 0, pageSize: 100 },
+        paginationModel: propPaginationModel,
         onPaginationModelChange,
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange,
@@ -144,9 +144,9 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
     }, [onPivotModelChange]);
 
     // ── Pagination ───────────────────────────────────────────────────────────
-    const isPaginationControlled = propPaginationModel !== undefined && params.paginationModel !== undefined;
+    const isPaginationControlled = propPaginationModel !== undefined;
     const [internalPaginationModel, setInternalPaginationModel] = useState<GridPaginationModel>(
-        () => initialState?.pagination?.paginationModel ?? propPaginationModel
+        () => initialState?.pagination?.paginationModel ?? propPaginationModel ?? { page: 0, pageSize: 100 }
     );
     const effectivePaginationModel = isPaginationControlled ? propPaginationModel : internalPaginationModel;
 

@@ -9,7 +9,9 @@ Manages the column headers, sorting triggers, column resizing, and column groupi
 | `columns` | `GridColDef[]` | Column definitions for the visible viewport. |
 | `columnGroupingModel` | `GridColumnGroupingModel` | Hierarchy for multi-level header spanning. |
 | `sortModel` | `GridSortModel` | Current sorting state for highlight and icons. |
-| `onSort` | `(field, direction) => void` | Callback triggered when a header is clicked. |
+| `onSort` | `(field, direction) => void` | Callback triggered on a plain click — replaces the sort model with a single key. |
+| `onSortAdd` | `(field, direction) => void` | Callback triggered on Shift+click or when `multiSort` is active — appends/cycles the key without replacing others. |
+| `multiSort` | `boolean` | When `true`, every click routes to `onSortAdd` instead of `onSort`. Wired from the `multiSort` prop on `<DataGrid>`. |
 | `onColumnResize` | `Function` | Callback for manual column width changes. |
 | `pinnedColumns` | `GridColumnPinning` | Coordinates sticky positioning for headers. |
 | `checkboxSelection` | `boolean` | Renders the "Select All" checkbox. |

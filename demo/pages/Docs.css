@@ -201,3 +201,26 @@
     gap: 16px;
     justify-content: center;
 }
+
+.docs-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.docs-checklist label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    cursor: default;
+    line-height: 1.5;
+}
+
+.docs-checklist input[type="checkbox"] {
+    margin-top: 2px;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    cursor: default;
+}

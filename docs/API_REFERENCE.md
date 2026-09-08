@@ -45,6 +45,7 @@ The main component for displaying and interacting with data.
 | :--- | :--- | :--- | :--- |
 | `sortingMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles sorting. The grid calls `onSortModelChange` but does not re-sort rows locally. |
 | `filterMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles filtering. The grid calls `onFilterModelChange` but does not re-filter rows locally. |
+| `multiSort` | `boolean` | `false` | When `true`, clicking any sortable column header appends/cycles it in the sort model instead of replacing it — no Shift key required. Shift+click always appends regardless of this prop. |
 | `onSortModelChange` | `(model: GridSortItem[]) => void` | — | Fired when the active sort model changes. |
 | `onFilterModelChange` | `(model: GridFilterModel) => void` | — | Fired when the active filter model changes. |
 
@@ -81,7 +82,6 @@ The main component for displaying and interacting with data.
 | `pinnedColumns` | `GridColumnPinning` | — | Columns pinned to the left or right viewport edges. See [Column & Row Pinning](#-column--row-pinning). |
 | `onPinnedColumnsChange` | `(model: GridColumnPinning) => void` | — | Fired when column pinning changes. |
 | `pinnedRows` | `GridRowPinning` | — | Row IDs pinned to the top or bottom of the viewport. |
-| `onPinnedRowsChange` | `(model: GridRowPinning) => void` | — | Fired when row pinning changes. |
 | `pinCheckboxColumn` | `boolean` | `false` | Keeps the checkbox column visible during horizontal scrolling. |
 | `pinExpandColumn` | `boolean` | `false` | Keeps the Master-Detail expansion column visible during horizontal scrolling. |
 
@@ -107,7 +107,7 @@ The main component for displaying and interacting with data.
 | :--- | :--- | :--- | :--- |
 | `treeData` | `boolean` | `false` | Enables hierarchical tree data display. |
 | `getTreeDataPath` | `(row: R) => string[]` | — | Returns the hierarchy path for a row (e.g. `['Engineering', 'Frontend']`). |
-| `groupingColDef` | `GridColDef` | — | Overrides the auto-generated tree expand/collapse column definition. |
+| `groupingColDef` | `Partial<GridColDef>` | — | Configures the dedicated `__group__` column prepended at position 0 (auto-pinned left) when row grouping is active. Accepts `headerName`, `width`, `renderCell`, and any non-system `GridColDef` field. The column's `field` is always `'__group__'`; it is never sorted, exported, hidden, or re-ordered. |
 | `defaultGroupingExpansionDepth` | `number` | `0` | Number of tree levels expanded on initial render (`-1` = all). |
 
 #### Row Grouping & Aggregation
@@ -115,7 +115,6 @@ The main component for displaying and interacting with data.
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `rowGroupingModel` | `GridRowGroupingModel` | `[]` | Array of field names to group rows by (e.g. `['department', 'team']`). See [Row Grouping](#️-row-grouping). |
-| `onRowGroupingModelChange` | `(model: GridRowGroupingModel) => void` | — | Fired when the grouping model changes. |
 | `aggregationModel` | `GridAggregationModel` | — | Map of `field → aggFn` (e.g. `{ salary: 'sum', age: 'avg' }`). See [Aggregation Reference](#-aggregation-reference). |
 | `onAggregationModelChange` | `(model: GridAggregationModel) => void` | — | Fired when the aggregation model changes. |
 | `getAggregationPosition` | `(groupNode: GridTreeNode \| null) => 'inline' \| 'footer' \| null` | — | Controls where aggregation results appear. `'inline'` = inside the group row, `'footer'` = a dedicated row below the group, `null` = hidden. Pass `null` groupNode = grand-total (root) position. |
@@ -279,7 +278,7 @@ Defines the behavior and appearance of a single column.
 | :--- | :--- | :--- | :--- |
 | `field` | `string` | — | **Required.** Unique identifier matching the row object key. |
 | `headerName` | `string` | — | Text shown in the column header cell. |
-| `description` | `string` | — | Tooltip shown on header hover (accessibility label). |
+| `description` | `string` | — | Tooltip shown on column header hover (rendered as the HTML `title` attribute — improves accessibility). |
 | `width` | `number \| string` | `100` | Fixed width in pixels or a percentage string. |
 | `minWidth` | `number` | — | Minimum width in pixels (enforced during resize). |
 | `maxWidth` | `number` | — | Maximum width in pixels (enforced during resize). |
@@ -335,9 +334,10 @@ Defines the behavior and appearance of a single column.
 | `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. |
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header kebab/context menu. |
 | `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, and Print exports. |
-| `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. |
+| `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`. |
+| `groupingValueFormatter` | `(params: { field: string; value: unknown }) => string` | — | Custom formatter for group-header labels when this column is the active grouping field. Falls back to `"field: value"` when omitted. |
 | `aggregable` | `boolean` | `true` | Allow this column to be aggregated. |
-| `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are available for this column (e.g. `['sum', 'avg']`). |
+| `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are computed and available for this column (e.g. `['sum', 'avg']`). Functions outside this list are skipped even if set in `aggregationModel`. |
 
 ---
 
@@ -1087,7 +1087,6 @@ import { DataGrid, GridRowGroupingModel, GridAggregationModel } from '@opencores
 import { useState } from 'react';
 
 export default function GroupingExample() {
-  const [rowGroupingModel, setRowGroupingModel] = useState<GridRowGroupingModel>(['department']);
   const [aggregationModel, setAggregationModel] = useState<GridAggregationModel>({
     salary: 'sum',
     age: 'avg',
@@ -1097,8 +1096,7 @@ export default function GroupingExample() {
     <DataGrid
       rows={rows}
       columns={columns}
-      rowGroupingModel={rowGroupingModel}
-      onRowGroupingModelChange={setRowGroupingModel}
+      rowGroupingModel={['department']}
       aggregationModel={aggregationModel}
       onAggregationModelChange={setAggregationModel}
     />

@@ -42,6 +42,7 @@ const ScrollToIndexesDemo = lazy(() => import('./examples/ScrollToIndexesDemo/Sc
 const LocaleTextDemo = lazy(() => import('./examples/LocaleTextDemo/LocaleTextDemo'));
 const CellErrorBoundaryDemo = lazy(() => import('./examples/CellErrorBoundaryDemo/CellErrorBoundaryDemo'));
 const PdfExportDemo = lazy(() => import('./examples/PdfExportDemo/PdfExportDemo'));
+const MultiSortDemo = lazy(() => import('./examples/MultiSortDemo/MultiSortDemo'));
 
 const examplesConfig = [
     // Resources
@@ -51,6 +52,7 @@ const examplesConfig = [
     { path: '/api-reference', name: 'API Reference', component: lazy(() => import('./pages/APIDocumentation')), category: 'Resources' },
     { path: '/licensing', name: 'Licensing', component: lazy(() => import('./pages/Licensing')), category: 'Resources' },
     { path: '/support', name: 'Support', component: lazy(() => import('./pages/Support')), category: 'Resources' },
+    { path: '/migration-v2', name: 'Migrating to v2', component: lazy(() => import('./pages/MigrationV2')), category: 'Resources' },
 
     // Main Features
     { path: '/basic', name: 'Basic Usage', component: BasicExample, category: 'Main features' },
@@ -59,6 +61,7 @@ const examplesConfig = [
     { path: '/pdf-export', name: 'PDF Export', component: PdfExportDemo, category: 'Main features' },
     { path: '/export', name: 'Export Data', component: ExportDemo, category: 'Main features' },
     { path: '/clipboard', name: 'Clipboard Copy', component: ClipboardDemo, category: 'Main features' },
+    { path: '/multi-sort', name: 'Multi-Column Sort', component: MultiSortDemo, category: 'Main features' },
     { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
     { path: '/editing', name: 'Cell Editing', component: EditingExample, category: 'Main features' },
     { path: '/events', name: 'Events Observer', component: EventsDemo, category: 'Main features' },
@@ -143,7 +146,7 @@ export default function App() {
                         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="OpenGridX Logo" className="app-logo" />
                         <h2 className="app-title">
                             OpenGridX
-                            <span className="app-version">v1.2.1</span>
+                            <span className="app-version">v2.0.0</span>
                         </h2>
                     </div>
 

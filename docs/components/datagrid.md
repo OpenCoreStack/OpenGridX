@@ -27,11 +27,29 @@ function MyGrid() {
 | `getRowId` | `(row: R) => GridRowId` | `row.id` | Unique ID for each row. |
 | `height` | `number \| string` | `undefined` | Height of the grid container. |
 | `loading` | `boolean` | `false` | Displays a loading skeleton/shimmer. |
+| `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Row height preset: compact = 32 px, standard = `rowHeight`, comfortable = 72 px. |
 | `checkboxSelection` | `boolean` | `false` | Enable row checkboxes. |
+| `disableRowSelectionOnClick` | `boolean` | `false` | When `true`, clicking a row does not toggle its selection. |
+| `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time. |
 | `pagination` | `boolean` | `false` | Enable/Disable bottom pagination bar. |
-| `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). |
+| `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). Omit for uncontrolled; use `initialState` to set the initial page/pageSize. |
 | `pageSizeOptions` | `number[]` | `[10, 25, 50]` | Available page size options. |
-| `initialState` | `GridInitialState` | `undefined` | Initial configuration (sorting, columns, etc). |
+| `initialState` | `GridInitialState` | `undefined` | Initial configuration (sorting, columns, pagination, etc). |
+
+## 🔃 Sorting
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `sortModel` | `GridSortItem[]` | — | Controlled sort state. |
+| `onSortModelChange` | `(model: GridSortItem[]) => void` | — | Fired when the sort model changes. |
+| `multiSort` | `boolean` | `false` | When `true`, every click appends/cycles the column in the sort model instead of replacing it. Shift+click always appends regardless of this prop. |
+
+## 🌳 Row Grouping
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `rowGroupingModel` | `string[]` | `[]` | Fields to group by (in order). |
+| `groupingColDef` | `GridColDef` | — | Config for the dedicated `__group__` column created at position 0, auto-pinned left, when grouping is active. |
 
 ## 🖱️ Interaction & Events
 

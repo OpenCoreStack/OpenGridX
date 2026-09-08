@@ -30,23 +30,18 @@ The grid supports "Zebra" striping via CSS:
 
 When `getDetailPanelContent` is provided, the `<Row />` renders an expandable container below itself to show supplemental data.
 
-## ⚠️ v1.1 — Hierarchy Field Deprecation
+## ⚠️ v2.0 — Runtime `_*` hierarchy fields removed
 
-The internal hierarchy fields (`_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount`, `_isGroupRow`) are no longer typed on `GridRowModel`. They will be removed from the runtime row object in v2.0.
-
-**Before (still works at runtime in v1.1 — `params.row._hasChildren` is `unknown`, not `boolean`; assignment to typed variables and arithmetic will error, truthiness checks will not):**
+The internal hierarchy fields (`_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount`, `_isGroupRow`) are no longer injected onto the runtime row object as of v2.0. Use `params.rowMeta` instead:
 
 ```tsx
+// ❌ v1 shim — no longer works in v2:
 renderCell: (params) => {
-  // v1.1 accepts this at runtime; _hasChildren resolves to unknown via [key: string]: unknown
   const hasChildren = (params.row as Record<string, unknown>)._hasChildren;
   return hasChildren ? <GroupIcon /> : params.value;
 }
-```
 
-**After (v1.1+):**
-
-```tsx
+// ✅ v2:
 renderCell: (params) => {
   const hasChildren = params.rowMeta?.hasChildren;
   return hasChildren ? <GroupIcon /> : params.value;

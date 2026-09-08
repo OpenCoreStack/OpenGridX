@@ -6,7 +6,7 @@
 - **Project Path**: `/Volumes/Data/RND/OpenGridX`
 - **Core Value**: 100% custom implementation with ZERO external UI dependencies.
 - **Performance**: Handles 100,000+ rows via custom virtualization at 60fps.
-- **Current Version**: `0.1.5` (published to npm)
+- **Current Version**: `2.0.0` (unpublished — pending release)
 
 ## 📦 NPM Publication Status
 - **v0.1.0** → Published ✅ (March 6, 2026 — first publish)
@@ -15,6 +15,12 @@
 - **v0.1.3** → Published ✅ (March 10, 2026 — CSS auto-import fix via barrel entry)
 - **v0.1.4** → Published ✅ (March 10, 2026 — Column Visibility DnD reorder + CSS subpath export fixes)
 - **v0.1.5** → Published ✅ (March 10, 2026 — Exported missing public types: GridSortItem, GridApi, etc.)
+- **v1.1.0** → Published ✅ (GridRowMeta pattern, CellErrorBoundary, GridLocaleText, duplicate ID fix)
+- **v1.2.1** → Published ✅ (PDF export, CellErrorBoundary fix, SPA routing)
+- **v1.2.2** → Published ✅ (CellErrorBoundary CellRenderTarget, getAllFilteredRows, PDF aggregation footer)
+- **v1.2.3** → Published ✅ (hideable:false excluded from Columns panel by default)
+- **v1.3.0** → Published ✅ (GridApi.getGroupedExportRows, grouped export across all formats)
+- **v2.0.0** → Unpublished — pending release (density, multiSort, disableRowSelectionOnClick, disableMultipleRowSelection, groupingColDef, groupable:false, groupingValueFormatter, availableAggregationFunctions, pagination bug fix, removed onPinnedRowsChange + onRowGroupingModelChange)
 - **Package URL**: https://www.npmjs.com/package/@opencorestack/opengridx
 - **npm org**: `opencorestack` (owner: `asif7774`)
 - **Next publish**: bump version in `package.json`, then `npm publish --access public --otp=<code>`

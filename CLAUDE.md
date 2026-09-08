@@ -13,7 +13,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Tests:** Vitest 4 + `@testing-library/react` (`renderHook` for hooks, component tests for UI)
 - **Build:** Vite (library mode). `npm run build` produces `dist/opengridx.es.js` and `dist/opengridx.umd.js`.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 1.3.0
+- **Current version:** 2.0.0
 
 ---
 
@@ -124,6 +124,52 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Zero `eslint-disable` or `@ts-ignore` — fix the root cause
 - Zero `any` — use `unknown` or explicit interfaces
 - Never add `Co-Authored-By` AI attribution to commit messages
+
+---
+
+## v2.0.0 — significant changes (breaking)
+
+### Breaking: removed dead public API surface
+
+The following props/types existed in v1.x but had no runtime implementation. They have been **removed** from the public TypeScript types:
+
+| Removed | Type | Reason |
+| :--- | :--- | :--- |
+| `onPinnedRowsChange` | `DataGridProps` | No pin/unpin-row UI exists; callback was never called |
+| `onRowGroupingModelChange` | `DataGridProps` | No drag-to-group UI; callback was never called |
+| `description` | `GridColDef` | Not read anywhere in the grid |
+
+### New: `density` prop wired
+
+`density?: 'compact' | 'standard' | 'comfortable'` now controls `effectiveRowHeight` (compact=32, standard=`rowHeight`, comfortable=72) via CSS `--ogx-row-height`. Previously the prop was accepted but silently discarded.
+
+### New: `disableRowSelectionOnClick` and `disableMultipleRowSelection`
+
+Both props are now wired in `handleRowClick`. `disableRowSelectionOnClick` suppresses click-to-select; `disableMultipleRowSelection` caps selection to a single row.
+
+### New: `groupingColDef` implemented
+
+When `rowGroupingModel` is active, passing `groupingColDef` now creates a dedicated synthetic `__group__` column at position 0, auto-pinned left. Previously the prop was accepted but had no runtime effect.
+
+### New: `groupable: false` honored
+
+Columns with `groupable: false` are now skipped when building the grouping tree in `useRowGrouping`. Previously this flag was silently ignored.
+
+### New: `groupingValueFormatter` on `GridColDef`
+
+```ts
+groupingValueFormatter?: (params: { field: string; value: unknown }) => string
+```
+
+Customizes the label for group-header rows at that level. Falls back to `"${field}: ${value}"` when omitted. The formatted string flows through `GridRowMeta.groupLabel` so `useGridColumns` picks it up for rendering.
+
+### New: `availableAggregationFunctions` honored
+
+Per-column `availableAggregationFunctions?: string[]` now gates which aggregation functions are computed in `useAggregation`. If the current `aggregationModel` entry for a field uses a function not in that list, the aggregation is skipped for that field.
+
+### New: Multi-sort shift-click
+
+Shift-clicking a column header now appends to (or removes from) `sortModel` rather than replacing it. The sort priority badge (1, 2, 3…) appears next to the sort arrow when more than one sort key is active. Plain click still replaces with a single-key sort.
 
 ---
 

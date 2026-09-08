@@ -134,6 +134,8 @@ export interface HeaderProps<R extends GridRowModel = GridRowModel> {
     onDrop?: (targetField: string) => (event: React.DragEvent) => void;
     focusedCell?: { id: string | number; field: string } | null;
     onHeaderClick?: (field: string) => void;
+    onSortAdd?: (field: string, direction: GridSortDirection) => void;
+    multiSort?: boolean;
     onHideColumn?: (field: string) => void;
     onPinColumn?: (field: string, side: 'left' | 'right' | null) => void;
     onManageColumns?: () => void;
@@ -166,6 +168,8 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         onDrop,
         focusedCell,
         onHeaderClick,
+        onSortAdd,
+        multiSort = false,
         onHideColumn,
         onPinColumn,
         onManageColumns,
@@ -193,8 +197,8 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         }
     }, [focusedCell]);
 
-    const handleColumnClick = (colDef: GridColDef<R>) => () => {
-        if (colDef.sortable === false || !onSort) return;
+    const handleColumnClick = (colDef: GridColDef<R>) => (e: React.MouseEvent) => {
+        if (colDef.sortable === false) return;
 
         const currentSort = sortModel.find(item => item.field === colDef.field);
         let newDirection: GridSortDirection = 'asc';
@@ -207,15 +211,25 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
             }
         }
 
-        onSort(colDef.field, newDirection);
+        if ((e.shiftKey || multiSort) && onSortAdd) {
+            onSortAdd(colDef.field, newDirection);
+        } else if (onSort) {
+            onSort(colDef.field, newDirection);
+        }
     };
 
     const getSortIcon = (field: string) => {
         const sortItem = sortModel.find(item => item.field === field);
         if (!sortItem) return null;
 
+        const sortIndex = sortModel.length > 1 ? sortModel.indexOf(sortItem) + 1 : null;
+
         return (
-            <span className={`ogx__sort-icon ogx__sort-icon--${sortItem.sort}`} aria-hidden="true" />
+            <span className={`ogx__sort-icon ogx__sort-icon--${sortItem.sort}`} aria-hidden="true">
+                {sortIndex !== null && (
+                    <span className="ogx__sort-badge">{sortIndex}</span>
+                )}
+            </span>
         );
     };
 
@@ -420,7 +434,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         }
                         onHeaderClick?.(colDef.field);
                         if (isSortable) {
-                            handleColumnClick(colDef)();
+                            handleColumnClick(colDef)(e);
                         }
                     };
 
@@ -433,6 +447,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             key={colDef.field}
                             className={classNames}
                             style={style}
+                            title={colDef.description}
                             onClick={handleHeaderClick}
                             role="columnheader"
                             draggable={!!onDragStart}

@@ -55,7 +55,6 @@ Rows can be pinned to the top or bottom of the grid. Pinned rows remain visible 
 | `pinnedColumns` | `GridColumnPinning` | `{ left: string[], right: string[] }` |
 | `pinnedRows` | `GridRowPinning` | `{ top: GridRowId[], bottom: GridRowId[] }` |
 | `onPinnedColumnsChange` | `(model) => void` | Callback triggered when pinning changes. |
-| `onPinnedRowsChange` | `(model) => void` | Callback triggered when row pinning changes. |
 
 ---
 

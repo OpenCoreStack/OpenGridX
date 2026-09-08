@@ -36,6 +36,28 @@ const [selection, setSelection] = useState<GridRowId[]>([]);
 />
 ```
 
+### Disable Click-to-Select
+
+Use `disableRowSelectionOnClick` to prevent clicking a row from changing the selection (useful when rows have their own click actions like navigation). Selection via checkboxes still works.
+
+```tsx
+<DataGrid
+  checkboxSelection
+  disableRowSelectionOnClick
+/>
+```
+
+### Single-Row Selection Only
+
+Use `disableMultipleRowSelection` to cap selection to one row at a time. Clicking a second row deselects the first; clicking an already-selected row deselects it.
+
+```tsx
+<DataGrid
+  disableMultipleRowSelection
+  onRowSelectionModelChange={(model) => console.log('selected:', model)}
+/>
+```
+
 ---
 
 ## ⚙️ API Reference

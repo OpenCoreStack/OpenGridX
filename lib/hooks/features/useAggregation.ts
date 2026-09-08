@@ -2,6 +2,7 @@
 import { useMemo, useEffect, useRef, useCallback, useState } from 'react';
 import type {
     GridRowModel,
+    GridColDef,
     GridAggregationModel,
     GridAggregationResult,
     GridFilterModel,
@@ -46,6 +47,7 @@ export function formatAggregationValue(value: unknown, fnName: string): string {
 
 export interface UseAggregationParams<R extends GridRowModel> {
         rows: R[];
+        columns?: GridColDef[];
         aggregationModel: GridAggregationModel;
         isServerSide: boolean;
         dataSource?: GridDataSource<R>;
@@ -65,6 +67,7 @@ export function useAggregation<R extends GridRowModel>(
 ): UseAggregationReturn {
     const {
         rows,
+        columns,
         aggregationModel,
         isServerSide,
         dataSource,
@@ -73,11 +76,21 @@ export function useAggregation<R extends GridRowModel>(
         serverAggregationResults,
     } = params;
 
+    const columnsLookup = useMemo(() => {
+        const map = new Map<string, GridColDef>();
+        (columns ?? []).forEach(col => map.set(col.field, col));
+        return map;
+    }, [columns]);
+
     const clientResult = useMemo<GridAggregationResult>(() => {
         if (isServerSide || Object.keys(aggregationModel).length === 0) return {};
 
         const result: GridAggregationResult = {};
         for (const [field, fnName] of Object.entries(aggregationModel)) {
+            const colDef = columnsLookup.get(field);
+            if (colDef?.availableAggregationFunctions && !colDef.availableAggregationFunctions.includes(fnName)) {
+                continue;
+            }
             const fn = AGGREGATION_FUNCTIONS[fnName as BuiltInAggFn];
             if (!fn) {
                 console.warn(`[useAggregation] Unknown aggregation function: "${fnName}"`);
@@ -87,7 +100,7 @@ export function useAggregation<R extends GridRowModel>(
             result[field] = fn(values);
         }
         return result;
-    }, [rows, aggregationModel, isServerSide]);
+    }, [rows, columnsLookup, aggregationModel, isServerSide]);
 
     const [serverResult, setServerResult] = useState<GridAggregationResult>({});
     const [isLoading, setIsLoading] = useState(false);

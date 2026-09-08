@@ -29,6 +29,7 @@ export interface GridRowMeta {
     treeDepth?: number;
     groupingField?: string;
     groupingValue?: unknown;
+    groupLabel?: string;
     descendantCount?: number;
     isExpanded?: boolean;
     isGroupRow?: boolean;
@@ -81,16 +82,22 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
   field: string;
   /** Text displayed in the column header. */
   headerName?: string;
-  /** Tooltip or accessible description for the header. */
+  /** Tooltip shown on header hover — used as the column's accessibility label. */
   description?: string;
-
   /** If true, this column can be used as a grouping dimension. */
   groupable?: boolean;
 
+  /**
+   * Custom formatter for the group-header label when this column is used as a grouping field.
+   * Receives the field name and grouped value; return the string to display.
+   * Falls back to `"field: value"` when omitted.
+   */
+  groupingValueFormatter?: (params: { field: string; value: unknown }) => string;
+
   /** If true, this column can be summarized using aggregation functions. */
   aggregable?: boolean;
-  /** List of allowed aggregation functions (e.g., ['sum', 'avg']). */
-  availableAggregationFunctions?: string[]; 
+  /** Restricts which aggregation functions are offered for this column (e.g., ['sum', 'avg']). */
+  availableAggregationFunctions?: string[];
 
   /** Width in pixels or a percentage string. Defaults to automatic calculation. */
   width?: number | string;
@@ -608,6 +615,13 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   sortModel?: GridSortItem[];
   /** Callback fired when the sorting model changes. */
   onSortModelChange?: (model: GridSortItem[]) => void;
+  /**
+   * When true, clicking any sortable column header appends/cycles that column in the
+   * sort model instead of replacing it — no Shift key required. Plain click still
+   * cycles asc → desc → removed for that column while all other active sort keys stay.
+   * Shift+click continues to work regardless of this prop.
+   */
+  multiSort?: boolean;
 
   /** Filtering mode: 'client' (default) or 'server'. */
   filterMode?: 'client' | 'server';
@@ -641,8 +655,6 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
 
   /** Defines which rows are pinned to the top or bottom. */
   pinnedRows?: GridRowPinning;
-  /** Callback fired when row pinning changes. */
-  onPinnedRowsChange?: (model: GridRowPinning) => void;
 
   /** If true, a column of checkboxes is added for row selection. */
   checkboxSelection?: boolean;
@@ -720,8 +732,6 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
 
   /** Controlled state for row grouping. */
   rowGroupingModel?: GridRowGroupingModel;
-  /** Callback fired when row grouping changes. */
-  onRowGroupingModelChange?: (model: GridRowGroupingModel) => void;
   /** Controlled state for data aggregation (e.g., { salary: 'sum' }). */
   aggregationModel?: GridAggregationModel;
   /** Callback fired when aggregation model changes. */

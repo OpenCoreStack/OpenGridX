@@ -1,0 +1,30 @@
+.multi-sort-hint {
+    background: var(--ogx-color-primary, #3b82f6);
+    color: #fff;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.multi-sort-state {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--ogx-color-text-secondary, #6b7280);
+}
+
+.multi-sort-label {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.multi-sort-state code {
+    background: var(--ogx-color-surface-secondary, #f3f4f6);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+    word-break: break-all;
+}

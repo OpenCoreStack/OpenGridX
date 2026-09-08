@@ -132,4 +132,44 @@ describe('useAggregation — client-side', () => {
         );
         expect(result.current.aggregationResult).toEqual(serverResults);
     });
+
+    it('skips aggregation when function not in availableAggregationFunctions', () => {
+        const columns = [{ field: 'salary', availableAggregationFunctions: ['avg', 'count'] }];
+        const { result } = renderHook(() =>
+            useAggregation({
+                rows: ROWS,
+                columns,
+                aggregationModel: { salary: 'sum' },
+                isServerSide: false,
+            })
+        );
+        // 'sum' is not in the allowed list, so the result should be absent
+        expect(result.current.aggregationResult.salary).toBeUndefined();
+    });
+
+    it('computes aggregation when function is in availableAggregationFunctions', () => {
+        const columns = [{ field: 'salary', availableAggregationFunctions: ['sum', 'avg'] }];
+        const { result } = renderHook(() =>
+            useAggregation({
+                rows: ROWS,
+                columns,
+                aggregationModel: { salary: 'sum' },
+                isServerSide: false,
+            })
+        );
+        expect(result.current.aggregationResult.salary).toBe(260000);
+    });
+
+    it('does not restrict aggregation when availableAggregationFunctions is absent', () => {
+        const columns = [{ field: 'salary' }];
+        const { result } = renderHook(() =>
+            useAggregation({
+                rows: ROWS,
+                columns,
+                aggregationModel: { salary: 'sum' },
+                isServerSide: false,
+            })
+        );
+        expect(result.current.aggregationResult.salary).toBe(260000);
+    });
 });
