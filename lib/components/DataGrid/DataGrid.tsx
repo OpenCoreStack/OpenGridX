@@ -27,7 +27,7 @@ import { GridListView } from './GridListView';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
-import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridAggregationResult, GridFilterModel, GridTreeNode, GridSortItem, GridRowMeta } from '../../types';
+import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridAggregationResult, GridFilterModel, GridTreeNode, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
 
 const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
 
@@ -499,7 +499,53 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     useEffect(() => {
         gridData.apiRef.current.getAggregationResult = () => hasAggregation ? aggregationResult : null;
         gridData.apiRef.current.getAggregationModel = () => hasAggregation ? aggregationModel : null;
-    }, [aggregationResult, aggregationModel, hasAggregation, gridData.apiRef]);
+        gridData.apiRef.current.getGroupedExportRows = (): GridGroupedExportRow[] | null => {
+            if (!isRowGrouping) return null;
+            const { treeNodes, groupingRows } = rowGroupingHandlers;
+            const rowLookup = new Map<GridRowId, GridRowModel>();
+            sortedUnpinnedRows.forEach(r => rowLookup.set((r as GridRowModel).id as GridRowId, r as GridRowModel));
+
+            const result: GridGroupedExportRow[] = [];
+
+            const traverse = (ids: GridRowId[]) => {
+                ids.forEach(id => {
+                    const node = treeNodes.get(id);
+                    if (!node) return;
+                    const isGroup = Boolean(node.children && node.children.length > 0);
+                    if (isGroup) {
+                        result.push({
+                            type: 'group-header',
+                            depth: node.depth,
+                            groupField: node.groupingField,
+                            groupValue: node.groupingValue,
+                        });
+                        traverse(node.children!);
+                        if (hasAggregation && node.aggregatedValues) {
+                            result.push({
+                                type: 'group-subtotal',
+                                depth: node.depth,
+                                groupField: node.groupingField,
+                                groupValue: node.groupingValue,
+                                aggregatedValues: node.aggregatedValues,
+                            });
+                        }
+                    } else {
+                        const row = rowLookup.get(id) ?? groupingRows.get(id);
+                        if (row) {
+                            result.push({ type: 'leaf', depth: node.depth, row });
+                        }
+                    }
+                });
+            };
+
+            traverse(Array.from(treeNodes.keys()).filter(id => treeNodes.get(id)?.parentId === null));
+
+            if (hasAggregation && aggregationResult) {
+                result.push({ type: 'grand-total', depth: 0, aggregatedValues: aggregationResult });
+            }
+            return result;
+        };
+    }, [aggregationResult, aggregationModel, hasAggregation, gridData.apiRef, isRowGrouping, rowGroupingHandlers, sortedUnpinnedRows]);
 
     const layout = useLayout({
         rowHeight,

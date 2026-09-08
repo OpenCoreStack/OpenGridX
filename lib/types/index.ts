@@ -376,6 +376,33 @@ export interface PdfExportOptions {
    * Base font size in points for table body. Default: 9
    */
   fontSize?: number;
+
+  /**
+   * Pre-built grouped export rows from `apiRef.current.getGroupedExportRows()`.
+   * When provided, the PDF table reflects the grouping structure (group headers,
+   * leaf rows, per-group subtotals, grand total) instead of a flat row list.
+   * Has no effect when the grid has no active `rowGroupingModel`.
+   */
+  groupedRows?: GridGroupedExportRow[];
+}
+
+/**
+ * A single entry in the ordered list returned by `GridApi.getGroupedExportRows()`.
+ * Traverse in array order to reproduce the on-screen grouping structure.
+ */
+export interface GridGroupedExportRow {
+  /** Discriminator: the kind of row this entry represents. */
+  type: 'group-header' | 'leaf' | 'group-subtotal' | 'grand-total';
+  /** Nesting depth (0 = top-level group, 1 = nested group, etc.). */
+  depth: number;
+  /** The grouping field for this level (absent on 'leaf' and 'grand-total'). */
+  groupField?: string;
+  /** The raw grouping value for this level (absent on 'leaf' and 'grand-total'). */
+  groupValue?: unknown;
+  /** Per-group aggregation results (present on 'group-subtotal' and 'grand-total'). */
+  aggregatedValues?: Record<string, unknown>;
+  /** The original data row (only present when `type === 'leaf'`). */
+  row?: GridRowModel;
 }
 
 export type GridPinnedPosition = 'left' | 'right';
@@ -819,6 +846,13 @@ export interface GridApi {
   getVisibleRows: () => GridRowModel[];
   /** Returns all filtered and sorted rows, ignoring pagination. Use this for full-dataset exports. */
   getAllFilteredRows: () => GridRowModel[];
+  /**
+   * Returns an ordered flat list of `GridGroupedExportRow` entries that mirrors the
+   * on-screen grouping tree: group-headers, leaf rows, per-group subtotals, and a
+   * grand-total entry at the end. Returns `null` when no `rowGroupingModel` is active.
+   * Pass the result to export functions that accept a `groupedRows` option.
+   */
+  getGroupedExportRows: () => GridGroupedExportRow[] | null;
   /** Returns the current aggregation results. */
   getAggregationResult: () => Record<string, unknown> | null;
   /** Returns the active aggregation configuration. */

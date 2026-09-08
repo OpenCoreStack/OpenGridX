@@ -13,7 +13,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Tests:** Vitest 4 + `@testing-library/react` (`renderHook` for hooks, component tests for UI)
 - **Build:** Vite (library mode). `npm run build` produces `dist/opengridx.es.js` and `dist/opengridx.umd.js`.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 1.2.3
+- **Current version:** 1.3.0
 
 ---
 
@@ -124,6 +124,14 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Zero `eslint-disable` or `@ts-ignore` — fix the root cause
 - Zero `any` — use `unknown` or explicit interfaces
 - Never add `Co-Authored-By` AI attribution to commit messages
+
+---
+
+## v1.3.0 — significant changes
+
+- **`GridApi.getGroupedExportRows()`** — new method returning a flat `GridGroupedExportRow[]` ordered list by traversing the active row-grouping tree (group-header → children → subtotal → grand-total). Returns `null` when row grouping is not active.
+- **`GridGroupedExportRow` type** — public interface for each entry: `type` (`group-header | leaf | group-subtotal | grand-total`), `depth`, optional `groupField`, `groupValue`, `aggregatedValues`, `row`.
+- **Grouped export across all formats** — `exportToCsv`, `exportToExcel`, `exportToJson`, `printGrid`, `exportToPdf` all accept `groupedRows?: GridGroupedExportRow[]`; flat behavior unchanged when absent.
 
 ---
 

@@ -300,6 +300,7 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
     getAllRows: () => Array.from(stateRef.current.rows.idRowsLookup.values()),
     getVisibleRows: () => Array.from(stateRef.current.rows.idRowsLookup.values()),
     getAllFilteredRows: () => Array.from(stateRef.current.rows.idRowsLookup.values()),
+    getGroupedExportRows: () => null,
     getAggregationResult: () => null,
     getAggregationModel: () => null,
     getColumn: (field: string) => stateRef.current.columns.lookup.get(field) || null,

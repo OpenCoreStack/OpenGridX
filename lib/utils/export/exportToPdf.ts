@@ -3,6 +3,7 @@ import type {
     GridRowModel,
     GridFilterModel,
     PdfExportOptions,
+    GridGroupedExportRow,
 } from '../../types';
 import { formatAggregationValue } from '../../hooks/features/useAggregation';
 
@@ -137,6 +138,7 @@ export async function exportToPdf<R extends GridRowModel>(
         headerBackgroundColor = '#4f46e5',
         headerTextColor = '#ffffff',
         fontSize = 9,
+        groupedRows,
     } = options;
 
     const doc = new JsPDF({ orientation, unit: 'mm', format: 'a4' });
@@ -157,7 +159,6 @@ export async function exportToPdf<R extends GridRowModel>(
         let cursorX = MARGIN;
         let cursorY = MARGIN + 8;
 
-        // Logo
         if (logoUrl) {
             try {
                 doc.addImage(logoUrl, 'PNG', cursorX, MARGIN, 10, 10);
@@ -167,26 +168,26 @@ export async function exportToPdf<R extends GridRowModel>(
             }
         }
 
-        // Title
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59); // #1e293b
+        doc.setTextColor(30, 41, 59);
         doc.text(title, cursorX, cursorY);
         cursorY += 6;
 
-        // Subtitle: date + row count
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 116, 139); // #64748b
+        doc.setTextColor(100, 116, 139);
         const exportedAt = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        const rowCount = groupedRows
+            ? groupedRows.filter(e => e.type === 'leaf').length
+            : rowsToExport.length;
         doc.text(
-            `Exported: ${exportedAt}  •  ${rowsToExport.length} row${rowsToExport.length !== 1 ? 's' : ''}`,
+            `Exported: ${exportedAt}  •  ${rowCount} row${rowCount !== 1 ? 's' : ''}`,
             cursorX,
             cursorY
         );
         cursorY += 5;
 
-        // Filter summary
         if (filterModel) {
             const summary = formatFilterSummary(filterModel, columns);
             if (summary) {
@@ -195,8 +196,7 @@ export async function exportToPdf<R extends GridRowModel>(
             }
         }
 
-        // Separator line
-        doc.setDrawColor(226, 232, 240); // #e2e8f0
+        doc.setDrawColor(226, 232, 240);
         doc.setLineWidth(0.3);
         doc.line(MARGIN, cursorY + 2, pageWidth - MARGIN, cursorY + 2);
         startY = cursorY + 6;
@@ -205,30 +205,67 @@ export async function exportToPdf<R extends GridRowModel>(
     // --- Build table data ---
     const head = [exportColumns.map(col => col.headerName ?? col.field)];
 
-    const body = rowsToExport.map(row =>
-        exportColumns.map(col => resolveValue(row, col))
-    );
-
-    // --- Aggregation footer ---
+    let body: string[][];
     let foot: string[][] | undefined;
-    if (aggregationResult && aggregationModel) {
-        const footRow = exportColumns.map((col, i) => {
-            if (i === 0) {
-                // First column shows TOTAL label if any aggregation exists
-                const hasAgg = exportColumns.some(c => aggregationModel[c.field]);
-                return hasAgg ? 'TOTAL' : '';
+
+    if (groupedRows && groupedRows.length > 0) {
+        // Grouped export: flatten the ordered list into body rows with indentation
+        body = [];
+        const aggMod = aggregationModel || {};
+        groupedRows.forEach((entry: GridGroupedExportRow) => {
+            if (entry.type === 'group-header') {
+                const indent = '  '.repeat(entry.depth * 2);
+                const label = `${indent}${entry.groupField ?? ''}: ${String(entry.groupValue ?? '')}`;
+                body.push(exportColumns.map((_, i) => i === 0 ? label : ''));
+            } else if (entry.type === 'leaf' && entry.row) {
+                const row = entry.row as R;
+                const indent = '  '.repeat(entry.depth * 2);
+                body.push(exportColumns.map((col, i) => (i === 0 ? indent : '') + resolveValue(row, col)));
+            } else if (entry.type === 'group-subtotal' && entry.aggregatedValues) {
+                const indent = '  '.repeat(entry.depth * 2);
+                body.push(exportColumns.map((col, i) => {
+                    if (i === 0) return `${indent}Subtotal`;
+                    const aggVal = entry.aggregatedValues![col.field];
+                    if (aggVal === undefined || aggVal === null) return '';
+                    let formatted: unknown = aggVal;
+                    if (col.valueFormatter) formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
+                    else if (aggMod[col.field]) formatted = formatAggregationValue(aggVal, aggMod[col.field] as string);
+                    return String(formatted);
+                }));
+            } else if (entry.type === 'grand-total' && entry.aggregatedValues) {
+                const footRow = exportColumns.map((col, i) => {
+                    if (i === 0) return 'Grand Total';
+                    const aggVal = entry.aggregatedValues![col.field];
+                    if (aggVal === undefined || aggVal === null) return '';
+                    let formatted: unknown = aggVal;
+                    if (col.valueFormatter) formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
+                    else if (aggMod[col.field]) formatted = formatAggregationValue(aggVal, aggMod[col.field] as string);
+                    return String(formatted);
+                });
+                foot = [footRow];
             }
-            const aggVal = aggregationResult[col.field];
-            if (aggVal === undefined || aggVal === null) return '';
-            let formatted: unknown = aggVal;
-            if (col.valueFormatter) {
-                formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-            } else if (aggregationModel[col.field]) {
-                formatted = formatAggregationValue(aggVal, aggregationModel[col.field] as string);
-            }
-            return String(formatted);
         });
-        foot = [footRow];
+    } else {
+        body = rowsToExport.map(row => exportColumns.map(col => resolveValue(row, col)));
+
+        if (aggregationResult && aggregationModel) {
+            const footRow = exportColumns.map((col, i) => {
+                if (i === 0) {
+                    const hasAgg = exportColumns.some(c => aggregationModel[c.field]);
+                    return hasAgg ? 'TOTAL' : '';
+                }
+                const aggVal = aggregationResult[col.field];
+                if (aggVal === undefined || aggVal === null) return '';
+                let formatted: unknown = aggVal;
+                if (col.valueFormatter) {
+                    formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
+                } else if (aggregationModel[col.field]) {
+                    formatted = formatAggregationValue(aggVal, aggregationModel[col.field] as string);
+                }
+                return String(formatted);
+            });
+            foot = [footRow];
+        }
     }
 
     // --- Column widths ---

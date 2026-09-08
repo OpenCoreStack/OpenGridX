@@ -5,6 +5,22 @@
 
 ---
 
+## [1.3.0] — 2026-09-08
+
+### Added
+- **Grouped export** — all five export functions (`exportToCsv`, `exportToExcel`, `exportToJson`,
+  `printGrid`, `exportToPdf`) now accept an optional `groupedRows?: GridGroupedExportRow[]` option.
+  When provided, the export preserves the row-grouping structure: group-header rows, indented leaf
+  rows, per-group subtotals, and a grand total footer. Flat behavior is unchanged when the option
+  is absent, making this a fully backward-compatible addition.
+- **`GridApi.getGroupedExportRows()`** — new method that returns a flat ordered list of
+  `GridGroupedExportRow` entries (types: `group-header | leaf | group-subtotal | grand-total`)
+  by traversing the active row-grouping tree. Returns `null` when row grouping is not active.
+- **`GridGroupedExportRow` type** — new public interface describing each entry in the grouped
+  export list (`type`, `depth`, `groupField?`, `groupValue?`, `aggregatedValues?`, `row?`).
+
+---
+
 ## [1.2.3] — 2026-09-08
 
 ### Fixed
