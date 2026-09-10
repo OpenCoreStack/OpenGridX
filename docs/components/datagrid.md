@@ -33,7 +33,7 @@ function MyGrid() {
 | `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time. |
 | `pagination` | `boolean` | `false` | Enable/Disable bottom pagination bar. |
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). Omit for uncontrolled; use `initialState` to set the initial page/pageSize. |
-| `pageSizeOptions` | `number[]` | `[10, 25, 50]` | Available page size options. |
+| `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. |
 | `initialState` | `GridInitialState` | `undefined` | Initial configuration (sorting, columns, pagination, etc). |
 
 ## 🔃 Sorting

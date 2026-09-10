@@ -25,6 +25,7 @@ export interface GridRowMeta {
   treeDepth?: number;
   groupingField?: string;
   groupingValue?: unknown;
+  groupLabel?: string;
   descendantCount?: number;
   isExpanded?: boolean;
   isGroupRow?: boolean;
@@ -68,7 +69,7 @@ renderCell: (params) => {
 
 The underscore fields (`_hasChildren`, `_treeDepth`, etc.) continue to be injected onto the row object at runtime in v1.1. They are no longer declared on `GridRowModel`; because `GridRowModel` retains `[key: string]: unknown`, accessing `params.row._hasChildren` resolves to `unknown` rather than producing a TypeScript compile error. Assignment to a typed variable (e.g. `const x: boolean = params.row._hasChildren`) and arithmetic will error; truthiness checks will not. Migrate to `params.rowMeta?.hasChildren` for the typed path.
 
-**The runtime injection will be removed in v2.0.** Migrate to `params.rowMeta` before upgrading to v2.
+**The runtime injection was removed in v2.0.** If you are on v2.0+, `params.row._hasChildren` and other underscore fields no longer exist at runtime. Use `params.rowMeta` instead.
 
 ---
 

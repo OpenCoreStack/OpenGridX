@@ -54,6 +54,18 @@ The grid supports both fixed and variable row heights:
 />
 ```
 
+The `density` prop overrides `rowHeight` with preset values:
+
+```tsx
+<DataGrid
+  rows={rows}
+  columns={columns}
+  density="compact"      // 32px rows
+  // density="standard"  // uses rowHeight (default 52px)
+  // density="comfortable" // 72px rows
+/>
+```
+
 ### Auto Height
 
 Disable virtualization for small datasets:
@@ -172,7 +184,7 @@ You should see console logs only for visible rows + overscan buffer.
 
 ## Comparison with MUI X DataGrid
 
-| Feature | Aui DataGrid | MUI X DataGrid |
+| Feature | OpenGridX | MUI X DataGrid |
 |---------|--------------|----------------|
 | Row virtualization | ✅ Yes | ✅ Yes |
 | Column virtualization | ❌ Planned | ✅ Yes (Pro) |

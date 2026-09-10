@@ -45,14 +45,14 @@ You can also render it persistently beside the grid or within a custom modal.
 
 ---
 
-## 🎨 Slot Implementation
-In advanced scenarios, you can replace the default panel with your own implementation using the `columnVisibilityPanel` slot.
+## 🎨 Controlling Visibility Programmatically
+
+The column visibility panel is an internal component; it cannot be replaced via the slots API. Use the controlled props to drive visibility from outside:
 
 ```tsx
 <DataGrid
-  slots={{
-    columnVisibilityPanel: MyCustomVisibilityPanel
-  }}
+  columnVisibilityModel={model}
+  onColumnVisibilityModelChange={setModel}
 />
 ```
 

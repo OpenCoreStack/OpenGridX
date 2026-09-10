@@ -7,7 +7,7 @@ Internal component that renders the sticky aggregation totals row pinned to the 
 | Prop | Type | Description |
 | :--- | :--- | :--- |
 | `columns` | `GridColDef[]` | Ordered list of visible column definitions used to lay out cells. |
-| `aggregationModel` | `GridAggregationModel` | Maps field names to function names (`'sum' \| 'avg' \| 'count' \| 'min' \| 'max'`). |
+| `aggregationModel` | `GridAggregationModel` | Maps field names to function names (`'sum' \| 'avg' \| 'count' \| 'min' \| 'max' \| 'unique'`). |
 | `aggregationResult` | `GridAggregationResult` | Computed values keyed by field name, produced by `useAggregation`. |
 | `columnWidths` | `Record<string, number>` | Runtime pixel widths for each field, kept in sync with user resize actions. |
 | `rowHeight` | `number` | Sets `min-height` on the footer row, matching the grid's configured row height. |

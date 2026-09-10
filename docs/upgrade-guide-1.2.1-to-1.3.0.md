@@ -1,7 +1,7 @@
-# OpenGridX — Upgrade Guide: v1.2.0 → v1.3.0
+# OpenGridX — Upgrade Guide: v1.2.1 → v1.3.0
 
 **Package**: `@opencorestack/opengridx`
-**Latest**: `1.3.0`
+**This guide covers**: `1.2.1 → 1.3.0` (historical reference — current version is `2.0.2`; see [`docs/migration/v1-to-v2.md`](./migration/v1-to-v2.md) for the v2 upgrade)
 
 ---
 
@@ -72,8 +72,8 @@ To restore the previous behavior (show them as permanently-disabled rows):
 
 ```tsx
 <DataGrid
-    toolbar
-    toolbarProps={{ showNonHideableColumns: true }}
+    slots={{ toolbar: GridToolbar }}
+    slotProps={{ toolbar: { showNonHideableColumns: true } }}
     ...
 />
 ```

@@ -44,14 +44,14 @@ Unlike infinite scroll which appends data to the end, Lazy Loading fetches speci
 Quickly filter the entire dataset across all visible columns. This is managed via the `GridToolbar`.
 
 ### Basic Setup
+
+Add the toolbar and wire a filter model — the toolbar's search bar activates automatically when `onFilterModelChange` is wired:
+
 ```tsx
 <DataGrid
   slots={{ toolbar: GridToolbar }}
-  slotProps={{
-    toolbar: {
-       showQuickFilter: true
-    }
-  }}
+  filterModel={filterModel}
+  onFilterModelChange={setFilterModel}
 />
 ```
 

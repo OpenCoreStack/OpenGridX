@@ -25,12 +25,12 @@ Aggregation allows you to calculate summary values (Sum, Avg, etc.) for groups o
 You can control where the aggregation results appear:
 - **`footer`**: A sticky row at the bottom of the grid.
 - **`inline`**: Values displayed within group headers (when Row Grouping is active).
-- **`both`**: Display in both locations.
+- **`null`**: Skip aggregation for this group.
 
 ```tsx
 <DataGrid
   aggregationModel={model}
-  getAggregationPosition={(groupNode) => 'both'}
+  getAggregationPosition={(groupNode) => groupNode ? 'inline' : 'footer'}
 />
 ```
 

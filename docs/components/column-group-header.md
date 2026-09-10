@@ -40,16 +40,9 @@ While the grid uses this component internally, you can customize its appearance 
 
 ---
 
-## 🎨 Slot Implementation
-Replace the system's group header with a custom one for specialized styling or interactions.
+## 🎨 Customization
 
-```tsx
-<DataGrid
-  slots={{
-    columnGroupHeader: MyCustomGroupHeader
-  }}
-/>
-```
+Column group headers are rendered internally; they cannot be replaced via the slots API. Style them through CSS targeting `.ogx__column-group-header`, or use the `columnGroupingModel` to control grouping structure.
 
 ## 📝 Best Practices
 - **Logical Labels**: Use clear, concise labels for groups like `2024 Performance` or `Contact Info`.

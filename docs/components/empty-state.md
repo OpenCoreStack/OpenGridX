@@ -43,7 +43,7 @@ To only change the message text without replacing the whole component, use `noRo
 />
 ```
 
-Default value: `"No rows"`
+Default value: `"No Data"`
 
 ## 🔗 Related
 - [DataGrid](datagrid.md)

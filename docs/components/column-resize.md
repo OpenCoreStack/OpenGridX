@@ -22,15 +22,14 @@ const columns: GridColDef[] = [
 ];
 ```
 
-### Grid-Wide Control
-Disable resizing globally via the `DataGrid` props.
+### Disabling Resize Per Column
+There is no single grid-wide prop to disable all column resizing. Set `resizable: false` on each column definition individually:
 
 ```tsx
-<DataGrid
-  rows={rows}
-  columns={columns}
-  disableColumnResize
-/>
+const columns: GridColDef[] = [
+  { field: 'id', headerName: 'ID', resizable: false },
+  { field: 'status', headerName: 'Status', resizable: false },
+];
 ```
 
 ---
@@ -46,18 +45,18 @@ Disable resizing globally via the `DataGrid` props.
 
 ---
 
-## 🎨 Slot Implementation
-In the DataGrid, you can replace the default handle component for custom styling (e.g., a thicker line or different colors).
+## 🎨 Styling the Resize Handle
 
-```tsx
-<DataGrid
-  slots={{
-    columnResizeHandle: MyCustomHandle
-  }}
-/>
+The resize handle is not replaceable via the slots API. Style it through CSS:
+
+```css
+.ogx__resize-handle {
+  width: 4px;
+  background: #6366f1;
+}
 ```
 
 ## 📝 Best Practices
 - **Define Min Widths**: Always set a reasonable `minWidth` so columns don't accidentally become 0px wide.
-- **Persistence**: Listen to `onColumnWidthChange` to save the user's preferred layout for their next visit.
+- **Persistence**: Use `onStateChange` to capture the current `columnWidths` from the state snapshot and save the user's preferred layout for their next visit.
 - **Content Fit**: Remember that large data values might hide behind narrow columns; use tooltips for overflow coverage.

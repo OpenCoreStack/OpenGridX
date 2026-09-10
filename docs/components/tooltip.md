@@ -52,15 +52,12 @@ You can choose from four different placements: `top`, `bottom`, `left`, or `righ
 
 ---
 
-## 🎨 Slot Implementation
-In the DataGrid, specialized components like the Toolbar often use tooltips within their built-in actions. These can be customized or replaced using the slots API.
+## 🎨 Customization
+
+The internal tooltip component is not replaceable via the slots API. For column-header tooltips, set the `description` field on `GridColDef` — it renders as the native `title` attribute on the header cell (v2.0.0+):
 
 ```tsx
-<DataGrid
-  slots={{
-    tooltip: GridTooltip
-  }}
-/>
+{ field: 'revenue', headerName: 'Revenue', description: 'Total billed revenue for the period' }
 ```
 
 ## 📝 Accessibility

@@ -8,7 +8,7 @@ Internal hook. Converts scroll position, viewport dimensions, and the current ro
 
 ## Purpose
 
-Row and column virtualization is the core performance mechanism: instead of rendering all rows and columns, only the visible slice is rendered. This hook encapsulates the binary search and offset math that determines that slice.
+Row virtualization is the core performance mechanism: instead of rendering all rows, only the visible slice is rendered. Column virtualization is not yet implemented — all columns are always rendered. This hook encapsulates the binary search and offset math that determines that slice.
 
 Before extraction, ~120 lines of `useMemo` logic lived inside `DataGrid.tsx`. The hook makes the math independently readable and testable.
 
@@ -18,12 +18,9 @@ Before extraction, ~120 lines of `useMemo` logic lived inside `DataGrid.tsx`. Th
 
 ```ts
 interface UseGridVirtualizationParams<R extends GridRowModel> {
-    layout: LayoutResult<R>;                      // from useLayout: row heights, column widths
-    scrollPosRef: React.MutableRefObject<{
-        scrollTop: number;
-        scrollLeft: number;
-    }>;
-    scrollTick: number;     // increments on scroll; exists only to invalidate the memo
+    layout: LayoutResult<R>;   // from useLayout: row heights, column widths
+    scrollTop: number;         // current vertical scroll position in pixels
+    scrollLeft: number;        // current horizontal scroll position in pixels
     viewportWidth: number;
     viewportHeight: number;
     autoHeight: boolean;
@@ -35,7 +32,7 @@ interface UseGridVirtualizationParams<R extends GridRowModel> {
 }
 ```
 
-> **`scrollTick` pattern** — The scroll position is read from `scrollPosRef.current` inside the memo body rather than held in state to avoid triggering a full React re-render on every scroll frame. `scrollTick` is the only scroll-related memo dependency — it is incremented by the rAF loop after every scroll event to invalidate and rerun the memo.
+> `scrollTop` and `scrollLeft` come from `useGridScrollSync`, which batches scroll events via RAF and returns plain numeric values that change at most once per animation frame.
 
 ---
 

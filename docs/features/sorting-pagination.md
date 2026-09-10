@@ -90,7 +90,7 @@ When using `paginationMode="server"`, you must provide the `rowCount` and handle
 | `paginationMode` | `'client' \| 'server' \| 'infinite'` | `'client'` | Location of the pagination logic. |
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). |
 | `onPaginationModelChange` | `(model: GridPaginationModel) => void` | — | Fired when page or page size changes. |
-| `pageSizeOptions` | `number[]` | `[10, 25, 50]` | Options for the rows-per-page selector. |
+| `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Options for the rows-per-page selector. |
 
 ---
 

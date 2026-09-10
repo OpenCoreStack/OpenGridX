@@ -5,7 +5,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 ## ✅ Implemented Features
 
 ### Core
-*   **Virtualization**: High-performance row and column virtualization for handling large datasets.
+*   **Virtualization**: High-performance row virtualization for handling large datasets. Column virtualization is planned (currently all columns are rendered).
 *   **Sorting**: Client-side and server-side multi-column sorting.
 *   **Filtering**: Client-side filtering with support for various operators.
 *   **Pagination**: Client-side and server-side pagination with customizable page sizes.

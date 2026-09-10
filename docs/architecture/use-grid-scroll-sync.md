@@ -31,16 +31,16 @@ interface UseGridScrollSyncParams {
 
 ```ts
 interface UseGridScrollSyncResult {
-    scrollPosRef: React.MutableRefObject<{ scrollTop: number; scrollLeft: number }>;
-    scrollTick: number;
+    scrollTop: number;
+    scrollLeft: number;
     handleScroll: (event: React.UIEvent<HTMLDivElement>) => void;
 }
 ```
 
 | Return | Used by |
 |--------|---------|
-| `scrollPosRef` | `useGridVirtualization` — reads scroll position to compute render context |
-| `scrollTick` | `useGridVirtualization` — included in its `useMemo` deps to trigger recompute on scroll |
+| `scrollTop` | `useGridVirtualization` — vertical scroll offset for computing the visible row window |
+| `scrollLeft` | `useGridVirtualization` — horizontal scroll offset for computing the visible column window |
 | `handleScroll` | Passed to the viewport `<div onScroll={handleScroll}>` |
 
 ---
@@ -50,10 +50,10 @@ interface UseGridScrollSyncResult {
 `handleScroll` fires on every scroll event (can be 60+ per second). Rather than recomputing the virtual window on every event, the hook schedules a single RAF per frame:
 
 ```
-scroll event → cancel pending RAF → schedule new RAF → RAF fires → setScrollTick(t + 1)
+scroll event → cancel pending RAF → schedule new RAF → RAF fires → setScrollPos({scrollTop, scrollLeft})
 ```
 
-`scrollTick` incrementing causes `useGridVirtualization` to recompute the render window at most once per animation frame, capping recompute cost to ~60Hz regardless of scroll event frequency.
+The state update (`setScrollPos`) causes `useGridVirtualization` to recompute the render window at most once per animation frame, capping recompute cost to ~60Hz regardless of scroll event frequency. The returned `scrollTop`/`scrollLeft` values are the latest committed scroll position.
 
 ---
 

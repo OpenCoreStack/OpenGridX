@@ -53,7 +53,7 @@ const columns: GridColDef<Row>[] = [
         // Disable conflicting features
         sortable: false,        // ✅ Disable sorting
         hideable: false,        // ✅ Disable column hiding
-        disableReorder: true,   // ✅ Disable column reordering
+        // Column reorder is disabled grid-wide via disableColumnReorder on <DataGrid>
         // Note: Avoid pinning this column
         renderCell: (params) => {
             if (params.row.isTotal) {

@@ -70,7 +70,7 @@ Use `disableMultipleRowSelection` to cap selection to one row at a time. Clickin
 | `disableMultipleRowSelection` | `boolean` | `false` | Restricts selection to a single row. |
 | `rowSelectionModel` | `GridRowId[]` | `[]` | Controlled array of selected IDs. |
 | `onRowSelectionModelChange` | `(model: GridRowSelectionModel) => void` | — | Fired when the selection changes. |
-| `pinCheckboxColumn` | `boolean` | `false` | Keep the checkbox column visible during horizontal scroll. |
+| `pinCheckboxColumn` | `boolean` | `true` | Keep the checkbox column visible during horizontal scroll. |
 
 ---
 

@@ -24,7 +24,7 @@ The main component for displaying and interacting with data.
 | `paginationMode` | `'client' \| 'server' \| 'infinite'` | `'client'` | How to handle paging. |
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). |
 | `onPaginationModelChange` | `(model: GridPaginationModel) => void` | — | Fired when page or page size changes. |
-| `pageSizeOptions` | `number[]` | `[10, 25, 50]` | Available page size options. |
+| `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. |
 | `rowCount` | `number` | — | Total rows (required for server-side paging). |
 | `height` | `number \| string` | `undefined` | Total height of the grid container. |
 | `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density. |
@@ -82,8 +82,8 @@ The main component for displaying and interacting with data.
 | `pinnedColumns` | `GridColumnPinning` | — | Columns pinned to the left or right viewport edges. See [Column & Row Pinning](#-column--row-pinning). |
 | `onPinnedColumnsChange` | `(model: GridColumnPinning) => void` | — | Fired when column pinning changes. |
 | `pinnedRows` | `GridRowPinning` | — | Row IDs pinned to the top or bottom of the viewport. |
-| `pinCheckboxColumn` | `boolean` | `false` | Keeps the checkbox column visible during horizontal scrolling. |
-| `pinExpandColumn` | `boolean` | `false` | Keeps the Master-Detail expansion column visible during horizontal scrolling. |
+| `pinCheckboxColumn` | `boolean` | `true` | Keeps the checkbox column visible during horizontal scrolling. |
+| `pinExpandColumn` | `boolean` | `true` | Keeps the Master-Detail expansion column visible during horizontal scrolling. |
 
 #### Inline Editing
 
@@ -138,7 +138,7 @@ The main component for displaying and interacting with data.
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `ariaLabel` | `string` | — | ARIA label for the grid container element. |
-| `noRowsLabel` | `string` | `'No rows'` | Message shown in the empty-state overlay when there are no rows. |
+| `noRowsLabel` | `string` | `'No Data'` | Message shown in the empty-state overlay when there are no rows. |
 | `className` | `string` | — | Additional CSS class applied to the outermost grid wrapper element. |
 | `style` | `React.CSSProperties` | — | Inline styles applied to the grid wrapper element. |
 
@@ -246,6 +246,8 @@ Access these methods via the `apiRef` prop.
 | `getAllColumns()` | `GridColDef[]` | Get all defined columns. |
 | `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results. |
 | `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
+| `getAllFilteredRows()` | `GridRowModel[]` | Get all filtered+sorted rows regardless of the current pagination window. Use for full-dataset exports. |
+| `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total). Returns `null` when row grouping is not active. |
 | `copySelectedRows()` | `Promise<void>` | Copy selected rows to clipboard as TSV. |
 
 ---
@@ -593,6 +595,7 @@ interface GridRowMeta {
   treeDepth?: number;
   groupingField?: string;
   groupingValue?: unknown;
+  groupLabel?: string;
   descendantCount?: number;
   isExpanded?: boolean;
   isGroupRow?: boolean;
@@ -1245,6 +1248,7 @@ interface PdfExportOptions {
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     filterModel?: GridFilterModel | null;
+    groupedRows?: GridGroupedExportRow[];
     alternateRowColor?: boolean;
     headerBackgroundColor?: string;
     headerTextColor?: string;
@@ -1262,6 +1266,7 @@ interface PdfExportOptions {
 | `aggregationResult` | `Record<string, unknown>` | — | From `apiRef.current.getAggregationResult()` |
 | `aggregationModel` | `GridAggregationModel` | — | From `apiRef.current.getAggregationModel()` |
 | `filterModel` | `GridFilterModel` | — | From `apiRef.current.getFilterModel()` |
+| `groupedRows` | `GridGroupedExportRow[]` | — | Pre-built grouped export rows from `apiRef.current.getGroupedExportRows()`. When provided, the PDF table reflects the grouping structure (group-header, indented leaves, subtotals, grand total). |
 | `alternateRowColor` | `boolean` | `true` | Alternating row background shading |
 | `headerBackgroundColor` | `string` | `'#4f46e5'` | Column header cell background (hex) |
 | `headerTextColor` | `string` | `'#ffffff'` | Column header cell text color (hex) |
