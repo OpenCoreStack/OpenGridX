@@ -84,16 +84,37 @@ Disable virtualization for small datasets:
 
 ### Overscan Buffer
 
-The overscan buffer determines how many extra rows are rendered outside the viewport. A larger buffer provides smoother scrolling but uses more memory.
+The overscan buffer determines how many extra rows are rendered outside the viewport. The grid adapts this buffer automatically based on scroll velocity so fast scrolls never produce blank flashes.
 
-**Current implementation:**
-- Default overscan: **5 rows** (above and below viewport)
-- Total rendered rows: ~(viewport rows + 10)
+**Adaptive algorithm (`useGridScrollSync`):**
+- Scroll velocity (px/ms) is measured on every scroll event
+- The overscan tier is chosen from the table below and applied immediately
+- 200 ms after scrolling stops the buffer decays back to `overscanRowCount`
+
+| Velocity (px/ms) | Overscan rows |
+|---|---|
+| < 0.5 | 3 |
+| 0.5 – 3 | 5 |
+| 3 – 15 | 12 |
+| 15 – 40 | 20 |
+| > 40 | 30 |
+
+**Configuring the floor:**
+
+```tsx
+// Never render fewer than 5 rows outside the viewport
+<DataGrid
+  rows={rows}
+  columns={columns}
+  overscanRowCount={5}
+/>
+```
+
+`overscanRowCount` (default `3`) sets the minimum — the adaptive algorithm always produces a value ≥ this floor.
 
 **Trade-offs:**
-- **Smaller overscan (1-3)**: Less memory, potential flickering during fast scrolling
-- **Larger overscan (5-8)**: More memory, smoother fast scrolling
-- **Very large overscan (10+)**: Diminishing returns, wasted rendering
+- **Smaller floor (1-3)**: Less idle memory, relies on adaptive headroom for fast scrolls
+- **Larger floor (5-8)**: Pre-renders more rows at rest, trades memory for smoother slow scrolls
 
 ### Scroll Performance
 
@@ -178,7 +199,7 @@ You should see console logs only for visible rows + overscan buffer.
 ## Future Improvements
 
 - [ ] Column virtualization for grids with 50+ columns
-- [ ] Adaptive overscan based on scroll velocity
+- [x] Adaptive overscan based on scroll velocity (`overscanRowCount` prop, v2.0.4)
 - [ ] Virtual scrollbar for extremely large datasets (millions of rows)
 - [ ] Intersection Observer API for better scroll detection
 
@@ -189,7 +210,7 @@ You should see console logs only for visible rows + overscan buffer.
 | Row virtualization | ✅ Yes | ✅ Yes |
 | Column virtualization | ❌ Planned | ✅ Yes (Pro) |
 | Variable row heights | ✅ Yes | ✅ Yes |
-| Overscan buffer | 5 rows | 3-8 rows (adaptive) |
+| Overscan buffer | 3–30 rows (adaptive, velocity-based) | 3-8 rows (adaptive) |
 | Max recommended rows | 100,000+ | 100,000+ |
 
 ## Related Documentation

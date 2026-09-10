@@ -5,6 +5,15 @@
 
 ---
 
+## [2.0.4] — 2026-09-10
+
+### Added
+
+- **Adaptive overscan based on scroll velocity** — `useGridScrollSync` now tracks scroll velocity (px/ms) on every scroll event and maps it to a dynamic overscan tier (3 / 5 / 12 / 20 / 30 rows). All three values (`scrollTop`, `scrollLeft`, `overscanRows`) are bundled into a single state update per RAF frame so `useGridVirtualization` recomputes exactly once per frame. 200 ms after scrolling stops, the overscan decays back to the floor set by `overscanRowCount`.
+- **`overscanRowCount` prop** — new `DataGridProps` field (`number`, default `3`). Sets the minimum overscan floor; the adaptive algorithm always produces a value ≥ this prop. Increasing it pre-renders more rows at rest; decreasing it saves idle memory.
+
+---
+
 ## [2.0.3] — 2026-09-10
 
 ### Documentation

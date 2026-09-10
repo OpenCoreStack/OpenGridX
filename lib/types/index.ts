@@ -608,6 +608,13 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   headerHeight?: number;
   /** If true, the grid height will adjust to match the total height of its rows. */
   autoHeight?: boolean;
+  /**
+   * Minimum number of rows to render outside the visible viewport (overscan buffer).
+   * The grid adapts this value upward automatically based on scroll velocity to prevent
+   * blank flashes during fast scrolling. This prop sets the floor — the buffer never
+   * drops below this value regardless of scroll speed. Defaults to `3`.
+   */
+  overscanRowCount?: number;
 
   /** Sorting mode: 'client' (default) or 'server'. */
   sortingMode?: 'client' | 'server';

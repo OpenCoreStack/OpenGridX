@@ -18,6 +18,7 @@ The main component for displaying and interacting with data.
 | `rowHeight` | `number` | `52` | Height of each row in pixels. |
 | `headerHeight` | `number` | `56` | Height of the header row. |
 | `autoHeight` | `boolean` | `false` | Adjust grid height to match row total. |
+| `overscanRowCount` | `number` | `3` | Minimum rows rendered outside the visible viewport. The grid adapts this upward automatically based on scroll velocity — this prop sets the floor. |
 | `loading` | `boolean` | `false` | Shows a loading skeleton overlay. |
 | `checkboxSelection` | `boolean` | `false` | Enable row selection via checkboxes. |
 | `pagination` | `boolean` | `false` | Enable the bottom pagination bar. |

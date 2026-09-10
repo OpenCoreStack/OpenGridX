@@ -35,6 +35,7 @@ function MyGrid() {
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). Omit for uncontrolled; use `initialState` to set the initial page/pageSize. |
 | `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. |
 | `initialState` | `GridInitialState` | `undefined` | Initial configuration (sorting, columns, pagination, etc). |
+| `overscanRowCount` | `number` | `3` | Minimum rows rendered outside the visible viewport. The grid adapts this upward automatically based on scroll velocity — this prop sets the floor. |
 
 ## 🔃 Sorting
 

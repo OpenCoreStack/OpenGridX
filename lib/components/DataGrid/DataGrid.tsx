@@ -118,6 +118,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         noRowsLabel = 'No Data',
         localeText,
         apiRef: propApiRef,
+        overscanRowCount = 3,
     } = props;
 
     const effectiveNoRowsLabel = localeText?.noRowsLabel ?? noRowsLabel;
@@ -301,7 +302,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         setRowCount
     } = gridData;
 
-    const { scrollTop, scrollLeft, handleScroll } = useGridScrollSync({ onRowsScrollEnd });
+    const { scrollTop, scrollLeft, overscanRows, handleScroll } = useGridScrollSync({ onRowsScrollEnd, overscanRowCount });
 
     useEffect(() => {
         if (propApiRef) {
@@ -693,6 +694,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         checkboxSelection,
         pinCheckboxColumn,
         pinExpandColumn,
+        overscanRows,
     });
 
 

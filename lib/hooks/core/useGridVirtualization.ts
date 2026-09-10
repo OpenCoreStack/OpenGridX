@@ -14,6 +14,8 @@ export interface UseGridVirtualizationParams<R extends GridRowModel> {
     checkboxSelection: boolean;
     pinCheckboxColumn: boolean;
     pinExpandColumn: boolean;
+    /** Adaptive overscan row count from useGridScrollSync. Defaults to 5. */
+    overscanRows?: number;
 }
 
 export interface GridVirtualizationResult<R extends GridRowModel = GridRowModel> {
@@ -57,6 +59,7 @@ export function useGridVirtualization<R extends GridRowModel>(
         checkboxSelection,
         pinCheckboxColumn,
         pinExpandColumn,
+        overscanRows = 5,
     } = params;
 
     return useMemo<GridVirtualizationResult<R>>(() => {
@@ -120,7 +123,6 @@ export function useGridVirtualization<R extends GridRowModel>(
         const scrollbarBuffer = hasHorizontalScroll ? 16 : 0;
         const totalHeight = pinnedTopHeight + unpinnedRowsHeight + pinnedBottomHeight + scrollbarBuffer + 2;
 
-        const overscanRows = 5;
         let firstRowIndex = 0;
         let lastRowIndex  = unpinnedRowsLength - 1;
         let offsetTop     = 0;
@@ -182,5 +184,6 @@ export function useGridVirtualization<R extends GridRowModel>(
         checkboxSelection,
         pinCheckboxColumn,
         pinExpandColumn,
+        overscanRows,
     ]);
 }

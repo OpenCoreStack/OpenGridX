@@ -90,6 +90,7 @@ export default function InfiniteScrollDemo() {
                 onRowsScrollEnd={handleScrollEnd}
                 rowHeight={48}
                 height={400}
+                overscanRowCount={5}
             />
         </DocsLayout>
     );

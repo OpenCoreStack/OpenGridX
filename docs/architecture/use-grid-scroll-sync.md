@@ -22,6 +22,8 @@ Extracting them gives the scroll logic its own test surface and removes 31 lines
 ```ts
 interface UseGridScrollSyncParams {
     onRowsScrollEnd?: (params: GridRowScrollEndParams) => void;
+    /** Minimum overscan rows — the adaptive algorithm never goes below this. Defaults to 3. */
+    overscanRowCount?: number;
 }
 ```
 
@@ -33,6 +35,8 @@ interface UseGridScrollSyncParams {
 interface UseGridScrollSyncResult {
     scrollTop: number;
     scrollLeft: number;
+    /** Dynamically computed overscan row count based on current scroll velocity. */
+    overscanRows: number;
     handleScroll: (event: React.UIEvent<HTMLDivElement>) => void;
 }
 ```
@@ -41,6 +45,7 @@ interface UseGridScrollSyncResult {
 |--------|---------|
 | `scrollTop` | `useGridVirtualization` — vertical scroll offset for computing the visible row window |
 | `scrollLeft` | `useGridVirtualization` — horizontal scroll offset for computing the visible column window |
+| `overscanRows` | `useGridVirtualization` — adaptive overscan count, set from current scroll velocity |
 | `handleScroll` | Passed to the viewport `<div onScroll={handleScroll}>` |
 
 ---
@@ -50,10 +55,27 @@ interface UseGridScrollSyncResult {
 `handleScroll` fires on every scroll event (can be 60+ per second). Rather than recomputing the virtual window on every event, the hook schedules a single RAF per frame:
 
 ```
-scroll event → cancel pending RAF → schedule new RAF → RAF fires → setScrollPos({scrollTop, scrollLeft})
+scroll event → measure velocity → cancel pending RAF → schedule new RAF
+  → RAF fires → setScrollState({ scrollTop, scrollLeft, overscanRows })
 ```
 
-The state update (`setScrollPos`) causes `useGridVirtualization` to recompute the render window at most once per animation frame, capping recompute cost to ~60Hz regardless of scroll event frequency. The returned `scrollTop`/`scrollLeft` values are the latest committed scroll position.
+All three values are bundled into a single `setScrollState` call so `useGridVirtualization` recomputes exactly once per frame. Scroll velocity (px/ms) is computed as `deltaPos / deltaTime` from the previous scroll event, then mapped to an overscan tier via `velocityToOverscan()`:
+
+| Velocity (px/ms) | `overscanRows` |
+|---|---|
+| < 0.5 | 3 |
+| 0.5 – 3 | 5 |
+| 3 – 15 | 12 |
+| 15 – 40 | 20 |
+| > 40 | 30 |
+
+The result is always `Math.max(computed, overscanRowCount)` so the prop floor is respected.
+
+---
+
+## Decay timer
+
+200 ms after the last scroll event, a `setTimeout` callback resets `overscanRows` back to `overscanRowCount`. This prevents the grid from holding a large overscan buffer while the user is idle.
 
 ---
 
@@ -65,12 +87,13 @@ When the viewport scrolls to within 100px of the bottom (`scrollHeight - scrollT
 
 ## Cleanup
 
-The hook registers a single `useEffect` with an empty dependency array to cancel any pending RAF on unmount:
+The hook registers a single `useEffect` with an empty dependency array to cancel any pending RAF and decay timer on unmount:
 
 ```ts
 useEffect(() => {
     return () => {
-        if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
+        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+        if (decayRef.current !== null) clearTimeout(decayRef.current);
     };
 }, []);
 ```

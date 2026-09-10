@@ -6,7 +6,7 @@
 - **Project Path**: `/Volumes/Data/RND/OpenGridX`
 - **Core Value**: 100% custom implementation with ZERO external UI dependencies.
 - **Performance**: Handles 100,000+ rows via custom virtualization at 60fps.
-- **Current Version**: `2.0.0` (unpublished — pending release)
+- **Current Version**: `2.0.3` (published ✅)
 
 ## 📦 NPM Publication Status
 - **v0.1.0** → Published ✅ (March 6, 2026 — first publish)
@@ -20,7 +20,10 @@
 - **v1.2.2** → Published ✅ (CellErrorBoundary CellRenderTarget, getAllFilteredRows, PDF aggregation footer)
 - **v1.2.3** → Published ✅ (hideable:false excluded from Columns panel by default)
 - **v1.3.0** → Published ✅ (GridApi.getGroupedExportRows, grouped export across all formats)
-- **v2.0.0** → Unpublished — pending release (density, multiSort, disableRowSelectionOnClick, disableMultipleRowSelection, groupingColDef, groupable:false, groupingValueFormatter, availableAggregationFunctions, pagination bug fix, removed onPinnedRowsChange + onRowGroupingModelChange)
+- **v2.0.0** → Published ✅ (Sep 8, 2026 — density, multiSort, disableRowSelectionOnClick, disableMultipleRowSelection, groupingColDef, groupable:false, groupingValueFormatter, availableAggregationFunctions, pagination bug fix, removed onPinnedRowsChange + onRowGroupingModelChange)
+- **v2.0.1** → Published ✅ (Sep 8, 2026 — document `unique` aggregation fn in changelog; add opengridx-ai-context.md)
+- **v2.0.2** → Published ✅ (Sep 10, 2026 — fix infinite re-render loop when rowGroupingModel + groupingColDef both active; memoize activeColumns + effectivePinnedColumns in DataGrid.tsx)
+- **v2.0.3** → Published ✅ (Sep 10, 2026 — comprehensive docs audit: 32 accuracy fixes across 19 files; wrong defaults, non-existent API, stale architecture docs)
 - **Package URL**: https://www.npmjs.com/package/@opencorestack/opengridx
 - **npm org**: `opencorestack` (owner: `asif7774`)
 - **Next publish**: bump version in `package.json`, then `npm publish --access public --otp=<code>`

@@ -29,10 +29,12 @@ interface UseGridVirtualizationParams<R extends GridRowModel> {
     checkboxSelection: boolean;
     pinCheckboxColumn: boolean;
     pinExpandColumn: boolean;
+    /** Adaptive overscan row count from useGridScrollSync. Defaults to 5. */
+    overscanRows?: number;
 }
 ```
 
-> `scrollTop` and `scrollLeft` come from `useGridScrollSync`, which batches scroll events via RAF and returns plain numeric values that change at most once per animation frame.
+> `scrollTop`, `scrollLeft`, and `overscanRows` all come from `useGridScrollSync`, which batches scroll events via RAF and bundles all three into a single state update that fires at most once per animation frame.
 
 ---
 
