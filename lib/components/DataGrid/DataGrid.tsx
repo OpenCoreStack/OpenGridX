@@ -206,25 +206,32 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const isRowGroupingActive = Boolean(propRowGroupingModel && propRowGroupingModel.length > 0);
 
     // Auto-pin __group__ column to the left when groupingColDef is active.
-    const effectivePinnedColumns = (groupingColDef && isRowGroupingActive && !pivotMode)
-        ? { ...pinnedColumns, left: ['__group__', ...((pinnedColumns?.left ?? []).filter(f => f !== '__group__'))] }
-        : pinnedColumns;
+    // Both values MUST be memoized: without useMemo they produce a new array/object
+    // reference every render, which cascades through useRowGrouping's memos and
+    // effects into an infinite setState loop (Maximum update depth exceeded).
+    const effectivePinnedColumns = useMemo(() => (
+        (groupingColDef && isRowGroupingActive && !pivotMode)
+            ? { ...pinnedColumns, left: ['__group__', ...((pinnedColumns?.left ?? []).filter(f => f !== '__group__'))] }
+            : pinnedColumns
+    ), [groupingColDef, isRowGroupingActive, pivotMode, pinnedColumns]);
 
-    const activeColumns = (groupingColDef && isRowGroupingActive && !pivotMode)
-        ? [
-            {
-                headerName: 'Group',
-                width: 220,
-                ...groupingColDef,
-                field: '__group__',
-                hideable: false,
-                sortable: false,
-                pinnable: false,
-                exportable: false,
-            } as unknown as GridColDef<R>,
-            ...baseColumns,
-          ]
-        : baseColumns;
+    const activeColumns = useMemo(() => (
+        (groupingColDef && isRowGroupingActive && !pivotMode)
+            ? [
+                {
+                    headerName: 'Group',
+                    width: 220,
+                    ...groupingColDef,
+                    field: '__group__',
+                    hideable: false,
+                    sortable: false,
+                    pinnable: false,
+                    exportable: false,
+                } as unknown as GridColDef<R>,
+                ...baseColumns,
+              ]
+            : baseColumns
+    ), [groupingColDef, isRowGroupingActive, pivotMode, baseColumns]);
 
     const [serverAggregationResults, setServerAggregationResults] = useState<GridAggregationResult | null>(null);
 

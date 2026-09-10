@@ -5,6 +5,19 @@
 
 ---
 
+## [2.0.2] — 2026-09-10
+
+### Fixed
+
+- **Infinite re-render loop with `rowGroupingModel` + `groupingColDef`** — when both were active,
+  `activeColumns` and `effectivePinnedColumns` were rebuilt as new object/array references on every
+  render. The new references cascaded through `useRowGrouping`'s memoized values and a `useEffect`
+  that called `setExpandedGroupIds`, triggering a render → new references → effect → `setState`
+  cycle that never settled (`Maximum update depth exceeded`). Both values are now wrapped in
+  `useMemo` so their references only change when their actual inputs change.
+
+---
+
 ## [2.0.1] — 2026-09-08
 
 ### Documentation
