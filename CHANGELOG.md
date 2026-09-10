@@ -5,6 +5,19 @@
 
 ---
 
+## [2.0.3] — 2026-09-10
+
+### Documentation
+
+Comprehensive accuracy audit — 32 issues corrected across 19 files:
+
+- **Wrong defaults corrected**: `pageSizeOptions` (`[10,25,50]` → `[10,25,50,100]`), `pinCheckboxColumn`/`pinExpandColumn` (`false` → `true`), `noRowsLabel` (`'No rows'` → `'No Data'`) — in `API_REFERENCE.md`, `components/datagrid.md`, `features/sorting-pagination.md`, `features/selection.md`, `components/empty-state.md`
+- **Missing API surface added**: `getAllFilteredRows()` and `getGroupedExportRows()` added to `GridApi` table; `groupLabel` field added to `GridRowMeta`; `groupedRows` option added to `PdfExportOptions`; `'unique'` added to aggregation function type in `components/aggregation-footer.md`
+- **Non-existent API removed or corrected**: `'both'` is not a valid `getAggregationPosition` return (valid: `'inline' | 'footer' | null`); `disableColumnResize` DataGrid prop, `columnResizeHandle`/`columnVisibilityPanel`/`columnGroupHeader`/`tooltip` slots, `onColumnWidthChange` callback, `disableReorder` on `GridColDef`, `showQuickFilter` in `GridToolbarProps`, `toolbar`/`toolbarProps` DataGrid props — all documented as real but never existed; corrected throughout
+- **Stale content updated**: `use-grid-scroll-sync.md` and `use-grid-virtualization.md` params/returns updated from old `scrollPosRef`/`scrollTick` pattern to current `scrollTop`/`scrollLeft`; `grid-row-meta.md` updated from "will be removed in v2" to "was removed in v2"; `roadmap.md` column virtualization claim corrected; `virtualization.md` "Aui DataGrid" placeholder fixed and `density` prop section added; `upgrade-guide` version and slots API corrected
+
+---
+
 ## [2.0.2] — 2026-09-10
 
 ### Fixed
