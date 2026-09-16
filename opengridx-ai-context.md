@@ -8,7 +8,7 @@ that uses the `@opencorestack/opengridx` library. Read it in full before writing
 ## What this library is
 
 `@opencorestack/opengridx` is a zero-dependency, high-performance React DataGrid component.
-Current version: **2.0.0**. It is a full custom implementation — not a wrapper around MUI or any
+Current version: **2.0.4**. It is a full custom implementation — not a wrapper around MUI or any
 other library.
 
 ---
@@ -203,13 +203,14 @@ node_modules/@opencorestack/opengridx/docs/migration/v1-to-v2.md   ← if it shi
 | `disableMultipleRowSelection` | Now caps selection to one row. Same caveat. |
 | `density` | Now sets row height. If you passed `density` expecting it to be ignored, row heights will change. |
 
-**Removed runtime row shim:**
+**Legacy row shim — still present, do not rely on it:**
 
 ```tsx
-// ❌ v1 shim — no longer injected on params.row in v2:
+// ⚠️ v1 shim — still injected on params.row as of v2.0.4 (deprecated, will be
+// removed in a future major version — do not write new code depending on it):
 const hasChildren = (params.row as Record<string, unknown>)._hasChildren;
 
-// ✅ v2:
+// ✅ use this instead, in both v1 and v2:
 const hasChildren = params.rowMeta?.hasChildren;
 ```
 

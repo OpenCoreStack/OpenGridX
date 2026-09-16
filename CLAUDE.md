@@ -13,7 +13,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Tests:** Vitest 4 + `@testing-library/react` (`renderHook` for hooks, component tests for UI)
 - **Build:** Vite (library mode). `npm run build` produces `dist/opengridx.es.js` and `dist/opengridx.umd.js`.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 2.0.0
+- **Current version:** 2.0.4
 
 ---
 
@@ -40,7 +40,7 @@ DataGridProps
        Header, GridVirtualRows, GridPinnedRows, Pagination, GridAggregationFooter
 ```
 
-Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGrouping`. They produce flat renderable row arrays with internal `_*` fields injected (runtime shim, removed in v2) **and** a `rowMetaMap: Map<GridRowId, GridRowMeta>` that is the clean typed API.
+Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGrouping`. They produce flat renderable row arrays with internal `_*` fields injected (runtime shim, still present as of v2.0.4 — deprecated, deferred to a future major version) **and** a `rowMetaMap: Map<GridRowId, GridRowMeta>` that is the clean typed API.
 
 ---
 
@@ -81,7 +81,7 @@ Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGroupin
 - **CSS variables:** `--ogx-*` (e.g. `--ogx-row-height`, `--ogx-color-primary`)
 - **Hook names:** `use-grid-*` for core hooks, `use*` for feature hooks
 - **Exported types:** `Grid*` prefix (e.g. `GridColDef`, `GridRowMeta`, `GridLocaleText`)
-- **Internal fields still on row at runtime (shim, remove in v2):** `_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount`, `_isGroupRow`
+- **Internal fields still on row at runtime (deprecated shim, not yet removed — was mistakenly documented as removed in v2.0):** `_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount`, `_isGroupRow`
 
 ---
 
@@ -89,7 +89,7 @@ Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGroupin
 
 Hierarchy metadata (`hasChildren`, `treeDepth`, `groupingField`, etc.) lives in a `Map<GridRowId, GridRowMeta>` returned by `useTreeData`/`useRowGrouping`, not on the row object. Access it in `renderCell` via `params.rowMeta`.
 
-The underscore fields remain on the row object at runtime in v1.x (backward compat shim). **Remove the runtime injection in v2.0** by deleting the `_hasChildren = ...` assignments in `useTreeData.ts` and `useRowGrouping.ts`.
+The underscore fields remain on the row object at runtime — this shim was carried through v1.x **and is still present in v2.0.4**; the injection was never actually removed in v2.0 despite earlier drafts of this file and `docs/roadmap.md` claiming otherwise. Removal is deferred to a future major version. When it happens, delete the `_hasChildren = ...` assignments in `useTreeData.ts` and `useRowGrouping.ts`. Until then, don't write code that assumes the underscore fields are absent.
 
 Full doc: `docs/architecture/grid-row-meta.md`
 

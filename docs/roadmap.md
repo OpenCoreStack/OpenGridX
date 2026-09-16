@@ -88,7 +88,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 ## ✅ Implemented Features (Recent)
 
 ### Library Hardening *(completed 2026-09-02)*
-- **`GridRowMeta`**: Hierarchy metadata (`hasChildren`, `treeDepth`, `groupingField`, `groupingValue`, `descendantCount`, `isExpanded`, `isGroupRow`) moved from `GridRowModel` into a separate `Map<GridRowId, GridRowMeta>`. Exposed as `params.rowMeta` in `renderCell`. Runtime shim maintains backward compatibility; removed in v2.0.
+- **`GridRowMeta`**: Hierarchy metadata (`hasChildren`, `treeDepth`, `groupingField`, `groupingValue`, `descendantCount`, `isExpanded`, `isGroupRow`) moved from `GridRowModel` into a separate `Map<GridRowId, GridRowMeta>`. Exposed as `params.rowMeta` in `renderCell`. Runtime shim (underscore-prefixed fields on the row object) maintains backward compatibility; still present as of v2.0.4, deprecated for removal in a future major version — see `docs/architecture/grid-row-meta.md`.
 - **`CellErrorBoundary`**: Custom `renderCell` errors are now caught per-cell. Failing cells show a `⚠` indicator with the error as a tooltip; the rest of the grid renders normally.
 - **`GridLocaleText` / `localeText` prop**: All user-visible pagination strings (`paginationRowsPerPage`, `paginationOf`, `paginationPage`, `noRowsLabel`) are now overrideable for internationalisation.
 - **Core hook tests**: `useGridRowPipeline`, `useGridControlledState`, `useGridKeyboardNavigation` now have full test coverage (25 new tests).

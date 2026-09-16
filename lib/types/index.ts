@@ -21,8 +21,9 @@ export interface GridRowModel {
  *
  * @since v1.1 — replaces the `_hasChildren` / `_treeDepth` / `_groupingField` etc.
  * properties that were previously (and incorrectly) typed on `GridRowModel`.
- * Those underscore fields remain on the row object at runtime in v1.1 for
- * backward compatibility; they will be removed from the runtime in v2.0.
+ * Those underscore fields remain on the row object at runtime for backward
+ * compatibility; removal was deferred past v2.0 (still present as of v2.0.4)
+ * to a future major version. Do not rely on them being absent yet.
  */
 export interface GridRowMeta {
     hasChildren?: boolean;

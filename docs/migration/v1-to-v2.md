@@ -78,6 +78,14 @@ In v1 passing `groupingColDef` had no runtime effect. In v2, when `rowGroupingMo
 
 ---
 
+## 5. No action needed: legacy underscore row fields are still present
+
+Earlier drafts of `docs/architecture/grid-row-meta.md` and `docs/roadmap.md` stated that the `_hasChildren` / `_treeDepth` / `_isExpanded` / `_groupingField` / `_groupingValue` / `_descendantCount` / `_isGroupRow` runtime shim was removed in v2.0. That was incorrect — it was never scheduled for v2.0 and nothing in this release touches it. `useTreeData` and `useRowGrouping` still inject these fields onto every row exactly as they did in v1.x.
+
+**No migration action is required.** If you were already using `params.rowMeta` (recommended since v1.1), nothing changes. If you were still reading the underscore fields directly, they continue to work in v2.0 — but treat them as deprecated and migrate to `params.rowMeta` before they're removed in a future major version. See `docs/architecture/grid-row-meta.md` for the full field mapping.
+
+---
+
 ## New features (no migration needed)
 
 These are purely additive — existing v1 code continues to work unchanged.

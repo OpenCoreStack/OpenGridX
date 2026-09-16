@@ -23,7 +23,7 @@ Comprehensive accuracy audit — 32 issues corrected across 19 files:
 - **Wrong defaults corrected**: `pageSizeOptions` (`[10,25,50]` → `[10,25,50,100]`), `pinCheckboxColumn`/`pinExpandColumn` (`false` → `true`), `noRowsLabel` (`'No rows'` → `'No Data'`) — in `API_REFERENCE.md`, `components/datagrid.md`, `features/sorting-pagination.md`, `features/selection.md`, `components/empty-state.md`
 - **Missing API surface added**: `getAllFilteredRows()` and `getGroupedExportRows()` added to `GridApi` table; `groupLabel` field added to `GridRowMeta`; `groupedRows` option added to `PdfExportOptions`; `'unique'` added to aggregation function type in `components/aggregation-footer.md`
 - **Non-existent API removed or corrected**: `'both'` is not a valid `getAggregationPosition` return (valid: `'inline' | 'footer' | null`); `disableColumnResize` DataGrid prop, `columnResizeHandle`/`columnVisibilityPanel`/`columnGroupHeader`/`tooltip` slots, `onColumnWidthChange` callback, `disableReorder` on `GridColDef`, `showQuickFilter` in `GridToolbarProps`, `toolbar`/`toolbarProps` DataGrid props — all documented as real but never existed; corrected throughout
-- **Stale content updated**: `use-grid-scroll-sync.md` and `use-grid-virtualization.md` params/returns updated from old `scrollPosRef`/`scrollTick` pattern to current `scrollTop`/`scrollLeft`; `grid-row-meta.md` updated from "will be removed in v2" to "was removed in v2"; `roadmap.md` column virtualization claim corrected; `virtualization.md` "Aui DataGrid" placeholder fixed and `density` prop section added; `upgrade-guide` version and slots API corrected
+- **Stale content updated**: `use-grid-scroll-sync.md` and `use-grid-virtualization.md` params/returns updated from old `scrollPosRef`/`scrollTick` pattern to current `scrollTop`/`scrollLeft`; `grid-row-meta.md` updated from "will be removed in v2" to "was removed in v2" *(correction, 2026-09-16: this specific change was itself inaccurate — the shim was never actually removed in v2.0; reverted to reflect that it is still present and deprecated)*; `roadmap.md` column virtualization claim corrected; `virtualization.md` "Aui DataGrid" placeholder fixed and `density` prop section added; `upgrade-guide` version and slots API corrected
 
 ---
 
@@ -190,10 +190,12 @@ Comprehensive accuracy audit — 32 issues corrected across 19 files:
 - `docs/architecture/grid-row-meta.md` — architecture doc for `GridRowMeta` and `rowMetaMap` data flow.
 
 ### Changed
-- `GridRowModel` no longer declares `_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount` as typed properties. These fields remain on the row object at runtime (backward-compat shim, removed in v2.0). Access hierarchy metadata via `params.rowMeta` instead.
+- `GridRowModel` no longer declares `_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount` as typed properties. These fields remain on the row object at runtime (backward-compat shim; scheduled for removal in v2.0 at the time of this release — see correction below). Access hierarchy metadata via `params.rowMeta` instead.
 
 ### Deprecated
-- `params.row._hasChildren` etc. — use `params.rowMeta?.hasChildren`. Runtime shim removed in v2.0.
+- `params.row._hasChildren` etc. — use `params.rowMeta?.hasChildren`. Runtime shim scheduled for removal in v2.0 at the time of this release.
+
+> **Correction (added retroactively):** the runtime shim removal described above did not ship in v2.0.0–v2.0.4. The underscore fields are still injected at runtime as of v2.0.4. Removal is deferred to a future major version. See `docs/architecture/grid-row-meta.md`.
 
 ---
 

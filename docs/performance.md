@@ -97,5 +97,5 @@ Or use the `dataSource` prop with `useGridDataSource` for a unified data-fetchin
 ## Related
 
 - [Virtualization](./features/virtualization.md)
-- [Server-Side Data](./features/server-side.md)
+- [Server-Side Data](./features/data-source.md)
 - [Infinite Scroll](./features/sorting-pagination.md)
