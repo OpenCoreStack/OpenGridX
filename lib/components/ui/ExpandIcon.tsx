@@ -5,9 +5,11 @@ export interface ExpandIconProps {
     isExpanded: boolean;
     onClick?: (event: React.MouseEvent) => void;
     variant?: 'chevron' | 'plus-minus';
+    /** Pass -1 inside grid cells: the cell, not the button, is the keyboard focus stop. */
+    tabIndex?: number;
 }
 
-export function ExpandIcon({ isExpanded, onClick, variant = 'chevron' }: ExpandIconProps) {
+export function ExpandIcon({ isExpanded, onClick, variant = 'chevron', tabIndex }: ExpandIconProps) {
     return (
         <button
             className={`ogx-expand-icon ${isExpanded ? 'ogx-expand-icon--expanded' : ''}`}
@@ -18,6 +20,7 @@ export function ExpandIcon({ isExpanded, onClick, variant = 'chevron' }: ExpandI
             }}
             aria-label={isExpanded ? 'Collapse row' : 'Expand row'}
             type="button"
+            tabIndex={tabIndex}
         >
             {variant === 'plus-minus' ? (
                 <svg

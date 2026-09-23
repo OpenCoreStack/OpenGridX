@@ -84,6 +84,10 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
     rowSpanningCaches?: RowSpanningCaches;
     rowHeight?: number;
     rowMeta?: GridRowMeta;
+    /** Position of each visible data column in render order, for `colIndex` and `aria-colindex`. */
+    columnIndexMap?: Map<string, number>;
+    /** 1-based `aria-rowindex` of this row in the whole grid (header rows included). Defaults to `rowIndex + 2`. */
+    ariaRowIndex?: number;
 }
 
 export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
@@ -128,23 +132,16 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         colspanMap,
         rowSpanningCaches,
         rowHeight = 52,
-        rowMeta
+        rowMeta,
+        columnIndexMap,
+        ariaRowIndex,
     } = props;
 
     const id = rowIdProp ?? row.id;
+    // All hooks must come before any early returns (Rules of Hooks).
+    // DOM focus is moved onto the focused cell by useGridKeyboardNavigation, not by the row.
     const checkboxId = useId();
-    const expandCellRef = React.useRef<HTMLDivElement>(null);
-    const checkboxCellRef = React.useRef<HTMLDivElement>(null);
-
-    // All hooks must come before any early returns (Rules of Hooks)
-    React.useLayoutEffect(() => {
-        if (focusedCellField === '__expand_col__' && expandCellRef.current) {
-            expandCellRef.current.focus({ preventScroll: true });
-        }
-        if (focusedCellField === '__checkbox_col__' && checkboxCellRef.current) {
-            checkboxCellRef.current.focus({ preventScroll: true });
-        }
-    }, [focusedCellField]);
+    const detailPanelId = useId();
 
     const pinnedPositions = React.useMemo(() => {
         return calculatePinnedPositions(
@@ -224,6 +221,15 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         onDetailPanelToggle?.(id);
     };
 
+    // aria-colindex: system columns first (reorder, expand, checkbox), then the data columns.
+    const reorderColIndex = rowReordering ? 1 : 0;
+    const expandColIndex = hasDetailPanel ? reorderColIndex + 1 : reorderColIndex;
+    const checkboxColIndex = checkboxSelection ? expandColIndex + 1 : expandColIndex;
+    const systemColumnCount = checkboxColIndex;
+    const dataColumnCount = columnIndexMap?.size ?? columns.filter(c => !c.isSpacer).length;
+    const isHierarchyRow = rowMeta !== undefined;
+    const hasChildren = rowMeta?.hasChildren === true;
+
     const rowPinnedPosition = isRowPinned(id, pinnedRows);
     const isRowPinnedTop = rowPinnedPosition === 'top';
     const isRowPinnedBottom = rowPinnedPosition === 'bottom';
@@ -248,8 +254,10 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                 onClick={handleRowClick}
                 onDoubleClick={onRowDoubleClick ? handleRowDoubleClick : undefined}
                 role="row"
-                aria-rowindex={rowIndex + 1}
+                aria-rowindex={ariaRowIndex ?? rowIndex + 2}
                 aria-selected={isSelected}
+                aria-level={isHierarchyRow ? (rowMeta?.treeDepth ?? 0) + 1 : undefined}
+                aria-expanded={hasChildren ? rowMeta?.isExpanded === true : undefined}
                 data-rowindex={rowIndex}
                 onDragOver={onDragOver ? onDragOver(id) : undefined}
                 onDrop={onDrop ? onDrop(id) : undefined}
@@ -263,9 +271,12 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                 { }
                 {rowReordering && (
                     <div
-                        className="ogx__cell ogx__cell--drag-handle"
+                        className={`ogx__cell ogx__cell--drag-handle ${focusedCellField === '__reorder_col__' ? 'ogx__cell--focused' : ''} ${(focusedCellField === '__reorder_col__' && isFocusVisible) ? 'ogx__cell--focus-visible' : ''}`}
                         role="gridcell"
                         aria-label="Drag to reorder row"
+                        aria-colindex={reorderColIndex}
+                        data-field="__reorder_col__"
+                        tabIndex={-1}
                         style={{
                             position: 'sticky',
                             left: 0,
@@ -289,12 +300,14 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         role="gridcell"
                         aria-label={showDetailPanel ? (isDetailPanelExpanded ? 'Collapse row details' : 'Expand row details') : undefined}
                         aria-expanded={showDetailPanel ? isDetailPanelExpanded : undefined}
+                        aria-controls={showDetailPanel && isDetailPanelExpanded ? detailPanelId : undefined}
+                        aria-colindex={expandColIndex}
+                        data-field="__expand_col__"
                         style={{
                             position: pinExpandColumn ? 'sticky' : undefined,
                             left: pinExpandColumn ? (rowReordering ? 48 : 0) : undefined,
                             zIndex: pinExpandColumn ? 5 : undefined
                         }}
-                        ref={expandCellRef}
                         tabIndex={-1}
                         onClick={(e) => {
                             e.stopPropagation();
@@ -313,6 +326,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                                 isExpanded={isDetailPanelExpanded}
                                 onClick={handleDetailPanelToggle}
                                 variant="plus-minus"
+                                tabIndex={-1}
                             />
                         )}
                     </div>
@@ -325,12 +339,13 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             } ${focusedCellField === '__checkbox_col__' ? 'ogx__cell--focused' : ''} ${(focusedCellField === '__checkbox_col__' && isFocusVisible) ? 'ogx__cell--focus-visible' : ''
                             }`}
                         role="gridcell"
+                        aria-colindex={checkboxColIndex}
+                        data-field="__checkbox_col__"
                         style={{
                             position: pinCheckboxColumn ? 'sticky' : undefined,
                             left: pinCheckboxColumn ? ((rowReordering ? 48 : 0) + (hasDetailPanel && pinExpandColumn ? 48 : 0)) : undefined,
                             zIndex: pinCheckboxColumn ? 11 : undefined
                         }}
-                        ref={checkboxCellRef}
                         tabIndex={-1}
                         onClick={(e) => {
                             e.stopPropagation();
@@ -360,7 +375,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                 )}
 
                 { }
-                {columns.map((colDef, colIndex) => {
+                {columns.map((colDef, localIndex) => {
                     if (colDef.isSpacer) {
                         return (
                             <div
@@ -384,6 +399,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             valueError = error ?? new Error('valueGetter failed');
                         }
                     }
+                    const colIndex = columnIndexMap?.get(colDef.field) ?? localIndex;
 
                     const effectiveWidth = columnWidths[colDef.field] ?? colDef.width;
 
@@ -417,6 +433,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             colDef={colDef}
                             rowIndex={rowIndex}
                             colIndex={colIndex}
+                            ariaColIndex={systemColumnCount + colIndex + 1}
                             isSelected={isSelected}
                             onCellClick={onCellClick}
                             width={effectiveWidth}
@@ -445,6 +462,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
             { }
             {showDetailPanel && (
                 <DetailPanel
+                    id={detailPanelId}
+                    colSpan={systemColumnCount + dataColumnCount}
                     row={row}
                     rowId={id}
                     rowIndex={rowIndex}

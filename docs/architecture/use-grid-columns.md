@@ -89,18 +89,22 @@ Under row grouping, a column with an `aggregationModel` entry also gets `valueGe
 
 ---
 
-## `navigationColumns`
+## `navigationColumns` and `columnIndexMap`
 
-Prepends system column stubs to `orderedColumns`:
+`navigationColumns` is what Row and Header render, in render order: system column stubs, then the visible data columns sorted left-pinned, unpinned, right-pinned (the same order `useLayout` renders them in):
 
 ```
-[{ field: '__reorder_col__' }]   (if rowReordering)
-[{ field: '__expand_col__' }]    (if hasDetailPanel)
-[{ field: '__checkbox_col__' }]  (if checkboxSelection)
-...orderedColumns
+[{ field: '__reorder_col__', sortable: false, editable: false }]   (if rowReordering)
+[{ field: '__expand_col__', sortable: false, editable: false }]    (if hasDetailPanel)
+[{ field: '__checkbox_col__', sortable: false, editable: false }]  (if checkboxSelection)
+...visibleOrderedColumns in pinned render order
 ```
 
-This array is consumed by `useGridKeyboardNavigation` (to map arrow-key movements across all focusable columns). `useGridSpanning` does not use it: spans are computed over the rendered data columns only (the layout's left-pinned, unpinned and right-pinned columns), so system columns and hidden columns are never part of a span.
+Hidden columns are not in it, so arrow keys never land on a column that is not rendered (v3.0; it used to be built from `orderedColumns`, in unpinned order). Its length is the grid's `aria-colcount`.
+
+`columnIndexMap` maps each visible data column's field to its position in that render order, system columns excluded. Row, Cell and Header use it for the public `colIndex` (`GridCellParams`, `renderCell`, `renderHeader`) and for `aria-colindex` (`colIndex + 1 +` the number of system columns), so both are absolute and do not depend on the horizontal render window.
+
+`navigationColumns` is consumed by `useGridKeyboardNavigation` (to map arrow-key movements across all focusable columns). `useGridSpanning` does not use it: spans are computed over the rendered data columns only (the layout's left-pinned, unpinned and right-pinned columns), so system columns and hidden columns are never part of a span.
 
 ---
 

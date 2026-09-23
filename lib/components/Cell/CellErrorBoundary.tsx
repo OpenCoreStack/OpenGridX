@@ -10,7 +10,15 @@ function CellRenderTarget({ renderFn }: { renderFn: () => React.ReactNode }) {
 interface CellErrorBoundaryProps {
     renderFn: () => React.ReactNode;
     field: string;
+    /** The error is cleared when this changes. An array is compared element by element. */
     resetKey?: unknown;
+}
+
+function sameResetKey(a: unknown, b: unknown): boolean {
+    if (Array.isArray(a) && Array.isArray(b)) {
+        return a.length === b.length && a.every((item, i) => Object.is(item, b[i]));
+    }
+    return Object.is(a, b);
 }
 
 interface CellErrorBoundaryState {
@@ -29,13 +37,11 @@ export class CellErrorBoundary extends React.Component<CellErrorBoundaryProps, C
         props: CellErrorBoundaryProps,
         state: CellErrorBoundaryState
     ): Partial<CellErrorBoundaryState> | null {
-        if (state.hasError && props.resetKey !== state.resetKey) {
+        if (sameResetKey(props.resetKey, state.resetKey)) return null;
+        if (state.hasError) {
             return { hasError: false, error: null, resetKey: props.resetKey };
         }
-        if (props.resetKey !== state.resetKey) {
-            return { resetKey: props.resetKey };
-        }
-        return null;
+        return { resetKey: props.resetKey };
     }
 
     static getDerivedStateFromError(error: Error): Partial<CellErrorBoundaryState> {
@@ -53,7 +59,7 @@ export class CellErrorBoundary extends React.Component<CellErrorBoundaryProps, C
             return (
                 <div
                     className="ogx__cell-error"
-                    role="status"
+                    role="img"
                     aria-label={`Error in cell: ${this.props.field}`}
                     title={this.state.error?.message ?? 'Render error'}
                 >

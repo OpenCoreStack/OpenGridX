@@ -15,6 +15,8 @@ export interface CellProps<R extends GridRowModel = GridRowModel> {
     colDef: GridColDef<R>;
     rowIndex: number;
     colIndex: number;
+    /** 1-based `aria-colindex` (system columns included). Defaults to `colIndex + 1`. */
+    ariaColIndex?: number;
     isSelected?: boolean;
     onClick?: (event: React.MouseEvent) => void;
     width?: number;
@@ -55,6 +57,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         colDef,
         rowIndex,
         colIndex,
+        ariaColIndex,
         isSelected,
         onClick,
         width,
@@ -122,13 +125,8 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
     const handleCommit = React.useCallback(() => { onEditStop?.(false, field); }, [onEditStop, field]);
     const handleCancel = React.useCallback(() => { onEditStop?.(true, field); }, [onEditStop, field]);
 
-    const cellRef = React.useRef<HTMLDivElement>(null);
-
-    React.useLayoutEffect(() => {
-        if (isFocused && cellRef.current) {
-            cellRef.current.focus({ preventScroll: true });
-        }
-    }, [isFocused]);
+    // A failed renderCell is retried when the row, the renderer or the value changes.
+    const errorResetKey = React.useMemo(() => [row, colDef.renderCell, value], [row, colDef.renderCell, value]);
 
     // A cell that unmounts while editing (scrolled out of the render window, filtered or paged away)
     // gets no blur, so its edit would be left open with no editor. Commit it instead, as blur would.
@@ -251,13 +249,12 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
 
     return (
         <div
-            ref={cellRef}
             className={classNames}
             style={style}
             onClick={handleClick}
             onDoubleClick={handleDoubleClick}
             role="gridcell"
-            aria-colindex={colIndex + 1}
+            aria-colindex={ariaColIndex ?? colIndex + 1}
             aria-readonly={!isEditable || undefined}
             tabIndex={-1}
             data-field={colDef.field}
@@ -309,7 +306,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                 ) : colDef.renderCell ? (
                     <CellErrorBoundary
                         field={colDef.field}
-                        resetKey={row}
+                        resetKey={errorResetKey}
                         renderFn={() => colDef.renderCell!({
                             value,
                             formattedValue,

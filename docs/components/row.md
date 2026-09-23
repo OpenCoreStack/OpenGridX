@@ -17,6 +17,14 @@ Manages a horizontal collection of cells. Includes support for selection, expans
 | `rowReordering` | `boolean` | Enables the drag handle for reordering rows. |
 | `rowHeight` | `number` | Height in pixels (default: 52). |
 | `isCellEditable` | `(params: GridCellParams) => boolean` | Per-cell editability predicate, combined with `colDef.editable` and the row's `rowMeta` to decide each cell's `isEditable`. |
+| `columnIndexMap` | `Map<string, number>` | Position of each visible data column in render order. Gives cells their `colIndex` / `aria-colindex` independently of the horizontal render window. |
+| `ariaRowIndex` | `number` | 1-based `aria-rowindex` in the whole grid (header rows and earlier pages included). Defaults to `rowIndex + 2`. |
+
+## ♿ Accessibility
+
+- `aria-rowindex` (from `ariaRowIndex`), `aria-selected`; with tree data or row grouping, `aria-level` (depth + 1) and, on rows with children, `aria-expanded`.
+- The reorder handle, detail-panel toggle and checkbox cells have `data-field` (`__reorder_col__`, `__expand_col__`, `__checkbox_col__`), `tabIndex={-1}` and `aria-colindex`, so they are keyboard focus stops like data cells.
+- The detail panel is rendered as a `role="row"` with one `role="gridcell"` spanning every column, referenced by the expand cell's `aria-controls` while open.
 
 ## 📐 Row Pinning
 

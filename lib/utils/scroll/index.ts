@@ -2,12 +2,17 @@
  * Vertically scrolls the grid viewport so the center (unpinned) row at `centerIndex`
  * is fully visible below the sticky header / top-pinned rows and above the
  * bottom-pinned rows. `cumulativeHeights` is the unpinned-row layout.
+ *
+ * `cumulativeHeights` includes each row's expanded detail panel. Pass `rowHeight` to bring
+ * only the row itself into view: otherwise a panel taller than the viewport pushes its own
+ * row out of view above the header.
  */
 export function scrollRowIntoView(
     viewport: HTMLElement,
     centerIndex: number,
     cumulativeHeights: number[],
     pinnedBottomHeight: number,
+    rowHeight?: number,
 ): void {
     if (centerIndex < 0 || centerIndex >= cumulativeHeights.length) return;
     const virtualContainer = viewport.querySelector<HTMLElement>('.ogx__virtual-container');
@@ -18,7 +23,9 @@ export function scrollRowIntoView(
     // pixels at the top of the viewport at any scroll position.
     const stickyTop = virtualContainer.getBoundingClientRect().top - viewport.getBoundingClientRect().top + scrollTop;
     const rowTop = stickyTop + (centerIndex === 0 ? 0 : cumulativeHeights[centerIndex - 1]);
-    const rowBottom = stickyTop + cumulativeHeights[centerIndex];
+    const rowBottom = rowHeight !== undefined
+        ? Math.min(rowTop + rowHeight, stickyTop + cumulativeHeights[centerIndex])
+        : stickyTop + cumulativeHeights[centerIndex];
 
     if (rowTop < scrollTop + stickyTop) {
         viewport.scrollTop = Math.max(0, rowTop - stickyTop);

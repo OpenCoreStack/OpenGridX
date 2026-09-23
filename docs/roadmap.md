@@ -42,9 +42,9 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 
 ### Accessibility & Clipboard *(completed 2026-03-03)*
 *   **ARIA roles**: `role="grid"`, `role="row"`, `role="gridcell"`, `role="columnheader"` on correct elements.
-*   **ARIA attributes**: `aria-sort`, `aria-selected`, `aria-label`, `aria-expanded`, `aria-readonly`, `aria-haspopup` throughout.
-*   **Keyboard navigation**: Tab / Enter / Escape / Arrow keys / Home / End / PageUp / PageDown.
-*   **`aria-rowcount` and `aria-colcount`**: Accurate counts including system columns.
+*   **ARIA attributes**: `aria-sort`, `aria-selected`, `aria-label`, `aria-expanded`, `aria-readonly`, `aria-haspopup` throughout. v3.0 adds `aria-level` / `aria-expanded` on hierarchy rows, `aria-multiselectable`, and `aria-sort` on the primary sort column only.
+*   **Keyboard navigation**: Enter / Escape / Arrow keys / Home / End / PageUp / PageDown, Shift+Space and Ctrl+A selection, Alt+ArrowDown for the column menu; the grid is a single Tab stop (v3.0). See [Keyboard & Accessibility](features/keyboard-navigation.md).
+*   **`aria-rowcount` / `aria-rowindex` and `aria-colcount` / `aria-colindex`**: Count header rows and system columns, number rows across pages and pinned rows, and match between header and body cells (corrected in v3.0).
 *   **Clipboard**: Full TSV-formatted copy support (Ctrl+C / Cmd+C) for seamless integration with Excel/Google Sheets.
 
 ### Advanced Excel Export *(completed 2026-03-03)*

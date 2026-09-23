@@ -26,11 +26,11 @@ pinnedTopRows, unpinnedRows, pinnedBottomRows
    ▼ sortRows (client) / passthrough (sortingMode='server' / hierarchy)
 sortedUnpinnedRows
    │
-   ▼ slice [page * pageSize, (page+1) * pageSize]  — skipped when pagination=false or paginationMode='server'
+   ▼ slice [currentPage * pageSize, (currentPage+1) * pageSize]  — skipped when pagination=false or paginationMode='server'
 paginatedUnpinnedRows
    │
-   ▼ [...pinnedTop, ...center, ...pinnedBottom] + optional skeleton rows
-allRenderableRows   ← consumed by viewport
+   ▼ [...pinnedTop, ...center, ...pinnedBottom]
+allRenderableRows   ← the rows the grid view and the list view render
 ```
 
 **Server modes do not need a `dataSource`.** `filterMode`, `sortingMode` and `paginationMode` set to
@@ -56,8 +56,6 @@ interface UseGridRowPipelineParams<R extends GridRowModel> {
     effectivePaginationModel: GridPaginationModel;
     pinnedRows?: GridRowPinning;              // { top: GridRowId[], bottom: GridRowId[] }
     getRowId?: (row: R) => GridRowId;         // resolves ids for pinnedRows; rows are not required to carry `id`
-    isLoading: boolean;
-    pageSize: number;
     columnLookup?: GridColumnLookup;          // from useGridColumnLookup(activeColumns, columnVisibilityModel)
 }
 ```
@@ -79,7 +77,8 @@ interface GridRowPipelineResult<R extends GridRowModel> {
     pinnedBottomRows: R[];
     sortedUnpinnedRows: R[];
     paginatedUnpinnedRows: R[];
-    allRenderableRows: R[];      // the viewport consumes this
+    currentPage: number;         // the page actually sliced (clamped to the last page)
+    allRenderableRows: R[];      // the rows the grid view and the list view render
 }
 ```
 
@@ -87,25 +86,23 @@ All intermediate results are returned so features like the row count badge or ag
 
 ---
 
-## Hierarchy mode shortcut
+## Page clamping
 
-When `activeHierarchyHandlers` is set (tree data or row grouping), the hook delegates row ordering entirely to the hierarchy controller. Pinning and client-side sort/filter are bypassed:
+When the grid pages client-side, the slice uses `currentPage`: `effectivePaginationModel.page` clamped to `0 … pageCount - 1`, where `pageCount = ceil(sortedUnpinnedRows.length / pageSize)` (at least 1). A page size below 1 is treated as 1 (`lib/utils/pagination`). So when the rows shrink (new `rows`, a filter, collapsed tree nodes) and the requested page is past the end, the last page is shown instead of an empty body. Under server pagination (`paginationMode="server"`) `currentPage` is the requested page, because the server owns the page count.
 
-```
-getVisibleRows() → allRenderableRows (direct pass-through)
-```
+`DataGrid` passes `currentPage` to the pager and calls `useGridPageCorrection`, which reports the corrected model through `onPaginationModelChange` (and stores it when uncontrolled) once rows are present and nothing is loading. A restored page is therefore not thrown away before the rows arrive.
 
 ---
 
-## Infinite scroll skeleton injection
+## Hierarchy mode shortcut
 
-When `paginationMode === 'infinite'` and `isLoading === true` and rows already exist, the hook appends synthetic skeleton rows:
+When `activeHierarchyHandlers` is set (tree data or row grouping), the hook delegates row ordering entirely to the hierarchy controller. Pinning and client-side sort/filter are bypassed: `getVisibleRows()` becomes `filteredRows` and `sortedUnpinnedRows`. Pagination still applies, so `allRenderableRows` is the current page of the visible hierarchy, the same rows the grid view renders.
 
-```ts
-{ id: '__skeleton_0__', _isSkeleton: true }, ...
-```
+---
 
-Up to `Math.min(pageSize, 20)` skeletons are injected. The viewport renders these as shimmer cells.
+## Infinite scroll loading rows
+
+`allRenderableRows` holds only real rows. While an infinite-scroll page loads, `GridVirtualRows` draws the placeholder rows itself (from `dataSourceLoading`) and `useLayout` adds their height, so the placeholders never reach `renderCell`, the list view, keyboard navigation, selection or spanning. (Before v3.0 the hook appended `{ id: '__skeleton_N__', _isSkeleton: true }` objects to `allRenderableRows`.)
 
 ---
 

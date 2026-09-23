@@ -258,6 +258,25 @@ describe('clicking tree-data parents', () => {
         expect(screen.getByText('Bo')).toBeInTheDocument();
     });
 
+    it('expands and collapses a real parent row from the keyboard', () => {
+        const onRowClick = vi.fn();
+        const { container } = render(<DataGrid rows={rows} columns={cols} treeData getTreeDataPath={r => r.path} onRowClick={onRowClick} />);
+        const grid = container.querySelector<HTMLElement>('[role="grid"]')!;
+        fireEvent.click(screen.getByText('Ada'));
+        onRowClick.mockClear();
+        act(() => { fireEvent.keyDown(grid, { key: 'Enter' }); });
+        expect(screen.getByText('Bo')).toBeInTheDocument();
+        act(() => { fireEvent.keyDown(grid, { key: 'Enter' }); });
+        expect(screen.queryByText('Bo')).toBeNull();
+        act(() => { fireEvent.keyDown(grid, { key: 'ArrowRight', altKey: true }); });
+        expect(screen.getByText('Bo')).toBeInTheDocument();
+        act(() => { fireEvent.keyDown(grid, { key: 'ArrowRight', altKey: true }); });
+        expect(screen.getByText('Bo')).toBeInTheDocument();
+        act(() => { fireEvent.keyDown(grid, { key: 'ArrowLeft', altKey: true }); });
+        expect(screen.queryByText('Bo')).toBeNull();
+        expect(onRowClick).not.toHaveBeenCalled();
+    });
+
     it('still toggles a synthetic group row on click without firing onRowClick', () => {
         const onRowClick = vi.fn();
         const { container } = render(<DataGrid rows={PEOPLE} columns={[{ field: 'dept', width: 150 }, { field: 'name', width: 150 }]} rowGroupingModel={['dept']} onRowClick={onRowClick} />);

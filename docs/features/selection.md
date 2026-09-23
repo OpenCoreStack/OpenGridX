@@ -62,6 +62,20 @@ Use `disableMultipleRowSelection` to cap selection to one row at a time. Clickin
 
 With `checkboxSelection`, the header checkbox selects the rows that pass the current filter (including pinned rows) and adds them to the selection; unchecking it removes those rows again. Rows hidden by the filter keep their selection state, and under row grouping group rows are not part of select-all. Synthetic rows (row-grouping group and subtotal rows, auto-created tree-data parents) have no checkbox and are never selected, by click, checkbox or Space key; tree-data parents that are your own rows are selectable like any row. The header shows checked when every such row is selected and indeterminate when only some are, so ids of rows that are no longer in `rows` do not affect it.
 
+### Keyboard Selection
+
+With focus in the grid (see [Keyboard & Accessibility](keyboard-navigation.md)):
+
+| Key | Action |
+| :--- | :--- |
+| **Shift+Space** | Select or deselect the focused row. Available when rows can be selected at all (`checkboxSelection`, or click selection not disabled with `disableRowSelectionOnClick`). |
+| **Space** / **Enter** on a row checkbox | Toggle that row. |
+| **Space** / **Enter** on the select-all header | Select or clear all rows, like clicking it. |
+| **Enter** on a non-editable cell | Same as clicking the row: `onRowClick`, then click-to-select unless `disableRowSelectionOnClick`. |
+| **Ctrl+A** / **Cmd+A** | Select every row, unless `disableMultipleRowSelection` (or selection is not possible). |
+
+Synthetic group rows (row grouping) are never selected from the keyboard. The grid sets `aria-multiselectable="true"` when several rows can be selected.
+
 ---
 
 ## ⚙️ API Reference

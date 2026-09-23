@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning } from '../../types';
+import { getViewportWidth, getViewportHeight } from '../../utils/viewport';
 
 
 interface ColumnMenuProps {
@@ -116,8 +117,41 @@ function UnpinIcon() {
     );
 }
 
+const menuItemsOf = (menu: HTMLElement | null): HTMLElement[] =>
+    menu ? Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]')) : [];
+
 export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedColumns, onManageColumns, onClose, anchorEl }: ColumnMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
+
+    // Closes the menu; when it was left from the keyboard or by choosing an item, focus goes back
+    // to the header cell that owns it (WAI-ARIA menu button pattern).
+    const close = React.useCallback((restoreFocus: boolean) => {
+        if (restoreFocus) {
+            const headerCell = anchorEl?.closest<HTMLElement>('[role="columnheader"]') ?? anchorEl;
+            headerCell?.focus({ preventScroll: true });
+        }
+        onClose();
+    }, [anchorEl, onClose]);
+
+    const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        const items = menuItemsOf(menuRef.current);
+        const current = items.indexOf(event.target as HTMLElement);
+        let next = -1;
+        if (event.key === 'ArrowDown') next = current + 1 >= items.length ? 0 : current + 1;
+        else if (event.key === 'ArrowUp') next = current <= 0 ? items.length - 1 : current - 1;
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = items.length - 1;
+        else if (event.key === 'Tab') {
+            event.preventDefault();
+            close(true);
+            return;
+        } else {
+            return;
+        }
+        event.preventDefault();
+        items[next]?.focus();
+    };
+
     const [style, setStyle] = useState<React.CSSProperties>({ position: 'fixed', zIndex: 1300, top: 0, left: 0, visibility: 'hidden' });
 
     React.useLayoutEffect(() => {
@@ -125,8 +159,8 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
 
         const anchorRect = anchorEl.getBoundingClientRect();
         const menuRect = menuRef.current.getBoundingClientRect();
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
+        const vw = getViewportWidth();
+        const vh = getViewportHeight();
         const margin = 8;
 
         let left = anchorRect.left;
@@ -143,6 +177,12 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
         setStyle({ position: 'fixed', zIndex: 1300, top, left, visibility: 'visible' });
     }, [anchorEl]);
 
+    // Move focus into the menu once it is positioned (a visibility:hidden element cannot take focus).
+    const isPositioned = style.visibility === 'visible';
+    React.useLayoutEffect(() => {
+        if (isPositioned) menuItemsOf(menuRef.current)[0]?.focus({ preventScroll: true });
+    }, [isPositioned]);
+
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -152,7 +192,7 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
             ) onClose();
         }
         function handleKey(e: KeyboardEvent) {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape') close(true);
         }
         document.addEventListener('mousedown', handleClickOutside);
         document.addEventListener('keydown', handleKey);
@@ -165,11 +205,16 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
             window.removeEventListener('scroll', onClose, true);
             window.removeEventListener('resize', onClose);
         };
-    }, [anchorEl, onClose]);
+    }, [anchorEl, onClose, close]);
 
-    const handleSort = (direction: GridSortDirection) => { onSort?.(colDef.field, direction); onClose(); };
-    const handleHide = () => { onHide?.(colDef.field); onClose(); };
-    const handlePin = (side: 'left' | 'right' | null) => { onPin?.(colDef.field, side); onClose(); };
+    const handleSort = (direction: GridSortDirection) => { onSort?.(colDef.field, direction); close(true); };
+    // `hideable: false` / `pinnable: false` mean the column cannot be hidden / pinned from the UI,
+    // so the menu leaves those actions out (this also covers the synthetic __group__ column).
+    const canHide = Boolean(onHide) && colDef.hideable !== false;
+    const canPin = Boolean(onPin) && colDef.pinnable !== false;
+
+    const handleHide = () => { if (canHide) onHide?.(colDef.field); close(true); };
+    const handlePin = (side: 'left' | 'right' | null) => { if (canPin) onPin?.(colDef.field, side); close(true); };
 
     const currentSort = sortModel?.find(item => item.field === colDef.field)?.sort;
     const isUnsorted = currentSort === undefined || currentSort === null;
@@ -181,24 +226,24 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
     const colLabel = colDef.headerName || colDef.field;
 
     return ReactDOM.createPortal(
-        <div ref={menuRef} className="ogx-column-menu" style={style} role="menu" aria-label={`Column options for ${colLabel}`}>
+        <div ref={menuRef} className="ogx-column-menu" style={style} role="menu" aria-label={`Column options for ${colLabel}`} onKeyDown={handleMenuKeyDown}>
 
             { }
             {onSort && colDef.sortable !== false && (
                 <>
-                    <button className={`ogx-menu-item${currentSort === 'asc' ? ' ogx-menu-item--active' : ''}`}
+                    <button type="button" className={`ogx-menu-item${currentSort === 'asc' ? ' ogx-menu-item--active' : ''}`}
                         onClick={() => handleSort('asc')} role="menuitemradio" aria-checked={currentSort === 'asc'}>
                         <span className="ogx-menu-item__indicator" aria-hidden="true">{currentSort === 'asc' ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
                         <span className="ogx-menu-item__icon" aria-hidden="true"><AscIcon /></span>
                         Sort Ascending
                     </button>
-                    <button className={`ogx-menu-item${currentSort === 'desc' ? ' ogx-menu-item--active' : ''}`}
+                    <button type="button" className={`ogx-menu-item${currentSort === 'desc' ? ' ogx-menu-item--active' : ''}`}
                         onClick={() => handleSort('desc')} role="menuitemradio" aria-checked={currentSort === 'desc'}>
                         <span className="ogx-menu-item__indicator" aria-hidden="true">{currentSort === 'desc' ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
                         <span className="ogx-menu-item__icon" aria-hidden="true"><DescIcon /></span>
                         Sort Descending
                     </button>
-                    <button className={`ogx-menu-item${isUnsorted ? ' ogx-menu-item--active' : ''}`}
+                    <button type="button" className={`ogx-menu-item${isUnsorted ? ' ogx-menu-item--active' : ''}`}
                         onClick={() => handleSort(null)} role="menuitemradio" aria-checked={isUnsorted}>
                         <span className="ogx-menu-item__indicator" aria-hidden="true">{isUnsorted ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
                         <span className="ogx-menu-item__icon" aria-hidden="true"><UnsortIcon /></span>
@@ -209,36 +254,43 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
             )}
 
             { }
-            <div className="ogx-menu-section-label" aria-hidden="true">Pin column</div>
-            <button className={`ogx-menu-item${isPinnedLeft ? ' ogx-menu-item--active' : ''}`}
-                onClick={() => handlePin('left')} role="menuitemradio" aria-checked={isPinnedLeft} aria-label="Pin to left">
-                <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedLeft ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
-                <span className="ogx-menu-item__icon" aria-hidden="true"><PinLeftIcon /></span>
-                Pin to Left
-            </button>
-            <button className={`ogx-menu-item${isPinnedRight ? ' ogx-menu-item--active' : ''}`}
-                onClick={() => handlePin('right')} role="menuitemradio" aria-checked={isPinnedRight} aria-label="Pin to right">
-                <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedRight ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
-                <span className="ogx-menu-item__icon" aria-hidden="true"><PinRightIcon /></span>
-                Pin to Right
-            </button>
-            <button className={`ogx-menu-item${isUnpinned ? ' ogx-menu-item--active' : ''}`}
-                onClick={() => handlePin(null)} role="menuitemradio" aria-checked={isUnpinned} aria-label="Unpin column">
-                <span className="ogx-menu-item__indicator" aria-hidden="true">{isUnpinned ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
-                <span className="ogx-menu-item__icon" aria-hidden="true"><UnpinIcon /></span>
-                Unpin
-            </button>
-            <div className="ogx-menu-divider" />
+            {canPin && (
+                <>
+                    <div className="ogx-menu-section-label" aria-hidden="true">Pin column</div>
+                    <button type="button" className={`ogx-menu-item${isPinnedLeft ? ' ogx-menu-item--active' : ''}`}
+                        onClick={() => handlePin('left')} role="menuitemradio" aria-checked={isPinnedLeft} aria-label="Pin to left">
+                        <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedLeft ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
+                        <span className="ogx-menu-item__icon" aria-hidden="true"><PinLeftIcon /></span>
+                        Pin to Left
+                    </button>
+                    <button type="button" className={`ogx-menu-item${isPinnedRight ? ' ogx-menu-item--active' : ''}`}
+                        onClick={() => handlePin('right')} role="menuitemradio" aria-checked={isPinnedRight} aria-label="Pin to right">
+                        <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedRight ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
+                        <span className="ogx-menu-item__icon" aria-hidden="true"><PinRightIcon /></span>
+                        Pin to Right
+                    </button>
+                    <button type="button" className={`ogx-menu-item${isUnpinned ? ' ogx-menu-item--active' : ''}`}
+                        onClick={() => handlePin(null)} role="menuitemradio" aria-checked={isUnpinned} aria-label="Unpin column">
+                        <span className="ogx-menu-item__indicator" aria-hidden="true">{isUnpinned ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
+                        <span className="ogx-menu-item__icon" aria-hidden="true"><UnpinIcon /></span>
+                        Unpin
+                    </button>
+                    <div className="ogx-menu-divider" />
+                </>
+            )}
 
-            { }
-            <button className="ogx-menu-item" onClick={handleHide} role="menuitem" aria-label={`Hide ${colLabel} column`}>
-                <span className="ogx-menu-item__indicator" aria-hidden="true" />
-                <span className="ogx-menu-item__icon" aria-hidden="true"><HideIcon /></span>
-                Hide Column
-            </button>
+            {canHide && (
+                <>
+                    <button type="button" className="ogx-menu-item" onClick={handleHide} role="menuitem" aria-label={`Hide ${colLabel} column`}>
+                        <span className="ogx-menu-item__indicator" aria-hidden="true" />
+                        <span className="ogx-menu-item__icon" aria-hidden="true"><HideIcon /></span>
+                        Hide Column
+                    </button>
+                    <div className="ogx-menu-divider" />
+                </>
+            )}
 
-            <div className="ogx-menu-divider" />
-            <button className="ogx-menu-item" onClick={() => { onManageColumns?.(); onClose(); }} role="menuitem" aria-label="Manage all columns">
+            <button type="button" className="ogx-menu-item" onClick={() => { onManageColumns?.(); close(false); }} role="menuitem" aria-label="Manage all columns">
                 <span className="ogx-menu-item__indicator" aria-hidden="true" />
                 <span className="ogx-menu-item__icon" aria-hidden="true"><ManageColumnsIcon /></span>
                 Manage columns

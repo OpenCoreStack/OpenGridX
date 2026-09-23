@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import ReactDOM from 'react-dom';
 import type { GridColDef } from '../../types';
 import type { GridPivotModel, GridPivotAggFn, GridPivotValueField } from '../../types';
+import { getViewportWidth } from '../../utils/viewport';
 
 const AGG_FNS: GridPivotAggFn[] = ['sum', 'avg', 'count', 'min', 'max'];
 
@@ -40,7 +41,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
     const computePos = useCallback(() => {
         if (!anchorRef.current) return { top: 0, right: 0 };
         const rect = anchorRef.current.getBoundingClientRect();
-        return { top: rect.bottom + 6, right: window.innerWidth - rect.right };
+        return { top: rect.bottom + 6, right: getViewportWidth() - rect.right };
     }, [anchorRef]);
 
     useEffect(() => {
@@ -140,7 +141,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                     Pivot Mode
                 </span>
                 {totalActive > 0 && (
-                    <button className="ogx-pivot-panel__reset-btn" onClick={reset} title="Reset pivot">
+                    <button type="button" className="ogx-pivot-panel__reset-btn" onClick={reset} title="Reset pivot">
                         Reset
                     </button>
                 )}
@@ -162,6 +163,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                             <span key={`${i}:${f}`} className="ogx-pivot-chip ogx-pivot-chip--row">
                                 {colLabel(f)}
                                 <button
+                                    type="button"
                                     className="ogx-pivot-chip__remove"
                                     onClick={() => removeRow(i)}
                                     title={`Remove ${colLabel(f)}`}
@@ -186,6 +188,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                             <span key={`${i}:${f}`} className="ogx-pivot-chip ogx-pivot-chip--col">
                                 {colLabel(f)}
                                 <button
+                                    type="button"
                                     className="ogx-pivot-chip__remove"
                                     onClick={() => removeCol(i)}
                                     title={`Remove ${colLabel(f)}`}
@@ -224,6 +227,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                                         ))}
                                     </select>
                                     <button
+                                        type="button"
                                         className="ogx-pivot-chip__remove"
                                         onClick={() => removeValue(i)}
                                         title={`Remove ${colLabel(vf.field)}`}
@@ -252,13 +256,13 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                                     </span>
                                     <div className="ogx-pivot-field-actions">
                                         {isDimension && (
-                                            <button className="ogx-pivot-add-btn ogx-pivot-add-btn--row" onClick={() => addRow(col.field)} title="Add to Row Fields" aria-label={`Add ${label} to Row Fields`}>Row</button>
+                                            <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--row" onClick={() => addRow(col.field)} title="Add to Row Fields" aria-label={`Add ${label} to Row Fields`}>Row</button>
                                         )}
                                         {isDimension && (
-                                            <button className="ogx-pivot-add-btn ogx-pivot-add-btn--col" onClick={() => addCol(col.field)} title="Add to Column Fields" aria-label={`Add ${label} to Column Fields`}>Col</button>
+                                            <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--col" onClick={() => addCol(col.field)} title="Add to Column Fields" aria-label={`Add ${label} to Column Fields`}>Col</button>
                                         )}
                                         {isNum && (
-                                            <button className="ogx-pivot-add-btn ogx-pivot-add-btn--value" onClick={() => addValue(col.field)} title="Add to Value Fields" aria-label={`Add ${label} to Value Fields`}>Val</button>
+                                            <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--value" onClick={() => addValue(col.field)} title="Add to Value Fields" aria-label={`Add ${label} to Value Fields`}>Val</button>
                                         )}
                                     </div>
                                 </div>

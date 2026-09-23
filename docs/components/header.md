@@ -16,6 +16,8 @@ Manages the column headers, sorting triggers, column resizing, and column groupi
 | `onColumnResize` | `Function` | Callback for manual column width changes. |
 | `pinnedColumns` | `GridColumnPinning` | Coordinates sticky positioning for headers. |
 | `checkboxSelection` | `boolean` | Renders the "Select All" checkbox. |
+| `focusedCell` | `{ id: GridRowId \| null; field: string } \| null` | The grid's focus position. `id: null` means the header cell of `field` is focused (v3.0; it used to be the string `'HEADER'`, which a real row id could collide with). DOM focus is moved by the grid, not by `<Header />`. |
+| `columnIndexMap` | `Map<string, number>` | Position of each visible data column in render order. Used for `aria-colindex` and the `colIndex` passed to `renderHeader`, so they match the body cells and do not change with horizontal scrolling. |
 
 ## 📐 Column Grouping
 
@@ -37,6 +39,13 @@ Unless `disableColumnMenu` is set to `true` in a column's `GridColDef`, each hea
 
 Clicking the menu icon opens a popover with actions to:
 - Sort Asc/Desc/Unsort (acts on that column only; other sort keys are kept)
-- Pin Left/Right/None
-- Hide Column
-- Manage Columns (Open [Visibility Panel](column-visibility.md))
+- Pin Left/Right/None (left out for columns with `pinnable: false`)
+- Hide Column (left out for columns with `hideable: false`)
+- Manage Columns (opens the toolbar's Columns panel when `slots.toolbar` renders `GridToolbar`, otherwise the standalone [Visibility Panel](column-visibility.md))
+
+**Keyboard** (v3.0): with a header cell focused, **Alt+ArrowDown** or **Ctrl+Enter** / **Cmd+Enter** opens its menu. Focus moves to the first item (also when the menu is opened with the mouse); **ArrowUp** / **ArrowDown** / **Home** / **End** move between items, and **Escape**, **Tab** or choosing an item closes the menu and returns focus to the header cell. See [Keyboard & Accessibility](../features/keyboard-navigation.md).
+
+## ♿ Accessibility
+
+- Header rows carry `aria-rowindex` (column-group rows first). Header cells carry `aria-colindex`, matching the body cells of the same column; the system columns (reorder, detail-panel toggle, select-all) come first and are focusable from the keyboard.
+- Only the primary sort column has `aria-sort="ascending"` / `"descending"`; other sortable headers have `aria-sort="none"`. With multi-sort each sorted header also has an `aria-description` such as "Sorted descending, sort priority 2 of 2".

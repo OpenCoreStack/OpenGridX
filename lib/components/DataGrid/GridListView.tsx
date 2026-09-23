@@ -1,24 +1,41 @@
 import React from 'react';
 import { Pagination } from '../Pagination/Pagination';
 import { ListViewRow } from '../ListView/ListViewRow';
+import { getPageCount, normalizePageSize } from '../../utils/pagination';
+import { getRowsScrollEndParams } from '../../utils/scroll/scrollEnd';
 import type {
+    GridColDef,
     GridRowModel,
     GridRowId,
+    GridRowMeta,
     GridRowParams,
     GridListViewColDef,
     GridPaginationModel,
     GridLocaleText,
+    GridRowScrollEndParams,
 } from '../../types';
 
 export interface GridListViewProps<R extends GridRowModel> {
     ariaLabel?: string;
+    /** Pinned-top rows, the current page and pinned-bottom rows: what the grid view renders. */
     allRenderableRows: R[];
     filteredRows: R[];
+    /** Number of rows at the start of allRenderableRows that are pinned to the top. */
+    pinnedTopRowCount: number;
+    /** Number of rows at the end of allRenderableRows that are pinned to the bottom. */
+    pinnedBottomRowCount: number;
+    /** Filtered, unpinned rows across all pages (the rows pagination splits into pages). */
+    unpinnedRowCount: number;
     pagination: boolean;
     effectivePaginationModel: GridPaginationModel;
+    /** The page actually shown (the requested page clamped to the last page). */
+    currentPage: number;
     pageSizeOptions: number[];
     selectedRowIds: Set<GridRowId>;
     listViewColumn: GridListViewColDef<R>;
+    /** Grid columns by field; a list field that names one gets its valueGetter / valueFormatter. */
+    columnsByField: ReadonlyMap<string, GridColDef>;
+    rowMetaMap: Map<GridRowId, GridRowMeta>;
     noRowsLabel: string;
     rowHeight: number;
     checkboxSelection: boolean;
@@ -32,8 +49,11 @@ export interface GridListViewProps<R extends GridRowModel> {
     onRowDoubleClick?: (params: GridRowParams<R>) => void;
     onSelectionChange: (rowId: GridRowId, isSelected: boolean) => void;
     onPaginationModelChange: (model: GridPaginationModel) => void;
+    onRowsScrollEnd?: (params: GridRowScrollEndParams) => void;
     /** Resolves a row's id; defaults to `row.id`. */
     getRowId?: (row: R) => GridRowId;
+    /** Whether several rows can be selected (aria-multiselectable). */
+    multiselectable?: boolean;
 }
 
 const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
@@ -42,11 +62,17 @@ export function GridListView<R extends GridRowModel>({
     ariaLabel,
     allRenderableRows,
     filteredRows,
+    pinnedTopRowCount,
+    pinnedBottomRowCount,
+    unpinnedRowCount,
     pagination,
     effectivePaginationModel,
+    currentPage,
     pageSizeOptions,
     selectedRowIds,
     listViewColumn,
+    columnsByField,
+    rowMetaMap,
     noRowsLabel,
     rowHeight,
     checkboxSelection,
@@ -59,32 +85,55 @@ export function GridListView<R extends GridRowModel>({
     onRowDoubleClick,
     onSelectionChange,
     onPaginationModelChange,
+    onRowsScrollEnd,
     getRowId = defaultGetRowId,
+    multiselectable = false,
 }: GridListViewProps<R>) {
     const PaginationComponent = paginationSlot || Pagination;
 
-    // serverRowCount is the grid's pagination total (server total in server mode, with or
-    // without a dataSource); the client total counts the rows being paged.
-    const totalRowCount = paginationMode === 'server'
-        ? serverRowCount
-        : filteredRows.length;
+    // Under server pagination only the current page is loaded; the server reports the total.
+    const isServerPaged = paginationMode === 'server';
+    // Rows split into pages (pinned rows stay on every page, as in the grid view).
+    const pagedRowCount = isServerPaged ? (serverRowCount || 0) : unpinnedRowCount;
+    const itemCount = isServerPaged ? (serverRowCount || 0) : filteredRows.length;
+    const pageSize = normalizePageSize(effectivePaginationModel.pageSize);
+    const pageCount = getPageCount(pagedRowCount, pageSize);
+
+    // aria-rowindex is 1-based over the whole data set (the list view has no header row):
+    // pinned-top rows, then the unpinned rows across all pages, then pinned-bottom rows.
+    const pageOffset = pagination ? currentPage * pageSize : 0;
+    const centerRowsOnPage = allRenderableRows.length - pinnedTopRowCount - pinnedBottomRowCount;
+    const ariaRowIndex = (idx: number): number => {
+        if (idx < pinnedTopRowCount) return idx + 1;
+        const centerIdx = idx - pinnedTopRowCount;
+        if (centerIdx < centerRowsOnPage) return pinnedTopRowCount + pageOffset + centerIdx + 1;
+        return pinnedTopRowCount + pagedRowCount + (centerIdx - centerRowsOnPage) + 1;
+    };
+
+    const handleScroll = onRowsScrollEnd
+        ? (event: React.UIEvent<HTMLDivElement>) => {
+            const params = getRowsScrollEndParams(event.currentTarget);
+            if (params) onRowsScrollEnd(params);
+        }
+        : undefined;
 
     return (
         <div
             className="ogx-list-view"
             role="grid"
             aria-label={ariaLabel || 'Data grid list view'}
-            aria-rowcount={allRenderableRows.length + 1}
+            aria-rowcount={itemCount}
+            aria-multiselectable={multiselectable}
         >
             <div className="ogx-list-view__toolbar">
                 <span>
-                    {filteredRows.length} {filteredRows.length === 1 ? 'item' : 'items'}
-                    {pagination ? ` · page ${effectivePaginationModel.page + 1} of ${Math.ceil(filteredRows.length / effectivePaginationModel.pageSize) || 1}` : ''}
+                    {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                    {pagination ? ` · page ${currentPage + 1} of ${pageCount}` : ''}
                     {selectedRowIds.size > 0 ? ` · ${selectedRowIds.size} selected` : ''}
                 </span>
             </div>
 
-            <div className="ogx-list-view__rows">
+            <div className="ogx-list-view__rows" onScroll={handleScroll}>
                 {allRenderableRows.length === 0 ? (
                     <div className="ogx-list-view__empty" aria-live="polite" role="status">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -102,7 +151,10 @@ export function GridListView<R extends GridRowModel>({
                             row={row}
                             rowId={id}
                             rowIndex={idx}
+                            ariaRowIndex={ariaRowIndex(idx)}
                             listViewColumn={listViewColumn}
+                            gridColumn={columnsByField.get(listViewColumn.field) as GridColDef<R> | undefined}
+                            rowMeta={rowMetaMap.get(id)}
                             isSelected={selectedRowIds.has(id)}
                             checkboxSelection={checkboxSelection}
                             rowHeight={rowHeight}
@@ -117,9 +169,9 @@ export function GridListView<R extends GridRowModel>({
 
             {pagination && (
                 <PaginationComponent
-                    page={effectivePaginationModel.page}
+                    page={currentPage}
                     pageSize={effectivePaginationModel.pageSize}
-                    rowCount={totalRowCount}
+                    rowCount={pagedRowCount}
                     pageSizeOptions={pageSizeOptions}
                     onPageChange={(newPage: number) => onPaginationModelChange({ ...effectivePaginationModel, page: newPage })}
                     onPageSizeChange={(newPageSize: number) => onPaginationModelChange({ ...effectivePaginationModel, pageSize: newPageSize, page: 0 })}

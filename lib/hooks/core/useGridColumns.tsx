@@ -4,6 +4,7 @@ import { ExpandIcon } from '../../components/ui/ExpandIcon';
 import { isColumnPinned } from '../../utils/pinning';
 import { formatAggregateForColumn } from '../../utils/aggregation';
 import { CellErrorBoundary } from '../../components/Cell/CellErrorBoundary';
+import { CHECKBOX_FIELD, EXPAND_FIELD, REORDER_FIELD } from '../../utils/focus';
 import type {
     GridColDef,
     GridRowModel,
@@ -41,6 +42,15 @@ function withGroupRowAggregates<R extends GridRowModel>(
             return p.value == null ? '' : String(p.value);
         },
     };
+}
+
+/** Stable-sorts columns into render order: left-pinned, unpinned, right-pinned. */
+function inPinnedRenderOrder<C extends { field: string }>(columns: C[], pinnedColumns?: GridColumnPinning): C[] {
+    const pinRank = (col: C) => {
+        const side = isColumnPinned(col.field, pinnedColumns);
+        return side === 'left' ? 0 : side === 'right' ? 2 : 1;
+    };
+    return [...columns].sort((a, b) => pinRank(a) - pinRank(b));
 }
 
 // Injected hierarchy renderers replace the plain-cell path in Cell, so they must
@@ -148,7 +158,10 @@ export interface UseGridColumnsResult<R extends GridRowModel> {
     hierarchyField: string | undefined;
     orderedColumns: GridColDef<R>[];
     visibleOrderedColumns: GridColDef<R>[];
-    navigationColumns: Array<GridColDef<R> | { field: string }>;
+    /** Focusable columns in render order: system columns, then the visible data columns (left-pinned, unpinned, right-pinned). */
+    navigationColumns: Array<GridColDef<R> | { field: string; sortable: false; editable: false }>;
+    /** Position of each visible data column in render order (system columns excluded): the public `colIndex`. */
+    columnIndexMap: Map<string, number>;
     columnWidths: Record<string, number>;
     effectiveColumnOrder: string[];
     setInternalColumnOrder: React.Dispatch<React.SetStateAction<string[]>>;
@@ -226,13 +239,7 @@ export function useGridColumns<R extends GridRowModel>(
         const orderIndex = new Map(effectiveColumnOrder.map((field, idx) => [field, idx]));
         const rank = (col: GridColDef<R>) => orderIndex.get(col.field) ?? activeColumns.indexOf(col);
         const ordered = disableColumnReorder ? activeColumns : [...activeColumns].sort((a, b) => rank(a) - rank(b));
-        const pinRank = (col: GridColDef<R>) => {
-            const side = isColumnPinned(col.field, pinnedColumns);
-            return side === 'left' ? 0 : side === 'right' ? 2 : 1;
-        };
-        const onScreen = ordered
-            .filter(col => columnVisibilityModel[col.field] !== false)
-            .sort((a, b) => pinRank(a) - pinRank(b));
+        const onScreen = inPinnedRenderOrder(ordered.filter(col => columnVisibilityModel[col.field] !== false), pinnedColumns);
         return (onScreen[0] ?? activeColumns[0])?.field;
     }, [isHierarchyEnabled, effectiveColumnOrder, activeColumns, disableColumnReorder, columnVisibilityModel, pinnedColumns]);
 
@@ -268,6 +275,7 @@ export function useGridColumns<R extends GridRowModel>(
                                         >
                                             <ExpandIcon
                                                 isExpanded={isExpanded}
+                                                tabIndex={-1}
                                                 onClick={(e) => { e.stopPropagation(); e.preventDefault(); activeHierarchyHandlers?.toggleExpansion(getRowId(cellParams.row)); }}
                                             />
                                         </div>
@@ -343,14 +351,26 @@ export function useGridColumns<R extends GridRowModel>(
         disableColumnReorder,
     });
 
-    // ── Navigation columns (system cols + data cols for keyboard nav) ─────────
+    // ── Navigation columns (system cols + rendered data cols, in render order) ─
+    // Mirrors what Row and Header render, so arrow keys follow the screen and never
+    // land on a hidden column. System columns are never sortable or editable.
+    const renderedDataColumns = useMemo(
+        () => inPinnedRenderOrder(visibleOrderedColumns, pinnedColumns),
+        [visibleOrderedColumns, pinnedColumns]
+    );
+
     const navigationColumns = useMemo(() => {
-        const specials: { field: string }[] = [];
-        if (rowReordering)    specials.push({ field: '__reorder_col__' });
-        if (hasDetailPanel)   specials.push({ field: '__expand_col__' });
-        if (checkboxSelection) specials.push({ field: '__checkbox_col__' });
-        return [...specials, ...orderedColumns] as Array<GridColDef<R> | { field: string }>;
-    }, [orderedColumns, checkboxSelection, hasDetailPanel, rowReordering]);
+        const specials: { field: string; sortable: false; editable: false }[] = [];
+        if (rowReordering)    specials.push({ field: REORDER_FIELD, sortable: false, editable: false });
+        if (hasDetailPanel)   specials.push({ field: EXPAND_FIELD, sortable: false, editable: false });
+        if (checkboxSelection) specials.push({ field: CHECKBOX_FIELD, sortable: false, editable: false });
+        return [...specials, ...renderedDataColumns];
+    }, [renderedDataColumns, checkboxSelection, hasDetailPanel, rowReordering]);
+
+    const columnIndexMap = useMemo(
+        () => new Map(renderedDataColumns.map((col, index) => [col.field, index])),
+        [renderedDataColumns]
+    );
 
     return {
         effectiveColumns,
@@ -358,6 +378,7 @@ export function useGridColumns<R extends GridRowModel>(
         orderedColumns,
         visibleOrderedColumns,
         navigationColumns,
+        columnIndexMap,
         columnWidths,
         effectiveColumnOrder,
         setInternalColumnOrder,

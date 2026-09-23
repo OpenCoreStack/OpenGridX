@@ -123,6 +123,8 @@ Built-in functions available (the same functions drive the footer, group rows, p
 
 `sum`, `avg`, `min` and `max` use numbers, numeric strings and dates. Empty values (`null`, `undefined`, and strings that are empty or only whitespace), booleans and other values are ignored, so a blank cell never counts as `0`. `count` and `unique` ignore empty values too. `min` and `max` of dates return the date itself.
 
+The toolbar's Summaries panel offers these for each aggregable column, or only the ones listed in the column's `availableAggregationFunctions`.
+
 ---
 
 ## 🎨 Formatting Totals

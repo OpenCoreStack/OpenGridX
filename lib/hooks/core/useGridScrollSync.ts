@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import type { GridRowScrollEndParams } from '../../types';
+import { getRowsScrollEndParams } from '../../utils/scroll/scrollEnd';
 
 export interface UseGridScrollSyncParams {
     onRowsScrollEnd?: (params: GridRowScrollEndParams) => void;
@@ -79,14 +80,8 @@ export function useGridScrollSync(params: UseGridScrollSyncParams): UseGridScrol
         }, 200);
 
         if (onRowsScrollEnd) {
-            const { scrollTop, scrollHeight, clientHeight } = target;
-            if (scrollHeight - scrollTop - clientHeight < 100) {
-                onRowsScrollEnd({
-                    visibleTop: scrollTop,
-                    visibleBottom: scrollTop + clientHeight,
-                    viewportHeight: clientHeight,
-                });
-            }
+            const endParams = getRowsScrollEndParams(target);
+            if (endParams) onRowsScrollEnd(endParams);
         }
     }, [onRowsScrollEnd, overscanRowCount]);
 

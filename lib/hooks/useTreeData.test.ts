@@ -268,14 +268,21 @@ describe('useTreeData — server filtering and sorting', () => {
 });
 
 describe('useTreeData — build cost', () => {
-    it('builds one parent with 100k children in linear time', () => {
-        const rows: FileRow[] = [{ id: 'root', path: ['root'], title: 'root' }];
-        for (let i = 1; i <= 100_000; i++) rows.push({ id: `row-${i}`, path: ['root', `f${i}`], title: `f${i}` });
-        const t0 = performance.now();
-        const { result } = renderHook(() => useTreeData<FileRow>({ rows, getRowId: getFileId, getTreeDataPath: getFilePath, treeData: true }));
-        const elapsed = performance.now() - t0;
-        expect(result.current.getNode('root')?.children).toHaveLength(100_000);
-        // The quadratic build took ~14 s for this shape; the linear one takes well under a second.
-        expect(elapsed).toBeLessThan(3000);
-    }, 60_000);
+    it('builds one parent with many children in linear time', () => {
+        const build = (n: number) => {
+            const rows: FileRow[] = [{ id: 'root', path: ['root'], title: 'root' }];
+            for (let i = 1; i <= n; i++) rows.push({ id: `row-${i}`, path: ['root', `f${i}`], title: `f${i}` });
+            const t0 = performance.now();
+            const { result } = renderHook(() => useTreeData<FileRow>({ rows, getRowId: getFileId, getTreeDataPath: getFilePath, treeData: true }));
+            const elapsed = performance.now() - t0;
+            expect(result.current.getNode('root')?.children).toHaveLength(n);
+            return elapsed;
+        };
+        build(5_000); // warm-up
+        const small = build(20_000);
+        const large = build(80_000);
+        // 4x the rows: about 4x the time when linear, about 16x when quadratic (the old build took
+        // ~14 s for 100k children). A ratio does not depend on how loaded the machine is.
+        expect(large / small).toBeLessThan(9);
+    }, 120_000);
 });

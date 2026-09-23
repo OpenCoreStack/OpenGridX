@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ColumnVisibilityPanel } from './ColumnVisibilityPanel';
 import type { GridColDef } from '../../types';
 
@@ -64,6 +64,49 @@ describe('ColumnVisibilityPanel', () => {
         const checkboxes = screen.getAllByRole('checkbox');
         const disabledCheckboxes = checkboxes.filter(cb => (cb as HTMLInputElement).disabled);
         expect(disabledCheckboxes).toHaveLength(0);
+    });
+
+    it('names each checkbox after its column and the footer checkbox Show/Hide All', () => {
+        render(
+            <ColumnVisibilityPanel
+                columns={columns}
+                visibleColumns={new Set(['name'])}
+                onVisibilityChange={noop}
+                onShowAll={noop}
+                onHideAll={noop}
+            />
+        );
+        expect(screen.getByRole('checkbox', { name: 'Name' })).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: 'Department' })).not.toBeChecked();
+        expect(screen.getByRole('checkbox', { name: 'Show/Hide All' })).not.toBeChecked();
+    });
+
+    it('toggles a column when its name is clicked', () => {
+        const onVisibilityChange = vi.fn();
+        render(
+            <ColumnVisibilityPanel
+                columns={columns}
+                visibleColumns={visibleColumns}
+                onVisibilityChange={onVisibilityChange}
+                onShowAll={noop}
+                onHideAll={noop}
+            />
+        );
+        fireEvent.click(screen.getByText('Department'));
+        expect(onVisibilityChange).toHaveBeenCalledWith('department', false);
+    });
+
+    it('does not nest one <label> inside another', () => {
+        const { container } = render(
+            <ColumnVisibilityPanel
+                columns={columns}
+                visibleColumns={visibleColumns}
+                onVisibilityChange={noop}
+                onShowAll={noop}
+                onHideAll={noop}
+            />
+        );
+        expect(container.querySelectorAll('label label')).toHaveLength(0);
     });
 
     it('never shows hideable:false columns even when search would match them', () => {
