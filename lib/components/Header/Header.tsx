@@ -354,17 +354,20 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
 
                         }}
                     >
-                        <Checkbox
-                            id={selectAllId}
-                            name={selectAllId}
-                            checked={allSelected}
-                            indeterminate={someSelected}
-                            onChange={(e) => onSelectAll?.(e.target.checked)}
-                            aria-label={allSelected ? 'Deselect all rows' : 'Select all rows'}
-                            tabIndex={focusedCell?.id === 'HEADER' && focusedCell.field === '__checkbox_col__' ? 0 : -1}
-                            onMouseDown={(e) => e.preventDefault()}
-                            inputRef={(el) => { cellRefs.current['__checkbox_col__'] = el; }}
-                        />
+                        {/* No select-all without a handler (single-row selection has none). */}
+                        {onSelectAll && (
+                            <Checkbox
+                                id={selectAllId}
+                                name={selectAllId}
+                                checked={allSelected}
+                                indeterminate={someSelected}
+                                onChange={(e) => onSelectAll(e.target.checked)}
+                                aria-label={allSelected ? 'Deselect all rows' : 'Select all rows'}
+                                tabIndex={focusedCell?.id === 'HEADER' && focusedCell.field === '__checkbox_col__' ? 0 : -1}
+                                onMouseDown={(e) => e.preventDefault()}
+                                inputRef={(el) => { cellRefs.current['__checkbox_col__'] = el; }}
+                            />
+                        )}
                     </div>
                 )}
 

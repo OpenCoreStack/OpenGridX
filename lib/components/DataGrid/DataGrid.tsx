@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from 'react';
 import { useLayout } from '../../hooks/core/useLayout';
 import { useGridKeyboardNavigation } from '../../hooks/core/useGridKeyboardNavigation';
 import { useGridControlledState } from '../../hooks/core/useGridControlledState';
@@ -9,6 +9,9 @@ import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
 import { useGridScrollSync } from '../../hooks/core/useGridScrollSync';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings } from '../../hooks/core/useGridDevWarnings';
+import { useGridRowSelection } from '../../hooks/core/useGridRowSelection';
+import { useGridApiMethods } from '../../hooks/core/useGridApiMethods';
+import { buildGroupedExportRows } from '../../utils/grouping/groupedExportRows';
 import { scrollRowIntoView } from '../../utils/scroll';
 import { GridAggregationFooter } from './GridAggregationFooter';
 import { GridEmptyState } from './GridEmptyState';
@@ -29,7 +32,7 @@ import { GridListView } from './GridListView';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
-import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridAggregationResult, GridFilterModel, GridTreeNode, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
+import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridAggregationResult, GridTreeNode, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
 
 const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
 
@@ -127,9 +130,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const effectiveNoRowsLabel = localeText?.noRowsLabel ?? noRowsLabel;
 
     // Stable defaults
-    const defaultFilterModel: GridFilterModel = useMemo(() => ({ items: [] }), []);
-    const filterModel = (propFilterModel || defaultFilterModel) as GridFilterModel;
-
     const defaultRowGroupingModel = useMemo(() => [], []);
     const rowGroupingModel = propRowGroupingModel || defaultRowGroupingModel;
 
@@ -163,6 +163,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         initialState,
         sortModel: propSortModel,
         onSortModelChange,
+        filterModel: propFilterModel,
+        onFilterModelChange,
         aggregationModel: propAggregationModel,
         onAggregationModelChange,
         columnVisibilityModel: propColumnVisibilityModel,
@@ -173,14 +175,19 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onPivotModelChange,
         paginationModel,
         onPaginationModelChange,
+        pageSizeOptions,
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange: propOnRowSelectionModelChange,
+        density,
     });
 
     const {
         sortModel,
         isSortControlled,
         setInternalSortModel,
+        handleSortModelChange,
+        filterModel,
+        handleFilterModelChange,
         aggregationModel,
         handleAggregationModelChange,
         columnVisibilityModel,
@@ -192,15 +199,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         effectivePaginationModel,
         handlePaginationModelChange,
         selectedRowIds,
-        isSelectionControlled,
-        setInternalRowSelectionModel,
+        handleRowSelectionModelChange,
+        density: effectiveDensity,
     } = controlledState;
-
-    const onRowSelectionModelChange = propOnRowSelectionModelChange;
 
     const pivot = usePivot(rows as GridRowModel[], columns as unknown as GridColDef[], currentPivotModel, pivotMode);
 
-    const effectiveRowHeight = density === 'compact' ? 32 : density === 'comfortable' ? 72 : rowHeight;
+    const effectiveRowHeight = effectiveDensity === 'compact' ? 32 : effectiveDensity === 'comfortable' ? 72 : rowHeight;
 
     const activeRows = (pivotMode && pivot.isValid ? pivot.pivotRows : rows) as unknown as R[];
     const baseColumns = (pivotMode && pivot.isValid ? pivot.pivotColumns : columns) as unknown as GridColDef<R>[];
@@ -290,7 +295,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         columns: activeColumns,
         rowHeight: effectiveRowHeight,
         headerHeight,
-        rowCount: propRowCount,
         columnVisibilityModel,
         initialState: props.initialState
     });
@@ -307,7 +311,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const { scrollTop, scrollLeft, overscanRows, handleScroll } = useGridScrollSync({ onRowsScrollEnd, overscanRowCount });
 
-    useEffect(() => {
+    // Layout effect: the live API must be in place before the parent's layout effects run.
+    useLayoutEffect(() => {
         if (propApiRef) {
             propApiRef.current = apiRef.current;
         }
@@ -323,8 +328,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // Expose on apiRef for programmatic use
     useEffect(() => {
         apiRef.current.copySelectedRows = copySelectedRows;
-        apiRef.current.getSelectedRows = () => Array.from(selectedRowIds);
-    }, [copySelectedRows, selectedRowIds, apiRef]);
+    }, [copySelectedRows, apiRef]);
 
     const isInternalLoading = state.dataSource.loading;
     const effectiveLoading = loading || isInternalLoading;
@@ -367,13 +371,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         processRowUpdate,
         onProcessRowUpdateError,
         onRowChange: (updatedRow) => {
-            // Dispatch a proper state update so React re-renders with the new row value
-            const { dispatch } = gridData;
-            const currentRows = Array.from(gridData.state.rows.idRowsLookup.values());
-            const nextRows = currentRows.map(r =>
-                r.id === updatedRow.id ? updatedRow : r
-            );
-            dispatch({ type: 'SET_ROWS', payload: nextRows });
+            // A functional update against the *current* store: this runs after an awaited
+            // processRowUpdate, by which time the rows prop (or a dataSource fetch) may have
+            // replaced the rows this render saw.
+            setRows(prev => prev.map(r => (r.id === updatedRow.id ? updatedRow : r)));
         },
     });
 
@@ -389,37 +390,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     }, [isTreeData, treeDataHandlers.rowMetaMap, isRowGrouping, rowGroupingHandlers.rowMetaMap]);
 
     const pagination = propPagination && !isRowGrouping;
-
-    const handleRowClick = useCallback((params: GridRowParams<R>) => {
-        const { row, id } = params;
-
-        if (isHierarchyEnabled && rowMetaMap.get(row.id)?.hasChildren) {
-            activeHierarchyHandlers?.toggleExpansion(id);
-            return;
-        }
-
-        onRowClick?.(params);
-
-        if (!disableRowSelectionOnClick) {
-            let next: GridRowId[];
-            if (disableMultipleRowSelection) {
-                const alreadySelected = selectedRowIds.has(id as GridRowId);
-                next = alreadySelected ? [] : [id as GridRowId];
-            } else {
-                const newSelection = new Set(selectedRowIds);
-                if (newSelection.has(id as GridRowId)) {
-                    newSelection.delete(id as GridRowId);
-                } else {
-                    newSelection.add(id as GridRowId);
-                }
-                next = Array.from(newSelection);
-            }
-            if (!isSelectionControlled) {
-                setInternalRowSelectionModel(next);
-            }
-            onRowSelectionModelChange?.(next);
-        }
-    }, [isHierarchyEnabled, activeHierarchyHandlers, onRowClick, rowMetaMap, disableRowSelectionOnClick, disableMultipleRowSelection, selectedRowIds, isSelectionControlled, setInternalRowSelectionModel, onRowSelectionModelChange]);
 
     const dataSourceHandlers = useGridDataSource({
         dataSource,
@@ -505,7 +475,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         columnWidths,
         effectiveColumnOrder,
         columnVisibilityModel,
-        pinnedColumns: effectivePinnedColumns,
+        pinnedColumns,
+        density: effectiveDensity,
     });
 
     const rowPipeline = useGridRowPipeline<GridRowModel>({
@@ -513,7 +484,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         activeHierarchyHandlers: activeHierarchyHandlers as { getVisibleRows: () => GridRowModel[] } | null,
         filterMode,
         filterModel,
-        dataSource: dataSource as GridDataSource<GridRowModel> | undefined,
         sortModel,
         sortingMode,
         pagination,
@@ -531,11 +501,57 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const paginatedUnpinnedRows = rowPipeline.paginatedUnpinnedRows as R[];
     const allRenderableRows   = rowPipeline.allRenderableRows   as R[];
 
-    useEffect(() => {
-        gridData.apiRef.current.getVisibleRows = () => pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
-        gridData.apiRef.current.getAllFilteredRows = () => sortedUnpinnedRows;
-        gridData.apiRef.current.getVisibleColumns = () => effectiveColumns as unknown as GridColDef[];
-    }, [sortedUnpinnedRows, paginatedUnpinnedRows, pagination, effectiveColumns, gridData.apiRef]);
+    // What the pager pages through. Client: the filtered, unpinned rows (pinned rows show on
+    // every page). Server: the server total, from the dataSource response or the rowCount prop.
+    const paginationRowCount = paginationMode === 'server'
+        ? ((dataSource ? state.pagination.rowCount ?? propRowCount : propRowCount) ?? sortedUnpinnedRows.length)
+        : sortedUnpinnedRows.length;
+
+    // Select-all acts on, and the header checkbox reflects, the data rows that pass the
+    // filter: never rows hidden by it, synthetic group rows, or stale ids in the selection.
+    const selectableRowIds = useMemo(() => dataRows.map(row => row.id), [dataRows]);
+    const rowSelection = useGridRowSelection({
+        selectedRowIds,
+        onSelectionModelChange: handleRowSelectionModelChange,
+        disableMultipleRowSelection,
+        selectableRowIds,
+    });
+
+    const handleRowClick = useCallback((params: GridRowParams<R>) => {
+        const { id } = params;
+
+        if (isHierarchyEnabled && rowMetaMap.get(id)?.hasChildren) {
+            activeHierarchyHandlers?.toggleExpansion(id);
+            return;
+        }
+
+        onRowClick?.(params);
+
+        if (!disableRowSelectionOnClick) {
+            rowSelection.clickRow(id);
+        }
+    }, [isHierarchyEnabled, activeHierarchyHandlers, onRowClick, rowMetaMap, disableRowSelectionOnClick, rowSelection]);
+
+    useGridApiMethods({
+        apiRef: gridData.apiRef,
+        sortModel,
+        multiSort,
+        onSortModelChange: handleSortModelChange,
+        filterModel,
+        onFilterModelChange: handleFilterModelChange,
+        paginationModel: effectivePaginationModel,
+        onPaginationModelChange: handlePaginationModelChange,
+        selectedRowIds,
+        onRowSelectionModelChange: handleRowSelectionModelChange,
+        disableMultipleRowSelection,
+        getVisibleRows: () => [...pinnedTopRows, ...(pagination ? paginatedUnpinnedRows : sortedUnpinnedRows), ...pinnedBottomRows],
+        getAllFilteredRows: () => {
+            const hierarchyRows = activeHierarchyHandlers?.getVisibleRows({ expandAll: true }) as R[] | null | undefined;
+            if (!hierarchyRows) return [...pinnedTopRows, ...sortedUnpinnedRows, ...pinnedBottomRows];
+            return hierarchyRows.filter(row => !rowMetaMap.get(row.id)?.isGroupRow);
+        },
+        visibleColumns: visibleOrderedColumns as unknown as GridColDef[],
+    });
 
     const rowReorderHandlers = useRowReorder({
         rows: pagination ? paginatedUnpinnedRows : sortedUnpinnedRows,
@@ -568,53 +584,18 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         gridData.apiRef.current.getAggregationModel = () => hasAggregation ? aggregationModel : null;
         gridData.apiRef.current.getGroupedExportRows = (): GridGroupedExportRow[] | null => {
             if (!isRowGrouping) return null;
-            const { treeNodes, groupingRows } = rowGroupingHandlers;
-            const rowLookup = new Map<GridRowId, GridRowModel>();
-            sortedUnpinnedRows.forEach(r => rowLookup.set((r as GridRowModel).id as GridRowId, r as GridRowModel));
-
-            const result: GridGroupedExportRow[] = [];
-
-            const traverse = (ids: GridRowId[]) => {
-                ids.forEach(id => {
-                    const node = treeNodes.get(id);
-                    if (!node) return;
-                    const isGroup = Boolean(node.children && node.children.length > 0);
-                    if (isGroup) {
-                        result.push({
-                            type: 'group-header',
-                            depth: node.depth,
-                            groupField: node.groupingField,
-                            groupValue: node.groupingValue,
-                            groupLabel: node.label,
-                        });
-                        traverse(node.children!);
-                        if (hasAggregation && node.aggregatedValues) {
-                            result.push({
-                                type: 'group-subtotal',
-                                depth: node.depth,
-                                groupField: node.groupingField,
-                                groupValue: node.groupingValue,
-                                groupLabel: node.label,
-                                aggregatedValues: node.aggregatedValues,
-                            });
-                        }
-                    } else {
-                        const row = rowLookup.get(id) ?? groupingRows.get(id);
-                        if (row) {
-                            result.push({ type: 'leaf', depth: node.depth, row });
-                        }
-                    }
-                });
-            };
-
-            traverse(Array.from(treeNodes.keys()).filter(id => treeNodes.get(id)?.parentId === null));
-
-            if (hasAggregation && aggregationResult) {
-                result.push({ type: 'grand-total', depth: 0, aggregatedValues: aggregationResult });
-            }
-            return result;
+            // Every group expanded, filtered and sorted like the screen: collapsed groups still
+            // export their rows.
+            return buildGroupedExportRows<R>({
+                rows: (rowGroupingHandlers.getVisibleRows({ expandAll: true }) ?? []) as R[],
+                getRowId: (row) => row.id,
+                rowMetaMap,
+                columns: activeColumns,
+                aggregationModel,
+                aggregationResult: hasAggregation ? aggregationResult : null,
+            });
         };
-    }, [aggregationResult, aggregationModel, hasAggregation, gridData.apiRef, isRowGrouping, rowGroupingHandlers, sortedUnpinnedRows]);
+    }, [aggregationResult, aggregationModel, hasAggregation, gridData.apiRef, isRowGrouping, rowGroupingHandlers, rowMetaMap, activeColumns]);
 
     const layout = useLayout({
         rowHeight: effectiveRowHeight,
@@ -715,32 +696,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         };
     }, [setDimensions]);
 
-    const handleSelectionChange = useCallback((rowId: GridRowId, isSelected: boolean) => {
-        const newSelection = new Set(selectedRowIds);
-        if (isSelected) {
-            newSelection.add(rowId);
-        } else {
-            newSelection.delete(rowId);
-        }
-        const newSelectionArray = Array.from(newSelection);
-
-        if (!isSelectionControlled) {
-            setInternalRowSelectionModel(newSelectionArray);
-        }
-        onRowSelectionModelChange?.(newSelectionArray);
-    }, [selectedRowIds, isSelectionControlled, onRowSelectionModelChange, setInternalRowSelectionModel]);
-
-    const handleSelectAll = useCallback((isSelected: boolean) => {
-        let newSelection: GridRowId[] = [];
-        if (isSelected) {
-            newSelection = effectiveRows.map((row: GridRowModel) => row.id);
-        }
-
-        if (!isSelectionControlled) {
-            setInternalRowSelectionModel(newSelection);
-        }
-        onRowSelectionModelChange?.(newSelection);
-    }, [effectiveRows, isSelectionControlled, onRowSelectionModelChange, setInternalRowSelectionModel]);
+    // Row checkbox / Space key. Honors disableMultipleRowSelection like a row click does.
+    const handleSelectionChange = rowSelection.toggleRow;
 
     const handleSort = useCallback((field: string, direction: GridSortDirection) => {
         const newSortModel = direction ? [{ field, sort: direction }] : [];
@@ -821,8 +778,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         totalRowCount: pinnedTopRows.length + (pagination ? paginatedUnpinnedRows.length : sortedUnpinnedRows.length) + pinnedBottomRows.length,
     });
 
-    const allSelected = rows.length > 0 && selectedRowIds.size === rows.length;
-    const someSelected = selectedRowIds.size > 0 && selectedRowIds.size < rows.length;
+    const { allSelected, someSelected } = rowSelection;
 
     const hasRowSpanning = React.useMemo(() => effectiveColumns.some(c => !!c.rowSpan), [effectiveColumns]);
     const [columnsPanelOpen, setColumnsPanelOpen] = React.useState(false);
@@ -860,7 +816,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 onPivotModelChange: handlePivotModelChange,
             } : {}),
             filterModel,
-            onFilterModelChange,
+            onFilterModelChange: handleFilterModelChange,
             columnVisibilityModel,
             onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
             onColumnReorder: reorderHandler,
@@ -874,7 +830,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         columnOrder, onColumnOrderChange, setInternalColumnOrder, gridData.apiRef,
         columns, aggregationModel, handleAggregationModelChange, pivotMode,
         propPivotModel, onPivotModelChange, currentPivotModel, handlePivotModelChange,
-        filterModel, onFilterModelChange, columnVisibilityModel,
+        filterModel, handleFilterModelChange, columnVisibilityModel,
         handleColumnVisibilityModelChange, columnsPanelOpen, slotProps?.toolbar,
     ]);
 
@@ -935,8 +891,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     rowHeight={effectiveRowHeight}
                     checkboxSelection={checkboxSelection}
                     paginationMode={paginationMode}
-                    dataSource={dataSource}
-                    serverRowCount={state.pagination.rowCount || 0}
+                    serverRowCount={paginationRowCount}
                     paginationSlot={slots?.pagination}
                     paginationSlotProps={slotProps?.pagination}
                     localeText={localeText ? {
@@ -995,7 +950,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             checkboxSelection={checkboxSelection}
                             allSelected={allSelected}
                             someSelected={someSelected}
-                            onSelectAll={handleSelectAll}
+                            onSelectAll={rowSelection.selectAll}
                             sortModel={sortModel}
                             onSort={handleSort}
                             onSortAdd={handleSortAdd}
@@ -1174,7 +1129,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     apiRef={gridData.apiRef}
                     aggregationModel={aggregationModel}
                     aggregationResult={hasAggregation ? aggregationResult : null}
-                    rowCount={dataRows.length}
+                    rowCount={paginationMode === 'server' ? paginationRowCount : dataRows.length}
                     pagination={pagination}
                     paginationModel={effectivePaginationModel}
                     pageSizeOptions={pageSizeOptions}
@@ -1189,7 +1144,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     <PaginationComponent
                         page={effectivePaginationModel.page}
                         pageSize={effectivePaginationModel.pageSize}
-                        rowCount={state.pagination.rowCount}
+                        rowCount={paginationRowCount}
                         pageSizeOptions={pageSizeOptions}
                         onPageChange={(newPage: number) => handlePaginationModelChange({ ...effectivePaginationModel, page: newPage })}
                         onPageSizeChange={(newPageSize: number) => handlePaginationModelChange({ ...effectivePaginationModel, pageSize: newPageSize, page: 0 })}

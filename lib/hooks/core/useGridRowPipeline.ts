@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { filterRows } from '../../utils/filtering';
 import { sortRows } from '../../utils/sorting';
 import { getPinnedRowGroups } from '../../utils/pinning';
-import type { GridRowModel, GridFilterModel, GridSortItem, GridPaginationModel, GridRowPinning, GridDataSource } from '../../types';
+import type { GridRowModel, GridFilterModel, GridSortItem, GridPaginationModel, GridRowPinning } from '../../types';
 
 interface HierarchyHandlers<R extends GridRowModel> {
     getVisibleRows: () => R[];
@@ -13,7 +13,6 @@ export interface UseGridRowPipelineParams<R extends GridRowModel> {
     activeHierarchyHandlers: HierarchyHandlers<R> | null;
     filterMode: string;
     filterModel: GridFilterModel;
-    dataSource?: GridDataSource<R>;
     sortModel: GridSortItem[];
     sortingMode: string;
     pagination: boolean;
@@ -49,7 +48,6 @@ export function useGridRowPipeline<R extends GridRowModel>(
         activeHierarchyHandlers,
         filterMode,
         filterModel,
-        dataSource,
         sortModel,
         sortingMode,
         pagination,
@@ -60,17 +58,19 @@ export function useGridRowPipeline<R extends GridRowModel>(
         pageSize,
     } = params;
 
+    // Server modes mean "the rows are already filtered/sorted/paged", with or without a
+    // dataSource (a consumer can fetch pages itself from onPaginationModelChange etc.).
     const filteredRows = useMemo<R[]>(() => {
         if (activeHierarchyHandlers) return (activeHierarchyHandlers.getVisibleRows() || []) as R[];
-        if (filterMode === 'server' && dataSource) return effectiveRows;
+        if (filterMode === 'server') return effectiveRows;
         return filterRows(effectiveRows, filterModel) as R[];
-    }, [effectiveRows, filterModel, activeHierarchyHandlers, filterMode, dataSource]);
+    }, [effectiveRows, filterModel, activeHierarchyHandlers, filterMode]);
 
     const dataRows = useMemo<R[]>(() => {
         if (!activeHierarchyHandlers) return filteredRows;
-        if (filterMode === 'server' && dataSource) return effectiveRows;
+        if (filterMode === 'server') return effectiveRows;
         return filterRows(effectiveRows, filterModel) as R[];
-    }, [activeHierarchyHandlers, filteredRows, filterMode, dataSource, effectiveRows, filterModel]);
+    }, [activeHierarchyHandlers, filteredRows, filterMode, effectiveRows, filterModel]);
 
     const { top: pinnedTopRows, center: unpinnedRows, bottom: pinnedBottomRows } = useMemo(() => {
         if (activeHierarchyHandlers) return { top: [] as R[], center: filteredRows, bottom: [] as R[] };
@@ -79,16 +79,16 @@ export function useGridRowPipeline<R extends GridRowModel>(
 
     const sortedUnpinnedRows = useMemo<R[]>(() => {
         if (activeHierarchyHandlers) return unpinnedRows;
-        if (sortingMode === 'server' && dataSource) return unpinnedRows;
+        if (sortingMode === 'server') return unpinnedRows;
         return sortRows(unpinnedRows, sortModel) as R[];
-    }, [unpinnedRows, sortModel, activeHierarchyHandlers, sortingMode, dataSource]);
+    }, [unpinnedRows, sortModel, activeHierarchyHandlers, sortingMode]);
 
     const paginatedUnpinnedRows = useMemo<R[]>(() => {
         if (!pagination) return sortedUnpinnedRows;
-        if (paginationMode === 'server' && dataSource) return sortedUnpinnedRows;
+        if (paginationMode === 'server') return sortedUnpinnedRows;
         const start = effectivePaginationModel.page * effectivePaginationModel.pageSize;
         return sortedUnpinnedRows.slice(start, start + effectivePaginationModel.pageSize);
-    }, [sortedUnpinnedRows, pagination, effectivePaginationModel.page, effectivePaginationModel.pageSize, paginationMode, dataSource]);
+    }, [sortedUnpinnedRows, pagination, effectivePaginationModel.page, effectivePaginationModel.pageSize, paginationMode]);
 
     const allRenderableRows = useMemo<R[]>(() => {
         if (activeHierarchyHandlers) return unpinnedRows;

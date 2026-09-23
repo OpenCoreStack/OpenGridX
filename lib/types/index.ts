@@ -547,24 +547,15 @@ export interface GridInternalState {
     idRowsLookup: Map<GridRowId, GridRowModel>;
     allRows: GridRowId[];
   };
-  sorting: {
-    sortModel: GridSortItem[];
-  };
-  filter: {
-    filterModel: GridFilterModel;
-  };
   pagination: {
-    paginationModel: GridPaginationModel;
-    rowCount: number;
+    /** Server-reported total (dataSource responses); undefined until one arrives. */
+    rowCount?: number;
   };
   columns: {
     all: GridColDef[];
     lookup: Map<string, GridColDef>;
     orderedFields: string[];
     columnVisibilityModel: GridColumnVisibilityModel;
-  };
-  selection: {
-    selectedRows: Set<GridRowId>;
   };
   pinning: {
     pinnedColumns: GridPinnedColumns;
