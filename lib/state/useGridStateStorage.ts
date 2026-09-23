@@ -1,8 +1,12 @@
 
-import { useRef, useCallback, useMemo, useEffect } from 'react';
+import { useRef, useCallback, useMemo, useEffect, useLayoutEffect, useState } from 'react';
 import type { GridState } from './types';
 
 export interface UseGridStateStorageOptions {
+    /**
+     * Storage key. The grid reads `initialState` only when it mounts, so when the key can
+     * change (per user, per view) remount the grid with it: `<DataGrid key={key} … />`.
+     */
     key: string;
     debounceMs?: number;
     include?: (keyof GridState)[];
@@ -19,12 +23,27 @@ export interface UseGridStateStorageReturn {
     clearState: () => void;
 }
 
+type GridStateStorage = NonNullable<UseGridStateStorageOptions['storage']>;
+
+/**
+ * Reading `window.localStorage` itself throws a SecurityError when site data is blocked
+ * (cookie blocking, sandboxed or partitioned iframes). Treat that as "no persistence".
+ */
+function resolveDefaultStorage(): GridStateStorage | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
 function readFromStorage(
   key: string,
-  storage: UseGridStateStorageOptions['storage']
+  storage: GridStateStorage
 ): GridState | undefined {
   try {
-    const raw = storage!.getItem(key);
+    const raw = storage.getItem(key);
     if (!raw) return undefined;
     return JSON.parse(raw) as GridState;
   } catch {
@@ -37,7 +56,7 @@ function writeToStorage(
   key: string,
   state: GridState,
   include: (keyof GridState)[] | undefined,
-  storage: UseGridStateStorageOptions['storage']
+  storage: GridStateStorage
 ) {
   try {
     const toWrite = include
@@ -45,10 +64,15 @@ function writeToStorage(
           Object.entries(state).filter(([k]) => include.includes(k as keyof GridState))
         )
       : state;
-    storage!.setItem(key, JSON.stringify(toWrite));
+    storage.setItem(key, JSON.stringify(toWrite));
   } catch {
     // swallow localStorage write errors (private browsing, quota exceeded)
   }
+}
+
+interface PendingWrite {
+  key: string;
+  state: GridState;
 }
 
 export function useGridStateStorage(
@@ -63,27 +87,55 @@ export function useGridStateStorage(
     key,
     debounceMs = 300,
     include,
-    storage = typeof window !== 'undefined' ? window.localStorage : undefined,
+    storage: storageOption,
   } = opts;
 
-  const initialState = useMemo(() => {
-    if (!storage) return undefined;
-    return readFromStorage(key, storage);
+  // Resolved once so its identity is stable across renders.
+  const [defaultStorage] = useState(resolveDefaultStorage);
+  const storage = storageOption ?? defaultStorage;
 
-  }, [key, storage]);
+  // Latest-value refs: `include` and `storage` are often written inline, so they must not
+  // drive callback identities (that used to flush storage on every re-render).
+  const includeRef = useRef(include);
+  const storageRef = useRef(storage);
+  useLayoutEffect(() => {
+    includeRef.current = include;
+    storageRef.current = storage;
+  });
+
+  // Read once per key. A new inline `storage` object on each render must not re-parse storage.
+  const [loaded, setLoaded] = useState<{ key: string; state: GridState | undefined }>(() => ({
+    key,
+    state: storage ? readFromStorage(key, storage) : undefined,
+  }));
+  let initialState = loaded.state;
+  if (loaded.key !== key) {
+    initialState = storage ? readFromStorage(key, storage) : undefined;
+    setLoaded({ key, state: initialState });
+  }
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestStateRef = useRef<GridState | null>(null);
+  // The pending write remembers the key it was made for, so a debounced write never lands in
+  // a different key after the key changes.
+  const pendingRef = useRef<PendingWrite | null>(null);
 
   const flush = useCallback(() => {
-    if (latestStateRef.current && storage) {
-      writeToStorage(key, latestStateRef.current, include, storage);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
-  }, [key, include, storage]);
+    const pending = pendingRef.current;
+    pendingRef.current = null;
+    const target = storageRef.current;
+    if (pending && target) {
+      writeToStorage(pending.key, pending.state, includeRef.current, target);
+    }
+  }, []);
 
   const onStateChange = useCallback(
     (state: GridState) => {
-      latestStateRef.current = state;
+      if (pendingRef.current && pendingRef.current.key !== key) flush();
+      pendingRef.current = { key, state };
 
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -91,23 +143,30 @@ export function useGridStateStorage(
 
       timerRef.current = setTimeout(flush, debounceMs);
     },
-    [flush, debounceMs]
+    [key, flush, debounceMs]
   );
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        flush();
-      }
-    };
-  }, [flush]);
+  // Flush a pending write on unmount only; nothing is written when no write is pending.
+  useEffect(() => flush, [flush]);
 
   const clearState = useCallback(() => {
-    if (storage) {
-      storage.removeItem(key);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
-  }, [key, storage]);
+    pendingRef.current = null;
+    const target = storageRef.current;
+    if (target) {
+      try {
+        target.removeItem(key);
+      } catch {
+        // storage became unavailable — nothing to clear
+      }
+    }
+  }, [key]);
 
-  return { initialState, onStateChange, clearState };
+  return useMemo(
+    () => ({ initialState, onStateChange, clearState }),
+    [initialState, onStateChange, clearState]
+  );
 }
