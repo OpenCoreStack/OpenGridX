@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { formatAggregateForColumn, isAggregationAllowed } from '../../utils/aggregation';
 import type { GridColDef, GridAggregationModel, GridAggregationResult, GridColumnPinning } from '../../types';
-import { calculatePinnedPositions, isColumnPinned } from '../../utils/pinning';
+import { calculatePinnedPositions, getPinnedEdgeFields, isColumnPinned } from '../../utils/pinning';
+import { getRenderedColumnWidth } from '../../utils/columnWidth';
 
 const SYSTEM_COLUMN_WIDTH = 48;
 
@@ -55,8 +56,10 @@ export function GridAggregationFooter({
         [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]
     );
 
-    const lastLeftField  = pinnedColumns?.left?.[pinnedColumns.left.length - 1];
-    const firstRightField = pinnedColumns?.right?.[0];
+    const { lastLeft: lastLeftField, firstRight: firstRightField } = useMemo(
+        () => getPinnedEdgeFields(columns, pinnedColumns),
+        [columns, pinnedColumns]
+    );
 
     // System-column spacers stick exactly where Row sticks its drag handle, expand and checkbox cells.
     const expandLeft = rowReordering ? SYSTEM_COLUMN_WIDTH : 0;
@@ -94,7 +97,7 @@ export function GridAggregationFooter({
                 const modelFn = (aggregationModel as Record<string, string>)[col.field];
                 const fnName = modelFn && isAggregationAllowed(col, modelFn) ? modelFn : undefined;
                 const rawValue = aggregationResult[col.field];
-                const colWidth = columnWidths[col.field] ?? (typeof col.width === 'number' ? col.width : 120);
+                const colWidth = getRenderedColumnWidth(col, columnWidths, 120);
 
                 const pinnedPosition = isColumnPinned(col.field, pinnedColumns);
                 const pinnedOffset   = pinnedPosition ? pinnedOffsets[col.field] : undefined;

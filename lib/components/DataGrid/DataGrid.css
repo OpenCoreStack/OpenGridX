@@ -47,20 +47,28 @@
   position: relative;
   z-index: 3;
 }
-.ogx__pinned-rows--top {
+/* Header + top-pinned rows, and bottom-pinned rows + aggregation footer, each stick as one block,
+   so they stack instead of overlapping whatever their heights (column group rows, detail panels). */
+.ogx__sticky-top {
   position: sticky;
-  top: var(--ogx-header-height);
-  z-index: 10; 
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+}
+.ogx__sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+.ogx__pinned-rows--top {
   background: var(--ogx-grid-background);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 .ogx__pinned-rows--bottom {
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
   background: var(--ogx-grid-background);
   box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
-  margin-top: auto;
 }
 .ogx--loading {
   opacity: 0.6;

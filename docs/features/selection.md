@@ -60,7 +60,7 @@ Use `disableMultipleRowSelection` to cap selection to one row at a time. Clickin
 
 ### Select All
 
-With `checkboxSelection`, the header checkbox selects the rows that pass the current filter (including pinned rows) and adds them to the selection; unchecking it removes those rows again. Rows hidden by the filter keep their selection state, and under row grouping group rows are not part of select-all. The header shows checked when every such row is selected and indeterminate when only some are, so ids of rows that are no longer in `rows` do not affect it.
+With `checkboxSelection`, the header checkbox selects the rows that pass the current filter (including pinned rows) and adds them to the selection; unchecking it removes those rows again. Rows hidden by the filter keep their selection state, and under row grouping group rows are not part of select-all. Synthetic rows (row-grouping group and subtotal rows, auto-created tree-data parents) have no checkbox and are never selected, by click, checkbox or Space key; tree-data parents that are your own rows are selectable like any row. The header shows checked when every such row is selected and indeterminate when only some are, so ids of rows that are no longer in `rows` do not affect it.
 
 ### Keyboard Selection
 

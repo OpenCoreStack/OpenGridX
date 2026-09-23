@@ -1,6 +1,7 @@
 import React from 'react';
 import { Row } from '../Row/Row';
 import { DetailPanelContent } from '../DetailPanel/DetailPanelContent';
+import { resolveDetailPanelHeight } from '../../utils/detailPanel';
 import type {
     GridRowModel,
     GridRowId,
@@ -41,6 +42,8 @@ export interface GridPinnedRowsProps<R extends GridRowModel> {
     getDetailPanelContent?: (params: GridDetailPanelParams<R>) => React.ReactNode;
     getDetailPanelHeight?: (params: GridDetailPanelParams<R>) => GridDetailPanelHeight;
     onDetailPanelToggle: (rowId: GridRowId) => void;
+    /** Receives the rendered height of `'auto'` detail panels. */
+    onDetailPanelHeightChange?: (rowId: GridRowId, height: number) => void;
     pinCheckboxColumn?: boolean;
     pinExpandColumn?: boolean;
     focusedCell: { id: GridRowId | null; field: string } | null;
@@ -80,6 +83,7 @@ export function GridPinnedRows<R extends GridRowModel>({
     getDetailPanelContent,
     getDetailPanelHeight,
     onDetailPanelToggle,
+    onDetailPanelHeightChange,
     pinCheckboxColumn,
     pinExpandColumn,
     focusedCell,
@@ -95,6 +99,9 @@ export function GridPinnedRows<R extends GridRowModel>({
     isCellEditable,
 }: GridPinnedRowsProps<R>) {
     if (rows.length === 0) return null;
+
+    // Detail callbacks run only for an expanded data row: never for collapsed rows or synthetic group rows.
+    const showDetail = (id: GridRowId) => expandedRowIds.has(id) && rowMetaMap.get(id)?.isGroupRow !== true;
 
     return (
         <div className={`ogx__pinned-rows ogx__pinned-rows--${position}`} role="rowgroup">
@@ -121,8 +128,9 @@ export function GridPinnedRows<R extends GridRowModel>({
                     pinnedRows={pinnedRows}
                     hasDetailPanel={hasDetailPanel}
                     isDetailPanelExpanded={expandedRowIds.has(id)}
-                    detailPanelContent={expandedRowIds.has(id) && getDetailPanelContent ? <DetailPanelContent<R> getContent={getDetailPanelContent} params={{ row, id, rowIndex }} /> : null}
-                    detailPanelHeight={expandedRowIds.has(id) ? getDetailPanelHeight?.({ row, id, rowIndex }) || 200 : 200}
+                    detailPanelContent={showDetail(id) && getDetailPanelContent ? <DetailPanelContent<R> getContent={getDetailPanelContent} params={{ row, id, rowIndex }} /> : null}
+                    detailPanelHeight={resolveDetailPanelHeight(showDetail(id) ? getDetailPanelHeight?.({ row, id, rowIndex }) : undefined)}
+                    onDetailPanelHeightChange={onDetailPanelHeightChange}
                     onDetailPanelToggle={onDetailPanelToggle}
                     pinCheckboxColumn={pinCheckboxColumn}
                     pinExpandColumn={pinExpandColumn}

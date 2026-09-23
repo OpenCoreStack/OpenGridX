@@ -3,6 +3,7 @@ import { useColumnReorder } from '../useColumnReorder';
 import { ExpandIcon } from '../../components/ui/ExpandIcon';
 import { isColumnPinned } from '../../utils/pinning';
 import { formatAggregateForColumn } from '../../utils/aggregation';
+import { CellErrorBoundary } from '../../components/Cell/CellErrorBoundary';
 import { CHECKBOX_FIELD, EXPAND_FIELD, REORDER_FIELD } from '../../utils/focus';
 import type {
     GridColDef,
@@ -43,19 +44,94 @@ function withGroupRowAggregates<R extends GridRowModel>(
     };
 }
 
-/** Stable-sorts columns into render order: left-pinned, unpinned, right-pinned. */
+/**
+ * Columns in render order: left-pinned in `pinnedColumns.left` order, unpinned in column order,
+ * right-pinned in `pinnedColumns.right` order — the order useLayout renders them in.
+ */
 function inPinnedRenderOrder<C extends { field: string }>(columns: C[], pinnedColumns?: GridColumnPinning): C[] {
-    const pinRank = (col: C) => {
+    if (!pinnedColumns) return columns;
+    const left = pinnedColumns.left ?? [];
+    const right = pinnedColumns.right ?? [];
+    const rank = (col: C) => {
         const side = isColumnPinned(col.field, pinnedColumns);
-        return side === 'left' ? 0 : side === 'right' ? 2 : 1;
+        if (side === 'left') return left.indexOf(col.field) - left.length;
+        if (side === 'right') return 1 + right.indexOf(col.field);
+        return 0;
     };
-    return [...columns].sort((a, b) => pinRank(a) - pinRank(b));
+    return [...columns].sort((a, b) => rank(a) - rank(b));
 }
 
 // Injected hierarchy renderers replace the plain-cell path in Cell, so they must
 // render the formatted value themselves or valueFormatter is silently lost.
 const displayValue = <R extends GridRowModel>(cellParams: GridRenderCellParams<R>): React.ReactNode =>
     cellParams.formattedValue ?? (cellParams.value as React.ReactNode);
+
+interface ConsumerCellResult {
+    useDefault: boolean;
+    content?: React.ReactNode;
+}
+
+/**
+ * Calls the consumer's renderCell for a hierarchy column cell. For a synthetic row (group, subtotal or
+ * auto-created tree parent) a result of `undefined` means "use the grid's default content". In the
+ * hierarchy column the output is wrapped in its own error boundary, so a renderCell that fails on a
+ * group row shows the error icon next to the expand toggle instead of replacing the toggle.
+ */
+function renderConsumerCell<R extends GridRowModel>(
+    col: GridColDef<R>,
+    cellParams: GridRenderCellParams<R>,
+    isolate: boolean,
+): ConsumerCellResult {
+    const renderCell = col.renderCell;
+    if (!renderCell) return { useDefault: true };
+    const isSynthetic = Boolean(cellParams.rowMeta?.isGroupRow);
+    if (!isolate) {
+        const output = renderCell(cellParams);
+        return isSynthetic && output === undefined ? { useDefault: true } : { useDefault: false, content: output };
+    }
+    let output: React.ReactNode;
+    try {
+        output = renderCell(cellParams);
+    } catch (error) {
+        return {
+            useDefault: false,
+            content: <CellErrorBoundary field={col.field} resetKey={cellParams.row} renderFn={() => { throw error; }} />,
+        };
+    }
+    if (isSynthetic && output === undefined) return { useDefault: true };
+    return { useDefault: false, content: <CellErrorBoundary field={col.field} resetKey={cellParams.row} renderFn={() => output} /> };
+}
+
+/** What the hierarchy column shows without a consumer renderCell (or when it returns undefined for a synthetic row). */
+function defaultHierarchyContent<R extends GridRowModel>(
+    cellParams: GridRenderCellParams<R>,
+    isRowGrouping: boolean,
+    isTreeData: boolean,
+): React.ReactNode {
+    const meta = cellParams.rowMeta;
+    if (!meta?.isGroupRow) return displayValue(cellParams);
+    // A subtotal row carries only aggregates; its label column stays empty.
+    if (meta.isGroupFooter) return null;
+    const descendantCount = meta.descendantCount;
+    if (isRowGrouping && meta.hasChildren) {
+        const groupLabel = meta.groupLabel ?? `${meta.groupingField}: ${String(meta.groupingValue)}`;
+        return (
+            <div className="ogx__group-cell-content">
+                {groupLabel}
+                {descendantCount !== undefined ? ` (${descendantCount})` : ''}
+            </div>
+        );
+    }
+    if (isTreeData) {
+        return (
+            <div className="ogx__group-cell-content">
+                {meta.groupLabel}
+                {descendantCount !== undefined && descendantCount > 0 ? ` (${descendantCount})` : ''}
+            </div>
+        );
+    }
+    return displayValue(cellParams);
+}
 
 export interface UseGridColumnsParams<R extends GridRowModel> {
     activeColumns: GridColDef<R>[];
@@ -86,6 +162,8 @@ const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 
 export interface UseGridColumnsResult<R extends GridRowModel> {
     effectiveColumns: GridColDef<R>[];
+    /** Tree data / row grouping: the column that shows the expand toggle, indent and group labels. */
+    hierarchyField: string | undefined;
     orderedColumns: GridColDef<R>[];
     visibleOrderedColumns: GridColDef<R>[];
     /** Focusable columns in render order: system columns, then the visible data columns (left-pinned, unpinned, right-pinned). */
@@ -190,31 +268,9 @@ export function useGridColumns<R extends GridRowModel>(
                         const depth = meta?.treeDepth ?? 0;
                         const hasChildren = Boolean(meta?.hasChildren);
                         const isExpanded = Boolean(meta?.isExpanded);
-                        const groupingField = meta?.groupingField;
-                        const groupingValue = meta?.groupingValue;
-                        const descendantCount = meta?.descendantCount;
-                        const isGroupRow = Boolean(meta?.isGroupRow);
 
-                        let content: React.ReactNode = col.renderCell ? col.renderCell(cellParams) : displayValue(cellParams);
-
-                        if (isTreeData && hasChildren && isGroupRow) {
-                            content = (
-                                <div className="ogx__group-cell-content">
-                                    {cellParams.value as React.ReactNode}
-                                    {descendantCount !== undefined && descendantCount > 0 ? ` (${descendantCount})` : ''}
-                                </div>
-                            );
-                        }
-
-                        if (isRowGrouping && hasChildren && groupingField) {
-                            const groupLabel = meta?.groupLabel ?? `${groupingField}: ${String(groupingValue)}`;
-                            content = (
-                                <div className="ogx__group-cell-content">
-                                    {groupLabel}
-                                    {descendantCount !== undefined ? ` (${descendantCount})` : ''}
-                                </div>
-                            );
-                        }
+                        const custom = renderConsumerCell(col, cellParams, true);
+                        const content = custom.useDefault ? defaultHierarchyContent(cellParams, isRowGrouping, isTreeData) : custom.content;
 
                         return (
                             <div style={{ display: 'flex', alignItems: 'center', paddingLeft: depth * 24, width: '100%', height: '100%' }}>
@@ -245,18 +301,15 @@ export function useGridColumns<R extends GridRowModel>(
                 ...groupRowAggregates,
                 renderCell: (cellParams: GridRenderCellParams<R>) => {
                     const meta = cellParams.rowMeta;
-                    const hasChildren = Boolean(meta?.hasChildren);
-                    const groupingField = meta?.groupingField;
-
-                    if (isRowGrouping && hasChildren) {
-                        if (col.field === groupingField) return null;
-                        if (cellParams.value !== undefined && cellParams.value !== null) {
-                            return col.renderCell ? col.renderCell(cellParams) : displayValue(cellParams);
-                        }
-                        return null;
+                    if (!meta?.isGroupRow) {
+                        return col.renderCell ? col.renderCell(cellParams) : displayValue(cellParams);
                     }
-
-                    return col.renderCell ? col.renderCell(cellParams) : displayValue(cellParams);
+                    // Synthetic rows: the consumer's renderCell decides; `undefined` keeps the default,
+                    // which is the aggregate (or nothing) and never the grouping value the label already shows.
+                    const custom = renderConsumerCell(col, cellParams, false);
+                    if (!custom.useDefault) return custom.content;
+                    if (col.field === meta.groupingField && !meta.isGroupFooter) return null;
+                    return cellParams.value == null ? null : displayValue(cellParams);
                 }
             };
         }) as GridColDef<R>[];
@@ -329,6 +382,7 @@ export function useGridColumns<R extends GridRowModel>(
 
     return {
         effectiveColumns,
+        hierarchyField,
         orderedColumns,
         visibleOrderedColumns,
         navigationColumns,

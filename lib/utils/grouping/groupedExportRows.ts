@@ -21,9 +21,12 @@ export interface BuildGroupedExportRowsParams<R extends GridRowModel> {
     aggregationModel: GridAggregationModel;
     /** The footer's grand total (already over the filtered data rows); omitted when null. */
     aggregationResult: GridAggregationResult | null;
+    /** Groups whose subtotal is hidden (getAggregationPosition returned null for them); no subtotal is written. */
+    isSubtotalHidden?: (groupId: GridRowId) => boolean;
 }
 
 interface OpenGroup<R> {
+    id: GridRowId;
     header: GridGroupedExportRow;
     leaves: R[];
 }
@@ -35,7 +38,7 @@ interface OpenGroup<R> {
  * export contains), so every subtotal agrees with the rows above it.
  */
 export function buildGroupedExportRows<R extends GridRowModel>(params: BuildGroupedExportRowsParams<R>): GridGroupedExportRow[] {
-    const { rows, getRowId, rowMetaMap, columns, aggregationModel, aggregationResult } = params;
+    const { rows, getRowId, rowMetaMap, columns, aggregationModel, aggregationResult, isSubtotalHidden } = params;
     const hasAggregation = Object.keys(aggregationModel).length > 0;
     const columnsLookup = new Map(columns.map(col => [col.field, col]));
 
@@ -45,7 +48,7 @@ export function buildGroupedExportRows<R extends GridRowModel>(params: BuildGrou
     const closeGroupsFrom = (depth: number) => {
         while (open.length > 0 && (open[open.length - 1].header.depth >= depth)) {
             const group = open.pop()!;
-            if (hasAggregation) {
+            if (hasAggregation && !isSubtotalHidden?.(group.id)) {
                 result.push({
                     type: 'group-subtotal',
                     depth: group.header.depth,
@@ -59,7 +62,9 @@ export function buildGroupedExportRows<R extends GridRowModel>(params: BuildGrou
     };
 
     for (const row of rows) {
-        const meta = rowMetaMap.get(getRowId(row));
+        const id = getRowId(row);
+        const meta = rowMetaMap.get(id);
+        if (meta?.isGroupFooter) continue;
         if (meta?.isGroupRow) {
             const depth = meta.treeDepth ?? 0;
             closeGroupsFrom(depth);
@@ -71,7 +76,7 @@ export function buildGroupedExportRows<R extends GridRowModel>(params: BuildGrou
                 groupLabel: meta.groupLabel,
             };
             result.push(header);
-            open.push({ header, leaves: [] });
+            open.push({ id, header, leaves: [] });
         } else {
             result.push({ type: 'leaf', depth: meta?.treeDepth ?? open.length, row });
             open.forEach(group => group.leaves.push(row));

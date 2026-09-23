@@ -24,14 +24,31 @@ export interface GridRowModel {
  * added at runtime: row objects reach `renderCell` exactly as you passed them.
  */
 export interface GridRowMeta {
+    /** The row has children to show: the expand toggle is rendered for it. */
     hasChildren?: boolean;
     treeDepth?: number;
     groupingField?: string;
     groupingValue?: unknown;
+    /** The label the grid shows for a synthetic row: the group label, or the path segment of an auto-created tree parent. */
     groupLabel?: string;
+    /**
+     * Data rows below this row at any depth that pass the active filter (row-grouping leaves, or
+     * tree-data rows; auto-created tree parents are not counted). The "(n)" shown next to group labels.
+     */
     descendantCount?: number;
     isExpanded?: boolean;
+    /**
+     * The row is synthetic: a row-grouping group row, a group subtotal row, or a tree-data parent the
+     * grid created for a path segment with no row of its own. Synthetic rows are never selected,
+     * edited or given a detail panel, and `valueGetter` is not called for them.
+     */
     isGroupRow?: boolean;
+    /**
+     * The row is the subtotal row of the group described by `groupingField` / `groupingValue`, shown
+     * after the group's children when `getAggregationPosition` returns `'footer'` for it.
+     * @since v3.0
+     */
+    isGroupFooter?: boolean;
 }
 
 export type GridAlignment = 'left' | 'center' | 'right';
@@ -63,7 +80,7 @@ export interface GridTreeNode {
     /** Display label for the group. */
     label?: string;
 
-    /** Total count of all descendants (recursive). */
+    /** Row grouping: the number of leaf rows in the group that pass the active filter (recursive). */
     descendantCount?: number;
 
     /** Count of children on the server (for lazy loading). */
@@ -780,7 +797,11 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   /** Advanced: Callback fired for every internal state update. */
   onStateChange?: (state: import('../state/types').GridState) => void;
 
-  /** Callback fired when a row is clicked. */
+  /**
+   * Callback fired when a row is clicked. Tree-data parent rows are real rows: a click fires this and
+   * selects them like any row (the chevron expands them). Synthetic rows (row-grouping group rows,
+   * subtotal rows and auto-created tree parents) do not fire it: clicking a group row toggles it.
+   */
   onRowClick?: (params: GridRowParams<R>) => void;
   /**
    * Callback fired when a row is double-clicked. Also fires for group rows; check
@@ -792,9 +813,12 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   /** Callback fired when a cell is clicked. */
   onCellClick?: (params: GridCellParams<R>) => void;
 
-  /** Renders the detail panel content for a row in Master-Detail mode. */
+  /**
+   * Renders the detail panel content for a row in Master-Detail mode. Called for data rows only:
+   * synthetic group, subtotal and auto-created tree-parent rows have no detail panel.
+   */
   getDetailPanelContent?: (params: GridDetailPanelParams<R>) => React.ReactNode;
-  /** Defines the height of the detail panel. */
+  /** Defines the height of the detail panel. Called for data rows only, like `getDetailPanelContent`. */
   getDetailPanelHeight?: (params: GridDetailPanelParams<R>) => GridDetailPanelHeight;
   /** Controlled state for expanded detail panels. */
   detailPanelExpandedRowIds?: Set<GridRowId>;
@@ -815,7 +839,11 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
 
   /** If true, enables hierarchical tree data display. */
   treeData?: boolean;
-  /** Function to get the path (array of strings) for a row in Tree Data mode. */
+  /**
+   * Function to get the path (array of strings) for a row in Tree Data mode. Required with `treeData`:
+   * without it the rows are shown flat. Segments may contain any character, including '/'. Keep the
+   * function identity stable (module scope or useCallback); a new function rebuilds the tree.
+   */
   getTreeDataPath?: (row: R) => string[];
   /** Optional override for the grouping column. */
   groupingColDef?: GridColDef<R>;
@@ -828,7 +856,12 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   aggregationModel?: GridAggregationModel;
   /** Callback fired when aggregation model changes. */
   onAggregationModelChange?: (model: GridAggregationModel) => void;
-  /** Advanced: Controls where aggregation results appear relative to groups. */
+  /**
+   * Advanced: where aggregation results appear. Called for every group node (with its current
+   * `isExpanded`) and once with `null` for the grand total. `'inline'` (default for groups) shows them
+   * on the group row; `'footer'` on a subtotal row after the group's children while it is expanded
+   * (inline while collapsed); `null` hides them. For the grand total, `null` hides the footer row.
+   */
   getAggregationPosition?: (groupNode: GridTreeNode | null) => 'inline' | 'footer' | null;
 
   /** If true, switches the grid to multidimensional Pivot Mode. */

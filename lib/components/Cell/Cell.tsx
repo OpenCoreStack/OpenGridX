@@ -22,6 +22,11 @@ export interface CellProps<R extends GridRowModel = GridRowModel> {
     width?: number;
     pinnedPosition?: GridPinnedPosition | null;
     pinnedOffset?: number;
+    /**
+     * The cell is the last left-pinned or first right-pinned cell of its row: it gets
+     * `ogx__cell--pinned-left-last` / `ogx__cell--pinned-right-first` (the section edge shadow).
+     */
+    isPinnedEdge?: boolean;
 
     isFocused?: boolean;
     isFocusVisible?: boolean;
@@ -38,6 +43,13 @@ export interface CellProps<R extends GridRowModel = GridRowModel> {
     rowSpan?: number;
     isHiddenByRowSpan?: boolean;
     rowMeta?: GridRowMeta;
+    /** The error the column's valueGetter threw for this cell (computed by Row); shown as a cell error. */
+    valueError?: unknown;
+}
+
+interface FormattedValue {
+    formattedValue: string;
+    error?: unknown;
 }
 
 function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
@@ -56,6 +68,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         width,
         pinnedPosition,
         pinnedOffset,
+        isPinnedEdge,
         isFocused,
         isFocusVisible,
         isEditable,
@@ -67,7 +80,8 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         colSpanInfo,
         rowSpan: rowSpanProp,
         isHiddenByRowSpan,
-        rowMeta
+        rowMeta,
+        valueError
     } = props;
 
     // All hooks must come before any early returns (Rules of Hooks)
@@ -79,29 +93,39 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         }
     }, [onCellValueChange, onValueChange, colDef.field]);
 
-    const formattedValue = React.useMemo(() => {
-        if (colDef.valueFormatter) {
-            return colDef.valueFormatter({
-                value,
-                row,
-                field: colDef.field
-            });
+    // A valueFormatter that throws is contained to its cell (shown as a cell error), like renderCell.
+    // Synthetic rows (group, subtotal, auto-created tree parent) have no value in most columns: the
+    // formatter, written for data rows, is only called for the values they do hold.
+    const isSyntheticRow = rowMeta?.isGroupRow === true;
+    const { formattedValue, error: formatError } = React.useMemo<FormattedValue>(() => {
+        if (colDef.valueFormatter && !(isSyntheticRow && value == null)) {
+            try {
+                return { formattedValue: colDef.valueFormatter({ value, row, field: colDef.field }) };
+            } catch (error) {
+                return { formattedValue: '', error: error ?? new Error('valueFormatter failed') };
+            }
         }
 
         if (value === null || value === undefined) {
-            return '';
+            return { formattedValue: '' };
         }
 
-        return String(value);
-    }, [value, row, colDef]);
+        return { formattedValue: String(value) };
+    }, [value, row, colDef, isSyntheticRow]);
 
     const resolvedCellClassName = React.useMemo(() => {
         if (!colDef.cellClassName) return '';
         if (typeof colDef.cellClassName === 'function') {
-            return colDef.cellClassName({ value, formattedValue, row, field: colDef.field, colDef, rowIndex, colIndex, rowMeta }) || '';
+            try {
+                return colDef.cellClassName({ value, formattedValue, row, field: colDef.field, colDef, rowIndex, colIndex, rowMeta }) || '';
+            } catch {
+                return '';
+            }
         }
         return colDef.cellClassName;
     }, [colDef, value, formattedValue, row, rowIndex, colIndex, rowMeta]);
+
+    const cellError = valueError ?? formatError;
 
     const field = colDef.field;
     const handleCommit = React.useCallback(() => { onEditStop?.(false, field); }, [onEditStop, field]);
@@ -199,6 +223,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         colDef.type && `ogx__cell--type-${colDef.type}`,
         isPinned && 'ogx__cell--pinned',
         isPinned && `ogx__cell--pinned-${pinnedPosition}`,
+        isPinned && isPinnedEdge && `ogx__cell--pinned-${pinnedPosition}-${pinnedPosition === 'left' ? 'last' : 'first'}`,
         isEditing && 'ogx__cell--editing',
         (rowSpanProp && rowSpanProp > 1) && 'ogx__cell--spanned',
         resolvedCellClassName
@@ -279,6 +304,12 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                             onCancel={handleCancel}
                         />
                     )
+                ) : cellError !== undefined ? (
+                    <CellErrorBoundary
+                        field={colDef.field}
+                        resetKey={row}
+                        renderFn={() => { throw cellError; }}
+                    />
                 ) : colDef.renderCell ? (
                     <CellErrorBoundary
                         field={colDef.field}

@@ -7,8 +7,13 @@ import { DragHandleIcon } from '../ui/DragHandleIcon';
 import { DetailPanel } from '../DetailPanel/DetailPanel';
 import type { GridRowModel, GridColDef, GridRowId, GridColumnPinning, GridRowPinning, GridRowParams, GridCellParams, GridDetailPanelHeight, GridRowMeta } from '../../types';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
-import { isColumnPinned, calculatePinnedPositions, isRowPinned } from '../../utils/pinning';
+import { isColumnPinned, calculatePinnedPositions, getPinnedEdgeFields, isRowPinned } from '../../utils/pinning';
 import { getCellValue, resolveCellEditable } from '../../utils/editing';
+import { getRenderedColumnWidth } from '../../utils/columnWidth';
+import { DEFAULT_DETAIL_PANEL_HEIGHT } from '../../utils/detailPanel';
+
+/** Sticky system cells (drag handle, detail toggle, checkbox) sit above scrolled, spanned and focused cells. */
+const SYSTEM_CELL_Z_INDEX = 12;
 
 
 /**
@@ -28,8 +33,7 @@ function mergeColSpan<R extends GridRowModel>(
     for (let i = originIndex; i < columns.length && covered < colSpan; i++) {
         const col = columns[i];
         if (col.isSpacer) break;
-        const w = columnWidths[col.field] ?? col.width;
-        width += typeof w === 'number' ? w : 100;
+        width += getRenderedColumnWidth(col, columnWidths);
         flexGrow += col.flex ?? 0;
         covered++;
     }
@@ -57,6 +61,8 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
     onDetailPanelToggle?: (rowId: GridRowId) => void;
     detailPanelContent?: React.ReactNode;
     detailPanelHeight?: GridDetailPanelHeight;
+    /** Called with the rendered height of an `'auto'` detail panel whenever it changes. */
+    onDetailPanelHeightChange?: (rowId: GridRowId, height: number) => void;
 
     pinCheckboxColumn?: boolean;
     pinExpandColumn?: boolean;
@@ -109,7 +115,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         isDetailPanelExpanded = false,
         onDetailPanelToggle,
         detailPanelContent,
-        detailPanelHeight = 200,
+        detailPanelHeight = DEFAULT_DETAIL_PANEL_HEIGHT,
+        onDetailPanelHeightChange,
         pinCheckboxColumn = true,
         pinExpandColumn = true,
         rowReordering = false,
@@ -156,11 +163,12 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         );
     }, [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]);
 
+    const pinnedEdges = React.useMemo(() => getPinnedEdgeFields(columns, pinnedColumns), [columns, pinnedColumns]);
+
     const isGroupRow = rowMeta?.hasChildren === true;
-    // A row-grouping group row is synthetic: it keeps the expand column's cell for alignment but
-    // has no detail panel and no toggle.
-    const rowHasDetailPanel = hasDetailPanel && rowMeta?.isGroupRow !== true;
-    const detailExpanded = rowHasDetailPanel && isDetailPanelExpanded;
+    // Group rows, subtotal rows and auto-created tree parents: not data, so no selection or detail panel.
+    const isSyntheticRow = rowMeta?.isGroupRow === true;
+    const showDetailPanel = hasDetailPanel && !isSyntheticRow;
 
     // Which cells may be edited is decided per cell below (resolveCellEditable), not per row:
     // tree-data parents are real rows and stay editable; synthetic group rows never are.
@@ -244,7 +252,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         isRowPinnedBottom && 'ogx__row--pinned-bottom',
         isDragging && 'ogx__row--dragging',
         isDragOver && 'ogx__row--drag-over',
-        isGroupRow && 'ogx__row--group'
+        isGroupRow && 'ogx__row--group',
+        rowMeta?.isGroupFooter && 'ogx__row--group-footer'
     ].filter(Boolean).join(' ');
 
     return (
@@ -280,7 +289,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         style={{
                             position: 'sticky',
                             left: 0,
-                            zIndex: 4
+                            zIndex: SYSTEM_CELL_Z_INDEX
                         }}
                         draggable={true}
                         onDragStart={onDragStart ? onDragStart(id) : undefined}
@@ -298,15 +307,15 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             } ${focusedCellField === '__expand_col__' ? 'ogx__cell--focused' : ''} ${(focusedCellField === '__expand_col__' && isFocusVisible) ? 'ogx__cell--focus-visible' : ''
                             }`}
                         role="gridcell"
-                        aria-label={rowHasDetailPanel ? (detailExpanded ? 'Collapse row details' : 'Expand row details') : undefined}
-                        aria-expanded={rowHasDetailPanel ? detailExpanded : undefined}
-                        aria-controls={detailExpanded ? detailPanelId : undefined}
+                        aria-label={showDetailPanel ? (isDetailPanelExpanded ? 'Collapse row details' : 'Expand row details') : undefined}
+                        aria-expanded={showDetailPanel ? isDetailPanelExpanded : undefined}
+                        aria-controls={showDetailPanel && isDetailPanelExpanded ? detailPanelId : undefined}
                         aria-colindex={expandColIndex}
                         data-field="__expand_col__"
                         style={{
                             position: pinExpandColumn ? 'sticky' : undefined,
                             left: pinExpandColumn ? (rowReordering ? 48 : 0) : undefined,
-                            zIndex: pinExpandColumn ? 5 : undefined
+                            zIndex: pinExpandColumn ? SYSTEM_CELL_Z_INDEX : undefined
                         }}
                         tabIndex={-1}
                         onClick={(e) => {
@@ -314,16 +323,16 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             onCellClick?.({
                                 row,
                                 field: '__expand_col__',
-                                value: detailExpanded,
+                                value: isDetailPanelExpanded,
                                 colDef: { field: '__expand_col__', width: 48 } as unknown as GridColDef<R>,
                                 rowIndex,
                                 colIndex: -1
                             });
                         }}
                     >
-                        {rowHasDetailPanel && (
+                        {showDetailPanel && (
                             <ExpandIcon
-                                isExpanded={detailExpanded}
+                                isExpanded={isDetailPanelExpanded}
                                 onClick={handleDetailPanelToggle}
                                 variant="plus-minus"
                                 tabIndex={-1}
@@ -344,7 +353,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         style={{
                             position: pinCheckboxColumn ? 'sticky' : undefined,
                             left: pinCheckboxColumn ? ((rowReordering ? 48 : 0) + (hasDetailPanel && pinExpandColumn ? 48 : 0)) : undefined,
-                            zIndex: pinCheckboxColumn ? 11 : undefined
+                            zIndex: pinCheckboxColumn ? SYSTEM_CELL_Z_INDEX : undefined
                         }}
                         tabIndex={-1}
                         onClick={(e) => {
@@ -359,16 +368,18 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             });
                         }}
                     >
-                        <Checkbox
-                            id={checkboxId}
-                            name={`ogx-select-row-${id}`}
-                            checked={isSelected}
-                            onChange={handleCheckboxChange}
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label={isSelected ? `Deselect row ${id}` : `Select row ${id}`}
-                            tabIndex={-1}
-                            onMouseDown={(e) => e.preventDefault()}
-                        />
+                        {!isSyntheticRow && (
+                            <Checkbox
+                                id={checkboxId}
+                                name={`ogx-select-row-${id}`}
+                                checked={isSelected}
+                                onChange={handleCheckboxChange}
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label={isSelected ? `Deselect row ${id}` : `Select row ${id}`}
+                                tabIndex={-1}
+                                onMouseDown={(e) => e.preventDefault()}
+                            />
+                        )}
                     </div>
                 )}
 
@@ -383,7 +394,20 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             />
                         );
                     }
-                    const value = getCellValue(row, colDef);
+                    // A synthetic row holds its grouping value and aggregates under the column fields; a
+                    // valueGetter written for data rows would recompute (or crash) from fields it lacks.
+                    // A valueGetter that throws is contained to its cell.
+                    let value: unknown;
+                    let valueError: unknown;
+                    if (isSyntheticRow) {
+                        value = row[colDef.field];
+                    } else {
+                        try {
+                            value = getCellValue(row, colDef);
+                        } catch (error) {
+                            valueError = error ?? new Error('valueGetter failed');
+                        }
+                    }
                     const colIndex = columnIndexMap?.get(colDef.field) ?? localIndex;
 
                     const effectiveWidth = columnWidths[colDef.field] ?? colDef.width;
@@ -402,11 +426,15 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     const colSpanInfo = storedColSpanInfo && !storedColSpanInfo.spannedByColSpan && storedColSpanInfo.cellProps.colSpan > 1
                         ? mergeColSpan(columns, colIndex, storedColSpanInfo.cellProps.colSpan, columnWidths)
                         : storedColSpanInfo;
-                    // A right-pinned merged cell is anchored by the right edge of the last column it covers.
-                    const offsetField = pinnedPosition === 'right' && colSpanInfo && !colSpanInfo.spannedByColSpan
+                    // A merged cell ends at the last column it covers: a right-pinned one is anchored by
+                    // that column's right edge, and it is the left-pinned edge cell if that column is.
+                    const lastCoveredField = colSpanInfo && !colSpanInfo.spannedByColSpan
                         ? columns[colIndex + colSpanInfo.cellProps.colSpan - 1]?.field ?? colDef.field
                         : colDef.field;
+                    const offsetField = pinnedPosition === 'right' ? lastCoveredField : colDef.field;
                     const pinnedOffset = pinnedPosition ? pinnedPositions[offsetField] : undefined;
+                    const isPinnedEdge = (pinnedPosition === 'left' && lastCoveredField === pinnedEdges.lastLeft)
+                        || (pinnedPosition === 'right' && colDef.field === pinnedEdges.firstRight);
                     const rowSpan = rowSpanningCaches?.spannedCells[id]?.[colDef.field];
                     const isHiddenByRowSpan = rowSpanningCaches?.hiddenCells[id]?.[colDef.field] || false;
 
@@ -424,6 +452,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             width={effectiveWidth}
                             pinnedPosition={pinnedPosition}
                             pinnedOffset={pinnedOffset}
+                            isPinnedEdge={isPinnedEdge}
 
                             isFocused={focusedCellField === colDef.field}
                             isFocusVisible={isFocusVisible}
@@ -438,13 +467,14 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             rowSpan={rowSpan}
                             isHiddenByRowSpan={isHiddenByRowSpan}
                             rowMeta={rowMeta}
+                            valueError={valueError}
                         />
                     );
                 })}
             </div>
 
             { }
-            {hasDetailPanel && (
+            {showDetailPanel && (
                 <DetailPanel
                     id={detailPanelId}
                     colSpan={systemColumnCount + dataColumnCount}
@@ -453,7 +483,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     rowIndex={rowIndex}
                     content={detailPanelContent}
                     height={detailPanelHeight}
-                    isExpanded={detailExpanded}
+                    isExpanded={isDetailPanelExpanded}
+                    onHeightChange={onDetailPanelHeightChange}
                 />
             )}
         </>

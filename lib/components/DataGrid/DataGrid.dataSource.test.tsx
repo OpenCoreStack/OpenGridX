@@ -265,6 +265,9 @@ describe('DataGrid dataSource — server-side tree data', () => {
         Array.from(container.querySelectorAll('.ogx__row:not(.ogx__row--skeleton)')).map(r => r.textContent?.trim());
     const rowNamed = (container: HTMLElement, name: string) =>
         Array.from(container.querySelectorAll('.ogx__row')).find(r => r.textContent?.includes(name)) as HTMLElement;
+    // Tree-data parents are real rows: a row click selects them, their chevron expands them.
+    const toggleOf = (container: HTMLElement, name: string) =>
+        rowNamed(container, name).querySelector('.ogx-expand-icon') as HTMLElement;
 
     function treeSource(): GridDataSource & { calls: string[][] } {
         const calls: string[][] = [];
@@ -290,7 +293,7 @@ describe('DataGrid dataSource — server-side tree data', () => {
         );
         await flush();
         expect(pager(container)).toContain('of 50');
-        fireEvent.click(rowNamed(container, 'Sales'));
+        fireEvent.click(toggleOf(container, 'Sales'));
         await flush(0);
         expect(texts(container)).toEqual(['Sales', 'Bob', 'Ann', 'Eng']);
         expect(pager(container)).toContain('of 50');
@@ -306,7 +309,7 @@ describe('DataGrid dataSource — server-side tree data', () => {
         );
         await flush();
         expect(texts(container)).toEqual(['Sales']);
-        fireEvent.click(rowNamed(container, 'Sales'));
+        fireEvent.click(toggleOf(container, 'Sales'));
         await flush(0);
         expect(ds.calls).toContainEqual(['Sales']);
         expect(texts(container)).toEqual(['Sales', 'Bob', 'Ann']);
@@ -320,7 +323,7 @@ describe('DataGrid dataSource — server-side tree data', () => {
         );
         const { container, rerender } = render(<Grid sortModel={[]} />);
         await flush();
-        fireEvent.click(rowNamed(container, 'Sales'));
+        fireEvent.click(toggleOf(container, 'Sales'));
         await flush(0);
         expect(texts(container)).toEqual(['Sales', 'Bob', 'Ann', 'Eng']);
 
@@ -330,7 +333,7 @@ describe('DataGrid dataSource — server-side tree data', () => {
         expect(texts(container)).toEqual(['Eng', 'Sales', 'Bob', 'Ann']);
 
         // A single click collapses it, like any expanded node.
-        fireEvent.click(rowNamed(container, 'Sales'));
+        fireEvent.click(toggleOf(container, 'Sales'));
         await flush(0);
         expect(texts(container)).toEqual(['Eng', 'Sales']);
     });
@@ -348,14 +351,14 @@ describe('DataGrid dataSource — server-side tree data', () => {
             <DataGrid rows={EMPTY} columns={TREE_COLS} dataSource={flaky} treeData getTreeDataPath={getTreeDataPath} paginationMode="server" />
         );
         await flush();
-        fireEvent.click(rowNamed(container, 'Sales'));
+        fireEvent.click(toggleOf(container, 'Sales'));
         await flush(0);
         expect(container.querySelector('.ogx-error-overlay')).toBeNull();
         expect(texts(container)).toEqual(['Sales', 'Eng']);
 
         // The node is collapsed again, so one click expands it and retries the request.
         failChildren = false;
-        fireEvent.click(rowNamed(container, 'Sales'));
+        fireEvent.click(toggleOf(container, 'Sales'));
         await flush(0);
         expect(texts(container)).toEqual(['Sales', 'Bob', 'Ann', 'Eng']);
     });
@@ -379,7 +382,7 @@ describe('DataGrid dataSource — server-side tree data', () => {
         );
         const { container, rerender } = render(<Grid page={0} />);
         await flush();
-        fireEvent.click(rowNamed(container, 'Sales'));
+        fireEvent.click(toggleOf(container, 'Sales'));
         rerender(<Grid page={1} />);
         await flush();
         expect(texts(container)).toEqual(['HR']);
