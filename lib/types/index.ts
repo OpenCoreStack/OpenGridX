@@ -280,13 +280,18 @@ export type GridFilterOperator =
   | 'isEmpty'
   | 'isNotEmpty'
   | 'isAnyOf'
+  | '='
   | '>'
   | '>='
   | '<'
   | '<='
   | '!='
   | 'is'
-  | 'not';
+  | 'not'
+  | 'after'
+  | 'onOrAfter'
+  | 'before'
+  | 'onOrBefore';
 
 /** Describes a filter condition for a specific column. */
 export interface GridFilterItem {
