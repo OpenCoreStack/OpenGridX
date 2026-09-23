@@ -17,6 +17,7 @@ type GetRowId = (row: GridRowModel) => GridRowId;
 
 type GridAction =
   | { type: 'SET_ROWS'; payload: GridRowModel[] | ((prev: GridRowModel[]) => GridRowModel[]); getRowId: GetRowId }
+  | { type: 'REPLACE_ROW'; id: GridRowId; row: GridRowModel }
   | { type: 'SET_COLUMNS'; payload: GridColDef[] }
   | { type: 'SET_DIMENSIONS'; payload: { viewportWidth: number; viewportHeight: number } }
   | { type: 'SET_DATASOURCE_LOADING'; payload: boolean }
@@ -30,18 +31,20 @@ let warnedDuplicateIds = false;
 
 /**
  * Keys rows by getRowId(row). The row objects are stored as given (never copied or given an
- * `id` field), so `idByRow` maps each one back to its key. A duplicate id keeps the first
- * row, so a later row never silently replaces it (or renders twice), and warns once in
- * development.
+ * `id` field), so `idByRow` maps each one back to its key. A row object the store already
+ * holds keeps its key (`knownIds`), so a committed edit stored under the edited row's id stays
+ * there even when the stored object does not resolve to that id itself. A duplicate id keeps
+ * the first row, so a later row never silently replaces it (or renders twice), and warns once
+ * in development.
  */
-function buildRowsState(rows: GridRowModel[], getRowId: GetRowId): GridState['rows'] {
+function buildRowsState(rows: GridRowModel[], getRowId: GetRowId, knownIds?: Map<GridRowModel, GridRowId>): GridState['rows'] {
   const idRowsLookup = new Map<GridRowId, GridRowModel>();
   const idByRow = new Map<GridRowModel, GridRowId>();
   const allRows: GridRowId[] = [];
   const duplicates: GridRowId[] = [];
 
   rows.forEach(row => {
-    const id = getRowId(row);
+    const id = knownIds?.get(row) ?? getRowId(row);
     if (idRowsLookup.has(id)) {
       duplicates.push(id);
       return;
@@ -120,7 +123,22 @@ function gridReducer(state: GridState, action: GridAction): GridState {
       // counts are derived from the rows the grid shows, so replacing rows never touches it.
       return {
         ...state,
-        rows: buildRowsState(newRows, action.getRowId),
+        rows: buildRowsState(newRows, action.getRowId, state.rows.idByRow),
+      };
+    }
+
+    case 'REPLACE_ROW': {
+      // Stores a committed edit under the id of the row that was edited, in the current store.
+      const previous = state.rows.idRowsLookup.get(action.id);
+      if (previous === undefined) return state;
+      const idRowsLookup = new Map(state.rows.idRowsLookup);
+      idRowsLookup.set(action.id, action.row);
+      const idByRow = new Map(state.rows.idByRow);
+      idByRow.delete(previous);
+      idByRow.set(action.row, action.id);
+      return {
+        ...state,
+        rows: { ...state.rows, idRowsLookup, idByRow },
       };
     }
 
@@ -239,6 +257,11 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
     dispatch({ type: 'SET_ROWS', payload: rowsOrUpdater, getRowId: getRowIdRef.current });
   }, []);
 
+  /** Replaces the row stored under `id` (a committed edit); does nothing if that row is gone. */
+  const replaceRow = useCallback((id: GridRowId, row: GridRowModel) => {
+    dispatch({ type: 'REPLACE_ROW', id, row });
+  }, []);
+
   const setColumns = useCallback((newColumns: GridColDef[]) => {
     dispatch({ type: 'SET_COLUMNS', payload: newColumns });
   }, []);
@@ -275,6 +298,7 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
     dispatch,
     apiRef,
     setRows,
+    replaceRow,
     setColumns,
     setDimensions,
     setDataSourceLoading,

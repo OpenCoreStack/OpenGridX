@@ -87,6 +87,23 @@ describe('getRowId only decides the internal key', () => {
         expect(cellTexts(container, 'qty')).toEqual(['1', '9']);
     });
 
+    it('keeps an edited row under its id even when processRowUpdate returns a row without the key', async () => {
+        const processRowUpdate = (newRow: GridRowModel) => ({ qty: newRow.qty }) as unknown as GridRowModel;
+        const { container, api } = renderWithApi({ processRowUpdate, checkboxSelection: true });
+        const qtyCell = container.querySelectorAll('.ogx__row')[0].querySelector('[data-field="qty"]') as HTMLElement;
+        fireEvent.doubleClick(qtyCell);
+        const input = container.querySelector('.ogx__row input:not([type="checkbox"])') as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '4' } });
+        await act(async () => {
+            fireEvent.keyDown(input, { key: 'Enter' });
+            await new Promise(r => setTimeout(r, 10));
+        });
+        expect(cellTexts(container, 'qty')).toEqual(['4', '2']);
+        expect(api().getRow('A')).toEqual({ qty: 4 });
+        act(() => { api().selectRow('A'); });
+        expect(container.querySelectorAll('.ogx__row--selected')).toHaveLength(1);
+    });
+
     it('works for rows that have no id field at all', () => {
         const rows = [{ sku: 'A', name: 'a' }, { sku: 'B', name: 'b' }] as unknown as GridRowModel[];
         const cols: GridColDef[] = [{ field: 'name', width: 100 }];

@@ -314,6 +314,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         state,
         apiRef,
         setRows,
+        replaceRow,
         setColumns,
         setDimensions,
         setDataSourceLoading,
@@ -398,11 +399,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         processRowUpdate,
         onProcessRowUpdateError,
         onRowChange: (updatedRow, rowId) => {
-            // A functional update against the *current* store, matched on the edited row's id:
-            // this runs after an awaited processRowUpdate, by which time the rows prop (or a
-            // dataSource fetch) may have replaced the rows this render saw. The row returned by
-            // processRowUpdate is stored as is (the grid never writes an id onto it).
-            setRows(prev => prev.map(r => (effectiveGetRowId(r as R) === rowId ? updatedRow : r)));
+            // Replaces the edited row in the *current* store, under the edited row's id: this runs
+            // after an awaited processRowUpdate, by which time the rows prop (or a dataSource
+            // fetch) may have replaced the rows this render saw. The returned row is stored as is
+            // (the grid never writes an id onto it), even if it does not carry its key itself.
+            replaceRow(rowId, updatedRow);
         },
     });
 
