@@ -142,8 +142,8 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
   renderCell?: (params: GridRenderCellParams<R>) => React.ReactNode;
   /** Custom component or element to render in the header. */
   renderHeader?: (params: GridRenderHeaderParams) => React.ReactNode;
-  /** Component to render when the cell is in edit mode. */
-  renderEditCell?: (params: GridRenderCellParams<R>) => React.ReactNode;
+  /** Component to render when the cell is in edit mode. Receives `onValueChange`, `onCommit` and `onCancel`. */
+  renderEditCell?: (params: GridRenderEditCellParams<R>) => React.ReactNode;
   /** If true, the cell's value can be modified by the user. */
   editable?: boolean;
   /** Optional stacking order (CSS z-index). */

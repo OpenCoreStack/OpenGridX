@@ -796,8 +796,12 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         const isEditing = Boolean(editingHandlers.editingCell);
 
         if (wasEditing && !isEditing) {
-
-            gridRef.current?.focus({ preventScroll: true });
+            // Only reclaim focus the editor took with it (focus is on <body> once the editor unmounts).
+            // If the edit ended because the user moved focus somewhere else, leave it there.
+            const active = document.activeElement;
+            if (!active || active === document.body) {
+                gridRef.current?.focus({ preventScroll: true });
+            }
         }
 
         prevEditingCellRef.current = editingHandlers.editingCell;
