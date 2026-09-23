@@ -31,6 +31,7 @@ function MyGrid() {
 | `checkboxSelection` | `boolean` | `false` | Enable row checkboxes. |
 | `disableRowSelectionOnClick` | `boolean` | `false` | When `true`, clicking a row does not toggle its selection. |
 | `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time. |
+| `disableClipboardCopy` | `boolean` | `false` | When `true`, Ctrl+C / Cmd+C does not copy the selected rows. `apiRef.current.copySelectedRows()` still works. |
 | `pagination` | `boolean` | `false` | Enable/Disable bottom pagination bar. |
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). Omit for uncontrolled; use `initialState` to set the initial page/pageSize. |
 | `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. |

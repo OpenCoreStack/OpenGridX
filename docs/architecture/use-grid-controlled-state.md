@@ -136,7 +136,7 @@ interface UseGridControlledStateReturn {
 
 **Uncontrolled mode:** When a prop is `undefined`, the effective value is the internal state. The `handle*Change` callback updates internal state and also fires the external callback (if provided) for observability.
 
-**Selection:** `handleRowSelectionModelChange` applies a new model like the other handlers. The row-click, checkbox, Space-key and select-all rules (including `disableMultipleRowSelection`) live in `useGridRowSelection`, which calls it.
+**Selection:** `handleRowSelectionModelChange` applies a new model like the other handlers. The row-click, checkbox, Space-key and select-all rules (including `disableMultipleRowSelection`) live in `useGridRowSelection`, which calls it. `getLatestRowSelectionModel()` (stable identity) returns the model most recently passed to `handleRowSelectionModelChange`, before it has rendered, and is reset to the rendered model on every commit (a controlled parent may reject a change). The clipboard reads it so a copy from `onRowSelectionModelChange`, or right after `apiRef.selectRows`, sees the new selection.
 
 **Default page size:** without `paginationModel` or `initialState.pagination`, the page size is 100 when `pageSizeOptions` offers it, otherwise the first option, so the page-size select always shows the size in use.
 
