@@ -161,7 +161,7 @@ export default function App() {
 | rowGroupingModel       | string[]                  | Fields to group by (one nesting level per field). Disables pagination. groupable:false fields are skipped |
 | aggregationModel       | GridAggregationModel      | {field: 'sum'/'avg'/'min'/'max'/'count'/'unique'} |
 | onAggregationModelChange | (model) => void        | Aggregation model changed (toolbar Summaries panel) |
-| groupingColDef         | GridColDef<R>             | Adds a dedicated `__group__` column pinned left (only with rowGroupingModel) |
+| groupingColDef         | Partial<GridColDef<R>>    | Adds a dedicated `__group__` column pinned left (rowGroupingModel or treeData); no `field` needed; never exported |
 | getAggregationPosition | (groupNode: GridTreeNode / null) => 'inline'/'footer'/null | Per group: 'inline' (default) on the group row, 'footer' on a subtotal row, null hides. Called with null for the grand total: null hides the footer |
 | defaultGroupingExpansionDepth | number             | Initial expansion depth. Default 0 (all collapsed); -1 = expand all |
 
@@ -341,7 +341,7 @@ Double-click or Enter opens the editor; Enter / Tab / blur commits; Escape cance
 
 ## SERVER-SIDE DATA SOURCE
 
-`useGridDataSource` is internal (not exported): pass a `dataSource` object to DataGrid.
+Pass a `dataSource` object to DataGrid; there is no separate data-source hook to import.
 
 ```tsx
 import { DataGrid, type GridDataSource } from '@opencorestack/opengridx';
@@ -590,7 +590,7 @@ Arrows move between cells (skipping hidden columns); Home/End, Ctrl+Home/End, Pa
 
 1. **Always `return newRow`** from `processRowUpdate` — returning nothing calls `onProcessRowUpdateError` and keeps the editor open.
 2. **`getRowId` default is `row.id`** — if your data uses a different key, always pass `getRowId`. The grid does not write an `id` onto your rows, and exports need `getRowId` in their options to match `selectedRows`.
-3. **CSS must be imported**: always add `import '@opencorestack/opengridx/styles'` to the app root. The JS bundle does not load it.
+3. **CSS must be imported**: always add `import '@opencorestack/opengridx/styles'` to the app root. The JS bundle does not load it; dev builds warn once ("The grid stylesheet is not loaded") when it is missing.
 4. **Optional peers**: `exportToExcelAdvanced` needs `exceljs`; `exportToPdf` needs `jspdf` + `jspdf-autotable`.
 5. **`dataSource` + `rows={[]}`**: with a dataSource pass an empty `rows` array — the grid fills it via `dataSource.getRows`.
 6. **`flex` columns**: columns with `flex` share the free space; `width` is ignored on them (use `minWidth` / `maxWidth`). A column with neither `width` nor `flex` acts like `flex: 1`.

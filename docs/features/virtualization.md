@@ -47,7 +47,7 @@ Virtualization depends on the grid's CSS. Import it once in your app:
 import '@opencorestack/opengridx/styles';
 ```
 
-Without the stylesheet the viewport does not scroll, so the grid renders every row.
+Without the stylesheet the viewport does not scroll, so the grid renders every row. In development the grid logs a one-time `[OpenGridX] The grid stylesheet is not loaded` warning.
 
 ### The grid needs a bounded height
 

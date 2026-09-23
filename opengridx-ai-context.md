@@ -100,7 +100,8 @@ and the JavaScript bundle does not import it (in Vite/Webpack/CRA/Next.js alike)
 ```ts
 import '@opencorestack/opengridx/styles';
 ```
-Without it the grid is unstyled and its viewport does not scroll, so every row is rendered.
+Without it the grid is unstyled and its viewport does not scroll, so every row is rendered. Dev builds warn once
+(`[OpenGridX] The grid stylesheet is not loaded`).
 
 ---
 
@@ -291,12 +292,9 @@ const hasChildren = params.rowMeta?.hasChildren;
 ## Exports available at the package root
 
 ```ts
-// Component
-import { DataGrid } from '@opencorestack/opengridx';
-
-// Other components
-import { GridToolbar, FilterPanel, ColumnVisibilityPanel, GridTooltip,
-         Button, Input, Checkbox } from '@opencorestack/opengridx';
+// Components
+import { DataGrid, GridToolbar, FilterPanel, ColumnVisibilityPanel, GridTooltip, Pagination,
+         Cell, Row, Header, Skeleton, Button, Input, Checkbox } from '@opencorestack/opengridx';
 
 // Hooks
 import { useGridApiRef, useGridStateStorage, useAggregation, usePivot } from '@opencorestack/opengridx';
@@ -307,21 +305,24 @@ import { DataGridThemeProvider, darkTheme, roseTheme, emeraldTheme,
 
 // Export utilities
 import { exportToCsv, exportToExcel, exportToExcelAdvanced,
-         exportToJson, printGrid, exportToPdf } from '@opencorestack/opengridx';
+         exportToJson, printGrid, exportToPdf, formatAggregationValue } from '@opencorestack/opengridx';
 
-// Types
+// Types (a selection; lib/index.ts lists them all)
 import type {
-  GridColDef, GridRowModel, GridRowId,
-  DataGridProps, GridSortItem, GridSortModel,
-  GridFilterModel, GridFilterItem,
-  GridPaginationModel, GridColumnPinning,
-  GridRowMeta, GridRowParams, GridCellParams,
+  DataGridProps, GridColDef, GridRowModel, GridRowId, GridRowMeta,
+  GridSortItem, GridSortModel, GridFilterModel, GridFilterItem, GridFilterGroup, GridFilterOperator,
+  GridPaginationModel, GridColumnPinning, GridRowPinning, GridColumnVisibilityModel,
+  GridRowParams, GridCellParams, GridRenderCellParams, GridRenderEditCellParams,
+  GridValueGetterParams, GridValueSetterParams, GridValueFormatterParams,
   GridApi, GridInitialState, GridState,
-  GridAggregationModel, GridPivotModel,
-  GridLocaleText, GridTheme,
-  GridRenderCellParams, GridRenderEditCellParams, GridValueSetterParams,
+  GridAggregationModel, GridPivotModel, GridTreeNode, GridGroupedExportRow,
   GridDataSource, GridGetRowsParams, GridGetRowsResponse,
-  CsvExportOptions, ExcelExportOptions, PdfExportOptions,
+  GridSlots, GridSlotProps, GridLocaleText, GridListViewColDef, GridColumnGroupingModel,
+  GridTheme, DataGridThemeProviderProps,
+  GridToolbarProps, ToolbarButtonRenderProps, ToolbarQuickFilterRenderProps,
+  PaginationProps, CellProps, RowProps, HeaderProps, FilterPanelProps, ColumnVisibilityPanelProps,
+  CsvExportOptions, ExcelExportOptions, JsonExportOptions, PrintOptions, PdfExportOptions,
+  ExcelAdvancedExportOptions, UseGridStateStorageOptions,
 } from '@opencorestack/opengridx';
 ```
 

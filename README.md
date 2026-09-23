@@ -21,7 +21,7 @@ import { DataGrid } from '@opencorestack/opengridx';
 import '@opencorestack/opengridx/styles';
 ```
 
-> **Import the styles.** The CSS ships as a separate file (`dist/opengridx.css`) and the JavaScript bundle does **not** load it. Import `@opencorestack/opengridx/styles` once, typically in your app's root file (`main.tsx`, `App.tsx` or Next.js `layout.tsx`). Without it the grid is unstyled and, because the viewport's scrolling comes from the stylesheet, it grows to fit every row and virtualization stops working.
+> **Import the styles.** The CSS ships as a separate file (`dist/opengridx.css`) and the JavaScript bundle does **not** load it. Import `@opencorestack/opengridx/styles` once, typically in your app's root file (`main.tsx`, `App.tsx` or Next.js `layout.tsx`). Without it the grid is unstyled and, because the viewport's scrolling comes from the stylesheet, it grows to fit every row and virtualization stops working. Development builds log a one-time `[OpenGridX] The grid stylesheet is not loaded` warning when this happens.
 
 ---
 
@@ -241,7 +241,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | :--- | :--- | :--- |
 | `treeData` | `boolean` | Enables hierarchical tree data display. |
 | `getTreeDataPath` | `(row) => string[]` | Returns the path array for each row in tree mode. |
-| `groupingColDef` | `GridColDef` | With `rowGroupingModel`, adds a dedicated `__group__` column, pinned left. |
+| `groupingColDef` | `Partial<GridColDef>` | With `rowGroupingModel` or `treeData`, adds a dedicated `__group__` column, pinned left (`field` not needed). |
 | `defaultGroupingExpansionDepth` | `number` | Initial expansion depth for tree data and row grouping. Default `0` (collapsed); `-1` expands everything. |
 | `rowGroupingModel` | `GridRowGroupingModel` | Fields to group rows by (e.g. `['department']`). |
 | `aggregationModel` | `GridAggregationModel` | Controlled aggregation state (e.g. `{ salary: 'sum' }`). |

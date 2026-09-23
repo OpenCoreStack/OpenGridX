@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach, type MockInstance } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import { DataGrid } from '../../components/DataGrid/DataGrid';
 import { resetGridStylesheetWarning } from './useGridDevWarnings';
@@ -7,12 +7,12 @@ const rows = [{ id: 1, name: 'a' }];
 const columns = [{ field: 'name' }];
 const STYLESHEET_MESSAGE = 'grid stylesheet is not loaded';
 
-function stylesheetWarnings(warn: ReturnType<typeof vi.spyOn>): number {
+function stylesheetWarnings(warn: MockInstance<typeof console.warn>): number {
     return warn.mock.calls.filter(([msg]) => String(msg).includes(STYLESHEET_MESSAGE)).length;
 }
 
 describe('missing stylesheet dev warning', () => {
-    let warn: ReturnType<typeof vi.spyOn>;
+    let warn: MockInstance<typeof console.warn>;
 
     beforeEach(() => {
         resetGridStylesheetWarning();

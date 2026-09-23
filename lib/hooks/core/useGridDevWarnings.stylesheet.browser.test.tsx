@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach, type MockInstance } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import { DataGrid } from '../../components/DataGrid/DataGrid';
 import { resetGridStylesheetWarning } from './useGridDevWarnings';
@@ -8,12 +8,12 @@ import stylesheet from '../../styles/opengridx.css?inline';
 const rows = Array.from({ length: 50 }, (_, i) => ({ id: i, name: `row ${i}` }));
 const columns = [{ field: 'name' }];
 
-function stylesheetWarned(warn: ReturnType<typeof vi.spyOn>): boolean {
+function stylesheetWarned(warn: MockInstance<typeof console.warn>): boolean {
     return warn.mock.calls.some(([msg]) => String(msg).includes('grid stylesheet is not loaded'));
 }
 
 describe('missing stylesheet dev warning (real browser)', () => {
-    let warn: ReturnType<typeof vi.spyOn>;
+    let warn: MockInstance<typeof console.warn>;
 
     beforeEach(() => {
         resetGridStylesheetWarning();

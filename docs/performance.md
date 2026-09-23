@@ -79,7 +79,7 @@ See [Virtualization](./features/virtualization.md) for the full adaptive-oversca
 
 Virtualization only works when the viewport has a fixed height: pass `height`, or put the grid in a container with a definite height (a flex child needs `min-height: 0`). In an unbounded container the viewport grows to fit every row and every row is rendered; a dev-mode warning reports this.
 
-The same happens when the stylesheet is missing, because the viewport's `overflow: auto` comes from it. Import it once in your app:
+The same happens when the stylesheet is missing, because the viewport's `overflow: auto` comes from it (a dev-mode warning reports a missing stylesheet too). Import it once in your app:
 
 ```tsx
 import '@opencorestack/opengridx/styles';

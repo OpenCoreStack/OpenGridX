@@ -79,7 +79,7 @@ Tree data is used for data that has a natural parent-child relationship (e.g., a
 | `treeData` | `boolean` | `false` | Enable tree data mode. |
 | `getTreeDataPath` | `(row) => string[]` | `undefined` | Path of a row. Required with `treeData`. |
 | `defaultGroupingExpansionDepth` | `number` | `0` | How many levels start expanded (`0` = collapsed, `-1` = all). |
-| `groupingColDef` | `GridColDef<R>` | `undefined` | Adds a dedicated group column (row grouping only). |
+| `groupingColDef` | `Partial<GridColDef<R>>` | `undefined` | Adds a dedicated group column (row grouping or tree data). |
 | `getAggregationPosition` | `(node: GridTreeNode \| null) => 'inline' \| 'footer' \| null` | `undefined` | Where group aggregates appear; called with `null` for the grand total. |
 
 Hierarchy information is never written onto your row objects: read it from `params.rowMeta` (`isGroupRow`, `hasChildren`, `treeDepth`, `groupLabel`, …) in `renderCell`. See [GridRowMeta](../architecture/grid-row-meta.md).
@@ -88,7 +88,7 @@ Hierarchy information is never written onto your row objects: read it from `para
 
 ## 🎨 Customizing the Group Column
 
-When `rowGroupingModel` or `treeData` is active, pass `groupingColDef` to configure a dedicated `__group__` column that is prepended at position 0 and auto-pinned left, separate from your data columns. Its type is `GridColDef<R>`, so TypeScript requires a `field`; the grid always replaces it with `'__group__'`. It also forces `hideable`, `sortable`, `filterable`, `pinnable` and `exportable` to `false`. Defaults: `headerName: 'Group'`, `width: 220`. With tree data (v3.0) the column shows the last segment of each row's path, and a `valueGetter` in `groupingColDef` can show something else (for example the whole path).
+When `rowGroupingModel` or `treeData` is active, pass `groupingColDef` to configure a dedicated `__group__` column that is prepended at position 0 and auto-pinned left, separate from your data columns. Its type is `Partial<GridColDef<R>>`: every key is optional, and a `field` you pass is ignored (it is always `'__group__'`). It also forces `hideable`, `sortable`, `filterable`, `pinnable` and `exportable` to `false`. Defaults: `headerName: 'Group'`, `width: 220`. With tree data (v3.0) the column shows the last segment of each row's path, and a `valueGetter` in `groupingColDef` can show something else (for example the whole path).
 
 ```tsx
 <DataGrid
@@ -96,7 +96,6 @@ When `rowGroupingModel` or `treeData` is active, pass `groupingColDef` to config
   columns={columns}
   rowGroupingModel={['department']}
   groupingColDef={{
-    field: '__group__', // required by the type; always replaced by the grid
     headerName: 'Department Group',
     width: 240,
   }}
