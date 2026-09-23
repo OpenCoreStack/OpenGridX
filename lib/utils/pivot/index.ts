@@ -14,11 +14,12 @@ import type {
 import {
     AGGREGATION_FUNCTIONS,
     formatAggregateForColumn,
-    getAggregationCellValue,
     isEmptyAggregateValue,
 } from '../aggregation';
-import { isRowMatchingFilter } from '../filtering';
+import { createRowFilter } from '../filtering';
 import { compareValues } from '../sorting';
+import { buildColumnLookup } from '../columnLookup';
+import { getCellValue } from '../values';
 
 /** Row id of the Grand Total row that closes every pivot. */
 export const PIVOT_GRAND_TOTAL_ID = '__pivot_grand_total__';
@@ -169,7 +170,7 @@ export function computePivot(
     const hasColFields = columnFields.length > 0;
     // Raw values are collected once per distinct field, however many functions use it.
     const valueSourceFields = Array.from(new Set(valueFields.map((vf) => vf.field)));
-    const get = (row: GridRowModel, field: string) => getAggregationCellValue(row, field, colDefMap.get(field));
+    const get = (row: GridRowModel, field: string) => getCellValue(row, field, colDefMap.get(field));
 
     const groups = new Map<string, GroupEntry>();
     // Without column fields there is exactly one column key, present even when there is no data.
@@ -230,17 +231,25 @@ export function computePivot(
         kept.push({ row, entry });
     }
 
+    // Generated value columns are numeric (or dates for min / max of dates); row-label columns keep
+    // their source column's type, so filtering and sorting compare them the way the grid does.
+    const isRowField = (field: string) => rowFields.includes(field);
+    const typeOf = (field: string): GridColDef['type'] => (isRowField(field) ? colDefMap.get(field)?.type : 'number');
+
     const { outputFilterModel, sortModel } = options;
     if (hasFilterItems(outputFilterModel)) {
-        kept = kept.filter(({ row }) => isRowMatchingFilter(row, outputFilterModel));
+        const generatedColumns: GridColDef[] = [];
+        for (const ck of colKeys) for (const vf of valueFields) generatedColumns.push({ field: cellField(ck, vf), type: 'number' });
+        const predicate = createRowFilter(outputFilterModel, buildColumnLookup(generatedColumns));
+        if (predicate) kept = kept.filter(({ row }) => predicate(row));
     }
 
     const sortValue = (row: GridRowModel, field: string) =>
-        field === 'id' && rowFields.includes('id') ? row[ID_LABEL_KEY] : row[field];
+        field === 'id' && isRowField('id') ? row[ID_LABEL_KEY] : row[field];
     if (sortModel && sortModel.length > 0) {
         kept = [...kept].sort((a, b) => {
             for (const item of sortModel) {
-                const c = compareValues(sortValue(a.row, item.field), sortValue(b.row, item.field), item.sort);
+                const c = compareValues(sortValue(a.row, item.field), sortValue(b.row, item.field), item.sort, typeOf(item.field));
                 if (c !== 0) return c;
             }
             return 0;

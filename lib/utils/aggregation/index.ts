@@ -1,4 +1,5 @@
 import type { GridAggregationModel, GridAggregationResult, GridColDef, GridRowModel } from '../../types';
+import { getCellValue, toNumber } from '../values';
 
 export type BuiltInAggFn = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'unique';
 
@@ -9,22 +10,9 @@ export type BuiltInAggFn = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'unique';
 export const isEmptyAggregateValue = (v: unknown): boolean =>
     v == null || (typeof v === 'string' && v.trim() === '');
 
-// Accepts numbers, numeric strings and Dates (as timestamps). Booleans, arrays and blank strings are
-// skipped: Number() coerces them to 0 or 1, which silently corrupts avg / min / max.
-const toNumber = (v: unknown): number | null => {
-    if (typeof v === 'number') return Number.isNaN(v) ? null : v;
-    if (typeof v === 'string') {
-        if (v.trim() === '') return null;
-        const n = Number(v);
-        return Number.isNaN(n) ? null : n;
-    }
-    if (v instanceof Date) {
-        const t = v.getTime();
-        return Number.isNaN(t) ? null : t;
-    }
-    return null;
-};
-
+// Numeric functions read values with the grid's shared toNumber (as filtering does): numbers, numeric
+// strings and Dates (as timestamps). Booleans, arrays and blank strings are skipped, since Number()
+// would coerce them to 0 or 1 and silently corrupt avg / min / max.
 const toNumbers = (values: unknown[]): number[] => {
     const nums: number[] = [];
     for (const v of values) {
@@ -65,18 +53,9 @@ export const AGGREGATION_FUNCTIONS: Record<BuiltInAggFn, (values: unknown[]) => 
 };
 
 /**
- * The value a cell of `field` shows for `row`: the column's `valueGetter` result when it has one,
- * otherwise `row[field]`. Aggregates must total what the cells display, so computed columns work.
+ * Aggregates each `aggregationModel` field over `rows`. Cells are read through the column's
+ * `valueGetter` (getCellValue), so a computed column totals what its cells show.
  */
-export function getAggregationCellValue<R extends GridRowModel>(
-    row: R,
-    field: string,
-    colDef?: GridColDef<R>,
-): unknown {
-    const raw = row[field];
-    return colDef?.valueGetter ? colDef.valueGetter({ row, field, value: raw }) : raw;
-}
-
 export function computeAggregations<R extends GridRowModel>(
     rows: R[],
     aggregationModel: GridAggregationModel,
@@ -94,7 +73,7 @@ export function computeAggregations<R extends GridRowModel>(
             console.warn(`[${warnPrefix}] Unknown aggregation function: "${fnName}"`);
             continue;
         }
-        result[field] = fn(rows.map((row) => getAggregationCellValue(row, field, colDef)));
+        result[field] = fn(rows.map((row) => getCellValue(row, field, colDef as GridColDef | undefined)));
     }
     return result;
 }

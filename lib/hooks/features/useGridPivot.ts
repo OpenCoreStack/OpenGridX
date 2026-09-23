@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { GridColDef, GridFilterModel, GridPivotModel, GridRowModel, GridSortItem } from '../../types';
 import { filterRows } from '../../utils/filtering';
+import { buildColumnLookup } from '../../utils/columnLookup';
 import { computePivot, splitPivotFilterModel, EMPTY_PIVOT_RESULT } from '../../utils/pivot';
 
 const EMPTY_FILTER_MODEL: GridFilterModel = { items: [] };
@@ -43,13 +44,16 @@ export function useGridPivot(params: UseGridPivotParams): UseGridPivotResult {
     const enabled = pivotMode && !hasDataSource;
 
     const sourceFields = useMemo(() => new Set(columns.map((c) => c.field)), [columns]);
+    // No source column is on screen while pivoting (the row-label columns show the row fields
+    // whatever the visibility model says), so the quick filter searches every filterable source column.
+    const sourceLookup = useMemo(() => buildColumnLookup(columns), [columns]);
     const splitFilter = useMemo(
         () => splitPivotFilterModel(filterModel, sourceFields),
         [filterModel, sourceFields],
     );
     const sourceRows = useMemo(
-        () => (enabled ? filterRows(rows, splitFilter.source) : rows),
-        [enabled, rows, splitFilter.source],
+        () => (enabled ? filterRows(rows, splitFilter.source, sourceLookup) : rows),
+        [enabled, rows, splitFilter.source, sourceLookup],
     );
     const pivot = useMemo(
         () => (enabled
