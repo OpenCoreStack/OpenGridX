@@ -10,7 +10,7 @@ import { getOperatorsForType, NO_VALUE_OPERATORS } from '../../utils/filtering';
 import { toLocalDateString } from '../../utils/values';
 
 
-interface FilterPanelProps {
+export interface FilterPanelProps {
     filterModel: GridFilterModel;
     columns: GridColDef[];
     onFilterModelChange: (model: GridFilterModel) => void;

@@ -4,18 +4,27 @@ import './styles/opengridx.css';
 
 export { DataGrid } from './components/DataGrid/DataGrid';
 export { Cell } from './components/Cell/Cell';
+export type { CellProps } from './components/Cell/Cell';
 export { Row } from './components/Row/Row';
+export type { RowProps } from './components/Row/Row';
 export { Header } from './components/Header/Header';
+export type { HeaderProps } from './components/Header/Header';
 export { Skeleton } from './components/Skeleton/Skeleton';
+export type { SkeletonProps } from './components/Skeleton/Skeleton';
 export { FilterPanel } from './components/FilterPanel';
+export type { FilterPanelProps } from './components/FilterPanel';
+export { Pagination } from './components/Pagination/Pagination';
+export type { PaginationProps } from './components/Pagination/Pagination';
 export { GridToolbar } from './components/Toolbar/GridToolbar';
 export type { GridToolbarProps, ToolbarButtonRenderProps, ToolbarQuickFilterRenderProps } from './components/Toolbar/GridToolbar';
 export { GridTooltip } from './components/Tooltip/Tooltip';
+export type { GridTooltipProps } from './components/Tooltip/Tooltip';
 export { ColumnVisibilityPanel } from './components/ColumnVisibilityPanel/ColumnVisibilityPanel';
 export type { ColumnVisibilityPanelProps } from './components/ColumnVisibilityPanel/ColumnVisibilityPanel';
 
 export { useGridApiRef } from './hooks/core/useGridApiRef';
 export { Button, Input, Checkbox } from './components/ui';
+export type { ButtonProps, InputProps, CheckboxProps } from './components/ui';
 
 export {
     exportToCsv,
@@ -50,6 +59,7 @@ export type {
     GridPaginationState,
     GridColumnsState,
     GridDensityState,
+    GridDataSourceState,
     UseGridStateStorageOptions,
     UseGridStateStorageReturn,
 } from './state';
@@ -87,8 +97,10 @@ export type {
     GridPinnedPosition,
     GridColumnVisibilityModel,
     GridRowSelectionModel,
+    GridColumnOrder,
     GridColumnOrderChangeParams,
     GridRowOrderChangeParams,
+    GridRowScrollEndParams,
     GridRowGroupingModel,
     GridAggregationModel,
     GridAggregationResult,
@@ -107,7 +119,11 @@ export type {
 
     GridApi,
     GridTreeNode,
+    GridGroupedExportRow,
     GridDetailPanelParams,
+    GridDetailPanelHeight,
+    GridSlots,
+    GridSlotProps,
     GridRowMeta,
     GridLocaleText,
     PdfExportOptions,

@@ -1,4 +1,5 @@
-
+import type { GridToolbarProps } from '../components/Toolbar/GridToolbar';
+import type { PaginationProps } from '../components/Pagination/Pagination';
 
 /** Unique identifier for a row (string or number). */
 export type GridRowId = string | number;
@@ -794,7 +795,10 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
 
   /** Advanced: The starting internal state of the grid. */
   initialState?: import('../state/types').GridInitialState;
-  /** Advanced: Callback fired for every internal state update. */
+  /**
+   * Called on mount and whenever the value of the sorting, filter, pagination, columns (widths, order,
+   * visibility, pinning) or density state changes. Selection, expansion and editing do not call it.
+   */
   onStateChange?: (state: import('../state/types').GridState) => void;
 
   /**
@@ -854,8 +858,11 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
    * function identity stable (module scope or useCallback); a new function rebuilds the tree.
    */
   getTreeDataPath?: (row: R) => string[];
-  /** Optional override for the grouping column. */
-  groupingColDef?: GridColDef<R>;
+  /**
+   * Configures the synthetic `__group__` column shown while `rowGroupingModel` is active. Every key is
+   * optional: `field` is always `'__group__'` (a `field` you pass is ignored).
+   */
+  groupingColDef?: Partial<GridColDef<R>>;
   /** Initial expansion depth for Tree Data. */
   defaultGroupingExpansionDepth?: number;
 
@@ -899,8 +906,11 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   slots?: {
     /** Component rendered as the grid toolbar. */
     toolbar?: React.ComponentType<Record<string, unknown>>;
-    /** Component rendered as the pagination control. */
-    pagination?: React.ComponentType<Record<string, unknown>>;
+    /**
+     * Component rendered as the pagination control. Receives `PaginationProps` (plus `slotProps.pagination`),
+     * so it can be typed with `PaginationProps` or wrap the exported `Pagination`.
+     */
+    pagination?: React.ComponentType<PaginationProps & Record<string, unknown>>;
     /** Component rendered when the grid is empty. */
     noRowsOverlay?: React.ComponentType<Record<string, unknown>>;
     /** Component rendered during loading states. */
@@ -910,7 +920,12 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   };
   /** Properties passed directly to custom slots. */
   slotProps?: {
-    toolbar?: Record<string, unknown>;
+    /**
+     * Merged over the props the grid passes to the toolbar. Typed as `GridToolbarProps` (so render props
+     * such as `renderQuickFilter` are checked and their parameters inferred), plus any extra keys a custom
+     * toolbar reads. `columns` / `baseColumns` are not checked, so typed `GridColDef<R>[]` can be passed.
+     */
+    toolbar?: Omit<Partial<GridToolbarProps>, 'columns' | 'baseColumns'> & Record<string, unknown>;
     pagination?: Record<string, unknown>;
     noRowsOverlay?: Record<string, unknown>;
     loadingOverlay?: Record<string, unknown>;
@@ -928,6 +943,12 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
    */
   columnGroupingModel?: GridColumnGroupingModel;
 }
+
+/** The `slots` prop of `DataGrid`: components that replace built-in parts of the grid. */
+export type GridSlots = NonNullable<DataGridProps['slots']>;
+
+/** The `slotProps` prop of `DataGrid`: props for each slot, keyed like `GridSlots`. */
+export type GridSlotProps = NonNullable<DataGridProps['slotProps']>;
 
 export interface GridEditCellProps<V = unknown> {
   id: GridRowId;

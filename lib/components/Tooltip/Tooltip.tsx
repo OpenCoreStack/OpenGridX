@@ -2,7 +2,7 @@ import React, { useState, useRef, useLayoutEffect, useEffect, useCallback, useId
 import ReactDOM from 'react-dom';
 import './Tooltip.css';
 
-interface GridTooltipProps {
+export interface GridTooltipProps {
     title: React.ReactNode;
     children: React.ReactElement;
     placement?: 'top' | 'bottom' | 'left' | 'right';
