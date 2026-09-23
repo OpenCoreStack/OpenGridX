@@ -19,7 +19,7 @@ The main component for displaying and interacting with data.
 | `headerHeight` | `number` | `56` | Height of the header row. |
 | `autoHeight` | `boolean` | `false` | Adjust grid height to match row total. |
 | `overscanRowCount` | `number` | `3` | Minimum rows rendered outside the visible viewport. The grid adapts this upward automatically based on scroll velocity — this prop sets the floor. |
-| `loading` | `boolean` | `false` | Shows a loading skeleton overlay. |
+| `loading` | `boolean` | `false` | With no rows, the body shows skeleton rows (or `slots.loadingOverlay`). With rows already shown, they stay and a progress bar runs along the top of the grid (or `slots.loadingOverlay` is shown over them). Works in list view too. |
 | `checkboxSelection` | `boolean` | `false` | Enable row selection via checkboxes. |
 | `pagination` | `boolean` | `false` | Enable the bottom pagination bar. Ignored while `rowGroupingModel` is active (dev-mode warning) and with `paginationMode="infinite"`. |
 | `paginationMode` | `'client' \| 'server' \| 'infinite'` | `'client'` | How to handle paging. `'infinite'` appends rows from the `dataSource` as `paginationModel.page` grows and never shows a pager or slices rows (see [Infinite Scroll](features/infinite-scroll.md)). |
@@ -160,7 +160,7 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `listView` | `boolean` | `false` | Renders the grid as a single-column list of cards. Designed for mobile and responsive layouts. |
+| `listView` | `boolean` | `false` | Renders the grid as a single-column list of cards. Designed for mobile and responsive layouts. Requires `listViewColumn`; without it the grid view is shown and a dev warning is logged. |
 | `listViewColumn` | `GridListViewColDef` | — | Column definition for list view mode. Must provide a `renderCell` function. The `field` value is used as a key. |
 
 #### Column Group Headers

@@ -18,6 +18,11 @@ The grid features a smart skeleton loader that automatically calculates the numb
 - **Shimmer Animation**: Uses a CSS-optimized animation for a premium feel.
 - **Auto-Fill**: Fills the entire visible height if `rows` are empty.
 
+### Loading with rows already shown
+When `loading` is true (or a data source request is running) and the grid already has rows, for example during a reload or a server-side sort, the rows stay visible and usable and a thin progress bar (`role="progressbar"`, class `ogx__loading-bar`) runs along the top of the grid. Pass `slots.loadingOverlay` to show your own indicator centred over the rows instead. Infinite scroll keeps its own indicator (skeleton rows at the bottom).
+
+List view follows the same rules: while loading it shows a progress bar or `slots.loadingOverlay`, never the "No rows" state.
+
 ---
 
 ## ♾️ Infinite Loading

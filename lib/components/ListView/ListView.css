@@ -110,3 +110,12 @@
     display: none;
   }
 }
+
+/* Loading with no rows yet: a progress bar, or slots.loadingOverlay centred. */
+.ogx-list-view__loading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+}

@@ -756,7 +756,7 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   /** If true, the user can only select a single row at a time. */
   disableMultipleRowSelection?: boolean;
 
-  /** If true, a loading shimmer/skeleton is displayed. */
+  /** Loading state. With no rows the body shows skeleton rows (or `slots.loadingOverlay`); with rows, they stay and a progress bar (or `slots.loadingOverlay`) is shown over them. */
   loading?: boolean;
   /** Visual density of the grid. */
   density?: 'compact' | 'standard' | 'comfortable';

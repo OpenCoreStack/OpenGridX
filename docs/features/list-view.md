@@ -6,7 +6,9 @@ Switch from a multi-column grid to a single-column detailed list. Perfect for mo
 
 ## 🏗️ Usage
 
-Enable List View by passing the `listView` prop. You must also provide a `listViewColumn` object which defines how each "Card" should be rendered.
+Enable List View by passing the `listView` prop. You must also provide a `listViewColumn` object which defines how each "Card" should be rendered. Without `listViewColumn` the grid view is shown instead and a dev warning is logged.
+
+List view honours `loading`, `slots.loadingOverlay`, `slots.noRowsOverlay` and `slots.footer` like the grid view: while loading it shows a progress bar (or your loading overlay) rather than the empty state, and `slots.footer` replaces its pagination controls.
 
 ```tsx
 const listColDef: GridListViewColDef<Employee> = {

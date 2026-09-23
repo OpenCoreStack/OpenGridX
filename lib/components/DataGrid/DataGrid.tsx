@@ -42,6 +42,7 @@ import { PIVOT_GRAND_TOTAL_ID } from '../../utils/pivot';
 import { isServerDrivenDataSource, getDataSourceErrorMessage } from '../../utils/dataSource';
 import { useGridClipboard } from '../../hooks/features/useGridClipboard';
 import { GridListView } from './GridListView';
+import { GridLoadingOverlay } from './GridLoadingOverlay';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
@@ -133,7 +134,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         // Column Visibility
         columnVisibilityModel: propColumnVisibilityModel,
         onColumnVisibilityModelChange,
-        listView = false,
+        listView: listViewRequested = false,
         listViewColumn,
         columnGroupingModel,
         noRowsLabel = 'No Data',
@@ -143,6 +144,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     } = props;
 
     const effectiveNoRowsLabel = localeText?.noRowsLabel ?? noRowsLabel;
+    // List view needs a listViewColumn to render its items; without one the grid view is shown
+    // (useGridDevWarnings says so) instead of an empty container.
+    const listView = listViewRequested && Boolean(listViewColumn);
 
     // Stable defaults
     const defaultRowGroupingModel = useMemo(() => [], []);
@@ -838,6 +842,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         viewportHeight: state.dimensions.viewportHeight,
         renderedRowCount: visibleRows.length,
         totalRowCount: pinnedTopRows.length + (pagination ? paginatedUnpinnedRows.length : sortedUnpinnedRows.length) + pinnedBottomRows.length,
+        listViewWithoutColumn: listViewRequested && !listViewColumn,
     });
 
     const { allSelected, someSelected } = rowSelection;
@@ -852,6 +857,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const NoRowsOverlaySlot = slots?.noRowsOverlay;
     const LoadingOverlaySlot = slots?.loadingOverlay;
     const FooterSlot = slots?.footer;
+    // Loading with rows on screen: the rows stay and an indicator runs over them. With no rows the
+    // body shows skeletons or the loading overlay instead, and infinite scroll appends skeleton rows.
+    const showLoadingOverRows = effectiveLoading && allRenderableRows.length > 0 && paginationMode !== 'infinite';
     const ToolbarSlot = slots?.toolbar;
 
     const toolbarProps = React.useMemo(() => {
@@ -972,6 +980,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     onRowsScrollEnd={onRowsScrollEnd}
                     getRowId={getRowIdOf}
                     multiselectable={rowSelectionEnabled && !disableMultipleRowSelection}
+                    loading={effectiveLoading}
+                    loadingOverlay={LoadingOverlaySlot ? <LoadingOverlaySlot {...slotProps?.loadingOverlay} /> : undefined}
+                    noRowsOverlay={NoRowsOverlaySlot ? <NoRowsOverlaySlot {...slotProps?.noRowsOverlay} /> : undefined}
+                    showPaginationControls={!FooterSlot}
                 />
             )}
 
@@ -1206,7 +1218,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 </div>
             )}
 
-            {!listView && FooterSlot && (
+            {FooterSlot && (
                 <FooterSlot
                     apiRef={gridData.apiRef}
                     aggregationModel={aggregationModel}
@@ -1252,6 +1264,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             : ''
                 )}
             </div>
+
+            {showLoadingOverRows && (
+                <GridLoadingOverlay overlay={LoadingOverlaySlot ? <LoadingOverlaySlot {...slotProps?.loadingOverlay} /> : undefined} />
+            )}
 
             <GridErrorOverlay error={state.dataSource.error} onRetry={dataSource ? dataSourceHandlers.fetchRows : undefined} />
         </div>

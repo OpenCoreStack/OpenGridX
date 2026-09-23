@@ -54,6 +54,14 @@ export interface GridListViewProps<R extends GridRowModel> {
     getRowId?: (row: R) => GridRowId;
     /** Whether several rows can be selected (aria-multiselectable). */
     multiselectable?: boolean;
+    /** The grid is loading (the `loading` prop or a data source fetch). */
+    loading?: boolean;
+    /** Rendered `slots.loadingOverlay`, shown instead of the rows while loading with no rows. */
+    loadingOverlay?: React.ReactNode;
+    /** Rendered `slots.noRowsOverlay`, shown instead of the default empty state. */
+    noRowsOverlay?: React.ReactNode;
+    /** False when `slots.footer` replaces the pagination area. Defaults to true. */
+    showPaginationControls?: boolean;
 }
 
 const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
@@ -88,6 +96,10 @@ export function GridListView<R extends GridRowModel>({
     onRowsScrollEnd,
     getRowId = defaultGetRowId,
     multiselectable = false,
+    loading = false,
+    loadingOverlay,
+    noRowsOverlay,
+    showPaginationControls = true,
 }: GridListViewProps<R>) {
     const PaginationComponent = paginationSlot || Pagination;
 
@@ -134,8 +146,15 @@ export function GridListView<R extends GridRowModel>({
             </div>
 
             <div className="ogx-list-view__rows" onScroll={handleScroll}>
-                {allRenderableRows.length === 0 ? (
-                    <div className="ogx-list-view__empty" aria-live="polite" role="status">
+                {allRenderableRows.length === 0 && loading ? (
+                    // The grid's live region announces loading; the list shows no "No Data" meanwhile.
+                    <div className="ogx-list-view__loading">
+                        {loadingOverlay ?? <div className="ogx__loading-bar" role="progressbar" aria-label="Loading data" />}
+                    </div>
+                ) : allRenderableRows.length === 0 && noRowsOverlay ? (
+                    <div className="ogx-list-view__empty">{noRowsOverlay}</div>
+                ) : allRenderableRows.length === 0 ? (
+                    <div className="ogx-list-view__empty">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                             <rect x="3" y="3" width="18" height="18" rx="2" />
                             <path d="M3 9h18M9 21V9" />
@@ -167,7 +186,7 @@ export function GridListView<R extends GridRowModel>({
                 )}
             </div>
 
-            {pagination && (
+            {pagination && showPaginationControls && (
                 <PaginationComponent
                     page={currentPage}
                     pageSize={effectivePaginationModel.pageSize}
