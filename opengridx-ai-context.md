@@ -8,7 +8,7 @@ that uses the `@opencorestack/opengridx` library. Read it in full before writing
 ## What this library is
 
 `@opencorestack/opengridx` is a zero-dependency, high-performance React DataGrid component.
-Current version: **2.1.0**. It is a full custom implementation — not a wrapper around MUI or any
+Current version: **3.0.0**. It is a full custom implementation — not a wrapper around MUI or any
 other library.
 
 ---
@@ -43,6 +43,14 @@ node_modules/@opencorestack/opengridx/docs/features/infinite-scroll.md
 node_modules/@opencorestack/opengridx/docs/features/pdf-export.md
 node_modules/@opencorestack/opengridx/docs/features/state-persistence.md
 node_modules/@opencorestack/opengridx/docs/features/loading-states.md
+node_modules/@opencorestack/opengridx/docs/features/data-source.md
+node_modules/@opencorestack/opengridx/docs/features/clipboard.md
+node_modules/@opencorestack/opengridx/docs/features/keyboard-navigation.md
+node_modules/@opencorestack/opengridx/docs/features/cell-spanning.md
+node_modules/@opencorestack/opengridx/docs/features/list-view.md
+node_modules/@opencorestack/opengridx/docs/features/custom-pagination.md
+node_modules/@opencorestack/opengridx/docs/customization/theming.md
+node_modules/@opencorestack/opengridx/docs/customization/slots-api.md
 ```
 
 Component docs (internal component API):
@@ -70,6 +78,7 @@ node_modules/@opencorestack/opengridx/lib/types/index.ts       ← source (more 
 ```tsx
 import { DataGrid } from '@opencorestack/opengridx';
 import type { GridColDef } from '@opencorestack/opengridx';
+import '@opencorestack/opengridx/styles';
 
 const columns: GridColDef[] = [
   { field: 'id',   headerName: 'ID',   width: 80 },
@@ -82,15 +91,16 @@ const rows = [
 ];
 
 export default function MyPage() {
-  return <DataGrid rows={rows} columns={columns} />;
+  return <DataGrid rows={rows} columns={columns} height={400} />;
 }
 ```
 
-Styles load automatically — no manual CSS import needed in Vite/Webpack/CRA. If the grid appears
-unstyled (Next.js App Router, SSR), add once to your app root:
+**The stylesheet is required and is not loaded automatically.** The CSS ships as `dist/opengridx.css`
+and the JavaScript bundle does not import it (in Vite/Webpack/CRA/Next.js alike). Add once to your app root:
 ```ts
 import '@opencorestack/opengridx/styles';
 ```
+Without it the grid is unstyled and its viewport does not scroll, so every row is rendered.
 
 ---
 
@@ -105,6 +115,8 @@ the grid manages its own state, optionally seeded via `initialState`).
 ```tsx
 // Uncontrolled pagination — grid handles its own page state:
 <DataGrid
+  rows={rows}
+  columns={columns}
   pagination
   pageSizeOptions={[10, 25]}
   initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
@@ -112,6 +124,8 @@ the grid manages its own state, optionally seeded via `initialState`).
 
 // Controlled pagination — you own the state:
 <DataGrid
+  rows={rows}
+  columns={columns}
   pagination
   paginationModel={model}
   onPaginationModelChange={setModel}
@@ -130,7 +144,7 @@ not on `params.row`:
 renderCell: (params) => {
   const depth      = params.rowMeta?.treeDepth ?? 0;
   const hasChildren = params.rowMeta?.hasChildren;
-  return <span style={{ paddingLeft: depth * 16 }}>{params.value}</span>;
+  return <span style={{ paddingLeft: depth * 16 }}>{params.formattedValue}</span>;
 }
 ```
 
@@ -163,7 +177,7 @@ const columns: GridColDef[] = [
 
 ```tsx
 // Option A — multiSort prop (single-click appends):
-<DataGrid multiSort sortModel={sortModel} onSortModelChange={setSortModel} />
+<DataGrid rows={rows} columns={columns} multiSort sortModel={sortModel} onSortModelChange={setSortModel} />
 
 // Option B — Shift+click always appends without any prop.
 ```
@@ -176,6 +190,15 @@ Read `node_modules/@opencorestack/opengridx/docs/migration/v2-to-v3.md`. In shor
 - `params.row._hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount` and `_isGroupRow` are no longer added to rows → use `params.rowMeta?.*`.
 - Under row grouping / tree data, `params.row` is now the consumer's own row object (it used to be a copy) → never mutate it in render callbacks.
 - Grouped exports write the same group label as the grid (`groupLabel` → `groupingValueFormatter` → `"field: value"`).
+- `getRowId` no longer copies rows or overwrites `row.id`; pass `getRowId` in export options so `selectedRows` match.
+- Behaviour fixes a v2 project may notice: `initialState.filter` is applied; toolbar search/filters work without `filterModel`;
+  apiRef setters (`sortColumn`, `setFilterModel`, `setPage`, `selectRows`, …) update the grid and fire callbacks;
+  `getVisibleColumns()` omits hidden columns; `onRowOrderChange` indices are positions in `rows`; `onColumnOrderChange`
+  indices are positions in the full column order (new `onColumnOrderModelChange` gives the whole order); Tab leaves the grid
+  outside edit mode; `isCellEditable` also gates double-click and Enter; empty filter values no longer filter; the quick filter
+  searches only visible, filterable columns; CSV starts with a BOM and CSV/HTML-Excel neutralise formulas (`escapeFormulas: false`);
+  `exportToExcel` saves `.xlsx` names as `.xls`; all grid buttons are `type="button"`; pinned columns render in `pinnedColumns` order;
+  `DataGridThemeProvider` pins a light or dark palette by `theme.mode` instead of following the OS.
 - After upgrading, restart the dev server and clear `node_modules/.vite`, or Vite may keep serving the old version.
 
 ## v1 → v2 migration (if this project was on v1)
@@ -241,15 +264,22 @@ const hasChildren = params.rowMeta?.hasChildren;
   `import { DataGrid, exportToCsv } from '@opencorestack/opengridx'`
 - **`initialState` is for seeding, not controlling** — if you pass `initialState.sorting.sortModel`
   AND `sortModel` prop, the prop wins (controlled mode). Use one or the other.
-- **`pageSizeOptions` must include the active `pageSize`** — if `pageSize` is 10 but
-  `pageSizeOptions` is `[25, 50]`, the selector will show a mismatch. Always include the initial
-  page size in the options array.
+- **Keep the active `pageSize` in `pageSizeOptions`** — a page size missing from the options is
+  added to the selector as an extra entry, which usually is not what you want. The default options are
+  `[10, 25, 50, 100]`.
+- **Import the stylesheet** — `import '@opencorestack/opengridx/styles'` once in the app root.
+- **Controlled props need their callback** — `paginationModel` without `onPaginationModelChange` (or `sortModel`
+  without `onSortModelChange`) freezes that state. Leave both out to let the grid own it.
 - **Give the grid a bounded height** — in a flex layout wrap it in `<div style={{ flex: 1, minHeight: 0 }}>`.
   Without `min-height: 0` the container grows to fit every row and virtualization is silently off.
   Pagination hides this, and row grouping disables pagination, so it tends to appear only after grouping
   is turned on. Dev builds log a warning.
-- **`apiRef` methods are only available after mount** — call `apiRef.current.*` inside event
-  handlers or `useEffect`, never during render.
+- **Call `apiRef` methods after mount** — `apiRef.current` is never null, but before the grid mounts
+  its methods do nothing. Call `apiRef.current.*` inside event handlers or `useEffect`, never during render.
+- **`valueFormatter` / `valueGetter` params are typed `unknown`** — cast before calling methods:
+  `valueFormatter: ({ value }) => (value as number).toFixed(2)`.
+- **Browser height limit** — one scrolling grid reaches about 645,000 rows at the default 52 px row height
+  (browsers cap element height); page or stream larger datasets.
 
 ---
 
@@ -259,8 +289,16 @@ const hasChildren = params.rowMeta?.hasChildren;
 // Component
 import { DataGrid } from '@opencorestack/opengridx';
 
+// Other components
+import { GridToolbar, FilterPanel, ColumnVisibilityPanel, GridTooltip,
+         Button, Input, Checkbox } from '@opencorestack/opengridx';
+
 // Hooks
-import { useGridApiRef } from '@opencorestack/opengridx';
+import { useGridApiRef, useGridStateStorage, useAggregation, usePivot } from '@opencorestack/opengridx';
+
+// Theming
+import { DataGridThemeProvider, darkTheme, roseTheme, emeraldTheme,
+         amberTheme, compactTheme } from '@opencorestack/opengridx';
 
 // Export utilities
 import { exportToCsv, exportToExcel, exportToExcelAdvanced,
@@ -273,10 +311,12 @@ import type {
   GridFilterModel, GridFilterItem,
   GridPaginationModel, GridColumnPinning,
   GridRowMeta, GridRowParams, GridCellParams,
-  GridApi, GridInitialState,
+  GridApi, GridInitialState, GridState,
   GridAggregationModel, GridPivotModel,
-  GridLocaleText, GridSlots,
-  GridGroupedExportRow,
+  GridLocaleText, GridTheme,
+  GridRenderCellParams, GridRenderEditCellParams, GridValueSetterParams,
+  GridDataSource, GridGetRowsParams, GridGetRowsResponse,
+  CsvExportOptions, ExcelExportOptions, PdfExportOptions,
 } from '@opencorestack/opengridx';
 ```
 
@@ -285,6 +325,7 @@ import type {
 ## Getting help
 
 - Full API reference: `node_modules/@opencorestack/opengridx/docs/API_REFERENCE.md`
-- Migration guide: `node_modules/@opencorestack/opengridx/docs/migration/v1-to-v2.md`
+- Migration guides: `node_modules/@opencorestack/opengridx/docs/migration/v2-to-v3.md`,
+  `node_modules/@opencorestack/opengridx/docs/migration/v1-to-v2.md`
 - Changelog: `node_modules/@opencorestack/opengridx/CHANGELOG.md`
 - GitHub: https://github.com/OpenCoreStack/OpenGridX
