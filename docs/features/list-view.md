@@ -76,7 +76,7 @@ List view pages exactly like the grid view: with `pagination`, one page of the (
 
 `onRowsScrollEnd` fires when the list is scrolled to within 100px of its bottom, so the [infinite scroll](./infinite-scroll.md) pattern works in list view too. Unlike the grid view, the list view fires it on **every** scroll event inside that zone (it is not fired once per arrival), so guard your handler (for example, ignore calls while a page is loading).
 
-The list view is **not virtualized**: it renders every row it shows (one page with `pagination`, otherwise all rows). Use pagination for large datasets. `slots.footer` and the aggregation footer are not rendered in list view.
+The list view is **not virtualized**: it renders every row it shows (one page with `pagination`, otherwise all rows). Use pagination for large datasets. `slots.footer` is rendered below the list (in place of its pagination controls); the aggregation footer row is not shown in list view.
 
 ## ♿ Accessibility
 

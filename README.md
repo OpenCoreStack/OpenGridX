@@ -103,7 +103,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `columns` | `GridColDef[]` | — | **Required.** Column definitions. |
 | `height` | `number \| string` | — | Grid height in pixels or a CSS string (e.g. `'100%'`). No default: without it the grid takes its container's height, and needs a bounded container to virtualize. |
 | `autoHeight` | `boolean` | `false` | Grows the grid to fit all rows (renders every row). |
-| `loading` | `boolean` | `false` | Shows skeleton rows (or `slots.loadingOverlay`) while there are no rows. |
+| `loading` | `boolean` | `false` | With no rows, shows skeleton rows (or `slots.loadingOverlay`). With rows shown, keeps them and runs a progress bar along the top (or shows `slots.loadingOverlay` over them). Works in list view too. |
 | `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Row height preset: 32 px, `rowHeight`, 72 px. |
 | `overscanRowCount` | `number` | `3` | Minimum rows rendered outside the viewport; raised automatically while scrolling fast. |
 | `checkboxSelection` | `boolean` | `false` | Enables checkbox column for row selection. |
@@ -266,7 +266,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | :--- | :--- | :--- |
 | `slots` | `GridSlots` | Replace built-in components (toolbar, pagination, overlays, footer). |
 | `slotProps` | `object` | Pass custom props to slot components. |
-| `listView` / `listViewColumn` | `boolean` / `GridListViewColDef` | Render rows as cards (mobile layouts). |
+| `listView` / `listViewColumn` | `boolean` / `GridListViewColDef` | Render rows as cards (mobile layouts). Honours loading, overlays and `slots.footer`; keyboard navigable; tree/group parents get an expand chevron. |
 | `columnGroupingModel` | `GridColumnGroupingModel` | Multi-level column group headers. |
 
 Per-cell styling uses `GridColDef.cellClassName` / `headerClassName`; themes are applied with `<DataGridThemeProvider theme={…}>` (see Theming below).

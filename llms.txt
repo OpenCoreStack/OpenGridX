@@ -78,7 +78,7 @@ export default function App() {
 | localeText        | GridLocaleText | —  | Override pager / no-rows strings: paginationRowsPerPage, paginationOf(from,to,count), paginationPage(page,count), noRowsLabel |
 | rowHeight         | number    | 52      | Row height in pixels                   |
 | headerHeight      | number    | 56      | Header height in pixels                |
-| loading           | boolean   | false   | Skeleton rows (or slots.loadingOverlay) while there are no rows |
+| loading           | boolean   | false   | No rows: skeleton rows (or slots.loadingOverlay). Rows shown: they stay, a progress bar (.ogx__loading-bar) runs along the top, or slots.loadingOverlay is shown over them |
 | noRowsLabel       | string    | 'No Data' | Empty state message                  |
 | density           | 'compact'/'standard'/'comfortable' | 'standard' | 32px / rowHeight / 72px rows |
 
@@ -216,7 +216,7 @@ There are no getRowClassName / getCellClassName / theme props: use GridColDef.ce
 ### List View
 | Prop           | Type               | Description                                 |
 |----------------|--------------------|---------------------------------------------|
-| listView       | boolean            | Render as cards instead of a table (requires listViewColumn) |
+| listView       | boolean            | Render as cards instead of a table (requires listViewColumn; without it the grid view shows + dev warning). Honours loading, noRowsOverlay/loadingOverlay and slots.footer; rows are a roving Tab stop (arrows, Home/End, PageUp/Down, Enter/Space, Alt+Arrow expand); tree/group parents get a chevron. Not virtualized |
 | listViewColumn | { field, renderCell } | Defines the card renderer                |
 
 ---
@@ -232,7 +232,7 @@ There are no getRowClassName / getCellClassName / theme props: use GridColDef.ce
 | flex              | number                                                 | Flex grow factor; `width` is ignored when flex is set |
 | minWidth          | number                                                 | Minimum width (layout and resize; resize default 50) |
 | maxWidth          | number                                                 | Maximum width (layout and resize; no max by default) |
-| type              | 'string'/'number'/'boolean'/'date'/'singleSelect'/'image' | Drives filter operators, sorting and editors |
+| type              | 'string'/'number'/'boolean'/'date'/'singleSelect'/'image' | Drives filter operators, sorting, editors and, without a valueFormatter, the cell text (date: local calendar date, boolean: Yes/No, singleSelect: option label, image: <img>); formattedValue, list view and exports use the same text |
 | editable          | boolean                                                | Enable double-click / Enter editing        |
 | valueOptions      | (string / number / {value, label})[]                   | Options for singleSelect type (editor commits the original option value) |
 | renderCell        | (params: GridRenderCellParams<R>) => ReactNode         | Custom cell renderer (errors contained per cell) |

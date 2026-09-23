@@ -476,8 +476,9 @@ You can exclude specific columns (e.g., action buttons or menus) from all export
 | Method | Description |
 |---|---|
 | `exportable: false` | Set in `GridColDef` to manually exclude any column |
-| `__check__` | Native checkbox column (auto-excluded) |
-| `__actions__` | Common field for action buttons (auto-excluded) |
+| `__checkbox_col__`, `__expand_col__`, `__reorder_col__` | The grid's checkbox, detail-panel and drag-handle columns (auto-excluded, v3.0+) |
+| `__group__` | The row-grouping column from `groupingColDef` (auto-excluded; grouped exports write group labels from `groupedRows`) |
+| `__check__`, `__actions__` | Legacy checkbox / action-button field names (auto-excluded) |
 | `isSpacer: true` | Spacer columns (auto-excluded from every format since v3.0; before, only advanced Excel skipped them) |
 
 ### Example

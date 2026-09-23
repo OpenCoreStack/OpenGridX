@@ -201,6 +201,9 @@ Read `node_modules/@opencorestack/opengridx/docs/migration/v2-to-v3.md`. In shor
   `DataGridThemeProvider` pins a light or dark palette by `theme.mode` instead of following the OS.
   Copy (Ctrl/Cmd+C, `copySelectedRows()`) takes the visible columns in screen order and every selected row that passes the filter,
   `copySelectedRows()` rejects when the write fails, and `disableClipboardCopy` turns the shortcut off.
+  Without a `valueFormatter`, `type` now formats cells (dates as local dates, booleans Yes / No, singleSelect labels, image `<img>`).
+  `loading` with rows already shown keeps them and shows a progress bar (or `slots.loadingOverlay`); list view honours loading,
+  overlays and `slots.footer` and is keyboard navigable.
 - After upgrading, restart the dev server and clear `node_modules/.vite`, or Vite may keep serving the old version.
 
 ## v1 → v2 migration (if this project was on v1)

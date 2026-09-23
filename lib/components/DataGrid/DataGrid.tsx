@@ -12,7 +12,7 @@ import { useGridViewportSize } from '../../hooks/core/useGridViewportSize';
 import { useDetailPanelHeights } from '../../hooks/features/useDetailPanelHeights';
 import { getDetailPanelRowIds } from '../../utils/detailPanel';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
-import { useGridDevWarnings } from '../../hooks/core/useGridDevWarnings';
+import { useGridDevWarnings, useGridStylesheetWarning } from '../../hooks/core/useGridDevWarnings';
 import { useGridRowSelection } from '../../hooks/core/useGridRowSelection';
 import { useGridLiveRowSelection } from '../../hooks/core/useGridLiveRowSelection';
 import { useGridApiMethods } from '../../hooks/core/useGridApiMethods';
@@ -882,6 +882,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const hasRowSpanning = React.useMemo(() => effectiveColumns.some(c => !!c.rowSpan), [effectiveColumns]);
     const columnsPanel = useGridColumnsPanel();
     const containerRef = React.useRef<HTMLDivElement>(null);
+    useGridStylesheetWarning(containerRef);
 
     const NoRowsOverlaySlot = slots?.noRowsOverlay;
     const LoadingOverlaySlot = slots?.loadingOverlay;
