@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type {
     GridRowModel,
     GridRowId,
@@ -12,6 +12,7 @@ import type {
 } from '../types';
 import { isRowMatchingFilter } from '../utils/filtering';
 import { compareValues } from '../utils/sorting';
+import { computeAggregations } from '../utils/aggregation';
 
 export interface UseRowGroupingParams<R extends GridRowModel> {
     rows: R[];
@@ -35,6 +36,12 @@ const defaultGetAggregationPosition = (groupNode: GridTreeNode | null): 'inline'
 // infinite re-render loops when callers omit optional params.
 const EMPTY_ROW_GROUPING_MODEL: GridRowGroupingModel = [];
 const EMPTY_AGGREGATION_MODEL: GridAggregationModel = {};
+const EMPTY_OVERRIDES: Map<GridRowId, boolean> = new Map();
+
+interface ExpansionOverrides {
+    configKey: string;
+    overrides: Map<GridRowId, boolean>;
+}
 
 export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingParams<R>) {
     const {
@@ -55,7 +62,16 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
         return map;
     }, [columns]);
 
-    const [expandedGroupIds, setExpandedGroupIds] = useState<Set<GridRowId>>(new Set());
+    // User expand/collapse choices are stored as overrides on top of the depth-based
+    // default, keyed by the grouping config. Rebuilding the tree (row edits, new rows
+    // arrays) keeps them because group ids are deterministic; changing the grouping
+    // config itself discards them.
+    const configKey = `${rowGroupingModel.join('\u001f')}|${defaultGroupingExpansionDepth}`;
+    const [expansionState, setExpansionState] = useState<ExpansionOverrides>(() => ({
+        configKey,
+        overrides: new Map(),
+    }));
+    const overrides = expansionState.configKey === configKey ? expansionState.overrides : EMPTY_OVERRIDES;
 
     const { treeNodes, rootIds, groupingRows } = useMemo(() => {
         const treeNodes = new Map<GridRowId, GridTreeNode>();
@@ -122,24 +138,8 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                 groupIds.push(groupId);
 
                 // Calculate Aggregations for this group
-                const aggregatedValues: Record<string, unknown> = {};
-                if (aggregationModel) {
-                    Object.entries(aggregationModel).forEach(([aggField, aggType]) => {
-                        const values = groupRowsList.map(r => r[aggField]);
-                        if (aggType === 'sum') {
-                            aggregatedValues[aggField] = values.reduce((a: number, b) => a + (Number(b) || 0), 0);
-                        } else if (aggType === 'min') {
-                            aggregatedValues[aggField] = Math.min(...values.map(v => Number(v) || 0));
-                        } else if (aggType === 'max') {
-                            aggregatedValues[aggField] = Math.max(...values.map(v => Number(v) || 0));
-                        } else if (aggType === 'avg') {
-                            const sum = values.reduce((a: number, b) => a + (Number(b) || 0), 0);
-                            aggregatedValues[aggField] = values.length ? sum / values.length : 0;
-                        } else if (aggType === 'count') {
-                            aggregatedValues[aggField] = values.length;
-                        }
-                    });
-                }
+                const aggregatedValues: Record<string, unknown> =
+                    computeAggregations(groupRowsList, aggregationModel, columnsLookup, 'useRowGrouping');
 
                 const groupRow = {
                     [field]: rawValue,
@@ -185,42 +185,29 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
     }, [rows, rowGroupingModel, aggregationModel, getRowId, getAggregationPosition, columnsLookup]);
 
-    useEffect(() => {
-        if (defaultGroupingExpansionDepth === -1) {
+    const isDefaultExpanded = useCallback((node: GridTreeNode | undefined) => (
+        Boolean(node?.children && node.children.length > 0) &&
+        (defaultGroupingExpansionDepth === -1 || (node?.depth ?? 0) < defaultGroupingExpansionDepth)
+    ), [defaultGroupingExpansionDepth]);
 
-            const allGroupIds = new Set<GridRowId>();
-            treeNodes.forEach((node, id) => {
-                if (node.children && node.children.length > 0) {
-                    allGroupIds.add(id);
-                }
-            });
-            setExpandedGroupIds(allGroupIds);
-        } else if (defaultGroupingExpansionDepth > 0) {
-            const depthIds = new Set<GridRowId>();
-            treeNodes.forEach((node, id) => {
-                if (node.depth < defaultGroupingExpansionDepth && node.children && node.children.length > 0) {
-                    depthIds.add(id);
-                }
-            });
-            setExpandedGroupIds(depthIds);
-        } else {
-
-            setExpandedGroupIds(new Set());
-        }
-
-    }, [rowGroupingModel, defaultGroupingExpansionDepth, treeNodes]);
+    const expandedGroupIds = useMemo<Set<GridRowId>>(() => {
+        const ids = new Set<GridRowId>();
+        treeNodes.forEach((node, id) => {
+            if (!node.children || node.children.length === 0) return;
+            if (overrides.get(id) ?? isDefaultExpanded(node)) ids.add(id);
+        });
+        return ids;
+    }, [treeNodes, overrides, isDefaultExpanded]);
 
     const toggleExpansion = useCallback((id: GridRowId) => {
-        setExpandedGroupIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) {
-                next.delete(id);
-            } else {
-                next.add(id);
-            }
-            return next;
+        setExpansionState(prev => {
+            const base = prev.configKey === configKey ? prev.overrides : EMPTY_OVERRIDES;
+            const current = base.get(id) ?? isDefaultExpanded(treeNodes.get(id));
+            const next = new Map(base);
+            next.set(id, !current);
+            return { configKey, overrides: next };
         });
-    }, []);
+    }, [configKey, treeNodes, isDefaultExpanded]);
 
     const isGroupExpanded = useCallback((id: GridRowId) => {
         return expandedGroupIds.has(id);
@@ -255,10 +242,8 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
         const traverse = (ids: GridRowId[]) => {
 
-            let visibleIds = ids;
-            if (filterModel) {
-                visibleIds = ids.filter(doesNodeMatchFilter);
-            }
+            // Copy before sorting: ids may be node.children / rootIds from the memoized tree.
+            const visibleIds = filterModel ? ids.filter(doesNodeMatchFilter) : [...ids];
 
             if (sortModel && sortModel.length > 0) {
                 visibleIds.sort((aId, bId) => {
@@ -299,14 +284,12 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                     };
                     result.push(enhancedRow);
 
-                    if (isExpandedGroupIds.has(id) && isGroup) {
+                    if (expandedGroupIds.has(id) && isGroup) {
                         traverse(node.children!);
                     }
                 }
             });
         };
-
-        const isExpandedGroupIds = expandedGroupIds; 
 
         traverse(rootIds);
 

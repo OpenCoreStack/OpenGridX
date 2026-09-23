@@ -227,3 +227,72 @@ describe('useRowGrouping — groupable: false', () => {
         expect(groupCount).toBe(2);
     });
 });
+
+describe('useRowGrouping — group aggregation matches useAggregation semantics', () => {
+    const NULL_ROWS = [
+        { id: 1, g: 'A', v: 10 as number | null },
+        { id: 2, g: 'A', v: null as number | null },
+        { id: 3, g: 'A', v: 20 as number | null },
+    ];
+    const MODEL = ['g'];
+    const aggFor = (fn: string, columns?: { field: string; availableAggregationFunctions?: string[] }[]) => {
+        const aggregationModel = { v: fn };
+        const { result } = renderHook(() => useRowGrouping({ rows: NULL_ROWS, getRowId: GET_ROW_ID, rowGroupingModel: MODEL, aggregationModel, columns }));
+        return [...result.current.treeNodes.values()].find(n => n.depth === 0)!.aggregatedValues!;
+    };
+
+    it('ignores nulls for min / avg / count instead of treating them as 0', () => {
+        expect(aggFor('min').v).toBe(10);
+        expect(aggFor('avg').v).toBe(15);
+        expect(aggFor('count').v).toBe(2);
+        expect(aggFor('sum').v).toBe(30);
+        expect(aggFor('max').v).toBe(20);
+    });
+
+    it('supports the unique aggregation', () => {
+        expect(aggFor('unique').v).toBe(2);
+    });
+
+    it('honors availableAggregationFunctions', () => {
+        expect(aggFor('avg', [{ field: 'v', availableAggregationFunctions: ['sum'] }])).not.toHaveProperty('v');
+    });
+});
+
+describe('useRowGrouping — expansion state', () => {
+    it('preserves user expansion when rows are replaced with edited copies', () => {
+        const { result, rerender } = renderHook(({ rows }) => useRowGrouping({ ...BASE_PARAMS, rows }), { initialProps: { rows: ROWS } });
+        const eng = [...result.current.treeNodes.values()].find(n => n.groupingValue === 'Engineering')!.id;
+        act(() => { result.current.toggleExpansion(eng); });
+        rerender({ rows: ROWS.map(r => (r.id === 1 ? { ...r, name: 'Alicia' } : r)) });
+        expect(result.current.isGroupExpanded(eng)).toBe(true);
+    });
+
+    it('preserves user expansion when an equal rowGroupingModel is passed as a new array', () => {
+        const { result, rerender } = renderHook(({ model }) => useRowGrouping({ ...BASE_PARAMS, rowGroupingModel: model }), { initialProps: { model: ['dept'] } });
+        const eng = [...result.current.treeNodes.values()].find(n => n.groupingValue === 'Engineering')!.id;
+        act(() => { result.current.toggleExpansion(eng); });
+        rerender({ model: ['dept'] });
+        expect(result.current.isGroupExpanded(eng)).toBe(true);
+    });
+
+    it('discards user overrides when defaultGroupingExpansionDepth changes', () => {
+        const { result, rerender } = renderHook(({ depth }) => useRowGrouping({ ...BASE_PARAMS, defaultGroupingExpansionDepth: depth }), { initialProps: { depth: -1 } });
+        const hr = [...result.current.treeNodes.values()].find(n => n.groupingValue === 'HR')!.id;
+        expect(result.current.isGroupExpanded(hr)).toBe(true);
+        act(() => { result.current.toggleExpansion(hr); });
+        expect(result.current.isGroupExpanded(hr)).toBe(false);
+        // depth 1 also expands depth-0 groups by default; the collapse override must not survive.
+        rerender({ depth: 1 });
+        expect(result.current.isGroupExpanded(hr)).toBe(true);
+    });
+
+    it('does not reorder the memoized tree when getVisibleRows sorts', () => {
+        const { result } = renderHook(() => useRowGrouping({ ...BASE_PARAMS, sortModel: SORT_DESC, defaultGroupingExpansionDepth: -1 }));
+        const eng = [...result.current.treeNodes.values()].find(n => n.groupingValue === 'Engineering')!;
+        const before = [...eng.children!];
+        result.current.getVisibleRows();
+        expect(eng.children).toEqual(before);
+    });
+});
+
+const SORT_DESC = [{ field: 'name', sort: 'desc' as const }];

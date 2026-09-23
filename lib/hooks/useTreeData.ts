@@ -1,8 +1,15 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { GridRowModel, GridRowId, GridTreeNode, GridFilterModel, GridSortItem } from '../types';
 import type { GridRowMeta } from '../types';
 import { isRowMatchingFilter } from '../utils/filtering';
 import { compareValues } from '../utils/sorting';
+
+const EMPTY_OVERRIDES: Map<GridRowId, boolean> = new Map();
+
+interface ExpansionOverrides {
+    configKey: string;
+    overrides: Map<GridRowId, boolean>;
+}
 
 interface UseTreeDataProps<R extends GridRowModel> {
     rows: R[];
@@ -157,49 +164,45 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
 
     }, [rows, getTreeDataPath, treeData, getRowId]);
 
-    const initialExpandedIds = useMemo(() => {
-        if (!treeData) return new Set<GridRowId>();
+    // Same model as useRowGrouping: depth-based default plus user overrides keyed by config.
+    // Rebuilding the tree (row edits, lazily loaded children) keeps the user's choices.
+    const configKey = `${treeData}|${defaultGroupingExpansionDepth}`;
+    const [expansionState, setExpansionState] = useState<ExpansionOverrides>(() => ({
+        configKey,
+        overrides: new Map(),
+    }));
+    const overrides = expansionState.configKey === configKey ? expansionState.overrides : EMPTY_OVERRIDES;
 
-        const initialExpanded = new Set<GridRowId>();
-        treeNodes.forEach(node => {
-            if (node.children && node.children.length > 0) {
-                 if (defaultGroupingExpansionDepth === -1 || node.depth < defaultGroupingExpansionDepth) {
-                     initialExpanded.add(node.id);
-                 }
-            }
+    const isDefaultExpanded = useCallback((node: GridTreeNode | undefined) => (
+        Boolean(node?.children && node.children.length > 0) &&
+        (defaultGroupingExpansionDepth === -1 || (node?.depth ?? 0) < defaultGroupingExpansionDepth)
+    ), [defaultGroupingExpansionDepth]);
+
+    const expandedGroupIds = useMemo<Set<GridRowId>>(() => {
+        const ids = new Set<GridRowId>();
+        if (!treeData) return ids;
+        treeNodes.forEach((node, id) => {
+            // A lazily loaded node can be expanded before it has any children, so an
+            // explicit override counts even when children is still empty.
+            if (overrides.get(id) ?? isDefaultExpanded(node)) ids.add(id);
         });
-        return initialExpanded;
-    }, [treeNodes, treeData, defaultGroupingExpansionDepth]);
-
-    const [expandedGroupIds, setExpandedGroupIds] = useState<Set<GridRowId>>(new Set());
-
-    useEffect(() => {
-        if (initialExpandedIds.size > 0) {
-            setExpandedGroupIds(initialExpandedIds);
-        }
-    }, [initialExpandedIds]);
+        return ids;
+    }, [treeData, treeNodes, overrides, isDefaultExpanded]);
 
     const toggleExpansion = useCallback((id: GridRowId) => {
-        setExpandedGroupIds(prev => {
-            const next = new Set(prev);
-            const isExpanding = !next.has(id);
-
-            if (next.has(id)) {
-                next.delete(id);
-            } else {
-                next.add(id);
-            }
-
-            if (isExpanding && onRowExpansionChange) {
-                 const node = treeNodes.get(id);
-                 if (node) {
-                     onRowExpansionChange(node);
-                 }
-            }
-
-            return next;
+        const isExpanding = !expandedGroupIds.has(id);
+        setExpansionState(prev => {
+            const base = prev.configKey === configKey ? prev.overrides : EMPTY_OVERRIDES;
+            const next = new Map(base);
+            next.set(id, isExpanding);
+            return { configKey, overrides: next };
         });
-    }, [treeNodes, onRowExpansionChange]);
+        // Called outside the state updater: updaters may run twice, and this can trigger a server fetch.
+        if (isExpanding && onRowExpansionChange) {
+            const node = treeNodes.get(id);
+            if (node) onRowExpansionChange(node);
+        }
+    }, [expandedGroupIds, configKey, treeNodes, onRowExpansionChange]);
 
     const getVisibleRows = useCallback(() => {
 
@@ -209,9 +212,7 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
         rows.forEach(r => rowLookup.set(getRowId(r), r));
         groupingRows.forEach(r => rowLookup.set(r.id, r));
 
-        const matchesFilter = (row: GridRowModel) => {
-             return isRowMatchingFilter(row, filterModel!);
-        };
+        const matchesFilter = (row: GridRowModel) => (filterModel ? isRowMatchingFilter(row, filterModel) : true);
 
         const filterCache = new Map<GridRowId, boolean>();
 

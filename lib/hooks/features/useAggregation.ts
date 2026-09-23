@@ -9,30 +9,9 @@ import type {
     GridSortItem,
     GridDataSource,
 } from '../../types';
+import { computeAggregations } from '../../utils/aggregation';
 
-export type BuiltInAggFn = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'unique';
-
-const AGGREGATION_FUNCTIONS: Record<BuiltInAggFn, (values: unknown[]) => unknown> = {
-    sum: (values) => {
-        const nums = values.filter((v) => v != null && !isNaN(Number(v)));
-        return nums.reduce((acc: number, v) => acc + Number(v), 0);
-    },
-    avg: (values) => {
-        const nums = values.filter((v) => v != null && !isNaN(Number(v)));
-        if (nums.length === 0) return null;
-        return nums.reduce((acc: number, v) => acc + Number(v), 0) / nums.length;
-    },
-    count: (values) => values.filter((v) => v != null).length,
-    min: (values) => {
-        const nums = values.filter((v) => v != null && !isNaN(Number(v))).map(Number);
-        return nums.length ? Math.min(...nums) : null;
-    },
-    max: (values) => {
-        const nums = values.filter((v) => v != null && !isNaN(Number(v))).map(Number);
-        return nums.length ? Math.max(...nums) : null;
-    },
-    unique: (values) => new Set(values.filter((v) => v != null)).size,
-};
+export type { BuiltInAggFn } from '../../utils/aggregation';
 
 export function formatAggregationValue(value: unknown, fnName: string): string {
     if (value == null) return '—';
@@ -85,21 +64,7 @@ export function useAggregation<R extends GridRowModel>(
     const clientResult = useMemo<GridAggregationResult>(() => {
         if (isServerSide || Object.keys(aggregationModel).length === 0) return {};
 
-        const result: GridAggregationResult = {};
-        for (const [field, fnName] of Object.entries(aggregationModel)) {
-            const colDef = columnsLookup.get(field);
-            if (colDef?.availableAggregationFunctions && !colDef.availableAggregationFunctions.includes(fnName)) {
-                continue;
-            }
-            const fn = AGGREGATION_FUNCTIONS[fnName as BuiltInAggFn];
-            if (!fn) {
-                console.warn(`[useAggregation] Unknown aggregation function: "${fnName}"`);
-                continue;
-            }
-            const values = rows.map((row) => (row as GridRowModel)[field]);
-            result[field] = fn(values);
-        }
-        return result;
+        return computeAggregations(rows, aggregationModel, columnsLookup, 'useAggregation');
     }, [rows, columnsLookup, aggregationModel, isServerSide]);
 
     const [serverResult, setServerResult] = useState<GridAggregationResult>({});
