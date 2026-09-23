@@ -5,6 +5,44 @@
 
 ---
 
+## [Unreleased]
+
+Fixes from a consumer defect report (migration of an ERP report writer from ag-grid) plus issues found while verifying it.
+
+### Fixed
+
+- **Row-grouping subtotals were wrong when data contained nulls** — `useRowGrouping` had its own copy of the aggregation functions that coerced `null` to `0` (`Number(v) || 0`). For `[10, null, 20]` a group showed `min` 0, `avg` 10 and `count` 3. It also ignored `unique` and `availableAggregationFunctions`. Group rows now use the same shared functions as the footer (`lib/utils/aggregation`), giving 10 / 15 / 2. Grouped exports (`getGroupedExportRows`) inherit the fix.
+- **`min` / `max` could throw `RangeError` on very large datasets** — `Math.min(...values)` exceeds the engine's argument limit at roughly 120k values. Replaced with loops.
+- **Expanded groups collapsed on every data change** — any new `rows` array (an inline edit, a live refresh) or a new-but-equal `rowGroupingModel` array reset expansion to the default. User choices are now overrides keyed by the grouping config, and are discarded only when `rowGroupingModel` or `defaultGroupingExpansionDepth` changes value.
+- **`getVisibleRows` sorted the memoized tree's child arrays in place** under row grouping; it now sorts a copy.
+- **Tree data reset user expansion whenever rows changed** (when `defaultGroupingExpansionDepth` was non-zero). With server-side tree data, a lazily expanded node could collapse as soon as its children arrived. Tree data now uses the same override model as row grouping, and the default expansion applies on the first render instead of after an effect.
+- **`onRowExpansionChange` (server-side child fetch) was called inside a React state updater**, which React may run twice (always in StrictMode). It is now called exactly once per expand.
+- **`useTreeData().getVisibleRows()` crashed when `filterModel` was omitted**, although the param is optional.
+- **`valueFormatter` was dropped for every column once row grouping was on** — the injected hierarchy renderers fell back to the raw value. They now render the formatted value. *(Report D3)*
+- **`slots.footer`, `slots.noRowsOverlay` and `slots.loadingOverlay` were typed and documented but never rendered.** All three are now wired. `footer` replaces the pagination area, as documented, and also receives `aggregationResult`, `rowCount`, `paginationModel`, `onPaginationModelChange` and `apiRef`. *(Report D2)*
+
+### Added
+
+- **`onRowDoubleClick`** on `DataGridProps`. *(Report D6)*
+- **`GridRenderCellParams.formattedValue`** — the `valueFormatter` output, now passed to `renderCell`.
+- **`ColumnVisibilityPanel` and `ColumnVisibilityPanelProps` exported**, as the docs already claimed. *(Report D5)*
+- **`ExcelAdvancedExportOptions.groupedRows`** — grouped reports in `exportToExcelAdvanced`, with Excel row outlining, numeric subtotals that keep `numFmt`, and `groupHeaderFillColor` / `groupSubtotalFillColor`. *(Report D7)*
+- **Development-mode warnings** (skipped when `NODE_ENV === 'production'`):
+  - when the grid renders every row of a dataset larger than 200 rows because its container has no bounded height *(root cause of report D1)*;
+  - when `pagination` is passed with an active `rowGroupingModel` *(report D4)*.
+- **Real-browser test project** — Vitest browser mode with Playwright/Chromium (`npm run test:browser`; `npm test` stays on jsdom). `@vitest/browser-playwright` and `playwright` are now declared devDependencies.
+- **CI:** `.github/workflows/npm-publish.yml` runs unit and browser tests before publishing. It previously ran only lint and build, so a failing test could not block a release.
+
+### Documentation
+
+- `features/virtualization.md` — new "The grid needs a bounded height" section. It explains the flex `min-height: 0` trap and replaces the claim that grouping "works seamlessly" with virtualization. Report D1 turned out to be this: grouped rows *are* virtualized (a 25,000-row group renders ~20 DOM rows in a bounded container, verified in Chromium), but an unbounded container renders everything, and pagination had been hiding it. Also corrects the claims that columns are not virtualized and that the default overscan is 5.
+- `features/tree-data-grouping.md`, `features/sorting-pagination.md` — pagination is ignored under row grouping (report D4); expansion and aggregation semantics.
+- `features/export-guide.md` — CSV and basic Excel append **two** aggregation rows, labels then values (report D8); grouped advanced-Excel export.
+- `customization/slots-api.md` — `footer` props. `components/column-visibility.md` — the examples showed `<ColumnVisibilityPanel />` with no props, which cannot work; replaced with real usage.
+- `roadmap.md` — removed "upcoming" items that had already shipped (npm publishing, native PDF export, GitHub Pages deployment).
+
+---
+
 ## [2.0.4] — 2026-09-10
 
 ### Added

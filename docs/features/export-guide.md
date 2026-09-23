@@ -47,7 +47,7 @@ exportToCsv(rows, columns, {
   includeHeaders: true,
   delimiter: ',',
   selectedRows: [1, 2, 3],           // export only these IDs
-  aggregationResult: aggResult,       // adds SUM/AVG totals row
+  aggregationResult: aggResult,       // adds two rows: function labels (SUM/AVG), then values
   aggregationModel: { salary: 'sum' },
 });
 ```
@@ -60,7 +60,7 @@ exportToCsv(rows, columns, {
 | `includeHeaders` | `boolean` | `true` | Include column header row |
 | `delimiter` | `string` | `','` | Field delimiter |
 | `selectedRows` | `(string\|number)[]` | — | Export only these row IDs |
-| `aggregationResult` | `object \| null` | — | Aggregation values row |
+| `aggregationResult` | `object \| null` | — | Appends two rows after the data: a function-label row (`SUM`, `AVG`…) then a values row |
 | `aggregationModel` | `object \| null` | — | Labels for aggregation row |
 
 ---
@@ -89,7 +89,7 @@ exportToExcel(rows, columns, {
 | `sheetName` | `string` | `'Sheet1'` | Sheet tab name |
 | `includeHeaders` | `boolean` | `true` | Include column header row |
 | `selectedRows` | `(string\|number)[]` | — | Export only these row IDs |
-| `aggregationResult` | `object \| null` | — | Aggregation values row |
+| `aggregationResult` | `object \| null` | — | Appends two rows after the data: a function-label row (`SUM`, `AVG`…) then a values row |
 | `aggregationModel` | `object \| null` | — | Labels for aggregation row |
 
 ---
@@ -163,6 +163,9 @@ await exportToExcelAdvanced(rows, columns, {
 | `aggregationResult` | `object \| null` | — | Aggregation totals |
 | `aggregationModel` | `object \| null` | — | Aggregation function labels |
 | `selectedRows` | `(string\|number)[]` | — | IDs for `rows: 'selected'` sheets |
+| `groupedRows` | `GridGroupedExportRow[]` | — | Grouped structure from `apiRef.current.getGroupedExportRows()` (v2.1+). See [Grouped export](#grouped-export-to-advanced-excel) |
+| `groupHeaderFillColor` | `string` | `'#e8eaf6'` | Group-header row fill (grouped export) |
+| `groupSubtotalFillColor` | `string` | `'#f0f4ff'` | Group-subtotal row fill (grouped export) |
 
 ### `ExcelSheetDefinition`
 
@@ -186,6 +189,22 @@ await exportToExcelAdvanced(rows, columns, {
 | `embedImage` | `boolean` | If true, URL in cell is fetched and embedded as image |
 | `imageWidth` | `number` | Width of embedded image (px, default: 40) |
 | `imageHeight`| `number` | Height of embedded image (px, default: 40) |
+
+### Grouped export to advanced Excel
+
+Since v2.1, pass the grid's grouped structure to keep number formats, styling and summary sheets on grouped reports:
+
+```tsx
+await exportToExcelAdvanced(rows, columns, {
+  fileName: 'sales-by-region.xlsx',
+  groupedRows: apiRef.current.getGroupedExportRows() ?? undefined,
+  aggregationModel,
+  aggregationResult: apiRef.current.getAggregationResult(),
+  columnStyles: { amount: { numFmt: '$#,##0.00' } },
+});
+```
+
+Sheets with `rows: 'all'` are written in grouped order: a bold group-header row (label from the column's `groupingValueFormatter`, else `"Header: value"`), the leaf rows, a `Subtotal` row per group, and a final `Grand Total`. Rows use Excel's native outlining, so users can collapse groups in Excel. Subtotal and total values are written as numbers so `columnStyles[field].numFmt` applies. A `grand-total` entry replaces the sheet's `includeSummary` rows, so totals are not duplicated. `rows: 'selected'` sheets ignore `groupedRows` and export flat.
 
 ### Summary Sheet
 

@@ -17,9 +17,16 @@ Row grouping allows you to categorize rows based on common column values.
 ```
 
 ### Features
-- **Multi-Level Groups**: Nest data as deeply as needed.
+- **Multi-Level Groups**: Nest data as deeply as needed — one level per field in `rowGroupingModel`, in order.
 - **Aggregation Integration**: Summarize values automatically for each group level.
 - **Expansion Control**: Control which groups are expanded by default.
+
+### Behaviour to know about
+
+- **Pagination is ignored** while `rowGroupingModel` is active. All groups render in one scrollable, virtualized view, so the grid needs a bounded height ([Virtualization](./virtualization.md#the-grid-needs-a-bounded-height)). A development-mode warning is logged if you pass `pagination` too.
+- **Expansion state survives data updates** (row grouping and tree data). Groups and nodes the user expanded or collapsed stay that way when `rows` changes: inline edits, live refreshes, new array identities, and lazily loaded server-side children. The state resets to `defaultGroupingExpansionDepth` only when `rowGroupingModel` or `defaultGroupingExpansionDepth` changes value.
+- **Group aggregation uses the same functions as the footer.** `sum`, `avg`, `count`, `min`, `max` and `unique` ignore `null`/`undefined`, so a group of `[10, null, 20]` gives `min` 10, `avg` 15 and `count` 2. `availableAggregationFunctions` on a column is honoured for group rows too.
+- **`valueFormatter` applies to grouped rows** the same as flat rows (fixed in v2.1; earlier versions rendered raw values for every column once grouping was on).
 
 ---
 

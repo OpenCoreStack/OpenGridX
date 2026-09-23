@@ -21,7 +21,7 @@ The main component for displaying and interacting with data.
 | `overscanRowCount` | `number` | `3` | Minimum rows rendered outside the visible viewport. The grid adapts this upward automatically based on scroll velocity — this prop sets the floor. |
 | `loading` | `boolean` | `false` | Shows a loading skeleton overlay. |
 | `checkboxSelection` | `boolean` | `false` | Enable row selection via checkboxes. |
-| `pagination` | `boolean` | `false` | Enable the bottom pagination bar. |
+| `pagination` | `boolean` | `false` | Enable the bottom pagination bar. Ignored while `rowGroupingModel` is active (dev-mode warning). |
 | `paginationMode` | `'client' \| 'server' \| 'infinite'` | `'client'` | How to handle paging. |
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). |
 | `onPaginationModelChange` | `(model: GridPaginationModel) => void` | — | Fired when page or page size changes. |
@@ -30,11 +30,12 @@ The main component for displaying and interacting with data.
 | `height` | `number \| string` | `undefined` | Total height of the grid container. |
 | `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density. |
 | `initialState` | `GridInitialState` | `undefined` | Starting state for sorting, filters, etc. |
-| `slots` | `GridSlots` | `{}` | Custom component overrides. |
+| `slots` | `GridSlots` | `{}` | Custom component overrides: `toolbar`, `pagination`, `noRowsOverlay`, `loadingOverlay`, `footer`. See [Slots API](customization/slots-api.md). |
 | `slotProps` | `Record<string, unknown>` | `{}` | Props passed to custom slots. |
 | `filterModel` | `GridFilterModel` | `undefined` | Active filters. |
 | `sortModel` | `GridSortItem[]` | `undefined` | Active sorting. |
 | `onRowClick` | `(params: GridRowParams) => void` | — | Fired when a row is clicked. |
+| `onRowDoubleClick` | `(params: GridRowParams) => void` | — | Fired when a row is double-clicked (v2.1+). Also fires for group rows; not fired on the checkbox, expand icon, drag handle or an open editor. |
 | `onCellClick` | `(params: GridCellParams) => void` | — | Fired when a cell is clicked. |
 | `onStateChange` | `(state: GridState) => void` | — | Fired on any internal state update. |
 | `processRowUpdate` | `(new, old) => R \| Promise<R>` | — | Fired after a cell edit is committed. |
@@ -302,7 +303,7 @@ Defines the behavior and appearance of a single column.
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `renderCell` | `(params: GridRenderCellParams) => ReactNode` | Fully custom cell renderer. Receives `value`, `row`, `field`, `rowIndex`, `colIndex`. |
+| `renderCell` | `(params: GridRenderCellParams) => ReactNode` | Fully custom cell renderer. Receives `value`, `formattedValue` (v2.1+, the `valueFormatter` output), `row`, `field`, `colDef`, `rowIndex`, `colIndex`, `rowMeta`. |
 | `renderHeader` | `(params: GridRenderHeaderParams) => ReactNode` | Custom header cell renderer. Use for icons, sort indicators, or rich headers. |
 | `renderEditCell` | `(params: GridRenderCellParams) => ReactNode` | Custom editor rendered when the cell enters edit mode. Requires `editable: true`. |
 
@@ -351,8 +352,16 @@ Defines the behavior and appearance of a single column.
 | `exportToCsv(rows, cols, options?)` | `void` | Triggers download of CSV file. |
 | `exportToJson(rows, cols, options?)` | `void` | Triggers download of JSON file. |
 | `exportToExcel(rows, cols, options?)` | `void` | Basic `.xls` export (zero-dep). |
-| `exportToExcelAdvanced(rows, cols, options?)` | `Promise<void>` | Real `.xlsx` export (styled, multi-sheet, lazy-loaded). |
+| `exportToExcelAdvanced(rows, cols, options?)` | `Promise<void>` | Real `.xlsx` export (styled, multi-sheet, lazy-loaded). Accepts `groupedRows` for outlined grouped reports (v2.1+). |
 | `printGrid(rows, cols, title \| options)` | `void` | Opens browser print dialog. |
+
+---
+
+## 🧩 Standalone Components
+
+| Component | Description |
+| :--- | :--- |
+| `ColumnVisibilityPanel` | Controlled column show/hide (and optional reorder) list, for use outside the grid (v2.1+). Props: `ColumnVisibilityPanelProps`. See [Column Visibility](components/column-visibility.md). |
 
 ---
 

@@ -10,8 +10,9 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 
 - **Language:** TypeScript 5.9 strict mode. Zero `any`, zero `eslint-disable`.
 - **Framework:** React 19
-- **Tests:** Vitest 4 + `@testing-library/react` (`renderHook` for hooks, component tests for UI)
-- **Build:** Vite (library mode). `npm run build` produces `dist/opengridx.es.js` and `dist/opengridx.umd.js`.
+- **Tests:** Vitest 4 + `@testing-library/react`. Two projects: `unit` (jsdom, `npm test`) and `browser` (real Chromium via Playwright, `npm run test:browser`)
+- **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
+- **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
 - **Current version:** 2.0.4
 
@@ -58,6 +59,8 @@ Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGroupin
 | `lib/components/Cell/CellErrorBoundary.tsx` | Class error boundary wrapping `renderCell` output |
 | `lib/utils/filtering/` | Client-side filter operators |
 | `lib/utils/sorting/` | Client-side sort comparators |
+| `lib/utils/aggregation/` | The single set of aggregation functions (`sum`/`avg`/`count`/`min`/`max`/`unique`) used by footer, row grouping and exports — do not re-implement them elsewhere |
+| `lib/hooks/core/useGridDevWarnings.ts` | Dev-only `console.warn`s (unbounded container, pagination + grouping) |
 
 ---
 
@@ -101,8 +104,10 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Import pattern: `import { describe, it, expect, vi } from 'vitest'` + `import { renderHook, act } from '@testing-library/react'`
 - Hook tests use `renderHook(() => useMyHook(params))` — no DOM needed for pure hooks
 - Component tests use `render` from `@testing-library/react`
-- Run all tests: `npx vitest run`
-- Run a single file: `npx vitest run lib/hooks/core/useGridRowPipeline.test.ts`
+- Run unit tests: `npm test` (jsdom). Real-browser tests: `npm run test:browser`. Both: `npm run test:all`
+- Run a single file: `npx vitest run --project unit lib/hooks/core/useGridRowPipeline.test.ts`
+- Anything that depends on layout, `ResizeObserver`, or scrolling (virtualization, container height, drag) must be a `*.browser.test.tsx` — jsdom has no layout engine and reports a 0px viewport (the grid falls back to 600px), so such bugs are invisible there
+- Browser tests need Chromium: `npx playwright install chromium` once
 
 ---
 
@@ -127,17 +132,24 @@ Full doc: `docs/architecture/grid-row-meta.md`
 
 ---
 
+## Unreleased (next minor) — significant changes
+
+- Row-grouping aggregation now shares `lib/utils/aggregation` (nulls ignored, `unique`, `availableAggregationFunctions`). Expansion in **both** `useRowGrouping` and `useTreeData` is derived state (depth default plus user overrides keyed by config); no effect resets it on row changes. Never call callbacks such as `onRowExpansionChange` inside a `setState` updater
+- Hierarchy renderers injected by `useGridColumns` must render `params.formattedValue`, not `params.value`, or `valueFormatter` is lost; `Cell` passes `formattedValue` into `renderCell` params
+- `slots.footer` / `noRowsOverlay` / `loadingOverlay` are rendered (they were typed-only). `footer` replaces the pagination area and receives grid state
+- New: `onRowDoubleClick`, exported `ColumnVisibilityPanel`, `ExcelAdvancedExportOptions.groupedRows`
+- **Virtualization needs a bounded container height.** In an unbounded container (e.g. flex child without `min-height: 0`) the viewport grows to content and every row renders; pagination masks it and grouping disables pagination. `useGridDevWarnings` warns about both
+
 ## v2.0.0 — significant changes (breaking)
 
 ### Breaking: removed dead public API surface
 
-The following props/types existed in v1.x but had no runtime implementation. They have been **removed** from the public TypeScript types:
+The following props existed in v1.x but had no runtime implementation. They have been **removed** from the public TypeScript types. (`GridColDef.description` was *not* removed — it renders as the header `title` tooltip.)
 
 | Removed | Type | Reason |
 | :--- | :--- | :--- |
 | `onPinnedRowsChange` | `DataGridProps` | No pin/unpin-row UI exists; callback was never called |
 | `onRowGroupingModelChange` | `DataGridProps` | No drag-to-group UI; callback was never called |
-| `description` | `GridColDef` | Not read anywhere in the grid |
 
 ### New: `density` prop wired
 

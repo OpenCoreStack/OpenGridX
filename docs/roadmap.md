@@ -5,7 +5,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 ## ✅ Implemented Features
 
 ### Core
-*   **Virtualization**: High-performance row virtualization for handling large datasets. Column virtualization is planned (currently all columns are rendered).
+*   **Virtualization**: Row virtualization plus horizontal virtualization of unpinned columns. Requires a bounded grid height (see `docs/features/virtualization.md`).
 *   **Sorting**: Client-side and server-side multi-column sorting.
 *   **Filtering**: Client-side filtering with support for various operators.
 *   **Pagination**: Client-side and server-side pagination with customizable page sizes.
@@ -74,18 +74,23 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 
 ### Advanced Data Features
 *   **Interactive Pivot Builder**: Drag-and-drop UI for users to dynamically create pivot tables.
-*   **Native PDF Reporting**: Automated PDF generation with customizable layouts.
 *   **Advanced Charts Integration**: Inline sparklines and trend visualization.
-
-### DX & Publishing
-*   **npm publish**: Finalize `package.json` metadata, `README.md`, and publish to npm registry.
 
 ### Demo Site
 *   **Full source viewer coverage**: Migrate all 32 examples to `DocsLayout` using Vite `?raw` auto-loading (eliminates string-literal source maintenance). See `docs/superpowers/plans/2026-07-29-demo-app-refactor.md`.
 *   **Syntax highlighting**: Prism.js token-based highlighting in the source viewer.
-*   **GitHub Pages deployment**: CI/CD via GitHub Actions (`base: '/OpenGridX/'` already configured in `vite.config.js`).
 
 ## ✅ Implemented Features (Recent)
+
+### Consumer defect fixes *(v2.1, 2026-09-23)*
+- Row-grouping subtotals now use the shared aggregation functions (nulls ignored, `unique` supported, `availableAggregationFunctions` honoured); `min`/`max` no longer overflow the call stack on very large datasets.
+- Group and tree-data expansion state survives row updates, including server-side lazily loaded children.
+- `valueFormatter` applies under row grouping; `formattedValue` is passed to `renderCell`.
+- `slots.footer`, `slots.noRowsOverlay` and `slots.loadingOverlay` are rendered (they were typed but ignored).
+- New `onRowDoubleClick`; `ColumnVisibilityPanel` exported; `exportToExcelAdvanced` accepts `groupedRows`.
+- Dev-mode warnings for an unbounded grid container and for `pagination` with row grouping.
+- Real-browser test project (Vitest browser mode + Playwright/Chromium), `npm run test:browser`; the npm publish workflow now runs unit and browser tests before publishing.
+- Already shipped, previously listed as upcoming: npm publishing (since 0.1.0), native PDF export (v1.2.1), GitHub Pages deployment.
 
 ### Library Hardening *(completed 2026-09-02)*
 - **`GridRowMeta`**: Hierarchy metadata (`hasChildren`, `treeDepth`, `groupingField`, `groupingValue`, `descendantCount`, `isExpanded`, `isGroupRow`) moved from `GridRowModel` into a separate `Map<GridRowId, GridRowMeta>`. Exposed as `params.rowMeta` in `renderCell`. Runtime shim (underscore-prefixed fields on the row object) maintains backward compatibility; still present as of v2.0.4, deprecated for removal in a future major version — see `docs/architecture/grid-row-meta.md`.

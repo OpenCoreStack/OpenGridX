@@ -18,7 +18,7 @@ The grid calculates which rows are visible based on:
 - Current scroll position
 - Viewport height
 - Row height (fixed or variable)
-- Overscan buffer (default: 5 rows)
+- Overscan buffer (adaptive, minimum `overscanRowCount`, default 3 rows)
 
 ```tsx
 // Example: 1000 rows, but only ~15 rendered at a time
@@ -29,7 +29,7 @@ The grid calculates which rows are visible based on:
 />
 ```
 
-**Performance characteristics:**
+**Performance characteristics** (when the grid has a bounded height — see below):
 - ✅ Renders ~15-25 rows regardless of total dataset size
 - ✅ Constant memory usage
 - ✅ Smooth 60fps scrolling
@@ -37,7 +37,35 @@ The grid calculates which rows are visible based on:
 
 ### Column Virtualization
 
-Currently, the DataGrid renders all columns. Column virtualization (rendering only visible columns) is planned for future releases.
+Unpinned columns are virtualized horizontally: only the columns in view plus 6 on each side are rendered, with spacer cells standing in for the rest. Pinned columns are always rendered.
+
+### The grid needs a bounded height
+
+Virtualization renders as many rows as fit in the grid's viewport. If the grid's container has no bounded height, the viewport grows to fit **every** row, so every row is rendered. Nothing errors; the grid just stops virtualizing.
+
+The most common cause is a flex child that is missing `min-height: 0`. A flex item defaults to `min-height: auto`, which lets it grow to its content:
+
+```tsx
+// ❌ Grows to fit all rows — virtualization is effectively off
+<div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+  <div style={{ flex: 1 }}>
+    <DataGrid rows={rows} columns={columns} height="100%" />
+  </div>
+</div>
+
+// ✅ Bounded — only visible rows render
+<div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+  <div style={{ flex: 1, minHeight: 0 }}>
+    <DataGrid rows={rows} columns={columns} height="100%" />
+  </div>
+</div>
+```
+
+`height="100%"` only helps if every ancestor up to a fixed-height element also has a definite height.
+
+In development builds the grid logs a `console.warn` when it detects that it is rendering every row of a dataset larger than 200 rows because its viewport is unbounded.
+
+Pagination can hide this problem, because a paginated grid only has one page of rows to render. Row grouping switches pagination off (see below), so an unbounded container that looked fine with pagination can freeze the tab once grouping is enabled.
 
 ## Configuration
 
@@ -157,7 +185,7 @@ When using detail panels, row heights become variable. The grid automatically:
 
 ## Virtualization with Grouping/Tree Data
 
-Row grouping and tree data work seamlessly with virtualization:
+Grouped and tree rows go through the same virtualizer as flat rows. Expanding a group of any size adds its rows to the virtual row list, not to the DOM: in a bounded container, expanding a 25,000-row group renders ~20 DOM rows (verified in Chromium by `DataGrid.virtualization.browser.test.tsx`).
 
 ```tsx
 // Tree data with virtualization
@@ -170,7 +198,7 @@ Row grouping and tree data work seamlessly with virtualization:
 />
 ```
 
-**Note:** When groups are collapsed, only visible rows are rendered. Expanding a group dynamically adds rows to the render list.
+**Note:** `pagination` is ignored while `rowGroupingModel` is active, so a grouped grid relies entirely on virtualization to bound what it renders. Make sure its container has a bounded height. A development-mode warning is logged if `pagination` is passed together with `rowGroupingModel`.
 
 ## Debugging Virtualization
 
@@ -192,13 +220,13 @@ You should see console logs only for visible rows + overscan buffer.
 
 ## Known Limitations
 
-1. **Column virtualization** - Not yet implemented (all columns are rendered)
+1. **Unbounded containers** - Virtualization needs a bounded viewport height (see above)
 2. **Dynamic row heights** - Requires full dataset scan for accurate scroll calculations
 3. **Horizontal scrolling** - May show brief flicker with very wide grids
 
 ## Future Improvements
 
-- [ ] Column virtualization for grids with 50+ columns
+- [x] Column virtualization (unpinned columns, 6-column overscan)
 - [x] Adaptive overscan based on scroll velocity (`overscanRowCount` prop, v2.0.4)
 - [ ] Virtual scrollbar for extremely large datasets (millions of rows)
 - [ ] Intersection Observer API for better scroll detection
@@ -208,7 +236,7 @@ You should see console logs only for visible rows + overscan buffer.
 | Feature | OpenGridX | MUI X DataGrid |
 |---------|--------------|----------------|
 | Row virtualization | ✅ Yes | ✅ Yes |
-| Column virtualization | ❌ Planned | ✅ Yes (Pro) |
+| Column virtualization | ✅ Yes (unpinned columns) | ✅ Yes (Pro) |
 | Variable row heights | ✅ Yes | ✅ Yes |
 | Overscan buffer | 3–30 rows (adaptive, velocity-based) | 3-8 rows (adaptive) |
 | Max recommended rows | 100,000+ | 100,000+ |

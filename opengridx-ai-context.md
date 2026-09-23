@@ -237,6 +237,10 @@ const hasChildren = params.rowMeta?.hasChildren;
 - **`pageSizeOptions` must include the active `pageSize`** — if `pageSize` is 10 but
   `pageSizeOptions` is `[25, 50]`, the selector will show a mismatch. Always include the initial
   page size in the options array.
+- **Give the grid a bounded height** — in a flex layout wrap it in `<div style={{ flex: 1, minHeight: 0 }}>`.
+  Without `min-height: 0` the container grows to fit every row and virtualization is silently off.
+  Pagination hides this, and row grouping disables pagination, so it tends to appear only after grouping
+  is turned on. Dev builds log a warning.
 - **`apiRef` methods are only available after mount** — call `apiRef.current.*` inside event
   handlers or `useEffect`, never during render.
 

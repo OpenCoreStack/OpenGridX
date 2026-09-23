@@ -113,29 +113,41 @@ function CustomLoader() {
 ```
 
 ### 5. `footer`
-Replace the entire footer section (including pagination).
+Replace the entire footer section below the grid, including the default pagination. Rendered whenever the slot is set, including while row grouping is active.
 
 **Props received:**
 ```typescript
 {
-  // Any props from slotProps.footer
+  apiRef: React.MutableRefObject<GridApi>;
+  aggregationModel: GridAggregationModel;
+  aggregationResult: GridAggregationResult | null;  // null when no aggregationModel
+  rowCount: number;              // filtered rows (leaf rows when grouping)
+  pagination: boolean;           // effective: false while row grouping is active
+  paginationModel: GridPaginationModel;
+  pageSizeOptions: number[];
+  onPaginationModelChange: (model: GridPaginationModel) => void;
+  // ...plus any props from slotProps.footer
 }
 ```
 
-**Example:**
+**Example — a persistent grand-total bar that stays in sync with filtering:**
 ```tsx
-function CustomFooter() {
+function TotalsFooter({ aggregationResult, rowCount }: Record<string, unknown>) {
+  const totals = aggregationResult as Record<string, number> | null;
   return (
     <div style={{ padding: '12px', borderTop: '1px solid #e0e0e0' }}>
-      <span>Custom footer content</span>
+      {String(rowCount)} rows · Total: {totals?.amount ?? '—'}
     </div>
   );
 }
 
 <DataGrid
-  slots={{ footer: CustomFooter }}
+  aggregationModel={{ amount: 'sum' }}
+  slots={{ footer: TotalsFooter }}
 />
 ```
+
+> `noRowsOverlay`, `loadingOverlay` and `footer` were declared in the types before v2.1 but never rendered. They are wired from v2.1.
 
 ## Complete Example
 

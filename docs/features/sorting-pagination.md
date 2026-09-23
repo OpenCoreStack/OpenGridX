@@ -62,6 +62,8 @@ Disable sorting for specific columns in `GridColDef`:
 
 OpenGridX supports standard page-based pagination and infinite scrolling.
 
+> **Pagination is ignored while row grouping is active.** When `rowGroupingModel` is non-empty the grid renders all groups in one scrollable, virtualized view and does not show the pager, even if `pagination` is set. A development-mode `console.warn` flags this combination. Give a grouped grid a bounded height so virtualization limits what renders; see [Virtualization](./virtualization.md#the-grid-needs-a-bounded-height).
+
 ### Usage
 ```tsx
 <DataGrid

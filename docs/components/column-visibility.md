@@ -12,26 +12,50 @@ The `ColumnVisibilityPanel` provides an interactive list for users to toggle the
 
 ## 🛠️ Usage
 
-### Toolbar Integration
-The most common way to use the visibility panel is within a dropdown menu in the grid's toolbar.
+The grid's toolbar and header menu already include this panel. Import it yourself (exported since v2.1) only when you want the list somewhere else, such as a sidebar or modal. It is a controlled component: you own the visibility model and pass it in.
 
 ```tsx
-import { ColumnVisibilityPanel } from '@opencorestack/opengridx';
+import { useMemo, useState } from 'react';
+import { DataGrid, ColumnVisibilityPanel } from '@opencorestack/opengridx';
+import type { GridColDef } from '@opencorestack/opengridx';
 
-// In your Toolbar component
-<Dropdown content={<ColumnVisibilityPanel />}>
-  <button>Columns</button>
-</Dropdown>
+function Report({ rows, columns }: { rows: Row[]; columns: GridColDef<Row>[] }) {
+  const [visibility, setVisibility] = useState<Record<string, boolean>>({});
+  const visibleColumns = useMemo(
+    () => new Set(columns.filter(c => visibility[c.field] !== false).map(c => c.field)),
+    [columns, visibility],
+  );
+  const setAll = (visible: boolean) =>
+    setVisibility(Object.fromEntries(columns.filter(c => c.hideable !== false).map(c => [c.field, visible])));
+
+  return (
+    <div style={{ display: 'flex' }}>
+      <aside className="my-column-sidebar">
+        <ColumnVisibilityPanel
+          columns={columns}
+          visibleColumns={visibleColumns}
+          onVisibilityChange={(field, isVisible) => setVisibility(v => ({ ...v, [field]: isVisible }))}
+          onShowAll={() => setAll(true)}
+          onHideAll={() => setAll(false)}
+        />
+      </aside>
+      <DataGrid rows={rows} columns={columns} columnVisibilityModel={visibility} onColumnVisibilityModelChange={setVisibility} />
+    </div>
+  );
+}
 ```
 
-### Direct Integration
-You can also render it persistently beside the grid or within a custom modal.
+### Props (`ColumnVisibilityPanelProps`)
 
-```tsx
-<div className="my-column-sidebar">
-  <ColumnVisibilityPanel />
-</div>
-```
+| Prop | Type | Description |
+| :--- | :--- | :--- |
+| `columns` | `GridColDef[]` | Columns to list |
+| `visibleColumns` | `Set<string>` | Fields currently visible |
+| `onVisibilityChange` | `(field, isVisible) => void` | Toggle one column |
+| `onShowAll` / `onHideAll` | `() => void` | Bulk actions (only `hideable` columns are affected) |
+| `onColumnReorder` | `(fromField, toField) => void` | Optional — enables drag-to-reorder in the list |
+| `onColumnOrderReset` | `() => void` | Optional — shows a reset-order action |
+| `showNonHideableColumns` | `boolean` | Show `hideable: false` columns as disabled rows. Default `false` |
 
 ---
 
@@ -47,7 +71,7 @@ You can also render it persistently beside the grid or within a custom modal.
 
 ## 🎨 Controlling Visibility Programmatically
 
-The column visibility panel is an internal component; it cannot be replaced via the slots API. Use the controlled props to drive visibility from outside:
+The built-in panel cannot be replaced through the slots API. To drive visibility from outside, use the controlled props, optionally together with a standalone `ColumnVisibilityPanel` as shown above:
 
 ```tsx
 <DataGrid
