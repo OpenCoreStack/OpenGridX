@@ -70,8 +70,8 @@ interface ToolbarButtonRenderProps {
 
 ```ts
 interface ToolbarQuickFilterRenderProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: string;                     // quickFilterValues joined with spaces
+  onChange: (value: string) => void; // split on whitespace into quickFilterValues terms
 }
 ```
 
