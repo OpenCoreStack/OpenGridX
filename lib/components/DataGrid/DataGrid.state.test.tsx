@@ -157,6 +157,48 @@ describe('committing an edit', () => {
     });
 });
 
+describe('pivot mode', () => {
+    const SALES: GridRowModel[] = [
+        { id: 1, dept: 'Eng', region: 'US', salary: 10 },
+        { id: 2, dept: 'HR', region: 'EU', salary: 20 },
+        // Three source rows, two pivot rows: the header must not compare against the source row count.
+        { id: 3, dept: 'Eng', region: 'EU', salary: 5 },
+    ];
+    const SALES_COLS: GridColDef[] = [{ field: 'dept' }, { field: 'region' }, { field: 'salary', type: 'number' }];
+    const PIVOT = { rowFields: ['dept'], columnFields: ['region'], valueFields: [{ field: 'salary', aggFn: 'sum' as const }] };
+    const headerFields = (container: HTMLElement) =>
+        Array.from(container.querySelectorAll('[role="columnheader"][data-field]')).map(h => h.getAttribute('data-field'));
+
+    it('select-all selects the pivot rows, not the grand total, and the header reflects them', () => {
+        const onSel = vi.fn();
+        function Parent() {
+            const [sel, setSel] = useState<GridRowModel['id'][]>([]);
+            return <DataGrid rows={SALES} columns={SALES_COLS} pivotMode pivotModel={PIVOT} checkboxSelection
+                rowSelectionModel={sel} onRowSelectionModelChange={(m) => { onSel(m); setSel(m); }} />;
+        }
+        const { container } = render(<Parent />);
+        const header = () => container.querySelector('input[aria-label$="all rows"]') as HTMLInputElement;
+        fireEvent.click(header());
+        const selected = onSel.mock.lastCall![0] as GridRowModel['id'][];
+        expect(selected.length).toBe(2);
+        expect(selected.map(String).some(id => id.toLowerCase().includes('total'))).toBe(false);
+        expect(header().checked).toBe(true);
+    });
+
+    it('the toolbar reorders the generated columns even with a controlled columnOrder', () => {
+        const Toolbar = vi.fn((_props: Record<string, unknown>) => null);
+        const { container } = render(
+            <DataGrid rows={SALES} columns={SALES_COLS} pivotMode pivotModel={PIVOT}
+                columnOrder={['salary', 'region', 'dept']} slots={{ toolbar: Toolbar }} />
+        );
+        const before = headerFields(container);
+        expect(before.length).toBeGreaterThan(2);
+        const reorder = Toolbar.mock.lastCall![0].onColumnReorder as (from: string, to: string) => void;
+        act(() => { reorder(before[before.length - 1]!, before[0]!); });
+        expect(headerFields(container)[0]).toBe(before[before.length - 1]);
+    });
+});
+
 describe('duplicate row ids', () => {
     it('renders each id once, keeps the first row and warns', () => {
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});

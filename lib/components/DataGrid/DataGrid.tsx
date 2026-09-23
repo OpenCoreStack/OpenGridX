@@ -867,7 +867,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 const newOrder = [...currentOrder];
                 newOrder.splice(fromIdx, 1);
                 newOrder.splice(toIdx, 0, fromField);
-                if (!columnOrder) setInternalColumnOrder(newOrder);
+                // A controlled columnOrder names source columns; generated pivot columns keep their own order.
+                if (isPivotActive || !columnOrder) setInternalColumnOrder(newOrder);
                 const col = effectiveColumns.find(c => c.field === fromField);
                 if (col) onColumnOrderChange?.({ oldIndex: fromIdx, targetIndex: toIdx, column: col as unknown as GridColDef });
             };
@@ -894,7 +895,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     }, [
         slots?.toolbar, disableColumnReorder, effectiveColumnOrder, orderedColumns, effectiveColumns,
         columnOrder, onColumnOrderChange, setInternalColumnOrder, gridData.apiRef,
-        columns, aggregationModel, handleAggregationModelChange, pivotMode,
+        columns, aggregationModel, handleAggregationModelChange, pivotMode, isPivotActive,
         propPivotModel, onPivotModelChange, currentPivotModel, handlePivotModelChange,
         filterModel, handleFilterModelChange, columnVisibilityModel,
         handleColumnVisibilityModelChange, columnsPanelOpen, slotProps?.toolbar, columnGroupingModel,
@@ -934,7 +935,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     effectiveColumns={effectiveColumns}
                     columnVisibilityModel={columnVisibilityModel}
                     effectiveColumnOrder={effectiveColumnOrder}
-                    columnOrder={columnOrder}
+                    columnOrder={isPivotActive ? undefined : columnOrder}
                     disableColumnReorder={disableColumnReorder}
                     onClose={() => setColumnsPanelOpen(false)}
                     onColumnVisibilityChange={handleColumnVisibilityModelChange}
