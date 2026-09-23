@@ -1,8 +1,10 @@
 import React, { useId } from 'react';
 import { Checkbox } from '../ui/Checkbox';
 import { ColumnResizeHandle } from '../ColumnResizeHandle/ColumnResizeHandle';
+import { clampResizeWidth } from '../ColumnResizeHandle/clampResizeWidth';
 import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning, GridAggregationModel, GridColumnGroupingModel } from '../../types';
-import { isColumnPinned, calculatePinnedPositions } from '../../utils/pinning';
+import { isColumnPinned, calculatePinnedPositions, getPinnedEdgeFields } from '../../utils/pinning';
+import { getRenderedColumnWidth } from '../../utils/columnWidth';
 import { buildColumnGroupRow, getColumnGroupDepth, getColumnGroupPaths } from '../../utils/columnGroups';
 import { ColumnMenu } from './ColumnMenu';
 
@@ -117,6 +119,17 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
     // Alt+ArrowDown or Ctrl/Cmd+Enter on a focused header cell opens its column menu.
     // DOM focus is moved onto the focused header cell by useGridKeyboardNavigation.
     const handleHeaderKeyDown = (colDef: GridColDef<R>) => (event: React.KeyboardEvent<HTMLDivElement>) => {
+        // Alt+ArrowLeft / Alt+ArrowRight resize the column (Shift for bigger steps).
+        const resizes = event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight');
+        if (resizes && event.target === event.currentTarget) {
+            if (colDef.resizable === false || !onColumnResize) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const width = getRenderedColumnWidth(colDef, columnWidths);
+            const step = (event.shiftKey ? 50 : 10) * (event.key === 'ArrowRight' ? 1 : -1);
+            onColumnResize(colDef.field, clampResizeWidth(width + step, width, colDef.minWidth, colDef.maxWidth));
+            return;
+        }
         const opensMenu = (event.altKey && event.key === 'ArrowDown') || ((event.ctrlKey || event.metaKey) && event.key === 'Enter');
         if (!opensMenu || colDef.disableColumnMenu || event.target !== event.currentTarget) return;
         event.preventDefault();
@@ -194,6 +207,8 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         );
     }, [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]);
 
+    const pinnedEdges = React.useMemo(() => getPinnedEdgeFields(columns, pinnedColumns), [columns, pinnedColumns]);
+
     const groupDepth = getColumnGroupDepth(columnGroupingModel);
     const groupPaths = React.useMemo(() => getColumnGroupPaths(columnGroupingModel), [columnGroupingModel]);
 
@@ -203,7 +218,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         if (groupDepth === 0) return [];
         return (allColumns ?? columns).map(c => ({
             field: c.field,
-            width: c.isSpacer ? Number(c.width) || 0 : (columnWidths[c.field] ?? (typeof c.width === 'number' ? c.width : 100)),
+            width: getRenderedColumnWidth(c, columnWidths),
             flex: c.isSpacer ? 0 : c.flex,
             pinned: c.isSpacer ? null : isColumnPinned(c.field, pinnedColumns),
             isSpacer: c.isSpacer,
@@ -308,7 +323,6 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             maxWidth: 48,
                             position: 'sticky',
                             left: 0,
-                            zIndex: 4
                         }}
                     />
                 )}
@@ -328,7 +342,6 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             maxWidth: 48,
                             position: pinExpandColumn ? 'sticky' : undefined,
                             left: pinExpandColumn ? (rowReordering ? 48 : 0) : undefined,
-                            zIndex: pinExpandColumn ? 5 : undefined
                         }}
                     >
                         { }
@@ -401,6 +414,8 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         isSorted && 'ogx__header-cell--sorted',
                         isPinned && `ogx__header-cell--pinned`,
                         isPinned && `ogx__header-cell--pinned-${pinnedPosition}`,
+                        pinnedPosition === 'left' && colDef.field === pinnedEdges.lastLeft && 'ogx__header-cell--pinned-left-last',
+                        pinnedPosition === 'right' && colDef.field === pinnedEdges.firstRight && 'ogx__header-cell--pinned-right-first',
                         isDragging && 'ogx__header-cell--dragging',
                         isDragOver && 'ogx__header-cell--drag-over',
                         isHeaderFocused(colDef.field) && 'ogx__header-cell--focused',
@@ -446,9 +461,10 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         }
                     };
 
-                    const handleDragStart = onDragStart ? onDragStart(colDef.field) : undefined;
-                    const handleDragOver = onDragOver ? onDragOver(colDef.field) : undefined;
-                    const handleDrop = onDrop ? onDrop(colDef.field) : undefined;
+                    // Pinned columns keep their place: they are neither dragged nor drop targets.
+                    const handleDragStart = onDragStart && !isPinned ? onDragStart(colDef.field) : undefined;
+                    const handleDragOver = onDragOver && !isPinned ? onDragOver(colDef.field) : undefined;
+                    const handleDrop = onDrop && !isPinned ? onDrop(colDef.field) : undefined;
 
                     return (
                         <div
@@ -458,7 +474,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             title={colDef.description}
                             onClick={handleHeaderClick}
                             role="columnheader"
-                            draggable={!!onDragStart}
+                            draggable={!!handleDragStart}
                             onDragStart={handleDragStart}
                             onDragOver={handleDragOver}
                             onDragEnd={onDragEnd}
@@ -505,10 +521,11 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             {isResizable && onColumnResize && (
                                 <ColumnResizeHandle
                                     field={colDef.field}
-                                    currentWidth={effectiveWidth}
+                                    currentWidth={getRenderedColumnWidth(colDef, columnWidths)}
                                     onResize={onColumnResize}
                                     minWidth={colDef.minWidth}
                                     maxWidth={colDef.maxWidth}
+                                    edge={pinnedPosition === 'right' ? 'start' : 'end'}
                                 />
                             )}
                         </div>

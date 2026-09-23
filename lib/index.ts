@@ -38,7 +38,7 @@ export { usePivot } from './hooks/features/usePivot';
 export type { UsePivotReturn } from './hooks/features/usePivot';
 
 export { DataGridThemeProvider } from './theme';
-export type { DataGridThemeProviderProps, GridTheme, GridThemeColors, GridThemeTypography, GridThemeSpacing, GridThemeBorders, GridThemeShadows, GridThemeGrid, GridThemeTransitions } from './theme';
+export type { DataGridThemeProviderProps, GridTheme, GridThemeColors, GridThemeTypography, GridThemeSpacing, GridThemeBorders, GridThemeShadows, GridThemeGrid, GridThemeTransitions, GridThemeToolbar, GridThemeOverlays, GridThemeScrollbar, GridThemeSkeleton, GridThemeGrayScale } from './theme';
 export { darkTheme, roseTheme, emeraldTheme, amberTheme, compactTheme } from './theme';
 
 export { useGridStateStorage } from './state';

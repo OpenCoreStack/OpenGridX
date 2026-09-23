@@ -213,15 +213,22 @@ export interface UseDataGridParams<R extends GridRowModel = GridRowModel> {
   headerHeight?: number;
   columnVisibilityModel?: GridColumnVisibilityModel;
   initialState?: import('../../state/types').GridInitialState;
+  /**
+   * When true (no dataSource owns the rows), the store follows the `rows` param: a new rows
+   * array replaces the stored rows in the same render, so rows and the columns rendered
+   * against them always change together.
+   */
+  syncRows?: boolean;
 }
 
 /**
- * The row store, plus dimensions and dataSource status. `rows` only seeds the store: the
- * caller syncs later changes of the rows prop through setRows, and skips that when a
- * dataSource owns the rows.
+ * The row store, plus dimensions and dataSource status. With `syncRows`, a new `rows` array
+ * replaces the stored rows during render (never one commit later, which let new columns run
+ * against the previous rows). Without it, `rows` only seeds the store and a dataSource fills
+ * it through setRows.
  */
 export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDataGridParams<R>) {
-  const { rows, columns, rowHeight = 52, headerHeight = 56, columnVisibilityModel, initialState: propInitialState } = params;
+  const { rows, columns, rowHeight = 52, headerHeight = 56, columnVisibilityModel, initialState: propInitialState, syncRows = false } = params;
   const getRowId = (params.getRowId ?? defaultGetRowId) as GetRowId;
 
   // Latest getRowId for dispatches from effects and event handlers. An inline getRowId
@@ -247,6 +254,15 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
       headerHeight
     }
   });
+
+  // The rows (and sync mode) the store was last filled from. Updating the store while
+  // rendering makes React re-render before committing, so no commit pairs the columns of
+  // this render with the rows of the previous one.
+  const [syncedFrom, setSyncedFrom] = useState({ rows, syncRows });
+  if (syncedFrom.rows !== rows || syncedFrom.syncRows !== syncRows) {
+    setSyncedFrom({ rows, syncRows });
+    if (syncRows) dispatch({ type: 'SET_ROWS', payload: rows, getRowId });
+  }
 
   const stateRef = useRef(state);
   useLayoutEffect(() => { stateRef.current = state; });

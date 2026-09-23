@@ -1,7 +1,7 @@
 import React, { useState, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { ColumnVisibilityPanel } from '../ColumnVisibilityPanel/ColumnVisibilityPanel';
-import type { GridColDef, GridRowModel, GridColumnOrderChangeParams, GridColumnGroupingModel } from '../../types';
+import type { GridColDef, GridRowModel, GridColumnGroupingModel } from '../../types';
 import { canReorderWithinColumnGroups } from '../../utils/columnGroups';
 import { getViewportWidth } from '../../utils/viewport';
 
@@ -9,65 +9,59 @@ export interface GridStandaloneColumnPanelProps<R extends GridRowModel> {
     isOpen: boolean;
     containerRef: React.RefObject<HTMLDivElement | null>;
     panelRef?: React.RefObject<HTMLDivElement | null>;
-    effectiveColumns: GridColDef<R>[];
+    /** Every column, in the grid's current column order. */
+    columns: GridColDef<R>[];
     columnVisibilityModel: Record<string, boolean>;
-    effectiveColumnOrder: string[];
-    columnOrder?: string[];
     disableColumnReorder: boolean;
     onClose: () => void;
     onColumnVisibilityChange: (model: Record<string, boolean>) => void;
-    onColumnOrderChange?: (params: GridColumnOrderChangeParams) => void;
-    setInternalColumnOrder: React.Dispatch<React.SetStateAction<string[]>>;
+    /** Moves `fromField` to the position of `toField` in the column order. */
+    onColumnMove: (fromField: string, toField: string) => void;
+    /** Restores the columns' definition order (the panel's Reset). */
+    onColumnOrderReset: () => void;
     /** When set, a column can only be moved within its own column group. */
     columnGroupingModel?: GridColumnGroupingModel;
+}
+
+interface PanelPlacement {
+    top: number;
+    right: number;
+    target: Element;
 }
 
 export function GridStandaloneColumnPanel<R extends GridRowModel>({
     isOpen,
     containerRef,
     panelRef,
-    effectiveColumns,
+    columns,
     columnVisibilityModel,
-    effectiveColumnOrder,
-    columnOrder,
     disableColumnReorder,
     onClose,
     onColumnVisibilityChange,
-    onColumnOrderChange,
-    setInternalColumnOrder,
+    onColumnMove,
+    onColumnOrderReset,
     columnGroupingModel,
 }: GridStandaloneColumnPanelProps<R>) {
-    const [panelTop, setPanelTop] = useState<number>(16);
-    const [panelRight, setPanelRight] = useState<number>(16);
-    const [portalTarget, setPortalTarget] = useState<Element>(() => document.body);
+    // Resolved from the DOM after mount, never during render, so the grid renders on the server.
+    const [placement, setPlacement] = useState<PanelPlacement | null>(null);
 
     useLayoutEffect(() => {
         if (!isOpen || !containerRef.current) return;
         const rect = containerRef.current.getBoundingClientRect();
-        setPanelTop(rect.top + 8);
-        setPanelRight(getViewportWidth() - rect.right + 8);
-        setPortalTarget(containerRef.current.closest('.ogx-theme-provider') || document.body);
+        setPlacement({
+            top: rect.top + 8,
+            right: getViewportWidth() - rect.right + 8,
+            target: containerRef.current.closest('.ogx-theme-provider') || document.body,
+        });
     }, [isOpen, containerRef]);
 
-    if (!isOpen) return null;
+    if (!isOpen || !placement) return null;
 
     const handleReorder = disableColumnReorder
         ? undefined
         : (fromField: string, toField: string) => {
             if (!canReorderWithinColumnGroups(columnGroupingModel, fromField, toField)) return;
-            const currentOrder = [...effectiveColumnOrder];
-            const fromIdx = currentOrder.indexOf(fromField);
-            const toIdx = currentOrder.indexOf(toField);
-            if (fromIdx === -1 || toIdx === -1) return;
-            const newOrder = [...currentOrder];
-            newOrder.splice(fromIdx, 1);
-            newOrder.splice(toIdx, 0, fromField);
-            if (!columnOrder) setInternalColumnOrder(newOrder);
-            onColumnOrderChange?.({
-                oldIndex: fromIdx,
-                targetIndex: toIdx,
-                column: effectiveColumns.find(c => c.field === fromField) as unknown as GridColDef,
-            });
+            onColumnMove(fromField, toField);
         };
 
     return ReactDOM.createPortal(
@@ -75,8 +69,8 @@ export function GridStandaloneColumnPanel<R extends GridRowModel>({
             ref={panelRef}
             style={{
                 position: 'fixed',
-                top: panelTop,
-                right: panelRight,
+                top: placement.top,
+                right: placement.right,
                 zIndex: 9999,
                 display: 'inline-block',
             }}
@@ -106,9 +100,9 @@ export function GridStandaloneColumnPanel<R extends GridRowModel>({
                 aria-label="Close"
             >×</button>
             <ColumnVisibilityPanel<R>
-                columns={effectiveColumns}
+                columns={columns}
                 visibleColumns={new Set(
-                    effectiveColumns
+                    columns
                         .filter(col => columnVisibilityModel[col.field] !== false)
                         .map(col => col.field)
                 )}
@@ -117,17 +111,18 @@ export function GridStandaloneColumnPanel<R extends GridRowModel>({
                 }}
                 onShowAll={() => {
                     const next = { ...columnVisibilityModel };
-                    effectiveColumns.forEach(col => { if (col.hideable !== false) next[col.field] = true; });
+                    columns.forEach(col => { if (col.hideable !== false) next[col.field] = true; });
                     onColumnVisibilityChange(next);
                 }}
                 onHideAll={() => {
                     const next = { ...columnVisibilityModel };
-                    effectiveColumns.forEach(col => { if (col.hideable !== false) next[col.field] = false; });
+                    columns.forEach(col => { if (col.hideable !== false) next[col.field] = false; });
                     onColumnVisibilityChange(next);
                 }}
                 onColumnReorder={handleReorder}
+                onColumnOrderReset={disableColumnReorder ? undefined : onColumnOrderReset}
             />
         </div>,
-        portalTarget
+        placement.target
     );
 }

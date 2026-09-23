@@ -22,6 +22,8 @@ To enable detail panels, provided two main props: `getDetailPanelContent` and `g
 />
 ```
 
+`getDetailPanelContent` and `getDetailPanelHeight` are called only for **expanded** rows, while they render (v3.0+). A collapsed row costs nothing, and the callbacks may read fields that only data rows have. Synthetic hierarchy rows (row-grouping group rows and generated tree-data parents) have no detail panel: they keep an empty cell in the expand column, are never passed to the callbacks, and their ids in `detailPanelExpandedRowIds` are ignored. Tree-data parents that are real rows do get a panel.
+
 ---
 
 ## 🕹️ Controlled Expansion
@@ -43,7 +45,8 @@ const [expandedIds, setExpandedIds] = useState(new Set());
 
 - **Expansion Column**: A `+` icon is automatically added to the start of the row.
 - **Pinning**: The expansion column can be pinned using `pinExpandColumn={true}`. This ensures the expansion trigger is always visible even when scrolling horizontally.
-- **Virtualization**: The grid engine correctly accounts for variable row heights when detail panels are open.
+- **Height**: `getDetailPanelHeight` returns a pixel height (default `200`, a fixed-height scroll box) or `'auto'`. An `'auto'` panel is measured when it renders and whenever its content resizes, and the rows below are laid out at the measured height. Until a panel has rendered once, 200px is reserved for it.
+- **Virtualization**: The grid engine accounts for variable row heights when detail panels are open, including panels on pinned rows (keyboard navigation and `scrollToIndexes` keep rows clear of an expanded bottom-pinned panel).
 
 ## ⌨️ Keyboard & Accessibility
 

@@ -170,8 +170,8 @@
   transition: background 0.15s, color 0.15s;
 }
 .ogx-filter__row-clear:hover {
-  background: var(--ogx-toolbar-btn-danger-bg, rgba(239, 68, 68, 0.08));
-  color: var(--ogx-toolbar-btn-danger-text, #ef4444);
+  background: var(--ogx-overlay-item-danger-bg, rgba(239, 68, 68, 0.08));
+  color: var(--ogx-overlay-item-danger-text, #ef4444);
 }
 .ogx-filter__empty {
   padding: var(--ogx-spacing-md);

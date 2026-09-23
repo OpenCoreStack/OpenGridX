@@ -32,7 +32,7 @@ export interface PivotPanelProps {
 export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: PivotPanelProps) {
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState({ top: 0, right: 0 });
-    const [portalContainer, setPortalContainer] = useState<Element>(document.body);
+    const [portalContainer, setPortalContainer] = useState<Element | null>(null);
 
     useLayoutEffect(() => {
         setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
@@ -280,5 +280,5 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
         </div>
     );
 
-    return ReactDOM.createPortal(panel, portalContainer);
+    return portalContainer ? ReactDOM.createPortal(panel, portalContainer) : null;
 }

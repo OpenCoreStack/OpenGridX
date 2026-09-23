@@ -84,6 +84,8 @@ function MyGrid({ rows, columns }) {
 3. **TSV Generation**: Fields are joined by tabs (`\t`), and rows are joined by newlines (`\n`). A field that holds a tab, a line break or a double quote is wrapped in double quotes, with inner quotes doubled (`say "hi"` → `"say ""hi"""`), so the pasted table keeps its rows and columns.
 4. **Clipboard API**: Uses `navigator.clipboard.writeText`. When it is missing (plain `http:` pages) or rejects, a hidden-textarea `document.execCommand('copy')` fallback runs; focus and the page selection are restored afterwards.
 
+> **Formulas**: copy reproduces what the grid shows and does **not** neutralise formulas. A copied value that starts with `=`, `+`, `-` or `@` may be evaluated as a formula when pasted into Excel, Google Sheets or LibreOffice. The file exports (CSV, Excel, and the others) do neutralise such text by prefixing `'`; use an export when the data comes from untrusted input.
+
 ---
 
 ## 📊 Example Output

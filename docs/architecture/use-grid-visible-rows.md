@@ -69,6 +69,8 @@ return combined.filter(item => {
 
 **Why:** If a user passes the same row in both `rows` and `pinnedRows`, it would appear in both `pinnedTopRows` and `paginatedUnpinnedRows`. Two `<Row key={id}>` elements with the same key cause React reconciliation bugs. The guard ensures each ID appears at most once — the pinned version takes precedence since it comes first in the merged array.
 
+Entries from the pinned sections carry `pinned: 'top' | 'bottom'`. `GridVirtualRows` renders only the untagged (center) entries, in one linear pass; it does not de-duplicate again and does not consult the raw `pinnedRows` prop, so under tree data / row grouping (where nothing is pinned) every row still renders in its place.
+
 ---
 
 ## Relationship to DataGrid

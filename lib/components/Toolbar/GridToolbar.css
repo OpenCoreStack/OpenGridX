@@ -3,8 +3,9 @@
   align-items: center;
   gap: var(--ogx-spacing-sm);
   padding: var(--ogx-spacing-sm) var(--ogx-spacing-sm);
-  border-bottom: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
-  background: var(--ogx-grid-header-background);
+  border-bottom: var(--ogx-border-width-thin) solid var(--ogx-toolbar-border, var(--ogx-grid-border-color));
+  background: var(--ogx-toolbar-background, var(--ogx-grid-header-background));
+  color: var(--ogx-toolbar-text, var(--ogx-grid-header-text));
   min-height: 44px;
   position: relative;
   z-index: 100;
@@ -37,17 +38,17 @@
   padding: 0;
   border: none;
   border-radius: 8px;
-  background: transparent;
-  color: var(--ogx-grid-header-text);
+  background: var(--ogx-toolbar-btn-bg, transparent);
+  color: var(--ogx-toolbar-btn-text, var(--ogx-grid-header-text));
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   position: relative;
 }
 .ogx-toolbar__icon-btn:hover {
-  background: var(--ogx-grid-header-hover-background);
+  background: var(--ogx-toolbar-btn-hover, var(--ogx-grid-header-hover-background));
 }
 .ogx-toolbar__icon-btn--active {
-  background: var(--ogx-grid-header-hover-background);
+  background: var(--ogx-toolbar-btn-hover, var(--ogx-grid-header-hover-background));
   outline: none;
 }
 .ogx-toolbar__icon-btn:focus {
@@ -106,7 +107,7 @@
   border: var(--ogx-border-width-thin) solid var(--ogx-border-color);
   border-radius: var(--ogx-border-radius-sm);
   background: transparent;
-  color: var(--ogx-color-error, #ef4444);
+  color: var(--ogx-toolbar-btn-danger-text, var(--ogx-color-error, #ef4444));
   font-family: var(--ogx-font-family);
   font-size: var(--ogx-font-size-xs);
   font-weight: 500;
@@ -114,8 +115,8 @@
   transition: background 0.15s, border-color 0.15s;
 }
 .ogx-toolbar__clear-btn:hover {
-  background: var(--ogx-toolbar-btn-danger-bg, rgba(239, 68, 68, 0.08));
-  border-color: var(--ogx-color-error, #ef4444);
+  background: var(--ogx-toolbar-btn-danger-hover, rgba(239, 68, 68, 0.15));
+  border-color: var(--ogx-toolbar-btn-danger-text, var(--ogx-color-error, #ef4444));
 }
 .ogx-toolbar__close-btn {
   padding: 2px 10px;
@@ -189,8 +190,8 @@
   padding: 3px 6px;
   border: var(--ogx-border-width-thin) solid var(--ogx-overlay-border, var(--ogx-border-color));
   border-radius: 999px;
-  background: transparent;
-  color: var(--ogx-grid-row-text);
+  background: var(--ogx-toolbar-chip-bg, transparent);
+  color: var(--ogx-toolbar-chip-text, var(--ogx-grid-row-text));
   font-family: var(--ogx-font-family-mono, monospace);
   font-size: 10px;
   font-weight: 500;

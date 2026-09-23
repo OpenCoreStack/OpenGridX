@@ -7,6 +7,11 @@ export type {
   GridThemeShadows,
   GridThemeGrid,
   GridThemeTransitions,
+  GridThemeToolbar,
+  GridThemeOverlays,
+  GridThemeScrollbar,
+  GridThemeSkeleton,
+  GridThemeGrayScale,
 } from './types';
 
 export { DataGridThemeProvider } from './DataGridThemeProvider';

@@ -286,3 +286,71 @@ describe('useRowReorder', () => {
         });
     });
 });
+
+describe('useRowReorder drag identity', () => {
+    const withTypes = (types: string[]) => {
+        const { fake, event } = makeEvent();
+        Object.assign(fake.dataTransfer, { types });
+        return { fake, event };
+    };
+
+    it('a row whose id is 0 can be dragged and dropped', () => {
+        const rows: Row[] = [{ id: 0, name: 'zero' }, ...ROWS];
+        const { result, onRowOrderChange } = setup({ rows });
+        const over = makeEvent();
+        act(() => { result.current.onDragStart?.(0)(makeEvent().event); });
+        act(() => { result.current.onDragOver?.(2)(over.event); });
+        expect(over.fake.preventDefault).toHaveBeenCalled();
+        act(() => { result.current.onDrop?.(2)(makeEvent().event); });
+        expect(onRowOrderChange).toHaveBeenCalledWith({ row: rows[0], oldIndex: 0, targetIndex: 2 });
+    });
+
+    it('stores a row token (and plain text) in the DataTransfer', () => {
+        const { result } = setup();
+        const setData = vi.fn();
+        const { fake, event } = makeEvent();
+        Object.assign(fake.dataTransfer, { setData });
+        act(() => { result.current.onDragStart?.(3)(event); });
+        expect(setData).toHaveBeenCalledWith('application/x-ogx-row', '3');
+        expect(setData).toHaveBeenCalledWith('text/plain', '3');
+    });
+
+    it('does not accept a drag that carries other data, and forgets the stale drag', () => {
+        const { result, onRowOrderChange } = setup();
+        act(() => { result.current.onDragStart?.(1)(makeEvent().event); });
+        const over = withTypes(['Files']);
+        act(() => { result.current.onDragOver?.(3)(over.event); });
+        expect(over.fake.preventDefault).not.toHaveBeenCalled();
+        expect(result.current.draggedRowId).toBeNull();
+        act(() => { result.current.onDrop?.(3)(withTypes(['Files']).event); });
+        expect(onRowOrderChange).not.toHaveBeenCalled();
+    });
+
+    it('rows that are not in `rows` (group rows) can be neither dragged nor dropped on', () => {
+        const { result, onRowOrderChange } = setup();
+        expect(result.current.canReorderRow('group-1')).toBe(false);
+        expect(result.current.canReorderRow(1)).toBe(true);
+        const start = makeEvent();
+        act(() => { result.current.onDragStart?.('group-1')(start.event); });
+        expect(start.fake.preventDefault).toHaveBeenCalled();
+        expect(result.current.draggedRowId).toBeNull();
+
+        act(() => { result.current.onDragStart?.(1)(makeEvent().event); });
+        const over = makeEvent();
+        act(() => { result.current.onDragOver?.('group-1')(over.event); });
+        expect(over.fake.preventDefault).not.toHaveBeenCalled();
+        act(() => { result.current.onDrop?.('group-1')(makeEvent().event); });
+        expect(onRowOrderChange).not.toHaveBeenCalled();
+    });
+
+    it('a native dragend on the source node ends the drag even after it unmounted', () => {
+        const { result } = setup();
+        const source = document.createElement('div');
+        const { fake, event } = makeEvent();
+        Object.assign(fake, { currentTarget: source });
+        act(() => { result.current.onDragStart?.(1)(event); });
+        expect(result.current.draggedRowId).toBe(1);
+        act(() => { source.dispatchEvent(new Event('dragend')); });
+        expect(result.current.draggedRowId).toBeNull();
+    });
+});

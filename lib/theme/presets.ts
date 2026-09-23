@@ -1,6 +1,7 @@
 import type { GridTheme } from './types';
 
 export const darkTheme: GridTheme = {
+  mode: 'dark',
   colors: {
     primary: '#60a5fa',       
     primaryDark: '#3b82f6',
@@ -32,11 +33,11 @@ export const darkTheme: GridTheme = {
     md: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
   },
   toolbar: {
-    background: 'transparent',
+    background: '#1e293b',
     text: '#cbd5e1',
     border: '#334155',
     buttonBackground: 'transparent',
-    buttonHoverBackground: '#1e293b',
+    buttonHoverBackground: '#334155',
     buttonText: '#e2e8f0',
     buttonPrimaryBackground: '#3b82f6',
     buttonPrimaryHoverBackground: '#2563eb',
@@ -73,8 +74,6 @@ export const darkTheme: GridTheme = {
   skeleton: {
     baseColor: '#1e293b',
     highlightColor: '#334155',
-    darkBaseColor: '#0f172a',
-    darkHighlightColor: '#1e293b',
   }
 };
 
@@ -140,6 +139,8 @@ export const compactTheme: GridTheme = {
     headerHeight: '40px',
     cellPaddingX: '8px',
     cellPaddingY: '4px',
+    cellFontSize: '12px',
+    headerFontSize: '12px',
   },
   typography: {
     fontSizeSm: '0.8rem',

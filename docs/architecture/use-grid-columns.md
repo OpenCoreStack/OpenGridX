@@ -26,6 +26,7 @@ interface UseGridColumnsParams<R extends GridRowModel> {
     columnVisibilityModel: Record<string, boolean>;
     columnOrder?: string[];                   // controlled; undefined = uncontrolled
     onColumnOrderChange?: (params: GridColumnOrderChangeParams) => void;
+    onColumnOrderModelChange?: (columnOrder: string[]) => void;  // whole new order; not in pivot mode
     disableColumnReorder: boolean;
     pivotMode: boolean;                       // pivot is active (DataGrid passes useGridPivot's isActive)
     checkboxSelection: boolean;
@@ -53,8 +54,10 @@ interface UseGridColumnsResult<R extends GridRowModel> {
     navigationColumns: Array<GridColDef<R> | { field: string }>;  // system + data cols
     columnWidths: Record<string, number>;
     effectiveColumnOrder: string[];
-    setInternalColumnOrder: React.Dispatch<...>;  // used by toolbar column reorder
-    columnReorderHandlers: ReturnType<typeof useColumnReorder>;
+    setInternalColumnOrder: React.Dispatch<...>;
+    columnReorderHandlers: ReturnType<typeof useColumnReorder>;  // header drag
+    moveColumn: (fromField: string, toField: string) => void;    // Columns panel drag
+    resetColumnOrder: () => void;                                // Columns panel Reset
     handleColumnResize: (field: string, newWidth: number) => void;
 }
 ```
@@ -81,6 +84,7 @@ Under row grouping, a column with an `aggregationModel` entry also gets `valueGe
 
 - **Uncontrolled:** the order is the columns' own order until the user reorders (`setInternalColumnOrder`); it is derived, not snapshotted at mount, so it stays right when the columns change or the grid mounts in pivot mode.
 - **Controlled:** `columnOrder` wins, except in pivot mode.
+- **Every move works on the full current order**, `orderedColumns.map(c => c.field)`: all current columns, including those added after mount, those missing from a stored or controlled order, and the synthetic `__group__` column. The header drag (`columnReorderHandlers`), `moveColumn` and `resetColumnOrder` all go through one commit step: it stores the new order (uncontrolled or pivot), fires `onColumnOrderChange` with indices in that full order (not for Reset), and fires `onColumnOrderModelChange` with the whole order (not in pivot mode). Before v3.0 the indices came from `orderedColumns` but were applied to `effectiveColumnOrder`, so a column added after the order was stored, or a partial controlled order, made a drag move the wrong column or nothing.
 - **Pivot mode:** the generated pivot columns keep an order of their own, reset whenever the generated column set changes. Pivoting never rewrites the normal order, a controlled `columnOrder` (which names source columns) does not apply, and reordering updates the pivot order. `setInternalColumnOrder` writes to the order that is active.
 
 ## Visibility

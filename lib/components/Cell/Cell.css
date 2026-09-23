@@ -22,7 +22,7 @@
 }
 /* Show ring when keyboard navigation is active */
 .ogx--kb .ogx__cell--focused {
-  outline: 2px solid var(--ogx-color-primary, #2563eb);
+  outline: 2px solid var(--ogx-grid-cell-focus-border, var(--ogx-color-primary, #2563eb));
   outline-offset: -2px;
 }
 .ogx__cell--editable {
@@ -69,6 +69,11 @@
 .ogx:not(.ogx--row-spanning) .ogx__row--selected:hover .ogx__cell--pinned-left,
 .ogx:not(.ogx--row-spanning) .ogx__row--selected:hover .ogx__cell--pinned-right {
   background-color: var(--ogx-grid-row-selected-hover-background);
+}
+/* Section edge cells show a shadow outside their box; the content stays clipped by .ogx__cell-content. */
+.ogx__cell--pinned-left-last,
+.ogx__cell--pinned-right-first {
+  overflow: visible;
 }
 .ogx__cell--pinned-left-last::after {
   content: '';

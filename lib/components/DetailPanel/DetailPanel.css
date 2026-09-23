@@ -28,9 +28,3 @@
 .ogx__detail-panel {
   animation: detailPanelExpand 0.2s ease-out;
 }
-@media (prefers-color-scheme: dark) {
-  .ogx__detail-panel {
-    background: var(--ogx-color-gray-800);
-    border-color: var(--ogx-color-gray-700);
-  }
-}

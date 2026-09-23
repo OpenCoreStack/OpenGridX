@@ -27,12 +27,3 @@
   display: block;
   transition: transform 0.2s ease;
 }
-@media (prefers-color-scheme: dark) {
-  .ogx-expand-icon {
-    color: var(--ogx-color-gray-400);
-  }
-  .ogx-expand-icon:hover {
-    background: var(--ogx-color-gray-800);
-    color: var(--ogx-color-gray-100);
-  }
-}

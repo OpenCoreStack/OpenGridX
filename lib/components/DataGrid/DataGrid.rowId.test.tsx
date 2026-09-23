@@ -124,7 +124,8 @@ describe('getRowId only decides the internal key', () => {
                 treeData getTreeDataPath={(r) => r.path as string[]} />
         );
         expect(container.querySelectorAll('.ogx__row')).toHaveLength(1);
-        fireEvent.click(container.querySelector('.ogx__row') as HTMLElement);
+        // Tree-data parents are real rows: a row click selects them, the chevron expands them.
+        fireEvent.click(container.querySelector('.ogx__row .ogx-expand-icon') as HTMLElement);
         expect(container.querySelectorAll('.ogx__row')).toHaveLength(2);
     });
 

@@ -224,6 +224,35 @@ describe('DataGrid copy — selection source', () => {
         expect(lastCopied()).toBe('Name\tAge\nAlice\t30');
     });
 
+    it('apiRef.getSelectedRows inside onRowSelectionModelChange returns the new selection', () => {
+        const seen: GridRowId[][] = [];
+        const holder: { api: React.MutableRefObject<GridApi> | null } = { api: null };
+        function Harness() {
+            const apiRef = useGridApiRef();
+            holder.api = apiRef;
+            return (
+                <DataGrid<Row>
+                    rows={ROWS}
+                    columns={COLS}
+                    apiRef={apiRef}
+                    onRowSelectionModelChange={() => { seen.push(apiRef.current.getSelectedRows()); }}
+                />
+            );
+        }
+        const { container } = render(<Harness />);
+        act(() => { fireEvent.click(firstCell(container)); });
+        act(() => { holder.api!.current.selectRow(2); });
+        expect(seen).toEqual([[1], [1, 2]]);
+        expect(holder.api!.current.getSelectedRows()).toEqual([1, 2]);
+    });
+
+    it('copies nothing for a selected row that was removed from rows', async () => {
+        const { api, rerenderGrid } = renderGrid({ rowSelectionModel: [1, 2] });
+        rerenderGrid({ rowSelectionModel: [1, 2], rows: [ROWS[1], ROWS[2]] });
+        await act(async () => { await api().copySelectedRows(); });
+        expect(lastCopied()).toBe('Name\tAge\nBob\t40');
+    });
+
     it('keeps one Ctrl+C listener and one copySelectedRows across rerenders', () => {
         const addSpy = vi.spyOn(window, 'addEventListener');
         const { api, rerenderGrid } = renderGrid({ rowSelectionModel: [1] });

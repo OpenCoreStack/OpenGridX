@@ -86,10 +86,11 @@ export interface UseGridControlledStateReturn {
     /** Sets the internal model when uncontrolled and fires onRowSelectionModelChange. */
     handleRowSelectionModelChange: (model: GridRowId[]) => void;
     /**
-     * The latest selection, including a change made in this tick that has not rendered yet
-     * (read from onRowSelectionModelChange or right after apiRef.selectRows). Stable identity.
+     * The model passed to `handleRowSelectionModelChange` since the last commit, or null when
+     * there is none: a change made in this tick that has not rendered yet (read from
+     * onRowSelectionModelChange or right after apiRef.selectRows). Stable identity.
      */
-    getLatestRowSelectionModel: () => GridRowId[];
+    getPendingRowSelectionModel: () => GridRowId[] | null;
 
     // density (prop, else initialState.density, else 'standard')
     density: GridDensity;
@@ -227,15 +228,16 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
     const rowSelectionModel = isSelectionControlled ? propRowSelectionModel! : internalRowSelectionModel;
     const selectedRowIds = useMemo(() => new Set(rowSelectionModel), [rowSelectionModel]);
 
-    // Every commit resets it to the rendered model (a controlled parent may reject a change).
-    const latestRowSelectionRef = useRef(rowSelectionModel);
+    // Cleared on every commit: the rendered model is current again (a controlled parent may
+    // also have rejected the change).
+    const pendingRowSelectionRef = useRef<GridRowId[] | null>(null);
     useLayoutEffect(() => {
-        latestRowSelectionRef.current = rowSelectionModel;
+        pendingRowSelectionRef.current = null;
     });
-    const getLatestRowSelectionModel = useCallback(() => latestRowSelectionRef.current, []);
+    const getPendingRowSelectionModel = useCallback(() => pendingRowSelectionRef.current, []);
 
     const handleRowSelectionModelChange = useCallback((model: GridRowId[]) => {
-        latestRowSelectionRef.current = model;
+        pendingRowSelectionRef.current = model;
         if (!isSelectionControlled) setInternalRowSelectionModel(model);
         onRowSelectionModelChange?.(model);
     }, [isSelectionControlled, onRowSelectionModelChange]);
@@ -276,7 +278,7 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
         isSelectionControlled,
         setInternalRowSelectionModel,
         handleRowSelectionModelChange,
-        getLatestRowSelectionModel,
+        getPendingRowSelectionModel,
 
         density,
     };

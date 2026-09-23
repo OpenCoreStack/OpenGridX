@@ -47,20 +47,28 @@
   position: relative;
   z-index: 3;
 }
-.ogx__pinned-rows--top {
+/* Header + top-pinned rows, and bottom-pinned rows + aggregation footer, each stick as one block,
+   so they stack instead of overlapping whatever their heights (column group rows, detail panels). */
+.ogx__sticky-top {
   position: sticky;
-  top: var(--ogx-header-height);
-  z-index: 10; 
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+}
+.ogx__sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+.ogx__pinned-rows--top {
   background: var(--ogx-grid-background);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 .ogx__pinned-rows--bottom {
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
   background: var(--ogx-grid-background);
   box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
-  margin-top: auto;
 }
 .ogx--loading {
   opacity: 0.6;
@@ -87,14 +95,14 @@
   overflow-y: visible;
 }
 .ogx__viewport::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: var(--ogx-scrollbar-size, 8px);
+  height: var(--ogx-scrollbar-size, 8px);
 }
 .ogx__viewport::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--ogx-scrollbar-track, transparent);
 }
 .ogx__viewport::-webkit-scrollbar-thumb {
-  background: var(--ogx-color-gray-300);
+  background: var(--ogx-scrollbar-thumb, var(--ogx-color-gray-300));
   border-radius: 4px;
   border: 2px solid transparent;
   background-clip: content-box;
@@ -104,7 +112,7 @@
 }
 .ogx__viewport {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  scrollbar-color: var(--ogx-scrollbar-thumb, rgba(0, 0, 0, 0.2)) var(--ogx-scrollbar-track, transparent);
 }
 .ogx__empty {
   display: flex;

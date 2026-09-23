@@ -1,8 +1,42 @@
 import React from 'react';
 import type { GridTheme } from './types';
+import { GridThemeContext } from './gridThemeContext';
 
+// Tokens that follow the primary colour. They are written as var() / color-mix() of the primary
+// tokens, so a theme that only sets colors.primary* recolours the toolbar, menus, selection and
+// focus ring too; a theme can still override any of them directly.
+const primaryDerived: Record<string, string> = {
+    '--ogx-grid-row-selected-background': 'var(--ogx-color-primary-light)',
+    '--ogx-grid-row-selected-hover-background': 'color-mix(in srgb, var(--ogx-color-primary) 14%, var(--ogx-color-primary-light))',
+    '--ogx-grid-cell-focus-border': 'var(--ogx-color-primary)',
+    '--ogx-toolbar-btn-primary-bg': 'var(--ogx-color-primary)',
+    '--ogx-toolbar-btn-primary-hover': 'var(--ogx-color-primary-dark)',
+    '--ogx-toolbar-input-focus-border': 'var(--ogx-color-primary)',
+    '--ogx-toolbar-input-focus-shadow': '0 0 0 3px color-mix(in srgb, var(--ogx-color-primary) 12%, transparent)',
+    '--ogx-toolbar-chip-active-bg': 'color-mix(in srgb, var(--ogx-color-primary) 12%, transparent)',
+    '--ogx-toolbar-chip-active-text': 'var(--ogx-color-primary-dark)',
+    '--ogx-overlay-item-selected-bg': 'color-mix(in srgb, var(--ogx-color-primary) 8%, transparent)',
+    '--ogx-overlay-item-selected-text': 'var(--ogx-color-primary-dark)',
+};
+
+// Tokens that follow the grid surface colours, so a theme that sets grid.* restyles the toolbar
+// to match unless it sets toolbar.* itself.
+const surfaceDerived: Record<string, string> = {
+    '--ogx-toolbar-background': 'var(--ogx-grid-header-background)',
+    '--ogx-toolbar-text': 'var(--ogx-grid-header-text)',
+    '--ogx-toolbar-border': 'var(--ogx-grid-border-color)',
+    '--ogx-toolbar-btn-bg': 'transparent',
+    '--ogx-toolbar-btn-hover': 'var(--ogx-grid-header-hover-background)',
+    '--ogx-toolbar-btn-text': 'var(--ogx-grid-header-text)',
+    '--ogx-toolbar-input-bg': 'var(--ogx-grid-background)',
+    '--ogx-toolbar-input-text': 'var(--ogx-grid-row-text)',
+    '--ogx-toolbar-chip-bg': 'transparent',
+    '--ogx-toolbar-chip-text': 'var(--ogx-grid-row-text)',
+};
+
+// The complete light palette. The provider pins every colour token, so a light theme stays light
+// (and readable) when the operating system is in dark mode, where :root switches to dark values.
 const lightBase: Record<string, string> = {
-
     '--ogx-color-primary': '#3b82f6',
     '--ogx-color-primary-dark': '#2563eb',
     '--ogx-color-primary-light': '#eff6ff',
@@ -14,6 +48,16 @@ const lightBase: Record<string, string> = {
 
     '--ogx-color-white': '#ffffff',
     '--ogx-color-black': '#0f172a',
+    '--ogx-color-gray-50': '#f8fafc',
+    '--ogx-color-gray-100': '#f1f5f9',
+    '--ogx-color-gray-200': '#e2e8f0',
+    '--ogx-color-gray-300': '#cbd5e1',
+    '--ogx-color-gray-400': '#94a3b8',
+    '--ogx-color-gray-500': '#64748b',
+    '--ogx-color-gray-600': '#475569',
+    '--ogx-color-gray-700': '#334155',
+    '--ogx-color-gray-800': '#1e293b',
+    '--ogx-color-gray-900': '#0f172a',
 
     '--ogx-border-color': '#e2e8f0',
     '--ogx-border-color-hover': '#cbd5e1',
@@ -31,9 +75,6 @@ const lightBase: Record<string, string> = {
     '--ogx-grid-row-text': '#1e293b',
     '--ogx-grid-row-hover-background': '#f8fafc',
     '--ogx-grid-row-alternate-background': 'transparent',
-    '--ogx-grid-row-selected-background': '#eff6ff',
-    '--ogx-grid-row-selected-hover-background': '#dbeafe',
-    '--ogx-grid-cell-focus-border': '#3b82f6',
 
     '--ogx-checkbox-bg': '#ffffff',
     '--ogx-checkbox-border': '#94a3b8',
@@ -42,27 +83,12 @@ const lightBase: Record<string, string> = {
     '--ogx-grid-pinned-right-shadow': '-4px 0 24px -4px rgba(0, 0, 0, 0.05)',
 
     // Toolbars
-    '--ogx-toolbar-background': 'transparent',
-    '--ogx-toolbar-text': '#1e293b',
-    '--ogx-toolbar-border': '#e2e8f0',
-    '--ogx-toolbar-btn-bg': 'transparent',
-    '--ogx-toolbar-btn-hover': '#f1f5f9',
-    '--ogx-toolbar-btn-text': '#334155',
-    '--ogx-toolbar-btn-primary-bg': '#3b82f6',
-    '--ogx-toolbar-btn-primary-hover': '#2563eb',
+    ...surfaceDerived,
     '--ogx-toolbar-btn-primary-text': '#ffffff',
     '--ogx-toolbar-btn-danger-bg': 'rgba(239, 68, 68, 0.08)',
     '--ogx-toolbar-btn-danger-hover': 'rgba(239, 68, 68, 0.15)',
     '--ogx-toolbar-btn-danger-text': '#ef4444',
-    '--ogx-toolbar-input-bg': '#ffffff',
-    '--ogx-toolbar-input-text': '#1e293b',
     '--ogx-toolbar-input-border': '#cbd5e1',
-    '--ogx-toolbar-input-focus-border': '#3b82f6',
-    '--ogx-toolbar-input-focus-shadow': '0 0 0 3px rgba(59, 130, 246, 0.12)',
-    '--ogx-toolbar-chip-bg': '#f1f5f9',
-    '--ogx-toolbar-chip-text': '#475569',
-    '--ogx-toolbar-chip-active-bg': 'rgba(59, 130, 246, 0.12)',
-    '--ogx-toolbar-chip-active-text': '#2563eb',
 
     // Overlays & Menus
     '--ogx-overlay-background': '#ffffff',
@@ -71,22 +97,92 @@ const lightBase: Record<string, string> = {
     '--ogx-overlay-shadow': '0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.06)',
     '--ogx-overlay-item-hover-bg': '#f8fafc',
     '--ogx-overlay-item-hover-text': '#0f172a',
-    '--ogx-overlay-item-selected-bg': 'rgba(59, 130, 246, 0.08)',
-    '--ogx-overlay-item-selected-text': '#2563eb',
     '--ogx-overlay-item-danger-bg': 'rgba(239, 68, 68, 0.08)',
     '--ogx-overlay-item-danger-text': '#ef4444',
 
     // Scrollbars
-    '--ogx-scrollbar-thumb': 'rgba(148, 163, 184, 0.5)',
+    '--ogx-scrollbar-thumb': '#cbd5e1',
     '--ogx-scrollbar-track': 'transparent',
-    '--ogx-scrollbar-size': '10px',
+    '--ogx-scrollbar-size': '8px',
 
     // Skeletons
     '--ogx-skeleton-base': '#f1f5f9',
     '--ogx-skeleton-highlight': '#ffffff',
-    '--ogx-skeleton-dark-base': '#e2e8f0',
-    '--ogx-skeleton-dark-highlight': '#f8fafc',
+
+    ...primaryDerived,
 };
+
+// The complete dark palette (theme.mode === 'dark'): the values the stylesheet uses under
+// prefers-color-scheme: dark, plus the toolbar, overlay, scrollbar and skeleton tokens.
+const darkBase: Record<string, string> = {
+    ...lightBase,
+    '--ogx-color-primary': '#60a5fa',
+    '--ogx-color-primary-dark': '#3b82f6',
+    '--ogx-color-primary-light': '#1e3a5f',
+    '--ogx-color-primary-focus': 'rgba(96, 165, 250, 0.4)',
+
+    '--ogx-color-white': '#0f172a',
+    '--ogx-color-black': '#f8fafc',
+    '--ogx-color-gray-50': '#1e293b',
+    '--ogx-color-gray-100': '#334155',
+    '--ogx-color-gray-200': '#475569',
+    '--ogx-color-gray-300': '#64748b',
+    '--ogx-color-gray-400': '#94a3b8',
+    '--ogx-color-gray-500': '#cbd5e1',
+    '--ogx-color-gray-600': '#e2e8f0',
+    '--ogx-color-gray-700': '#e2e8f0',
+    '--ogx-color-gray-800': '#f1f5f9',
+    '--ogx-color-gray-900': '#f8fafc',
+
+    '--ogx-border-color': '#334155',
+    '--ogx-border-color-hover': '#475569',
+
+    '--ogx-shadow-sm': '0 1px 2px 0 rgba(0, 0, 0, 0.3)',
+    '--ogx-shadow-md': '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+    '--ogx-shadow-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+
+    '--ogx-grid-background': '#0f172a',
+    '--ogx-grid-border-color': '#334155',
+    '--ogx-grid-header-background': '#1e293b',
+    '--ogx-grid-header-text': '#e2e8f0',
+    '--ogx-grid-header-hover-background': '#334155',
+    '--ogx-grid-header-sorted-background': '#1e3a5f',
+    '--ogx-grid-row-text': '#cbd5e1',
+    '--ogx-grid-row-hover-background': '#1e293b',
+    '--ogx-grid-row-alternate-background': '#162032',
+
+    '--ogx-checkbox-bg': '#1e293b',
+    '--ogx-checkbox-border': '#64748b',
+
+    '--ogx-grid-pinned-left-shadow': '4px 0 24px -4px rgba(0, 0, 0, 0.3)',
+    '--ogx-grid-pinned-right-shadow': '-4px 0 24px -4px rgba(0, 0, 0, 0.3)',
+
+    '--ogx-toolbar-btn-danger-bg': 'rgba(239, 68, 68, 0.15)',
+    '--ogx-toolbar-btn-danger-hover': 'rgba(239, 68, 68, 0.25)',
+    '--ogx-toolbar-btn-danger-text': '#fca5a5',
+    '--ogx-toolbar-input-border': '#334155',
+
+    '--ogx-overlay-background': '#1e293b',
+    '--ogx-overlay-text': '#cbd5e1',
+    '--ogx-overlay-border': '#334155',
+    '--ogx-overlay-shadow': '0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -1px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.2)',
+    '--ogx-overlay-item-hover-bg': '#334155',
+    '--ogx-overlay-item-hover-text': '#f1f5f9',
+    '--ogx-overlay-item-danger-bg': 'rgba(239, 68, 68, 0.15)',
+    '--ogx-overlay-item-danger-text': '#fca5a5',
+
+    '--ogx-scrollbar-thumb': '#475569',
+
+    '--ogx-skeleton-base': '#1e293b',
+    '--ogx-skeleton-highlight': '#334155',
+
+    ...primaryDerived,
+    // On a dark surface the lighter primary reads better than primary-dark.
+    '--ogx-toolbar-chip-active-text': 'var(--ogx-color-primary)',
+    '--ogx-overlay-item-selected-text': 'var(--ogx-color-primary)',
+};
+
+const GRAY_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
 
 function themeToCSS(theme: GridTheme): Record<string, string> {
     const vars: Record<string, string> = {};
@@ -110,6 +206,11 @@ function themeToCSS(theme: GridTheme): Record<string, string> {
         set('--ogx-color-warning', c.warning);
         set('--ogx-color-error', c.error);
         set('--ogx-color-info', c.info);
+        set('--ogx-color-white', c.white);
+        set('--ogx-color-black', c.black);
+        if (c.gray) {
+            for (const step of GRAY_STEPS) set(`--ogx-color-gray-${step}`, c.gray[step]);
+        }
     }
 
     if (theme.typography) {
@@ -156,6 +257,8 @@ function themeToCSS(theme: GridTheme): Record<string, string> {
 
     if (theme.grid) {
         const g = theme.grid;
+        // Row and header heights also reach the grid's layout through GridThemeContext
+        // (useGridThemeDimensions); these variables serve custom CSS outside the grid.
         set('--ogx-grid-row-height-compact', g.rowHeightCompact);
         set('--ogx-grid-row-height-standard', g.rowHeightStandard);
         set('--ogx-row-height', g.rowHeightStandard);
@@ -164,6 +267,8 @@ function themeToCSS(theme: GridTheme): Record<string, string> {
         set('--ogx-header-height', g.headerHeight);
         set('--ogx-grid-cell-padding-x', g.cellPaddingX);
         set('--ogx-grid-cell-padding-y', g.cellPaddingY);
+        set('--ogx-grid-cell-font-size', g.cellFontSize);
+        set('--ogx-grid-header-font-size', g.headerFontSize);
         set('--ogx-grid-background', g.background);
         set('--ogx-grid-border-color', g.borderColor);
         set('--ogx-grid-header-background', g.headerBackground);
@@ -240,8 +345,6 @@ function themeToCSS(theme: GridTheme): Record<string, string> {
         const sk = theme.skeleton;
         set('--ogx-skeleton-base', sk.baseColor);
         set('--ogx-skeleton-highlight', sk.highlightColor);
-        set('--ogx-skeleton-dark-base', sk.darkBaseColor);
-        set('--ogx-skeleton-dark-highlight', sk.darkHighlightColor);
     }
 
     return vars;
@@ -260,17 +363,19 @@ export function DataGridThemeProvider({
     className,
     style
 }: DataGridThemeProviderProps) {
-    const cssVars = React.useMemo(() => {
-
-        return { ...lightBase, ...themeToCSS(theme) };
-    }, [theme]);
+    const cssVars = React.useMemo(
+        () => ({ ...(theme.mode === 'dark' ? darkBase : lightBase), ...themeToCSS(theme) }),
+        [theme],
+    );
 
     return (
-        <div
-            className={`ogx-theme-provider ${className || ''}`.trim()}
-            style={{ ...style, ...cssVars } as React.CSSProperties}
-        >
-            {children}
-        </div>
+        <GridThemeContext.Provider value={theme}>
+            <div
+                className={`ogx-theme-provider ${className || ''}`.trim()}
+                style={{ ...style, ...cssVars } as React.CSSProperties}
+            >
+                {children}
+            </div>
+        </GridThemeContext.Provider>
     );
 }

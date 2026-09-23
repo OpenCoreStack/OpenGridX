@@ -60,7 +60,13 @@ Use `disableMultipleRowSelection` to cap selection to one row at a time. Clickin
 
 ### Select All
 
-With `checkboxSelection`, the header checkbox selects the rows that pass the current filter (including pinned rows) and adds them to the selection; unchecking it removes those rows again. Rows hidden by the filter keep their selection state, and under row grouping group rows are not part of select-all. The header shows checked when every such row is selected and indeterminate when only some are, so ids of rows that are no longer in `rows` do not affect it.
+With `checkboxSelection`, the header checkbox selects the rows that pass the current filter (including pinned rows) and adds them to the selection; unchecking it removes those rows again. Rows hidden by the filter keep their selection state, and under row grouping group rows are not part of select-all. Synthetic rows (row-grouping group and subtotal rows, auto-created tree-data parents) have no checkbox and are never selected, by click, checkbox or Space key; tree-data parents that are your own rows are selectable like any row. The header shows checked when every such row is selected and indeterminate when only some are, so ids of rows that are no longer in `rows` do not affect it.
+
+### Removed Rows
+
+When rows leave `rows`, their ids leave the selection (v3.0+): `apiRef.current.getSelectedRows()`, the header checkbox and the next model a click produces no longer contain them, and the pruned model is reported once through `onRowSelectionModelChange`. An uncontrolled selection forgets the ids, so a row that comes back is not selected again; a controlled model should adopt the reported value. This applies when the grid holds every row: without a `dataSource`, with client pagination and filtering, and outside pivot mode. With `paginationMode="server"`, `filterMode="server"` or a `dataSource`, ids of rows that are not loaded are kept, so a selection survives paging.
+
+In pivot mode the pivot rows have their own ids (`'__pivot_row__:["North"]'`, derived from the row-field values), so a selection made on the source rows never marks a pivot row, and leaving pivot mode gives the source selection back.
 
 ### Keyboard Selection
 

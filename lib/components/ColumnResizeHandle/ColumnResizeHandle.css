@@ -10,6 +10,17 @@
   align-items: center;
   justify-content: center;
   user-select: none;
+  /* Touch and pen drags resize the column instead of scrolling the grid. */
+  touch-action: none;
+}
+/* Right-pinned columns grow leftwards: their handle sits on the left edge. */
+.ogx-column-resize-handle--start {
+  right: auto;
+  left: -4px;
+}
+.ogx-column-resize-handle:focus-visible .ogx-column-resize-handle__line {
+  background: var(--ogx-color-primary);
+  opacity: 1;
 }
 .ogx-column-resize-handle:hover .ogx-column-resize-handle__line,
 .ogx-column-resize-handle--dragging .ogx-column-resize-handle__line {

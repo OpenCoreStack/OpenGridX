@@ -494,6 +494,35 @@ describe('empty grid', () => {
         expect(onSortModelChange).toHaveBeenCalledWith([{ field: 'b', sort: 'asc' }]);
     });
 
+    it('Enter on a header adds to the sort model when multiSort is on, like a click', () => {
+        const onSortModelChange = vi.fn();
+        const { container } = render(
+            <DataGrid rows={ROWS} columns={COLS} multiSort sortModel={[{ field: 'a', sort: 'asc' }]}
+                onSortModelChange={onSortModelChange}
+                filterModel={{ items: [{ field: 'a', operator: 'equals', value: 'nothing' }] }} />
+        );
+        fireEvent.focus(grid(container));
+        key(grid(container), 'ArrowRight');
+        key(grid(container), 'Enter');
+        expect(focusedHeader(container)).toBe('b');
+        expect(onSortModelChange).toHaveBeenLastCalledWith([{ field: 'a', sort: 'asc' }, { field: 'b', sort: 'asc' }]);
+    });
+
+    it('Shift+Enter on a header adds to the sort model, like a shift-click', () => {
+        const onSortModelChange = vi.fn();
+        const { container } = render(
+            <DataGrid rows={ROWS} columns={COLS} sortModel={[{ field: 'a', sort: 'asc' }]}
+                onSortModelChange={onSortModelChange}
+                filterModel={{ items: [{ field: 'a', operator: 'equals', value: 'nothing' }] }} />
+        );
+        fireEvent.focus(grid(container));
+        key(grid(container), 'ArrowRight');
+        key(grid(container), 'Enter', { shiftKey: true });
+        expect(onSortModelChange).toHaveBeenLastCalledWith([{ field: 'a', sort: 'asc' }, { field: 'b', sort: 'asc' }]);
+        key(grid(container), 'Enter');
+        expect(onSortModelChange).toHaveBeenLastCalledWith([{ field: 'b', sort: 'asc' }]);
+    });
+
     it('rows removed under a focused cell leave focus on the header', () => {
         const { container, rerender } = render(<DataGrid rows={ROWS} columns={COLS} />);
         fireEvent.click(cellAt(container, 0, 'b'));
