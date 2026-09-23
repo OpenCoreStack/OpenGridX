@@ -1,195 +1,23 @@
-
 import { useMemo } from 'react';
-import type { GridColDef, GridRowModel } from '../../types';
-import type { GridPivotModel, GridPivotAggFn } from '../../types';
-import { AGGREGATION_FUNCTIONS } from '../../utils/aggregation';
+import type { GridColDef, GridRowModel, GridPivotModel } from '../../types';
+import { computePivot, EMPTY_PIVOT_RESULT } from '../../utils/pivot';
+import type { PivotResult } from '../../utils/pivot';
 
-const SEP_COL = '\u0000';
-const SEP_KEY = '\u001f';
+export type UsePivotReturn = PivotResult;
 
-// Same functions as the footer and row grouping, so every aggregate means the same thing.
-function aggregate(values: unknown[], fn: GridPivotAggFn): number | null {
-    const result = AGGREGATION_FUNCTIONS[fn](values);
-    return typeof result === 'number' ? result : null;
-}
-
-function makeKey(row: GridRowModel, fields: string[]): string {
-    return fields.map((f) => String(row[f] ?? '')).join(SEP_COL);
-}
-
-function cellKey(ck: string, field: string, aggFn: string, hasColFields: boolean): string {
-    return hasColFields ? `${ck}${SEP_KEY}${field}${SEP_KEY}${aggFn}` : `${field}${SEP_KEY}${aggFn}`;
-}
-
-export interface UsePivotReturn {
-    pivotRows:    GridRowModel[];
-    pivotColumns: GridColDef[];
-        colKeys:      string[];
-        isValid:      boolean;
-}
-
+/**
+ * Headless pivot: turns flat rows into pivot rows (one per row-field combination, then a Grand Total
+ * row) and generated columns (row-label columns, then one value column per column key and value field).
+ * `DataGrid`'s `pivotMode` uses the same engine.
+ */
 export function usePivot(
     rawRows:  GridRowModel[],
     rawCols:  GridColDef[],
     model:    GridPivotModel,
     enabled:  boolean,
 ): UsePivotReturn {
-    return useMemo<UsePivotReturn>(() => {
-        const empty: UsePivotReturn = { pivotRows: [], pivotColumns: [], colKeys: [], isValid: false };
-
-        if (!enabled) return empty;
-
-        const { rowFields, columnFields, valueFields } = model;
-        if (rowFields.length === 0 || valueFields.length === 0) return empty;
-
-        const hasColFields = columnFields.length > 0;
-        const colDefMap = new Map(rawCols.map((c) => [c.field, c]));
-
-        const colKeySet = new Set<string>();
-        for (const row of rawRows) {
-            colKeySet.add(makeKey(row, columnFields));
-        }
-        const colKeys = Array.from(colKeySet).sort();
-
-        const outerMap = new Map<string, {
-            labelValues: Record<string, unknown>;
-            bucket:      Map<string, Map<string, unknown[]>>;
-        }>();
-
-        for (const row of rawRows) {
-            const rk = makeKey(row, rowFields);
-            if (!outerMap.has(rk)) {
-                const labelValues: Record<string, unknown> = {};
-                for (const f of rowFields) labelValues[f] = row[f];
-                outerMap.set(rk, { labelValues, bucket: new Map() });
-            }
-            const entry = outerMap.get(rk)!;
-
-            const ck = makeKey(row, columnFields);
-            if (!entry.bucket.has(ck)) entry.bucket.set(ck, new Map());
-            const colBucket = entry.bucket.get(ck)!;
-
-            for (const vf of valueFields) {
-                const raw = row[vf.field];
-                if (!colBucket.has(vf.field)) colBucket.set(vf.field, []);
-                if (raw != null) colBucket.get(vf.field)!.push(raw);
-            }
-        }
-
-        let rowIndex = 0;
-        const pivotRows: GridRowModel[] = [];
-
-        for (const [, entry] of outerMap) {
-            const pivotRow: GridRowModel = { id: rowIndex++, ...entry.labelValues };
-
-            for (const ck of colKeys) {
-                const colBucket = entry.bucket.get(ck);
-                for (const vf of valueFields) {
-                    const ck_ = cellKey(ck, vf.field, vf.aggFn, hasColFields);
-                    const values = colBucket?.get(vf.field) ?? [];
-                    pivotRow[ck_] = values.length > 0 ? aggregate(values, vf.aggFn) : null;
-                }
-            }
-
-            pivotRows.push(pivotRow);
-        }
-
-        // ── Grand Total row ───────────────────────────────────────────────────
-        // avg/min/max must be recomputed from raw source data — summing
-        // per-row averages or mins produces wrong numbers.
-        const gtBuckets = new Map<string, unknown[]>();
-        for (const row of rawRows) {
-            const ck = makeKey(row, columnFields);
-            for (const vf of valueFields) {
-                if (vf.aggFn !== 'avg' && vf.aggFn !== 'min' && vf.aggFn !== 'max') continue;
-                const bk = `${ck}${SEP_KEY}${vf.field}`;
-                if (!gtBuckets.has(bk)) gtBuckets.set(bk, []);
-                const raw = row[vf.field];
-                if (raw != null) gtBuckets.get(bk)!.push(raw);
-            }
-        }
-
-        const totalRow: GridRowModel = { id: '__pivot_grand_total__' };
-        for (let i = 0; i < rowFields.length; i++) {
-            totalRow[rowFields[i]] = i === 0 ? 'Grand Total' : '';
-        }
-        for (const ck of colKeys) {
-            for (const vf of valueFields) {
-                const ck_ = cellKey(ck, vf.field, vf.aggFn, hasColFields);
-
-                const cellValues = pivotRows
-                    .map(r => r[ck_])
-                    .filter(v => v != null && !isNaN(Number(v)))
-                    .map(Number);
-
-                if (cellValues.length === 0) { totalRow[ck_] = null; continue; }
-
-                const bk = `${ck}${SEP_KEY}${vf.field}`;
-                switch (vf.aggFn) {
-                    case 'sum':
-                    case 'count':
-                        totalRow[ck_] = cellValues.reduce((a, b) => a + b, 0);
-                        break;
-                    case 'avg':
-                    case 'min':
-                    case 'max':
-                        // Recomputed from raw source values: an average of per-row averages is wrong.
-                        totalRow[ck_] = aggregate(gtBuckets.get(bk) ?? [], vf.aggFn);
-                        break;
-                }
-            }
-        }
-        pivotRows.push(totalRow);
-
-
-        const pivotColumns: GridColDef[] = [];
-
-        for (const f of rowFields) {
-            const orig = colDefMap.get(f);
-            pivotColumns.push({
-                field:      f,
-                headerName: orig?.headerName ?? f,
-                width:      orig?.width as number ?? 140,
-                sortable:   true,
-            });
-        }
-
-        for (const ck of colKeys) {
-            const colLabel = hasColFields
-                ? ck.split(SEP_COL).map((v, i) => {
-                    const def = colDefMap.get(columnFields[i]);
-                    return def?.headerName ? `${def.headerName}: ${v}` : v;
-                  }).join(' / ')
-                : '';
-
-            for (const vf of valueFields) {
-                const orig      = colDefMap.get(vf.field);
-                const ck_       = cellKey(ck, vf.field, vf.aggFn, hasColFields);
-                const labelBase = vf.headerName ?? orig?.headerName ?? vf.field;
-                const headerName = colLabel
-                    ? `${colLabel} — ${labelBase} (${vf.aggFn})`
-                    : `${labelBase} (${vf.aggFn})`;
-
-                pivotColumns.push({
-                    field:       ck_,
-                    headerName,
-                    width:       140,
-                    type:        'number',
-                    align:       'right',
-                    headerAlign: 'right',
-                    sortable:    true,
-                    valueFormatter: ({ value }) => {
-                        if (value == null) return '—';
-                        const n = Number(value);
-                        if (vf.aggFn === 'avg') return n.toFixed(2);
-                        if (vf.aggFn === 'count') return n.toLocaleString();
-                        if (orig?.valueFormatter) return orig.valueFormatter({ value, row: {} as GridRowModel, field: vf.field });
-                        return n.toLocaleString();
-                    },
-                });
-            }
-        }
-
-        return { pivotRows, pivotColumns, colKeys, isValid: true };
-    }, [rawRows, rawCols, model, enabled]);
+    return useMemo<UsePivotReturn>(
+        () => (enabled ? computePivot(rawRows, rawCols, model) : EMPTY_PIVOT_RESULT),
+        [rawRows, rawCols, model, enabled],
+    );
 }

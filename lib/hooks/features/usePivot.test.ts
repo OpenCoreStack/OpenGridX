@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { usePivot } from './usePivot';
-import type { GridColDef } from '../../types';
+import type { GridColDef, GridRowModel } from '../../types';
 import type { GridPivotModel } from '../../types';
 
 const COLS: GridColDef[] = [
@@ -230,5 +230,188 @@ describe('usePivot — large datasets and shared aggregation semantics', () => {
         const eng = result.current.pivotRows.find(r => r.dept === 'Eng')!;
         expect(eng['region\u001fcount']).toBe(2);
         expect(grandTotalRow(result.current.pivotRows)['region\u001fcount']).toBe(2);
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// v3.0 correctness fixes
+// ─────────────────────────────────────────────────────────────────────────────
+
+const GT_ID = '__pivot_grand_total__';
+const dataRowsOf = (rows: GridRowModel[]) => rows.filter(r => r.id !== GT_ID);
+
+describe('usePivot — value fields', () => {
+    it('does not double sum or count when the same field is listed with two functions', () => {
+        const rows = [{ id: 1, dept: 'Eng', salary: 10 }, { id: 2, dept: 'Eng', salary: 20 }];
+        const model: GridPivotModel = {
+            rowFields: ['dept'], columnFields: [],
+            valueFields: [{ field: 'salary', aggFn: 'sum' }, { field: 'salary', aggFn: 'count' }],
+        };
+        const { result } = renderHook(() => usePivot(rows, COLS, model, true));
+        const eng = result.current.pivotRows.find(r => r.dept === 'Eng')!;
+        expect(eng['salary\u001fsum']).toBe(30);
+        expect(eng['salary\u001fcount']).toBe(2);
+        expect(grandTotalRow(result.current.pivotRows)['salary\u001fsum']).toBe(30);
+    });
+
+    it('aggregates the valueGetter result of a computed column', () => {
+        const cols: GridColDef[] = [
+            { field: 'dept' },
+            { field: 'total', type: 'number', valueGetter: ({ row }) => (row.price as number) * (row.qty as number) },
+        ];
+        const rows = [{ id: 1, dept: 'A', price: 2, qty: 3 }, { id: 2, dept: 'A', price: 5, qty: 2 }];
+        const model: GridPivotModel = { rowFields: ['dept'], columnFields: [], valueFields: [{ field: 'total', aggFn: 'sum' }] };
+        const { result } = renderHook(() => usePivot(rows, cols, model, true));
+        expect(result.current.pivotRows.find(r => r.dept === 'A')!['total\u001fsum']).toBe(16);
+    });
+
+    it('skips a value field whose function the column does not allow', () => {
+        const cols: GridColDef[] = [
+            { field: 'dept' },
+            { field: 'price', type: 'number', availableAggregationFunctions: ['avg'] },
+        ];
+        const rows = [{ id: 1, dept: 'A', price: 2 }];
+        const model: GridPivotModel = {
+            rowFields: ['dept'], columnFields: [],
+            valueFields: [{ field: 'price', aggFn: 'sum' }, { field: 'price', aggFn: 'avg' }],
+        };
+        const { result } = renderHook(() => usePivot(rows, cols, model, true));
+        expect(result.current.pivotColumns.map(c => c.field)).toEqual(['dept', 'price\u001favg']);
+    });
+
+    it('skips a row or column field on a groupable: false column, as row grouping does', () => {
+        const cols: GridColDef[] = [
+            { field: 'dept' },
+            { field: 'sku', groupable: false },
+            { field: 'salary', type: 'number' },
+        ];
+        const rows = [{ id: 1, dept: 'A', sku: 'x', salary: 1 }, { id: 2, dept: 'A', sku: 'y', salary: 2 }];
+        const model: GridPivotModel = { rowFields: ['dept', 'sku'], columnFields: ['sku'], valueFields: [{ field: 'salary', aggFn: 'sum' }] };
+        const { result } = renderHook(() => usePivot(rows, cols, model, true));
+        expect(result.current.pivotColumns.map(c => c.field)).toEqual(['dept', 'salary\u001fsum']);
+        expect(dataRowsOf(result.current.pivotRows)).toHaveLength(1);
+    });
+});
+
+describe('usePivot — formatting', () => {
+    const cols: GridColDef[] = [
+        { field: 'dept' },
+        {
+            field: 'salary', type: 'number',
+            valueFormatter: ({ value, row }) => `${(row as unknown as { currency: { symbol: string } }).currency.symbol}${Number(value).toFixed(2)}`,
+        },
+    ];
+    const rows = [
+        { id: 1, dept: 'Eng', salary: 10, currency: { symbol: '$' } },
+        { id: 2, dept: 'Eng', salary: 15, currency: { symbol: '$' } },
+    ];
+    const model: GridPivotModel = {
+        rowFields: ['dept'], columnFields: [],
+        valueFields: [{ field: 'salary', aggFn: 'sum' }, { field: 'salary', aggFn: 'avg' }, { field: 'salary', aggFn: 'count' }],
+    };
+
+    it('formats sum and avg with the source valueFormatter, giving it a real source row', () => {
+        const { result } = renderHook(() => usePivot(rows, cols, model, true));
+        const eng = result.current.pivotRows.find(r => r.dept === 'Eng')!;
+        const col = (f: string) => result.current.pivotColumns.find(c => c.field === f)!;
+        expect(col('salary\u001fsum').valueFormatter!({ value: eng['salary\u001fsum'], row: eng, field: 'salary\u001fsum' })).toBe('$25.00');
+        expect(col('salary\u001favg').valueFormatter!({ value: eng['salary\u001favg'], row: eng, field: 'salary\u001favg' })).toBe('$12.50');
+        const gt = grandTotalRow(result.current.pivotRows);
+        expect(col('salary\u001fsum').valueFormatter!({ value: gt['salary\u001fsum'], row: gt, field: 'salary\u001fsum' })).toBe('$25.00');
+    });
+
+    it('does not apply the source valueFormatter to count', () => {
+        const { result } = renderHook(() => usePivot(rows, cols, model, true));
+        const eng = result.current.pivotRows.find(r => r.dept === 'Eng')!;
+        const col = result.current.pivotColumns.find(c => c.field === 'salary\u001fcount')!;
+        expect(col.valueFormatter!({ value: eng['salary\u001fcount'], row: eng, field: col.field })).toBe('2');
+    });
+
+    it('falls back to the default format instead of throwing when the formatter needs row data it does not get', () => {
+        const { result } = renderHook(() => usePivot(rows, cols, model, true));
+        const col = result.current.pivotColumns.find(c => c.field === 'salary\u001fsum')!;
+        expect(col.valueFormatter!({ value: 1234, row: {} as GridRowModel, field: col.field })).toBe('1,234');
+    });
+
+    it('formats avg with thousands separators when the column has no formatter', () => {
+        const { result } = renderHook(() => usePivot(ROWS, COLS, MODEL_NO_COL_FIELDS, true));
+        const col = result.current.pivotColumns.find(c => c.field === 'salary\u001favg')!;
+        expect(col.valueFormatter!({ value: 56666.666, row: {} as GridRowModel, field: col.field })).toBe('56,666.67');
+    });
+
+    it('keeps the source column formatter, type and alignment on row-label columns, and still shows Grand Total', () => {
+        const labelCols: GridColDef[] = [
+            { field: 'status', headerName: 'Status', type: 'singleSelect', align: 'center', valueFormatter: ({ value }) => (value === 1 ? 'Active' : 'Inactive') },
+            { field: 'salary', type: 'number' },
+        ];
+        const labelRows = [{ id: 1, status: 1, salary: 10 }, { id: 2, status: 0, salary: 5 }];
+        const labelModel: GridPivotModel = { rowFields: ['status'], columnFields: [], valueFields: [{ field: 'salary', aggFn: 'sum' }] };
+        const { result } = renderHook(() => usePivot(labelRows, labelCols, labelModel, true));
+        const statusCol = result.current.pivotColumns.find(c => c.field === 'status')!;
+        expect(statusCol).toMatchObject({ type: 'singleSelect', align: 'center', headerName: 'Status' });
+        const [active] = result.current.pivotRows;
+        const gt = grandTotalRow(result.current.pivotRows);
+        expect(statusCol.valueFormatter!({ value: active.status, row: active, field: 'status' })).toBe('Active');
+        expect(statusCol.valueFormatter!({ value: gt.status, row: gt, field: 'status' })).toBe('Grand Total');
+    });
+
+    it('formats column-field header labels with the source valueFormatter', () => {
+        const flagCols: GridColDef[] = [
+            { field: 'dept' },
+            { field: 'active', headerName: 'Active', type: 'boolean', valueFormatter: ({ value }) => (value ? 'Yes' : 'No') },
+            { field: 'salary', headerName: 'Salary', type: 'number' },
+        ];
+        const flagRows = [{ id: 1, dept: 'Eng', active: true, salary: 1 }, { id: 2, dept: 'Eng', active: false, salary: 2 }];
+        const flagModel: GridPivotModel = { rowFields: ['dept'], columnFields: ['active'], valueFields: [{ field: 'salary', aggFn: 'sum' }] };
+        const { result } = renderHook(() => usePivot(flagRows, flagCols, flagModel, true));
+        const headers = result.current.pivotColumns.slice(1).map(c => c.headerName);
+        expect(headers).toEqual(['Active: No — Salary (sum)', 'Active: Yes — Salary (sum)']);
+    });
+});
+
+describe('usePivot — keys, ids and ordering', () => {
+    it('orders numeric column-field values numerically', () => {
+        const rows = [1, 2, 3, 10, 11, 12].map((m, i) => ({ id: i, dept: 'Eng', month: m, salary: 1 }));
+        const model: GridPivotModel = { rowFields: ['dept'], columnFields: ['month'], valueFields: [{ field: 'salary', aggFn: 'sum' }] };
+        const { result } = renderHook(() => usePivot(rows, COLS, model, true));
+        expect(result.current.colKeys).toEqual(['1', '2', '3', '10', '11', '12']);
+    });
+
+    it('orders numeric strings naturally and puts blank values last', () => {
+        const rows = ['10', '9', null, '100'].map((q, i) => ({ id: i, dept: 'Eng', q, salary: 1 }));
+        const model: GridPivotModel = { rowFields: ['dept'], columnFields: ['q'], valueFields: [{ field: 'salary', aggFn: 'sum' }] };
+        const { result } = renderHook(() => usePivot(rows, COLS, model, true));
+        expect(result.current.colKeys).toEqual(['9', '10', '100', '']);
+    });
+
+    it('puts null, undefined and empty-string row values in one blank group labelled null', () => {
+        const rows = [{ id: 1, dept: '', salary: 1 }, { id: 2, dept: null, salary: 2 }, { id: 3, salary: 4 }];
+        const model: GridPivotModel = { rowFields: ['dept'], columnFields: [], valueFields: [{ field: 'salary', aggFn: 'sum' }] };
+        const { result } = renderHook(() => usePivot(rows, COLS, model, true));
+        const data = dataRowsOf(result.current.pivotRows);
+        expect(data).toHaveLength(1);
+        expect(data[0].dept).toBeNull();
+        expect(data[0]['salary\u001fsum']).toBe(7);
+    });
+
+    it('keeps unique synthetic ids when a row field is named id, and still shows its label', () => {
+        const cols: GridColDef[] = [{ field: 'id' }, { field: 'salary', type: 'number' }];
+        const rows = [{ id: 'x', salary: 1 }, { id: 'y', salary: 2 }];
+        const model: GridPivotModel = { rowFields: ['id'], columnFields: [], valueFields: [{ field: 'salary', aggFn: 'sum' }] };
+        const { result } = renderHook(() => usePivot(rows, cols, model, true));
+        expect(result.current.pivotRows.map(r => r.id)).toEqual([0, 1, GT_ID]);
+        const idCol = result.current.pivotColumns.find(c => c.field === 'id')!;
+        const labels = result.current.pivotRows.map(r => idCol.valueGetter!({ row: r, field: 'id', value: r.id }));
+        expect(labels).toEqual(['x', 'y', 'Grand Total']);
+    });
+});
+
+describe('usePivot — empty data', () => {
+    it('keeps the value columns and produces no rows (not a lone Grand Total) when there is no data', () => {
+        const model: GridPivotModel = { rowFields: ['dept'], columnFields: [], valueFields: [{ field: 'salary', aggFn: 'sum' }] };
+        const { result } = renderHook(() => usePivot([], COLS, model, true));
+        expect(result.current.pivotColumns.map(c => c.field)).toEqual(['dept', 'salary\u001fsum']);
+        expect(result.current.pivotRows).toEqual([]);
+        expect(result.current.isValid).toBe(true);
     });
 });
