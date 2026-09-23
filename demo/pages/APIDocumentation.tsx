@@ -48,8 +48,8 @@ export default function APIDocumentation() {
         { name: 'pivotMode', type: 'boolean', default: 'false', desc: 'Enable pivot table mode.' },
         { name: 'pivotModel', type: 'GridPivotModel', default: 'undefined', desc: 'Active pivot configuration (rows, columns, values).' },
         // Editing
-        { name: 'processRowUpdate', type: '(newRow, oldRow) => R | Promise<R>', default: '—', desc: 'Intercepts a committed cell edit. Return the updated row.' },
-        { name: 'isCellEditable', type: '(params) => boolean', default: '—', desc: 'Fine-grained control over which cells are editable.' },
+        { name: 'processRowUpdate', type: '(newRow, oldRow) => R | Promise<R>', default: '—', desc: 'Called once per committed cell edit. Return the updated row (or a Promise of it).' },
+        { name: 'isCellEditable', type: '(params) => boolean', default: '—', desc: 'Per-cell veto over editable columns. Applies to double-click, Enter, Tab and aria-readonly.' },
         // Server-Side
         { name: 'dataSource', type: 'GridDataSource', default: '—', desc: 'Remote data provider. Drives server-side sorting, filtering, pagination.' },
         // List View
@@ -101,11 +101,12 @@ export default function APIDocumentation() {
         { name: 'type', type: "'string' | 'number' | 'boolean' | 'date' | 'singleSelect' | 'image'", default: "'string'", desc: 'Column type — drives filtering operators and default formatting.' },
         { name: 'valueOptions', type: 'Array<string | { value; label }>', default: '—', desc: 'Options list for singleSelect type.' },
         { name: 'valueGetter', type: '(params) => any', default: '—', desc: 'Derive a cell value from the row (computed columns).' },
+        { name: 'valueSetter', type: '(params: GridValueSetterParams) => R', default: '—', desc: 'Map an edited value back onto the row. Needed for editable valueGetter columns.' },
         { name: 'valueFormatter', type: '(params) => string', default: '—', desc: 'Format the display value without affecting sort/filter logic.' },
         // Rendering
         { name: 'renderCell', type: '(params: GridRenderCellParams) => ReactNode', default: '—', desc: 'Custom cell renderer component.' },
         { name: 'renderHeader', type: '(params: GridRenderHeaderParams) => ReactNode', default: '—', desc: 'Custom header renderer component.' },
-        { name: 'renderEditCell', type: '(params: GridRenderCellParams) => ReactNode', default: '—', desc: 'Custom input component shown during cell editing.' },
+        { name: 'renderEditCell', type: '(params: GridRenderEditCellParams) => ReactNode', default: '—', desc: 'Custom editor shown during cell editing. Receives onValueChange, onCommit and onCancel.' },
         // Styling
         { name: 'cellClassName', type: 'string | ((params: GridRenderCellParams) => string)', default: '—', desc: 'CSS class(es) added to every cell in this column. Accepts a static string or a function for dynamic per-row classes.' },
         { name: 'headerClassName', type: 'string', default: '—', desc: 'CSS class(es) added to the header cell of this column.' },
@@ -113,7 +114,7 @@ export default function APIDocumentation() {
         { name: 'sortable', type: 'boolean', default: 'true', desc: 'Allow the column to be sorted.' },
         { name: 'filterable', type: 'boolean', default: 'true', desc: 'Include this column in the filter panel.' },
         { name: 'resizable', type: 'boolean', default: 'true', desc: 'Allow the user to drag-resize this column.' },
-        { name: 'editable', type: 'boolean', default: 'false', desc: 'Allow double-click to edit cell values (triggers processRowUpdate).' },
+        { name: 'editable', type: 'boolean', default: 'false', desc: 'Allow double-click or Enter to edit cell values (triggers processRowUpdate).' },
         { name: 'hideable', type: 'boolean', default: 'true', desc: 'Allow hiding via column menu / visibility panel.' },
         { name: 'pinnable', type: 'boolean', default: 'true', desc: 'Allow pinning via column menu.' },
         { name: 'disableColumnMenu', type: 'boolean', default: 'false', desc: 'Hide the ⋮ column menu icon.' },
