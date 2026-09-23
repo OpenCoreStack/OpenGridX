@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 2.0.4
+- **Current version:** 2.1.0
 
 ---
 
@@ -41,7 +41,7 @@ DataGridProps
        Header, GridVirtualRows, GridPinnedRows, Pagination, GridAggregationFooter
 ```
 
-Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGrouping`. They produce flat renderable row arrays with internal `_*` fields injected (runtime shim, still present as of v2.0.4 — deprecated, deferred to a future major version) **and** a `rowMetaMap: Map<GridRowId, GridRowMeta>` that is the clean typed API.
+Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGrouping`. They produce flat renderable row arrays with internal `_*` fields injected (runtime shim, still present as of v2.1.0 — deprecated, deferred to a future major version) **and** a `rowMetaMap: Map<GridRowId, GridRowMeta>` that is the clean typed API.
 
 ---
 
@@ -92,7 +92,7 @@ Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGroupin
 
 Hierarchy metadata (`hasChildren`, `treeDepth`, `groupingField`, etc.) lives in a `Map<GridRowId, GridRowMeta>` returned by `useTreeData`/`useRowGrouping`, not on the row object. Access it in `renderCell` via `params.rowMeta`.
 
-The underscore fields remain on the row object at runtime — this shim was carried through v1.x **and is still present in v2.0.4**; the injection was never actually removed in v2.0 despite earlier drafts of this file and `docs/roadmap.md` claiming otherwise. Removal is deferred to a future major version. When it happens, delete the `_hasChildren = ...` assignments in `useTreeData.ts` and `useRowGrouping.ts`. Until then, don't write code that assumes the underscore fields are absent.
+The underscore fields remain on the row object at runtime — this shim was carried through v1.x **and is still present in v2.1.0**; the injection was never actually removed in v2.0 despite earlier drafts of this file and `docs/roadmap.md` claiming otherwise. Removal is deferred to a future major version. When it happens, delete the `_hasChildren = ...` assignments in `useTreeData.ts` and `useRowGrouping.ts`. Until then, don't write code that assumes the underscore fields are absent.
 
 Full doc: `docs/architecture/grid-row-meta.md`
 
@@ -132,12 +132,13 @@ Full doc: `docs/architecture/grid-row-meta.md`
 
 ---
 
-## Unreleased (next minor) — significant changes
+## v2.1.0 — significant changes
 
 - Row-grouping aggregation now shares `lib/utils/aggregation` (nulls ignored, `unique`, `availableAggregationFunctions`). Expansion in **both** `useRowGrouping` and `useTreeData` is derived state (depth default plus user overrides keyed by config); no effect resets it on row changes. Never call callbacks such as `onRowExpansionChange` inside a `setState` updater
 - Hierarchy renderers injected by `useGridColumns` must render `params.formattedValue`, not `params.value`, or `valueFormatter` is lost; `Cell` passes `formattedValue` into `renderCell` params
 - `slots.footer` / `noRowsOverlay` / `loadingOverlay` are rendered (they were typed-only). `footer` replaces the pagination area and receives grid state
 - New: `onRowDoubleClick`, exported `ColumnVisibilityPanel`, `ExcelAdvancedExportOptions.groupedRows`
+- Row indices: `renderContext` and `layout.cumulativeHeights` cover **center (unpinned) rows only**; `allRenderableRows` indices include top-pinned rows. Convert with `pinnedTopRows.length`. Vertical scroll-into-view goes through `lib/utils/scroll` (`scrollRowIntoView`), which accounts for the sticky header and pinned rows
 - **Virtualization needs a bounded container height.** In an unbounded container (e.g. flex child without `min-height: 0`) the viewport grows to content and every row renders; pagination masks it and grouping disables pagination. `useGridDevWarnings` warns about both
 
 ## v2.0.0 — significant changes (breaking)

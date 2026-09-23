@@ -71,7 +71,7 @@ export interface GridRowMeta {
 **Runtime backward-compat shim (v1.1 only):**
 - The underscore fields continue to be injected onto the row object at runtime by `useTreeData` / `useRowGrouping`. The injection code is not removed — only the TypeScript type declaration is removed.
 - Effect: `(params.row as any)._hasChildren` still resolves at runtime. TypeScript strict-mode users get a compile error pointing them to `params.rowMeta`. JS users and `as any` users are unaffected.
-- This shim was planned for removal in v2.0, but that did not happen — it is still present as of v2.0.4. Removal is deferred to a future major version.
+- This shim was planned for removal in v2.0, but that did not happen — it is still present as of v2.1.0. Removal is deferred to a future major version.
 
 **Files touched:**
 - `lib/types/index.ts` — type changes

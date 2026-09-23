@@ -8,7 +8,7 @@ that uses the `@opencorestack/opengridx` library. Read it in full before writing
 ## What this library is
 
 `@opencorestack/opengridx` is a zero-dependency, high-performance React DataGrid component.
-Current version: **2.0.4**. It is a full custom implementation — not a wrapper around MUI or any
+Current version: **2.1.0**. It is a full custom implementation — not a wrapper around MUI or any
 other library.
 
 ---
@@ -206,7 +206,7 @@ node_modules/@opencorestack/opengridx/docs/migration/v1-to-v2.md   ← if it shi
 **Legacy row shim — still present, do not rely on it:**
 
 ```tsx
-// ⚠️ v1 shim — still injected on params.row as of v2.0.4 (deprecated, will be
+// ⚠️ v1 shim — still injected on params.row as of v2.1.0 (deprecated, will be
 // removed in a future major version — do not write new code depending on it):
 const hasChildren = (params.row as Record<string, unknown>)._hasChildren;
 

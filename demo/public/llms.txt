@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 2.0.4
+# Version: 2.1.0
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 
@@ -67,8 +67,11 @@ export default function App() {
 ### Display
 | Prop              | Type      | Default | Description                            |
 |-------------------|-----------|---------|----------------------------------------|
-| height            | number    | 500     | Grid height in pixels                  |
+| height            | number/string | —     | Grid height. The grid must have a BOUNDED height or it renders every row (see GOTCHAS) |
 | autoHeight        | boolean   | false   | Fit height to rows                     |
+| overscanRowCount  | number    | 3       | Minimum rows rendered outside the viewport (adaptive) |
+| ariaLabel         | string    | —       | Accessible name for the grid          |
+| localeText        | GridLocaleText | —  | Override pagination / no-rows strings |
 | rowHeight         | number    | 52      | Row height in pixels                   |
 | headerHeight      | number    | 56      | Header height in pixels                |
 | loading           | boolean   | false   | Show skeleton loading overlay          |
@@ -79,6 +82,8 @@ export default function App() {
 | Prop                       | Type                          | Description                         |
 |----------------------------|-------------------------------|-------------------------------------|
 | checkboxSelection          | boolean                       | Enable checkbox column              |
+| disableMultipleRowSelection | boolean                     | Cap selection to one row            |
+| pinCheckboxColumn          | boolean (default true)        | Pin the checkbox column left        |
 | rowSelectionModel          | GridRowId[]                   | Controlled selection                |
 | onRowSelectionModelChange  | (model: GridRowId[]) => void  | Selection change callback           |
 | disableRowSelectionOnClick | boolean                       | Prevent click toggling selection    |
@@ -87,9 +92,9 @@ export default function App() {
 | Prop              | Type                        | Description                     |
 |-------------------|-----------------------------|----------------------------------|
 | sortModel         | GridSortItem[]              | Controlled sort state            |
+| multiSort         | boolean                     | Plain click appends to sortModel (Shift+click always does) |
 | onSortModelChange | (model: GridSortItem[]) => void | Sort change callback          |
 | sortingMode       | 'client' / 'server'         | Where sorting is applied         |
-| disableColumnSorting | boolean                  | Disable sorting for all columns  |
 
 ### Filtering
 | Prop                | Type                           | Description                       |
@@ -97,7 +102,6 @@ export default function App() {
 | filterModel         | GridFilterModel                | Controlled filter state           |
 | onFilterModelChange | (model: GridFilterModel) => void | Filter change callback          |
 | filterMode          | 'client' / 'server'            | Where filtering is applied        |
-| disableColumnFilter | boolean                        | Disable filter for all columns    |
 
 ### Pagination
 | Prop                    | Type                                    | Description                      |
@@ -119,7 +123,6 @@ export default function App() {
 | columnOrder               | string[]                  | Controlled column order                   |
 | onColumnOrderChange       | (params) => void          | Column reorder callback                   |
 | disableColumnReorder      | boolean                   | Disable drag-to-reorder                   |
-| disableColumnResize       | boolean                   | Disable resize handles                    |
 | columnGroupingModel       | GridColumnGroupingModel   | Multi-level column header groups          |
 
 ### Row Features
@@ -129,8 +132,6 @@ export default function App() {
 | rowReordering     | boolean                   | Enable drag-and-drop row reordering       |
 | onRowOrderChange  | (params) => void          | Row reorder callback                      |
 | getRowId          | (row: R) => GridRowId     | Custom row ID accessor (default: row.id)  |
-| getRowClassName   | (params) => string        | Dynamic CSS class per row                 |
-| getRowHeight      | (params) => number        | Dynamic row height                        |
 
 ### Cell Editing
 | Prop                    | Type                       | Description                             |
@@ -143,15 +144,18 @@ export default function App() {
 | Prop                    | Type                       | Description                             |
 |-------------------------|----------------------------|-----------------------------------------|
 | getDetailPanelContent   | (params) => ReactNode      | Render expanded detail row              |
+| pinExpandColumn         | boolean (default true)     | Pin the detail-panel expand column      |
 | getDetailPanelHeight    | (params) => number / 'auto'| Height of detail panel                  |
-| expandedRowIds          | Set<GridRowId>             | Controlled expanded rows                |
+| detailPanelExpandedRowIds | Set<GridRowId>             | Controlled expanded rows                |
 | onDetailPanelExpandedRowIdsChange | (ids) => void  | Expand/collapse callback               |
 
 ### Grouping & Aggregation
 | Prop                   | Type                      | Description                              |
 |------------------------|---------------------------|------------------------------------------|
-| rowGroupingModel       | string[]                  | Fields to group by                       |
+| rowGroupingModel       | string[]                  | Fields to group by (one nesting level per field). Disables pagination |
 | aggregationModel       | GridAggregationModel      | {field: 'sum'/'avg'/'min'/'max'/'count'} |
+| onAggregationModelChange | (model) => void        | Aggregation model changed                |
+| groupingColDef         | Partial<GridColDef>       | Dedicated pinned __group__ column        |
 | getAggregationPosition | (group) => 'footer'/'inline' | Where to render aggregation row       |
 | defaultGroupingExpansionDepth | number             | Auto-expand depth (default -1 = all)     |
 
@@ -179,8 +183,8 @@ export default function App() {
 |--------------|-----------------------|------------------------------------------|
 | slots        | GridSlots             | Replace toolbar, pagination, overlays    |
 | slotProps    | GridSlotProps         | Props for slot components                |
-| theme        | GridTheme             | Override theme tokens                    |
-| sx           | React.CSSProperties   | Inline styles on the root element        |
+| className    | string                | Extra CSS class on the root element      |
+| style        | React.CSSProperties   | Inline styles on the root element (use DataGridThemeProvider for theming) |
 
 ### Callbacks
 | Prop              | Type                  | Description                   |
@@ -473,8 +477,9 @@ interface GridColumnPinning   { left?: string[]; right?: string[]; }
 interface GridRowPinning      { top?: GridRowId[]; bottom?: GridRowId[]; }
 
 interface GridRenderCellParams<R = GridRowModel> {
-  value: any; row: R; field: string;
+  value: unknown; formattedValue?: string; row: R; field: string;
   colDef: GridColDef<R>; rowIndex: number; colIndex: number;
+  rowMeta?: GridRowMeta; // hierarchy info for tree-data / grouping rows
 }
 
 interface GridDataSource {
@@ -501,4 +506,8 @@ interface GridGetRowsResponse { rows: GridRowModel[]; rowCount: number; }
 7. **`singleSelect` editing**: for dropdown editors in cells, set `type: 'singleSelect'` and provide `valueOptions`.
 8. **`initialState.columns.columnWidths`**: accepts `Record<string, number>` to restore saved column widths.
 9. **`pinnedColumns`** and **`columnWidths`** are independent state — pinning does not reset widths.
-10. **Aggregation** requires `rowGroupingModel` OR a global footer via `getAggregationPosition={() => 'footer'}`.
+10. **Aggregation**: setting `aggregationModel` alone renders a sticky footer with the totals; with `rowGroupingModel` each group row also shows its own aggregates. `null`/`undefined` values are ignored by every function.
+11. **GOTCHAS — bounded height**: virtualization only works if the grid's container has a bounded height. A flex child without `min-height: 0` grows to fit every row, so every row is rendered. Pagination hides this, and row grouping turns pagination off. Use `<div style={{ flex: 1, minHeight: 0 }}>` around `height="100%"`, or pass a fixed pixel `height`. Dev builds log a warning when this happens.
+12. **Pagination is ignored under row grouping** — a grouped grid is one scrollable, virtualized list.
+13. **`valueFormatter` + `renderCell`**: `renderCell` receives `params.formattedValue` (v2.1+), so a custom renderer can reuse the formatter instead of duplicating it.
+14. **`slots.footer`** replaces the pagination area and receives `aggregationResult`, `rowCount`, `paginationModel`, `onPaginationModelChange` and `apiRef` (v2.1+).

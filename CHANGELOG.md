@@ -5,7 +5,7 @@
 
 ---
 
-## [Unreleased]
+## [2.1.0] — 2026-09-23
 
 Fixes from a consumer defect report (migration of an ERP report writer from ag-grid) plus issues found while verifying it.
 
@@ -18,12 +18,14 @@ Fixes from a consumer defect report (migration of an ERP report writer from ag-g
 - **Tree data reset user expansion whenever rows changed** (when `defaultGroupingExpansionDepth` was non-zero). With server-side tree data, a lazily expanded node could collapse as soon as its children arrived. Tree data now uses the same override model as row grouping, and the default expansion applies on the first render instead of after an effect.
 - **`onRowExpansionChange` (server-side child fetch) was called inside a React state updater**, which React may run twice (always in StrictMode). It is now called exactly once per expand.
 - **`useTreeData().getVisibleRows()` crashed when `filterModel` was omitted**, although the param is optional.
+- **Rows were drawn in the wrong place when rows were pinned to the top.** `useGridVisibleRows` subtracted the pinned count from render-window indices that already exclude pinned rows. With N top-pinned rows, every row past the first screen was drawn N rows too low, and the bottom N rows of the viewport were left blank.
+- **Keyboard navigation and `apiRef.scrollToIndexes` left the target row hidden below the fold.** The scroll math ignored the sticky header, so the row ended up about one header height below the visible area. Keyboard navigation also mapped pinned rows onto the wrong layout index. Both now share `scrollRowIntoView` and never scroll to pinned rows, which are always visible.
 - **`valueFormatter` was dropped for every column once row grouping was on** — the injected hierarchy renderers fell back to the raw value. They now render the formatted value. *(Report D3)*
 - **`slots.footer`, `slots.noRowsOverlay` and `slots.loadingOverlay` were typed and documented but never rendered.** All three are now wired. `footer` replaces the pagination area, as documented, and also receives `aggregationResult`, `rowCount`, `paginationModel`, `onPaginationModelChange` and `apiRef`. *(Report D2)*
 
 ### Added
 
-- **`onRowDoubleClick`** on `DataGridProps`. *(Report D6)*
+- **`onRowDoubleClick`** on `DataGridProps`, in grid and list view. *(Report D6)*
 - **`GridRenderCellParams.formattedValue`** — the `valueFormatter` output, now passed to `renderCell`.
 - **`ColumnVisibilityPanel` and `ColumnVisibilityPanelProps` exported**, as the docs already claimed. *(Report D5)*
 - **`ExcelAdvancedExportOptions.groupedRows`** — grouped reports in `exportToExcelAdvanced`, with Excel row outlining, numeric subtotals that keep `numFmt`, and `groupHeaderFillColor` / `groupSubtotalFillColor`. *(Report D7)*

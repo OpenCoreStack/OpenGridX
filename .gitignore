@@ -28,3 +28,6 @@ demo/dist/*
 .agent/
 docs/research/
 research/
+
+# Vitest browser-mode failure screenshots
+__screenshots__/
