@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import { useState } from 'react';
+import { StrictMode, useState } from 'react';
 import { DataGrid } from './DataGrid';
 import type { GridColDef, GridFilterModel, GridRenderEditCellParams } from '../../types';
 
@@ -437,6 +437,22 @@ describe('processRowUpdate that returns nothing', () => {
 });
 
 describe('an edit whose cell leaves the grid', () => {
+    it('editing works inside React StrictMode: the editor stays open until Enter, which commits once', async () => {
+        const processRowUpdate = vi.fn((r: Row) => r);
+        const { container } = render(<StrictMode><DataGrid rows={ROWS} columns={COLS} processRowUpdate={processRowUpdate} /></StrictMode>);
+        fireEvent.doubleClick(cellOf(container, 0, 'name'));
+        await act(async () => { await Promise.resolve(); });
+        const input = editorOf(container)!;
+        expect(input).not.toBeNull();
+        fireEvent.change(input, { target: { value: 'Omega' } });
+        await act(async () => { await Promise.resolve(); });
+        expect(editorOf(container)).toBe(input);
+        expect(processRowUpdate).not.toHaveBeenCalled();
+        fireEvent.keyDown(input, { key: 'Enter' });
+        await waitFor(() => expect(editorOf(container)).toBeNull());
+        expect(processRowUpdate).toHaveBeenCalledTimes(1);
+    });
+
     it('is committed when the edited row is filtered out of view', async () => {
         const processRowUpdate = vi.fn((r: Row) => r);
         const noFilter: GridFilterModel = { items: [] };
