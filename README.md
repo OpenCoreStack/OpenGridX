@@ -406,7 +406,7 @@ import {
 } from '@opencorestack/opengridx';
 
 exportToCsv(rows, columns, { fileName: 'data.csv' });
-exportToExcel(rows, columns, { fileName: 'data.xlsx' });
+exportToExcel(rows, columns, { fileName: 'data.xls' });  // HTML table, opened by Excel as .xls
 exportToExcelAdvanced(rows, columns, {
     fileName: 'data.xlsx',
     columnStyles: { avatar: { embedImage: true, imageWidth: 40, imageHeight: 40 } }
