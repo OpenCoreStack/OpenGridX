@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAggregation, formatAggregationValue } from './useAggregation';
+import type { GridAggregationResult, GridDataSource, GridFilterModel, GridRowModel } from '../../types';
 
 const ROWS = [
     { id: 1, salary: 50000, dept: 'Eng', active: true },
@@ -171,5 +172,67 @@ describe('useAggregation — client-side', () => {
             })
         );
         expect(result.current.aggregationResult.salary).toBe(260000);
+    });
+});
+
+describe('useAggregation — server side (getAggregations)', () => {
+    const rows: GridRowModel[] = [{ id: 1, salary: 10 }, { id: 2, salary: 20 }];
+    const NO_SORT: never[] = [];
+    const makeSource = (getAggregations: GridDataSource<GridRowModel>['getAggregations']) =>
+        ({ getRows: vi.fn(), getAggregations }) as unknown as GridDataSource<GridRowModel>;
+
+    it('does not refetch when the parent re-renders with an equal inline model or filter', async () => {
+        const getAggregations = vi.fn(async () => ({ salary: 999 }));
+        const dataSource = makeSource(getAggregations);
+        const { result, rerender } = renderHook(({ model, filter }) => useAggregation({
+            rows, aggregationModel: model, isServerSide: true, dataSource, filterModel: filter, sortModel: NO_SORT,
+        }), { initialProps: { model: { salary: 'sum' } as Record<string, string>, filter: { items: [] } as GridFilterModel } });
+        await waitFor(() => expect(result.current.aggregationResult).toEqual({ salary: 999 }));
+        for (let i = 0; i < 3; i++) {
+            rerender({ model: { salary: 'sum' }, filter: { items: [] } });
+            await act(async () => { await Promise.resolve(); });
+            expect(result.current.aggregationResult).toEqual({ salary: 999 });
+        }
+        expect(getAggregations).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows no result, not the previous function\'s, while the request for a new model is pending', async () => {
+        let resolveSecond: (v: GridAggregationResult) => void = () => {};
+        const getAggregations = vi.fn()
+            .mockImplementationOnce(async () => ({ salary: 30 }))
+            .mockImplementationOnce(() => new Promise(r => { resolveSecond = r; }));
+        const dataSource = makeSource(getAggregations);
+        const { result, rerender } = renderHook(({ model }) => useAggregation({
+            rows, aggregationModel: model, isServerSide: true, dataSource, sortModel: NO_SORT,
+        }), { initialProps: { model: { salary: 'sum' } as Record<string, string> } });
+        await waitFor(() => expect(result.current.aggregationResult).toEqual({ salary: 30 }));
+
+        rerender({ model: { salary: 'avg' } });
+        expect(result.current.aggregationResult).toEqual({});
+        expect(result.current.isLoading).toBe(true);
+
+        await act(async () => { resolveSecond({ salary: 15 }); });
+        expect(result.current.aggregationResult).toEqual({ salary: 15 });
+        expect(result.current.isLoading).toBe(false);
+    });
+
+    it('drops the previous filter\'s totals and reports the error when the new request fails', async () => {
+        const failure = new Error('boom');
+        const getAggregations = vi.fn()
+            .mockImplementationOnce(async () => ({ salary: 30 }))
+            .mockImplementationOnce(async () => { throw failure; });
+        const dataSource = makeSource(getAggregations);
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const model = { salary: 'sum' };
+        const { result, rerender } = renderHook(({ filter }) => useAggregation({
+            rows, aggregationModel: model, isServerSide: true, dataSource, filterModel: filter, sortModel: NO_SORT,
+        }), { initialProps: { filter: { items: [] } as GridFilterModel } });
+        await waitFor(() => expect(result.current.aggregationResult).toEqual({ salary: 30 }));
+
+        rerender({ filter: { items: [{ field: 'salary', operator: '>', value: 15 }] } });
+        await waitFor(() => expect(result.current.error).toBe(failure));
+        expect(result.current.aggregationResult).toEqual({});
+        expect(result.current.isLoading).toBe(false);
+        errSpy.mockRestore();
     });
 });

@@ -99,7 +99,13 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
     const [internalAggregationModel, setInternalAggregationModel] = useState<GridAggregationModel>(
         () => propAggregationModel ?? {}
     );
-    const aggregationModel = isAggregationControlled ? propAggregationModel! : internalAggregationModel;
+    // Identity follows content: `aggregationModel={{ salary: 'sum' }}` is a new object on every parent
+    // render, and the fetches and memos keyed on the model must not rerun for an unchanged model.
+    const aggregationModelKey = JSON.stringify(isAggregationControlled ? propAggregationModel! : internalAggregationModel);
+    const aggregationModel = useMemo<GridAggregationModel>(
+        () => JSON.parse(aggregationModelKey) as GridAggregationModel,
+        [aggregationModelKey],
+    );
 
     const handleAggregationModelChange = useCallback((model: GridAggregationModel) => {
         if (!isAggregationControlled) setInternalAggregationModel(model);
