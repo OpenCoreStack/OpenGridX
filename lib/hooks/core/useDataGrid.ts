@@ -1,38 +1,72 @@
 
-import { useReducer, useCallback, useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { useReducer, useCallback, useState, useRef, useLayoutEffect } from 'react';
 import type {
   GridInternalState as GridState,
   GridRowModel,
   GridColDef,
   GridRowId,
-  GridSortItem,
-  GridFilterModel,
-  GridPaginationModel,
   GridColumnVisibilityModel,
   GridApi
 } from '../../types';
+import { createGridApiPlaceholder } from './gridApiPlaceholder';
+
+// Sort, filter, pagination and selection deliberately have no slice here: they live in
+// useGridControlledState, which is what the grid renders from. (Copies of them in this
+// reducer used to drift from it, which made the imperative API a no-op.)
+type GetRowId = (row: GridRowModel) => GridRowId;
 
 type GridAction =
-  | { type: 'SET_ROWS'; payload: GridRowModel[] | ((prev: GridRowModel[]) => GridRowModel[]); preserveRowCount?: boolean }
+  | { type: 'SET_ROWS'; payload: GridRowModel[] | ((prev: GridRowModel[]) => GridRowModel[]); getRowId: GetRowId }
+  | { type: 'REPLACE_ROW'; id: GridRowId; row: GridRowModel }
   | { type: 'SET_COLUMNS'; payload: GridColDef[] }
-  | { type: 'SET_SORT_MODEL'; payload: GridSortItem[] }
-  | { type: 'SET_FILTER_MODEL'; payload: GridFilterModel }
-  | { type: 'SET_PAGINATION_MODEL'; payload: GridPaginationModel }
-  | { type: 'SET_SELECTION'; payload: Set<GridRowId> }
   | { type: 'SET_DIMENSIONS'; payload: { viewportWidth: number; viewportHeight: number } }
   | { type: 'SET_DATASOURCE_LOADING'; payload: boolean }
   | { type: 'SET_DATASOURCE_ERROR'; payload: unknown }
   | { type: 'SET_ROW_COUNT'; payload: number };
 
-function createInitialState<R extends GridRowModel>(rows: R[], columns: GridColDef<R>[], columnVisibilityModel: GridColumnVisibilityModel = {}): GridState {
+const defaultGetRowId: GetRowId = (row) => row.id;
+
+// Rows are re-keyed on every rows change, so warn once rather than on every update.
+let warnedDuplicateIds = false;
+
+/**
+ * Keys rows by getRowId(row). The row objects are stored as given (never copied or given an
+ * `id` field), so `idByRow` maps each one back to its key. A row object the store already
+ * holds keeps its key (`knownIds`), so a committed edit stored under the edited row's id stays
+ * there even when the stored object does not resolve to that id itself. A duplicate id keeps
+ * the first row, so a later row never silently replaces it (or renders twice), and warns once
+ * in development.
+ */
+function buildRowsState(rows: GridRowModel[], getRowId: GetRowId, knownIds?: Map<GridRowModel, GridRowId>): GridState['rows'] {
   const idRowsLookup = new Map<GridRowId, GridRowModel>();
+  const idByRow = new Map<GridRowModel, GridRowId>();
   const allRows: GridRowId[] = [];
+  const duplicates: GridRowId[] = [];
 
   rows.forEach(row => {
-    idRowsLookup.set(row.id, row);
-    allRows.push(row.id);
+    const id = knownIds?.get(row) ?? getRowId(row);
+    if (idRowsLookup.has(id)) {
+      duplicates.push(id);
+      return;
+    }
+    idRowsLookup.set(id, row);
+    idByRow.set(row, id);
+    allRows.push(id);
   });
 
+  if (duplicates.length > 0 && !warnedDuplicateIds && process.env.NODE_ENV !== 'production') {
+    warnedDuplicateIds = true;
+    console.warn(
+      `[OpenGridX] ${duplicates.length} row(s) reuse the id of an earlier row and were ignored ` +
+      `(ids: ${duplicates.slice(0, 5).map(String).join(', ')}${duplicates.length > 5 ? ', …' : ''}). ` +
+      'Every row needs a unique id; pass getRowId if the unique key lives in another field.'
+    );
+  }
+
+  return { idRowsLookup, allRows, idByRow };
+}
+
+function createInitialState<R extends GridRowModel>(rows: R[], getRowId: GetRowId, columns: GridColDef<R>[], columnVisibilityModel: GridColumnVisibilityModel = {}): GridState {
   const columnLookup = new Map<string, GridColDef>();
   const orderedFields: string[] = [];
 
@@ -42,28 +76,15 @@ function createInitialState<R extends GridRowModel>(rows: R[], columns: GridColD
   });
 
   return {
-    rows: {
-      idRowsLookup,
-      allRows
-    },
+    rows: buildRowsState(rows, getRowId),
     columns: {
       all: columns as unknown as GridColDef[],
       lookup: columnLookup,
       orderedFields,
       columnVisibilityModel
     },
-    sorting: {
-      sortModel: []
-    },
-    filter: {
-      filterModel: { items: [] }
-    },
     pagination: {
-      paginationModel: { page: 0, pageSize: 100 },
-      rowCount: rows.length
-    },
-    selection: {
-      selectedRows: new Set()
+      rowCount: undefined
     },
     pinning: {
       pinnedColumns: {},
@@ -93,28 +114,31 @@ function createInitialState<R extends GridRowModel>(rows: R[], columns: GridColD
 function gridReducer(state: GridState, action: GridAction): GridState {
   switch (action.type) {
     case 'SET_ROWS': {
-      const currentRows = Array.from(state.rows.idRowsLookup.values());
-      const newRows = typeof action.payload === 'function' 
+      const currentRows = state.rows.allRows.map(id => state.rows.idRowsLookup.get(id)!);
+      const newRows = typeof action.payload === 'function'
         ? action.payload(currentRows)
         : action.payload;
 
-      const idRowsLookup = new Map<GridRowId, GridRowModel>();
-      const allRows: GridRowId[] = [];
-
-      newRows.forEach(row => {
-        idRowsLookup.set(row.id, row);
-        allRows.push(row.id);
-      });
-
+      // pagination.rowCount is the server-reported total only (SET_ROW_COUNT). Client row
+      // counts are derived from the rows the grid shows, so replacing rows never touches it.
       return {
         ...state,
-        rows: { idRowsLookup, allRows },
-        pagination: {
-          ...state.pagination,
-          // Only override rowCount when we're NOT in server mode (i.e. no preserveRowCount flag)
-          // Server-side fetches set rowCount separately via SET_ROW_COUNT.
-          rowCount: action.preserveRowCount ? state.pagination.rowCount : newRows.length
-        }
+        rows: buildRowsState(newRows, action.getRowId, state.rows.idByRow),
+      };
+    }
+
+    case 'REPLACE_ROW': {
+      // Stores a committed edit under the id of the row that was edited, in the current store.
+      const previous = state.rows.idRowsLookup.get(action.id);
+      if (previous === undefined) return state;
+      const idRowsLookup = new Map(state.rows.idRowsLookup);
+      idRowsLookup.set(action.id, action.row);
+      const idByRow = new Map(state.rows.idByRow);
+      idByRow.delete(previous);
+      idByRow.set(action.row, action.id);
+      return {
+        ...state,
+        rows: { ...state.rows, idRowsLookup, idByRow },
       };
     }
 
@@ -137,33 +161,6 @@ function gridReducer(state: GridState, action: GridAction): GridState {
         }
       };
     }
-
-    case 'SET_SORT_MODEL':
-      return {
-        ...state,
-        sorting: { sortModel: action.payload }
-      };
-
-    case 'SET_FILTER_MODEL':
-      return {
-        ...state,
-        filter: { filterModel: action.payload }
-      };
-
-    case 'SET_PAGINATION_MODEL':
-      return {
-        ...state,
-        pagination: {
-          ...state.pagination,
-          paginationModel: action.payload
-        }
-      };
-
-    case 'SET_SELECTION':
-      return {
-        ...state,
-        selection: { selectedRows: action.payload }
-      };
 
     case 'SET_DIMENSIONS':
       return {
@@ -209,32 +206,40 @@ function gridReducer(state: GridState, action: GridAction): GridState {
 
 export interface UseDataGridParams<R extends GridRowModel = GridRowModel> {
   rows: R[];
+  /** Keys the store. Read when rows are set; defaults to `row.id`. */
+  getRowId?: (row: R) => GridRowId;
   columns: GridColDef<R>[];
   rowHeight?: number;
   headerHeight?: number;
-  rowCount?: number;
   columnVisibilityModel?: GridColumnVisibilityModel;
   initialState?: import('../../state/types').GridInitialState;
 }
 
+/**
+ * The row store, plus dimensions and dataSource status. `rows` only seeds the store: the
+ * caller syncs later changes of the rows prop through setRows, and skips that when a
+ * dataSource owns the rows.
+ */
 export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDataGridParams<R>) {
   const { rows, columns, rowHeight = 52, headerHeight = 56, columnVisibilityModel, initialState: propInitialState } = params;
+  const getRowId = (params.getRowId ?? defaultGetRowId) as GetRowId;
+
+  // Latest getRowId for dispatches from effects and event handlers. An inline getRowId
+  // therefore never re-keys (or resets) the store by itself; new rows are keyed with it.
+  const getRowIdRef = useRef(getRowId);
+  useLayoutEffect(() => { getRowIdRef.current = getRowId; });
 
   const [internalInitialState] = useState(() =>
-    createInitialState(rows, columns, columnVisibilityModel)
+    createInitialState(rows, getRowId, columns, columnVisibilityModel)
   );
 
   const [state, dispatch] = useReducer(gridReducer, {
     ...internalInitialState,
-    sorting: propInitialState?.sorting || internalInitialState.sorting,
-    filter: propInitialState?.filter || internalInitialState.filter,
     dataSource: propInitialState?.dataSource
       ? { ...internalInitialState.dataSource, ...propInitialState.dataSource }
       : internalInitialState.dataSource,
     pagination: {
-      ...internalInitialState.pagination,
-      ...(propInitialState?.pagination || {}),
-      rowCount: params.rowCount ?? propInitialState?.pagination?.rowCount ?? internalInitialState.pagination.rowCount
+      rowCount: propInitialState?.pagination?.rowCount,
     },
     dimensions: {
       ...internalInitialState.dimensions,
@@ -246,37 +251,19 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
   const stateRef = useRef(state);
   useLayoutEffect(() => { stateRef.current = state; });
 
-  // Sync internal state when the external `rows` prop changes
-  const prevRowsRef = useRef(rows);
-  useEffect(() => {
-    if (rows !== prevRowsRef.current) {
-      prevRowsRef.current = rows;
-      dispatch({ type: 'SET_ROWS', payload: rows as GridRowModel[] });
-    }
-  }, [rows]);
+  // `_preserveRowCount` is still accepted from callers written against the old signature;
+  // replacing rows never changes the server row count any more.
+  const setRows = useCallback((rowsOrUpdater: GridRowModel[] | ((prev: GridRowModel[]) => GridRowModel[]), _preserveRowCount?: boolean) => {
+    dispatch({ type: 'SET_ROWS', payload: rowsOrUpdater, getRowId: getRowIdRef.current });
+  }, []);
 
-  const setRows = useCallback((rowsOrUpdater: GridRowModel[] | ((prev: GridRowModel[]) => GridRowModel[]), preserveRowCount?: boolean) => {
-    dispatch({ type: 'SET_ROWS', payload: rowsOrUpdater, preserveRowCount });
+  /** Replaces the row stored under `id` (a committed edit); does nothing if that row is gone. */
+  const replaceRow = useCallback((id: GridRowId, row: GridRowModel) => {
+    dispatch({ type: 'REPLACE_ROW', id, row });
   }, []);
 
   const setColumns = useCallback((newColumns: GridColDef[]) => {
     dispatch({ type: 'SET_COLUMNS', payload: newColumns });
-  }, []);
-
-  const setSortModel = useCallback((sortModel: GridSortItem[]) => {
-    dispatch({ type: 'SET_SORT_MODEL', payload: sortModel });
-  }, []);
-
-  const setFilterModel = useCallback((filterModel: GridFilterModel) => {
-    dispatch({ type: 'SET_FILTER_MODEL', payload: filterModel });
-  }, []);
-
-  const setPaginationModel = useCallback((paginationModel: GridPaginationModel) => {
-    dispatch({ type: 'SET_PAGINATION_MODEL', payload: paginationModel });
-  }, []);
-
-  const setSelection = useCallback((selectedRows: Set<GridRowId>) => {
-    dispatch({ type: 'SET_SELECTION', payload: selectedRows });
   }, []);
 
   const setDimensions = useCallback((viewportWidth: number, viewportHeight: number) => {
@@ -295,77 +282,24 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
     dispatch({ type: 'SET_ROW_COUNT', payload: count });
   }, []);
 
-  const apiRef = useRef<GridApi>({
+  // Store-backed getters live here. DataGrid installs the rest of the API (sort, filter,
+  // pagination, selection, visible rows and columns) from the state it actually renders.
+  const [initialApi] = useState<GridApi>(() => ({
+    ...createGridApiPlaceholder(),
     getRow: (id: GridRowId) => stateRef.current.rows.idRowsLookup.get(id) || null,
-    getAllRows: () => Array.from(stateRef.current.rows.idRowsLookup.values()),
-    getVisibleRows: () => Array.from(stateRef.current.rows.idRowsLookup.values()),
-    getAllFilteredRows: () => Array.from(stateRef.current.rows.idRowsLookup.values()),
-    getGroupedExportRows: () => null,
-    getAggregationResult: () => null,
-    getAggregationModel: () => null,
+    getAllRows: () => stateRef.current.rows.allRows.map(id => stateRef.current.rows.idRowsLookup.get(id)!),
     getColumn: (field: string) => stateRef.current.columns.lookup.get(field) || null,
     getAllColumns: () => stateRef.current.columns.all,
-    getVisibleColumns: () => stateRef.current.columns.all,
-    selectRow: (id: GridRowId, isSelected = true) => {
-      const newSelection = new Set(stateRef.current.selection.selectedRows);
-      if (isSelected) {
-        newSelection.add(id);
-      } else {
-        newSelection.delete(id);
-      }
-      setSelection(newSelection);
-    },
-    selectRows: (ids: GridRowId[], isSelected = true) => {
-      const newSelection = new Set(stateRef.current.selection.selectedRows);
-      ids.forEach(id => {
-        if (isSelected) {
-          newSelection.add(id);
-        } else {
-          newSelection.delete(id);
-        }
-      });
-      setSelection(newSelection);
-    },
-    getSelectedRows: () => Array.from(stateRef.current.selection.selectedRows),
-    sortColumn: (field: string, direction) => {
-      if (direction === null) {
-        setSortModel(stateRef.current.sorting.sortModel.filter(item => item.field !== field));
-      } else {
-        const existingIndex = stateRef.current.sorting.sortModel.findIndex(item => item.field === field);
-        if (existingIndex >= 0) {
-          const newModel = [...stateRef.current.sorting.sortModel];
-          newModel[existingIndex] = { field, sort: direction };
-          setSortModel(newModel);
-        } else {
-          setSortModel([...stateRef.current.sorting.sortModel, { field, sort: direction }]);
-        }
-      }
-    },
-    getSortModel: () => stateRef.current.sorting.sortModel,
-    setFilterModel,
-    getFilterModel: () => stateRef.current.filter.filterModel,
-    setPage: (page: number) => {
-      setPaginationModel({ ...stateRef.current.pagination.paginationModel, page });
-    },
-    setPageSize: (pageSize: number) => {
-      setPaginationModel({ ...stateRef.current.pagination.paginationModel, pageSize, page: 0 });
-    },
-    scrollToIndexes: () => {
-
-    },
-    copySelectedRows: () => Promise.resolve()
-  });
+  }));
+  const apiRef = useRef<GridApi>(initialApi);
 
   return {
     state,
     dispatch,
     apiRef,
     setRows,
+    replaceRow,
     setColumns,
-    setSortModel,
-    setFilterModel,
-    setPaginationModel,
-    setSelection,
     setDimensions,
     setDataSourceLoading,
     setDataSourceError,

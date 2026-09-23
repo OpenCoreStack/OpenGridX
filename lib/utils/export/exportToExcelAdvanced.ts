@@ -1,5 +1,5 @@
 
-import type { GridColDef, GridRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
+import type { GridColDef, GridRowId, GridRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
 import { groupHeaderLabel } from './groupLabel';
 import {
     aggregationForExport,
@@ -83,6 +83,11 @@ export interface ExcelAdvancedExportOptions {
     aggregationModel?: GridAggregationModel | null;
     /** Currently selected row IDs, written by `rows: 'selected'` sheets */
     selectedRows?: (string | number)[];
+    /**
+     * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
+     * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
+     */
+    getRowId?: (row: GridRowModel) => GridRowId;
     /**
      * Grouped row structure, typically from `apiRef.current.getGroupedExportRows()`.
      * When provided, sheets with `rows: 'all'` are written in grouped order: group-header,
@@ -345,6 +350,7 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
         aggregationResult = null,
         aggregationModel = null,
         selectedRows,
+        getRowId,
         groupedRows,
         groupHeaderFillColor = '#e8eaf6',
         groupSubtotalFillColor = '#f0f4ff',
@@ -361,7 +367,7 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
 
     const allRows: GridRowModel[] = rows as GridRowModel[];
     // A 'selected' sheet writes the selection only: an empty selection is an empty sheet.
-    const sRows: GridRowModel[] = hasSelection(selectedRows) ? pickSelectedRows(allRows, selectedRows) : [];
+    const sRows: GridRowModel[] = hasSelection(selectedRows) ? pickSelectedRows(allRows, selectedRows, getRowId) : [];
 
     // Normalise sheet definitions
     const resolvedSheets: (ExcelSheetDefinition | { type: 'summary'; name?: string })[] =

@@ -63,7 +63,11 @@ export interface UseGridSpanningParams<R extends GridRowModel> {
     /** Rows whose detail panel is expanded. A row span ends at such a row, above its panel. */
     expandedRowIds?: Set<GridRowId>;
     rowMetaMap?: Map<GridRowId, GridRowMeta>;
+    /** Resolves a row's id (the grid's getRowId); span caches are keyed by it. Defaults to `row.id`. */
+    getRowId?: (row: R) => GridRowId;
 }
+
+const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 
 export interface GridSpanningResult {
     hasColSpan: boolean;
@@ -164,6 +168,7 @@ export function useGridSpanning<R extends GridRowModel>(params: UseGridSpanningP
         rightPinnedColumns,
         expandedRowIds,
         rowMetaMap,
+        getRowId = defaultGetRowId,
     } = params;
 
     const hasColSpan = useMemo(() => columns.some(c => c.colSpan !== undefined && c.colSpan !== null), [columns]);
@@ -208,12 +213,12 @@ export function useGridSpanning<R extends GridRowModel>(params: UseGridSpanningP
             centerRowSpanStart: new Map(),
         };
         const warned = new Set<string>();
-        const context = { spanColumns, expandedRowIds, rowMetaMap, warned, out };
+        const context = { spanColumns, expandedRowIds, rowMetaMap, getRowId, warned, out };
         computeSection(pinnedTopRows, 0, false, context);
         computeSection(centerRows, pinnedTopRows.length, true, context);
         computeSection(pinnedBottomRows, pinnedTopRows.length + centerRows.length, false, context);
         return out;
-    }, [hasSpans, spanColumns, pinnedTopRows, centerRows, pinnedBottomRows, expandedRowIds, rowMetaMap]);
+    }, [hasSpans, spanColumns, pinnedTopRows, centerRows, pinnedBottomRows, expandedRowIds, rowMetaMap, getRowId]);
 
     return useMemo<GridSpanningResult>(() => {
         if (!computation) return EMPTY_RESULT;
@@ -241,6 +246,7 @@ interface SectionContext<R extends GridRowModel> {
     spanColumns: { columns: SpanColumn<R>[]; leftCount: number; unpinnedCount: number };
     expandedRowIds?: Set<GridRowId>;
     rowMetaMap?: Map<GridRowId, GridRowMeta>;
+    getRowId: (row: R) => GridRowId;
     warned: Set<string>;
     out: SpanComputation;
 }
@@ -251,7 +257,7 @@ function computeSection<R extends GridRowModel>(
     isCenter: boolean,
     context: SectionContext<R>,
 ): void {
-    const { spanColumns, expandedRowIds, rowMetaMap, warned, out } = context;
+    const { spanColumns, expandedRowIds, rowMetaMap, getRowId, warned, out } = context;
     const { columns, leftCount, unpinnedCount } = spanColumns;
     const columnCount = columns.length;
     const { colspanMap, rowSpanningCaches, hiddenOriginFields, unpinnedRanges, centerRowSpanStart } = out;
@@ -283,8 +289,8 @@ function computeSection<R extends GridRowModel>(
     /** Evaluates the spans of the cell at column `i` (not covered from above); returns the columns it takes. */
     const processCell = (row: R, r: number, i: number): number => {
         const column = columns[i];
-        const rowId = row.id;
-        const cellParams = buildParams(row, column.colDef, rowIndexOffset + r, i, rowMetaMap, warned);
+        const rowId = getRowId(row);
+        const cellParams = buildParams(row, rowId, column.colDef, rowIndexOffset + r, i, rowMetaMap, warned);
 
         let colSpan = 1;
         if (column.hasColSpan) {
@@ -297,7 +303,7 @@ function computeSection<R extends GridRowModel>(
             rowSpan = Math.min(evaluateSpan(column.colDef.rowSpan, cellParams, 'rowSpan', column.field, warned), rows.length - r);
             if (rowSpan > 1 && expandedRowIds && expandedRowIds.size > 0) {
                 for (let k = 0; k < rowSpan - 1; k++) {
-                    if (expandedRowIds.has(rows[r + k].id)) {
+                    if (expandedRowIds.has(getRowId(rows[r + k]))) {
                         rowSpan = k + 1;
                         break;
                     }
@@ -355,7 +361,7 @@ function computeSection<R extends GridRowModel>(
         let i = 0;
         while (i < columnCount) {
             if (coveredUntil[i] > r) {
-                markHidden(row.id, r, i);
+                markHidden(getRowId(row), r, i);
                 i++;
             } else if (columns[i].hasColSpan || columns[i].hasRowSpan) {
                 i += processCell(row, r, i);
@@ -368,6 +374,7 @@ function computeSection<R extends GridRowModel>(
 
 function buildParams<R extends GridRowModel>(
     row: R,
+    rowId: GridRowId,
     colDef: GridColDef<R>,
     rowIndex: number,
     colIndex: number,
@@ -384,7 +391,7 @@ function buildParams<R extends GridRowModel>(
             value = undefined;
         }
     }
-    return { row, value, field: colDef.field, colDef, rowIndex, colIndex, rowMeta: rowMetaMap?.get(row.id) };
+    return { row, value, field: colDef.field, colDef, rowIndex, colIndex, rowMeta: rowMetaMap?.get(rowId) };
 }
 
 function evaluateSpan<R extends GridRowModel>(

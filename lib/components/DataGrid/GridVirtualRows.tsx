@@ -124,9 +124,9 @@ export function GridVirtualRows<R extends GridRowModel>({
         })();
 
     const centerRows = visibleRows
-        .filter(({ row }) => !isRowPinned(row.id, pinnedRows))
+        .filter(({ id }) => !isRowPinned(id, pinnedRows))
         .filter((item, index, self) =>
-            index === self.findIndex(t => t.row.id === item.row.id)
+            index === self.findIndex(t => t.id === item.id)
         );
 
     return (
@@ -154,13 +154,14 @@ export function GridVirtualRows<R extends GridRowModel>({
                         />
                     ))
                 ) : (
-                    centerRows.map(({ row, rowIndex: actualIndex }) => (
+                    centerRows.map(({ row, id, rowIndex: actualIndex }) => (
                         <Row<R>
-                            key={row.id}
+                            key={id}
                             row={row}
+                            rowId={id}
                             columns={virtualColumns}
                             rowIndex={actualIndex}
-                            isSelected={selectedRowIds.has(row.id)}
+                            isSelected={selectedRowIds.has(id)}
                             checkboxSelection={checkboxSelection}
                             onRowClick={onRowClick}
                             onRowDoubleClick={onRowDoubleClick}
@@ -170,9 +171,9 @@ export function GridVirtualRows<R extends GridRowModel>({
                             pinnedColumns={pinnedColumns}
                             pinnedRows={pinnedRows}
                             hasDetailPanel={hasDetailPanel}
-                            isDetailPanelExpanded={expandedRowIds.has(row.id)}
-                            detailPanelContent={getDetailPanelContent && !rowMetaMap.get(row.id)?.isGroupRow ? getDetailPanelContent({ row, id: row.id, rowIndex: actualIndex }) : null}
-                            detailPanelHeight={(rowMetaMap.get(row.id)?.isGroupRow ? undefined : getDetailPanelHeight?.({ row, id: row.id, rowIndex: actualIndex })) || 200}
+                            isDetailPanelExpanded={expandedRowIds.has(id)}
+                            detailPanelContent={getDetailPanelContent && !rowMetaMap.get(id)?.isGroupRow ? getDetailPanelContent({ row, id, rowIndex: actualIndex }) : null}
+                            detailPanelHeight={(rowMetaMap.get(id)?.isGroupRow ? undefined : getDetailPanelHeight?.({ row, id, rowIndex: actualIndex })) || 200}
                             onDetailPanelToggle={onDetailPanelToggle}
                             pinCheckboxColumn={pinCheckboxColumn}
                             pinExpandColumn={pinExpandColumn}
@@ -181,18 +182,18 @@ export function GridVirtualRows<R extends GridRowModel>({
                             onDragOver={rowReorderHandlers.onDragOver}
                             onDragEnd={rowReorderHandlers.onDragEnd}
                             onDrop={rowReorderHandlers.onDrop}
-                            isDragging={rowReorderHandlers.draggedRowId === row.id}
-                            isDragOver={rowReorderHandlers.dragOverRowId === row.id}
+                            isDragging={rowReorderHandlers.draggedRowId === id}
+                            isDragOver={rowReorderHandlers.dragOverRowId === id}
                             editingCell={editingHandlers.editingCell}
                             onEditStart={editingHandlers.startCellEdit}
                             onEditStop={editingHandlers.stopCellEdit}
                             onEditCellValueChange={editingHandlers.setEditCellValue}
                             isCellEditable={isCellEditable}
-                            focusedCellField={focusedCell != null && focusedCell.id === row.id ? focusedCell.field : null}
+                            focusedCellField={focusedCell != null && focusedCell.id === id ? focusedCell.field : null}
                             colspanMap={colspanMap}
                             rowSpanningCaches={rowSpanningCaches}
                             rowHeight={rowHeight}
-                            rowMeta={rowMetaMap.get(row.id)}
+                            rowMeta={rowMetaMap.get(id)}
                         />
                     ))
                 )}

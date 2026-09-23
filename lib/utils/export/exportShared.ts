@@ -1,4 +1,4 @@
-import type { GridAggregationModel, GridColDef, GridGroupedExportRow, GridRowModel } from '../../types';
+import type { GridAggregationModel, GridColDef, GridGroupedExportRow, GridRowId, GridRowModel } from '../../types';
 import { computeAggregations, formatAggregateForColumn } from '../aggregation';
 
 /**
@@ -24,16 +24,21 @@ export function hasSelection(selectedRows: SelectedRowIds): selectedRows is read
 
 /**
  * The rows whose id is in `selectedRows`, in row order. Linear time: the ids go into a Set once,
- * so "select all" on a large grid does not scan the selection for every row.
+ * so "select all" on a large grid does not scan the selection for every row. `getRowId` must be
+ * the grid's getRowId when it has one: the grid keys rows with it and never writes it to `row.id`.
  */
-export function pickSelectedRows<R extends GridRowModel>(rows: R[], selectedRows: readonly (string | number)[]): R[] {
+export function pickSelectedRows<R extends GridRowModel>(
+    rows: R[],
+    selectedRows: readonly (string | number)[],
+    getRowId: (row: R) => GridRowId = (row) => row.id,
+): R[] {
     const selected = new Set<unknown>(selectedRows);
-    return rows.filter(row => selected.has(row.id));
+    return rows.filter(row => selected.has(getRowId(row)));
 }
 
 /** `selectedRows` when a selection is given, else every row. */
-export function rowsForExport<R extends GridRowModel>(rows: R[], selectedRows: SelectedRowIds): R[] {
-    return hasSelection(selectedRows) ? pickSelectedRows(rows, selectedRows) : rows;
+export function rowsForExport<R extends GridRowModel>(rows: R[], selectedRows: SelectedRowIds, getRowId?: (row: R) => GridRowId): R[] {
+    return hasSelection(selectedRows) ? pickSelectedRows(rows, selectedRows, getRowId) : rows;
 }
 
 /**

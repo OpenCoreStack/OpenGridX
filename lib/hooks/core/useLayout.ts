@@ -26,7 +26,11 @@ export interface UseLayoutParams<R extends GridRowModel> {
     paginationMode: string;
     isLoading: boolean;
     pageSize: number;
+    /** Resolves a row's id (getRowId) for the expanded-detail-panel lookup; defaults to `row.id`. */
+    getRowId?: (row: R) => GridRowId;
 }
+
+const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 
 export interface LayoutResult<R extends GridRowModel> {
     rowHeights: number[];
@@ -85,6 +89,7 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
         paginationMode,
         isLoading,
         pageSize,
+        getRowId = defaultGetRowId,
     } = params;
 
     return useMemo<LayoutResult<R>>(() => {
@@ -92,8 +97,9 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
 
         const rowHeights = unpinnedRows.map((row, index) => {
             let height = rowHeight;
-            if (expandedRowIds.has(row.id) && !rowMetaMap?.get(row.id)?.isGroupRow) {
-                const detailHeight = getDetailPanelHeight?.({ row, id: row.id, rowIndex: pinnedTopRowsLength + index }) ?? 200;
+            const id = getRowId(row);
+            if (expandedRowIds.has(id) && !rowMetaMap?.get(id)?.isGroupRow) {
+                const detailHeight = getDetailPanelHeight?.({ row, id, rowIndex: pinnedTopRowsLength + index }) ?? 200;
                 height += typeof detailHeight === 'number' ? detailHeight : parseInt(String(detailHeight), 10) || 200;
             }
             return height;
@@ -348,5 +354,6 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
         paginationMode,
         isLoading,
         pageSize,
+        getRowId,
     ]);
 }

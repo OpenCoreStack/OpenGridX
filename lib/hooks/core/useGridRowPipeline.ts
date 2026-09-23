@@ -3,11 +3,11 @@ import { filterRows } from '../../utils/filtering';
 import { sortRows } from '../../utils/sorting';
 import { getPinnedRowGroups } from '../../utils/pinning';
 import type { GridColumnLookup } from '../../utils/columnLookup';
-import type { GridRowModel, GridFilterModel, GridSortItem, GridPaginationModel, GridRowPinning, GridDataSource } from '../../types';
+import type { GridRowModel, GridRowId, GridFilterModel, GridSortItem, GridPaginationModel, GridRowPinning } from '../../types';
 
 interface HierarchyHandlers<R extends GridRowModel> {
     /** `labelField` is the column showing the hierarchy, so sorting by it can order group rows by their labels. */
-    getVisibleRows: (labelField?: string) => R[] | null;
+    getVisibleRows: (options?: { labelField?: string; expandAll?: boolean }) => R[] | null;
 }
 
 export interface UseGridRowPipelineParams<R extends GridRowModel> {
@@ -15,13 +15,14 @@ export interface UseGridRowPipelineParams<R extends GridRowModel> {
     activeHierarchyHandlers: HierarchyHandlers<R> | null;
     filterMode: string;
     filterModel: GridFilterModel;
-    dataSource?: GridDataSource<R>;
     sortModel: GridSortItem[];
     sortingMode: string;
     pagination: boolean;
     paginationMode: string;
     effectivePaginationModel: GridPaginationModel;
     pinnedRows?: GridRowPinning;
+    /** Resolves a row's id for pinnedRows lookups; defaults to `row.id`. */
+    getRowId?: (row: R) => GridRowId;
     isLoading: boolean;
     pageSize: number;
     /**
@@ -59,48 +60,50 @@ export function useGridRowPipeline<R extends GridRowModel>(
         activeHierarchyHandlers,
         filterMode,
         filterModel,
-        dataSource,
         sortModel,
         sortingMode,
         pagination,
         paginationMode,
         effectivePaginationModel,
         pinnedRows,
+        getRowId,
         isLoading,
         pageSize,
         columnLookup,
         hierarchyField,
     } = params;
 
+    // Server modes mean "the rows are already filtered/sorted/paged", with or without a
+    // dataSource (a consumer can fetch pages itself from onPaginationModelChange etc.).
     const filteredRows = useMemo<R[]>(() => {
-        if (activeHierarchyHandlers) return (activeHierarchyHandlers.getVisibleRows(hierarchyField) || []) as R[];
-        if (filterMode === 'server' && dataSource) return effectiveRows;
+        if (activeHierarchyHandlers) return (activeHierarchyHandlers.getVisibleRows({ labelField: hierarchyField }) || []) as R[];
+        if (filterMode === 'server') return effectiveRows;
         return filterRows(effectiveRows, filterModel, columnLookup) as R[];
-    }, [effectiveRows, filterModel, activeHierarchyHandlers, hierarchyField, filterMode, dataSource, columnLookup]);
+    }, [effectiveRows, filterModel, activeHierarchyHandlers, hierarchyField, filterMode, columnLookup]);
 
     const dataRows = useMemo<R[]>(() => {
         if (!activeHierarchyHandlers) return filteredRows;
-        if (filterMode === 'server' && dataSource) return effectiveRows;
+        if (filterMode === 'server') return effectiveRows;
         return filterRows(effectiveRows, filterModel, columnLookup) as R[];
-    }, [activeHierarchyHandlers, filteredRows, filterMode, dataSource, effectiveRows, filterModel, columnLookup]);
+    }, [activeHierarchyHandlers, filteredRows, filterMode, effectiveRows, filterModel, columnLookup]);
 
     const { top: pinnedTopRows, center: unpinnedRows, bottom: pinnedBottomRows } = useMemo(() => {
         if (activeHierarchyHandlers) return { top: [] as R[], center: filteredRows, bottom: [] as R[] };
-        return getPinnedRowGroups(filteredRows, pinnedRows);
-    }, [filteredRows, pinnedRows, activeHierarchyHandlers]);
+        return getPinnedRowGroups(filteredRows, pinnedRows, getRowId);
+    }, [filteredRows, pinnedRows, activeHierarchyHandlers, getRowId]);
 
     const sortedUnpinnedRows = useMemo<R[]>(() => {
         if (activeHierarchyHandlers) return unpinnedRows;
-        if (sortingMode === 'server' && dataSource) return unpinnedRows;
+        if (sortingMode === 'server') return unpinnedRows;
         return sortRows(unpinnedRows, sortModel, columnLookup) as R[];
-    }, [unpinnedRows, sortModel, activeHierarchyHandlers, sortingMode, dataSource, columnLookup]);
+    }, [unpinnedRows, sortModel, activeHierarchyHandlers, sortingMode, columnLookup]);
 
     const paginatedUnpinnedRows = useMemo<R[]>(() => {
         if (!pagination) return sortedUnpinnedRows;
-        if (paginationMode === 'server' && dataSource) return sortedUnpinnedRows;
+        if (paginationMode === 'server') return sortedUnpinnedRows;
         const start = effectivePaginationModel.page * effectivePaginationModel.pageSize;
         return sortedUnpinnedRows.slice(start, start + effectivePaginationModel.pageSize);
-    }, [sortedUnpinnedRows, pagination, effectivePaginationModel.page, effectivePaginationModel.pageSize, paginationMode, dataSource]);
+    }, [sortedUnpinnedRows, pagination, effectivePaginationModel.page, effectivePaginationModel.pageSize, paginationMode]);
 
     // What keyboard navigation walks: the rendered rows. With tree data and pagination that is the
     // current page, the same as a flat grid (hierarchy modes have no pinned rows).

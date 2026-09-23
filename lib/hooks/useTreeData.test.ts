@@ -149,7 +149,7 @@ describe('useTreeData — auto-created parents', () => {
             { id: 2, path: ['Alpha', 'a.txt'], title: 'a.txt' },
         ];
         const { result } = buildTree(rows, { sortModel: [{ field: 'title', sort: 'asc' }] });
-        const labels = (result.current.getVisibleRows('title') ?? [])
+        const labels = (result.current.getVisibleRows({ labelField: 'title' }) ?? [])
             .map(r => result.current.rowMetaMap.get(r.id)?.groupLabel ?? r.title);
         expect(labels).toEqual(['Alpha', 'a.txt', 'Bravo', 'b.txt']);
     });

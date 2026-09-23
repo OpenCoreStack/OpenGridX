@@ -395,7 +395,7 @@ describe('useRowGrouping — sorting', () => {
 
     it('orders groups by their grouping value when sorting by the column that shows the labels', () => {
         const { result } = renderHook(() => useRowGrouping({ rows, getRowId: saleId, rowGroupingModel: ['region'], sortModel: [{ field: 'team', sort: 'asc' }], columnLookup }));
-        expect(groupValues(result.current.getVisibleRows('team'))).toEqual(['North', 'South']);
+        expect(groupValues(result.current.getVisibleRows({ labelField: 'team' }))).toEqual(['North', 'South']);
         // Without a label column, 'team' is a column the groups have no value for: first-appearance order.
         expect(groupValues(result.current.getVisibleRows())).toEqual(['South', 'North']);
     });

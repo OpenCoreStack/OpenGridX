@@ -14,6 +14,7 @@ import type {
     GridFilterModel,
     GridSortItem,
     GridApi,
+    GridRowModel,
 } from '../../types';
 
 // Tree data and row grouping through the public DataGrid API: synthetic rows (group rows, subtotal
@@ -199,7 +200,7 @@ describe('tree data labels', () => {
 
 describe('row grouping labels and sorting', () => {
     it('sorts groups by grouping value when the column showing the labels is sorted', () => {
-        const rows = [{ id: 1, region: 'South', team: 'b' }, { id: 2, region: 'North', team: 'a' }];
+        const rows: GridRowModel[] = [{ id: 1, region: 'South', team: 'b' }, { id: 2, region: 'North', team: 'a' }];
         const { container } = render(
             <DataGrid rows={rows} columns={[{ field: 'team', width: 150 }, { field: 'region', width: 150 }]} rowGroupingModel={['region']} sortModel={[{ field: 'team', sort: 'asc' }]} />
         );
@@ -207,14 +208,14 @@ describe('row grouping labels and sorting', () => {
     });
 
     it('indents and expands as if a groupable:false field was not in the model', () => {
-        const rows = [{ id: 1, region: 'EU', team: 'Alpha', name: 'Ann' }, { id: 2, region: 'US', team: 'Alpha', name: 'Bob' }];
+        const rows: GridRowModel[] = [{ id: 1, region: 'EU', team: 'Alpha', name: 'Ann' }, { id: 2, region: 'US', team: 'Alpha', name: 'Bob' }];
         const cols: GridColDef[] = [{ field: 'region', width: 100, groupable: false }, { field: 'team', width: 100 }, { field: 'name', width: 100 }];
         const { container } = render(<DataGrid rows={rows} columns={cols} rowGroupingModel={['region', 'team']} defaultGroupingExpansionDepth={1} />);
         expect(rowTexts(container)).toEqual(['team: Alpha (2)', 'EUAlphaAnn', 'USAlphaBob']);
     });
 
     it('counts and aggregates only the leaves that pass the filter', () => {
-        const rows = [{ id: 1, region: 'N', team: 'a', amount: 100 }, { id: 2, region: 'N', team: 'b', amount: 5 }];
+        const rows: GridRowModel[] = [{ id: 1, region: 'N', team: 'a', amount: 100 }, { id: 2, region: 'N', team: 'b', amount: 5 }];
         const cols: GridColDef[] = [{ field: 'region', width: 100 }, { field: 'team', width: 100 }, { field: 'amount', width: 100 }];
         const { container } = render(
             <DataGrid rows={rows} columns={cols} rowGroupingModel={['region']} aggregationModel={{ amount: 'sum' }}
@@ -267,7 +268,7 @@ describe('clicking tree-data parents', () => {
 });
 
 describe('selection under row grouping', () => {
-    const rows = [{ id: 1, region: 'North', name: 'A' }, { id: 2, region: 'North', name: 'B' }, { id: 3, region: 'South', name: 'C' }];
+    const rows: GridRowModel[] = [{ id: 1, region: 'North', name: 'A' }, { id: 2, region: 'North', name: 'B' }, { id: 3, region: 'South', name: 'C' }];
     const cols: GridColDef[] = [{ field: 'region', width: 150 }, { field: 'name', width: 150 }];
     const mount = (onChange: (ids: GridRowId[]) => void) => render(
         <DataGrid rows={rows} columns={cols} checkboxSelection rowGroupingModel={['region']} defaultGroupingExpansionDepth={-1} onRowSelectionModelChange={onChange} />
@@ -302,7 +303,7 @@ describe('selection under row grouping', () => {
 });
 
 describe('getAggregationPosition in the grid', () => {
-    const rows = [{ id: 1, name: 'x', team: 'A', amount: 10 }, { id: 2, name: 'y', team: 'A', amount: 20 }, { id: 3, name: 'z', team: 'B', amount: 5 }];
+    const rows: GridRowModel[] = [{ id: 1, name: 'x', team: 'A', amount: 10 }, { id: 2, name: 'y', team: 'A', amount: 20 }, { id: 3, name: 'z', team: 'B', amount: 5 }];
     const cols: GridColDef[] = [{ field: 'name', width: 150 }, { field: 'team', width: 120 }, { field: 'amount', width: 120, type: 'number' }];
     type Position = 'inline' | 'footer' | null;
     const mount = (getAggregationPosition: (node: GridTreeNode | null) => Position) => render(

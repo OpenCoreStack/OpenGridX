@@ -18,8 +18,8 @@ export interface UseGridEditingParams<R extends GridRowModel> {
     processRowUpdate?: (newRow: R, oldRow: R) => R | Promise<R>;
     onProcessRowUpdateError?: (error: unknown) => void;
     /**
-     * Receives the committed row and the id of the row that was edited. Match on `id`: the row
-     * returned by `processRowUpdate` need not carry the grid's normalised `id` field.
+     * Receives the committed row and the id of the row that was edited. Match on `id` (the key the
+     * grid resolved with getRowId), not on a field of the returned row.
      */
     onRowChange?: (newRow: R, id: GridRowId) => void;
 }

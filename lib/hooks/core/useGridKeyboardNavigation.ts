@@ -42,6 +42,8 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
     viewportRef: React.RefObject<HTMLDivElement | null>;
     /** Number of top-pinned rows at the start of allRenderableRows. */
     pinnedTopRowCount?: number;
+    /** Resolves a row's id (getRowId); defaults to `row.id`. */
+    getRowId?: (row: R) => GridRowId;
     /** Hierarchy metadata, so synthetic group rows are never edited. */
     rowMetaMap?: Map<GridRowId, GridRowMeta>;
     /**
@@ -50,6 +52,8 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
      */
     getSpanOrigin?: (rowId: GridRowId, field: string) => { rowId: GridRowId; field: string } | null;
 }
+
+const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 
 export interface FocusedCell {
     id: GridRowId;
@@ -84,6 +88,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         virtualization,
         viewportRef,
         pinnedTopRowCount = 0,
+        getRowId = defaultGetRowId,
         rowMetaMap,
         getSpanOrigin,
     } = params;
@@ -100,12 +105,12 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
                 const firstRow = allRenderableRows[0];
                 const firstCol = navigationColumns[0];
                 if (firstRow && firstCol) {
-                    return { id: firstRow.id, field: firstCol.field };
+                    return { id: getRowId(firstRow), field: firstCol.field };
                 }
                 return null;
             });
         }
-    }, [allRenderableRows, navigationColumns, checkboxSelection]);
+    }, [allRenderableRows, navigationColumns, checkboxSelection, getRowId]);
 
     const handleBlur = useCallback((event: React.FocusEvent<HTMLDivElement>) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node)) {
@@ -145,7 +150,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
             } else {
                 // Same rule and starting value as double-click (see Row / resolveCellEditable).
                 const colIndex = navigationColumns.findIndex(c => c.field === field);
-                const rowIndex = allRenderableRows.findIndex(r => r.id === id);
+                const rowIndex = allRenderableRows.findIndex(r => getRowId(r) === id);
                 const col = navigationColumns[colIndex];
                 const row = allRenderableRows[rowIndex];
                 if (col && row) {
@@ -185,7 +190,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         if (isEditing && event.key !== 'Tab') return;
 
         const isHeader = id === 'HEADER';
-        const rowIndex = isHeader ? -1 : allRenderableRows.findIndex(r => r.id === id);
+        const rowIndex = isHeader ? -1 : allRenderableRows.findIndex(r => getRowId(r) === id);
         const colIndex = navigationColumns.findIndex(c => c.field === field);
 
         if (!isHeader && rowIndex === -1) return;
@@ -254,7 +259,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
                 const row = allRenderableRows[r];
                 const col = navigationColumns[c];
                 // Cells covered by a span are not stops; their origin is.
-                if (getSpanOrigin?.(row.id, col.field)) continue;
+                if (getSpanOrigin?.(getRowId(row), col.field)) continue;
                 const isInteractable = ['__checkbox_col__', '__expand_col__', '__reorder_col__'].includes(col.field);
                 const colDef = col as GridColDef<R>;
                 const cellEditable = isInteractable || resolveCellEditable({
@@ -264,7 +269,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
                     colDef,
                     rowIndex: r,
                     colIndex: c,
-                    rowMeta: rowMetaMap?.get(row.id),
+                    rowMeta: rowMetaMap?.get(getRowId(row)),
                 }, isCellEditable);
 
                 if (cellEditable) return { r, c };
@@ -275,7 +280,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         const originOf = (r: number, c: number) => {
             const row = allRenderableRows[r];
             const col = navigationColumns[c];
-            return row && col ? getSpanOrigin?.(row.id, col.field) ?? null : null;
+            return row && col ? getSpanOrigin?.(getRowId(row), col.field) ?? null : null;
         };
 
         // Arrow keys step over the cells of the focused span (its own merged area), then land on
@@ -331,7 +336,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         if (handled && nextRowIndex >= 0) {
             const origin = originOf(nextRowIndex, nextColIndex);
             if (origin) {
-                const originRow = allRenderableRows.findIndex(r => r.id === origin.rowId);
+                const originRow = allRenderableRows.findIndex(r => getRowId(r) === origin.rowId);
                 const originCol = navigationColumns.findIndex(c => c.field === origin.field);
                 if (originRow !== -1 && originCol !== -1) {
                     nextRowIndex = originRow;
@@ -355,7 +360,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
                 if (nextRowIndex === -1) {
                     setFocusedCell({ id: 'HEADER', field: nextCol.field });
                 } else {
-                    setFocusedCell({ id: allRenderableRows[nextRowIndex].id, field: nextCol.field });
+                    setFocusedCell({ id: getRowId(allRenderableRows[nextRowIndex]), field: nextCol.field });
                 }
 
                 const el = viewportRef.current;
@@ -407,6 +412,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         pageSize,
         viewportRef,
         pinnedTopRowCount,
+        getRowId,
         rowMetaMap,
         getSpanOrigin,
     ]);

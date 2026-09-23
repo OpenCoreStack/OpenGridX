@@ -50,6 +50,14 @@ const EMPTY_OVERRIDES: Map<GridRowId, boolean> = new Map();
 
 const FIELD_SEPARATOR = '\u001f';
 
+/** Options of the hierarchy hooks' getVisibleRows. */
+export interface GridHierarchyVisibleRowsOptions {
+    /** Walk every group regardless of expansion (exports, getAllFilteredRows). */
+    expandAll?: boolean;
+    /** The column that shows the hierarchy: sorting by it orders group rows by their grouping value / label. */
+    labelField?: string;
+}
+
 interface ExpansionOverrides {
     configKey: string;
     overrides: Map<GridRowId, boolean>;
@@ -164,12 +172,13 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
     }));
     const overrides = expansionState.configKey === configKey ? expansionState.overrides : EMPTY_OVERRIDES;
 
-    // Groups are built from the rows that pass the filter, so group subtotals, the "(n)" counts and the
-    // set of groups all describe what is shown. With filterMode 'server' the rows already are the result.
-    const leafRows = useMemo<R[]>(() => {
-        if (!isActive || filterMode === 'server') return rows;
+    // Groups hold only the rows that pass the filter, so group subtotals, the "(n)" counts and the set
+    // of groups all describe what is shown. With filterMode 'server' the rows already are the result.
+    // null = every row passes.
+    const matchingRows = useMemo<Set<R> | null>(() => {
+        if (!isActive || filterMode === 'server') return null;
         const rowFilter = createRowFilter(filterModel, columnLookup);
-        return rowFilter ? rows.filter(row => rowFilter(row)) : rows;
+        return rowFilter ? new Set(rows.filter(row => rowFilter(row))) : null;
     }, [isActive, rows, filterMode, filterModel, columnLookup]);
 
     const build = useMemo<GroupingBuild<R>>(() => {
@@ -186,7 +195,8 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
         const groupRows = (currentRows: R[], depth: number, parentId: GridRowId | null): GridRowId[] => {
             if (depth >= groupingFields.length) {
-                return currentRows.map(row => {
+                const leaves = matchingRows ? currentRows.filter(row => matchingRows.has(row)) : currentRows;
+                return leaves.map(row => {
                     const id = getRowId(row);
                     rowLookup.set(id, row);
                     treeNodes.set(id, {
@@ -218,13 +228,17 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
             const ids: GridRowId[] = [];
             buckets.forEach((bucket, key) => {
+                // Group order is the order of first appearance among all rows, so filtering never
+                // reorders the groups; a group with no matching row is left out.
+                const matching = matchingRows ? bucket.rows.filter(row => matchingRows.has(row)) : bucket.rows;
+                if (matching.length === 0) return;
                 const groupId = groupIdOf(field, key, parentId);
                 ids.push(groupId);
                 groupIds.push(groupId);
 
                 // Aggregated over this group's (filtered) leaf rows.
                 const aggregatedValues: Record<string, unknown> = hasAggregation
-                    ? computeAggregations(bucket.rows, stableAggregationModel, columnsLookup, 'useRowGrouping')
+                    ? computeAggregations(matching, stableAggregationModel, columnsLookup, 'useRowGrouping')
                     : {};
 
                 const inline = { [field]: bucket.value, ...aggregatedValues, id: groupId } as unknown as R;
@@ -249,7 +263,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                     label: colDef?.groupingValueFormatter
                         ? colDef.groupingValueFormatter({ field, value: bucket.value })
                         : `${field}: ${String(bucket.value)}`,
-                    descendantCount: bucket.rows.length,
+                    descendantCount: matching.length,
                 };
                 treeNodes.set(groupId, treeNode);
                 treeNode.children = groupRows(bucket.rows, depth + 1, groupId);
@@ -257,9 +271,9 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
             return ids;
         };
 
-        rootIds.push(...groupRows(leafRows, 0, null));
+        rootIds.push(...groupRows(rows, 0, null));
         return { treeNodes, rootIds, groupIds, groupRowVariants, groupingRows, rowLookup };
-    }, [isActive, leafRows, groupingFields, hasAggregation, stableAggregationModel, getRowId, columnsLookup]);
+    }, [isActive, rows, matchingRows, groupingFields, hasAggregation, stableAggregationModel, getRowId, columnsLookup]);
 
     const { treeNodes, rootIds, groupIds, groupRowVariants, groupingRows, rowLookup } = build;
 
@@ -315,8 +329,10 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
      * The rows to render, in order. `labelField` is the column that shows the group labels: sorting
      * by it orders the groups by their grouping value (a group row has no value of its own there).
      */
-    const getVisibleRows = useCallback((labelField?: string): R[] | null => {
+    const getVisibleRows = useCallback((options?: GridHierarchyVisibleRowsOptions): R[] | null => {
         if (!isActive) return null;
+        const labelField = options?.labelField;
+        const expandAll = options?.expandAll ?? false;
 
         const activeSortModel = isClientSort && sortModel ? sortModel : [];
 
@@ -363,9 +379,10 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                 const showInline = position === 'inline' || (position === 'footer' && !isExpanded);
                 result.push(showInline ? variants.inline : variants.bare);
 
-                if (isExpanded && node?.children) {
+                if ((isExpanded || expandAll) && node?.children) {
                     traverse(node.children);
-                    if (position === 'footer' && variants.footer) result.push(variants.footer);
+                    // expandAll (exports) walks the data only; exporters write their own subtotals.
+                    if (isExpanded && !expandAll && position === 'footer' && variants.footer) result.push(variants.footer);
                 }
             }
         };

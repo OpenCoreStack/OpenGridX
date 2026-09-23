@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useGridControlledState } from './useGridControlledState';
+import { useGridControlledState, getDefaultPageSize } from './useGridControlledState';
+import type { GridInitialState } from '../../state/types';
 
 const BASE_PARAMS = {
     sortModel: undefined,
@@ -82,5 +83,64 @@ describe('useGridControlledState — selection', () => {
             result.current.setInternalRowSelectionModel([1, 2, 3]);
         });
         expect(result.current.selectedRowIds).toEqual(new Set([1, 2, 3]));
+    });
+});
+
+describe('useGridControlledState — filter', () => {
+    const BOB = { items: [{ field: 'name', operator: 'equals' as const, value: 'Bob' }] };
+
+    it('initialState.filter seeds the internal filter model', () => {
+        const { result } = renderHook(() =>
+            useGridControlledState({ ...BASE_PARAMS, initialState: { filter: { filterModel: BOB } } })
+        );
+        expect(result.current.isFilterControlled).toBe(false);
+        expect(result.current.filterModel).toEqual(BOB);
+    });
+
+    it('uncontrolled: handleFilterModelChange updates the model and fires the callback', () => {
+        const onFilterModelChange = vi.fn();
+        const { result } = renderHook(() => useGridControlledState({ ...BASE_PARAMS, onFilterModelChange }));
+        expect(result.current.filterModel).toEqual({ items: [] });
+        act(() => { result.current.handleFilterModelChange(BOB); });
+        expect(result.current.filterModel).toEqual(BOB);
+        expect(onFilterModelChange).toHaveBeenCalledWith(BOB);
+    });
+
+    it('controlled: the filterModel prop wins over handleFilterModelChange', () => {
+        const controlled = { items: [] };
+        const { result } = renderHook(() => useGridControlledState({ ...BASE_PARAMS, filterModel: controlled }));
+        act(() => { result.current.handleFilterModelChange(BOB); });
+        expect(result.current.filterModel).toBe(controlled);
+    });
+});
+
+describe('useGridControlledState — default page size', () => {
+    it('is 100 when pageSizeOptions offers it (or is not given)', () => {
+        expect(getDefaultPageSize(undefined)).toBe(100);
+        expect(getDefaultPageSize([10, 25, 50, 100])).toBe(100);
+        const { result } = renderHook(() => useGridControlledState(BASE_PARAMS));
+        expect(result.current.effectivePaginationModel).toEqual({ page: 0, pageSize: 100 });
+    });
+
+    it('is the first option when 100 is not offered', () => {
+        const { result } = renderHook(() => useGridControlledState({ ...BASE_PARAMS, pageSizeOptions: [5, 10, 20] }));
+        expect(result.current.effectivePaginationModel).toEqual({ page: 0, pageSize: 5 });
+    });
+});
+
+describe('useGridControlledState — density', () => {
+    it('uses the prop, then initialState.density, then standard', () => {
+        expect(renderHook(() => useGridControlledState(BASE_PARAMS)).result.current.density).toBe('standard');
+        expect(renderHook(() => useGridControlledState({ ...BASE_PARAMS, initialState: { density: { density: 'compact' } } })).result.current.density).toBe('compact');
+        expect(renderHook(() => useGridControlledState({ ...BASE_PARAMS, density: 'comfortable', initialState: { density: { density: 'compact' } } })).result.current.density).toBe('comfortable');
+    });
+});
+
+describe('GridInitialState', () => {
+    it('accepts a partial columns state', () => {
+        // Type-level check: this literal did not compile while columnWidths and columnOrder were required.
+        const initialState: GridInitialState = { columns: { columnVisibilityModel: { age: false } } };
+        const { result } = renderHook(() => useGridControlledState({ ...BASE_PARAMS, initialState }));
+        expect(result.current.columnVisibilityModel).toEqual({ age: false });
     });
 });

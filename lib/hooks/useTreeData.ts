@@ -4,6 +4,7 @@ import { createRowFilter } from '../utils/filtering';
 import { sortItemsBySortModel, type GridSortValue } from '../utils/sorting';
 import { getCellValue } from '../utils/values';
 import type { GridColumnLookup } from '../utils/columnLookup';
+import type { GridHierarchyVisibleRowsOptions } from './useRowGrouping';
 
 const EMPTY_OVERRIDES: Map<GridRowId, boolean> = new Map();
 
@@ -316,8 +317,10 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
      * indent and the labels of auto-created parents): sorting by it orders auto-created parents by
      * their label, since they have no cell values of their own.
      */
-    const getVisibleRows = useCallback((labelField?: string): GridRowModel[] | null => {
+    const getVisibleRows = useCallback((options?: GridHierarchyVisibleRowsOptions): GridRowModel[] | null => {
         if (!isActive) return null;
+        const labelField = options?.labelField;
+        const expandAll = options?.expandAll ?? false;
 
         const { visible, visibleChildren } = visibility;
         const activeSortModel = isClientSort && sortModel ? sortModel : [];
@@ -345,7 +348,7 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
                 // Hierarchy info travels in rowMetaMap; the consumer's row object is passed through unchanged.
                 result.push(row);
                 const children = visibleChildren.get(id);
-                if (children && children.length > 0 && expandedGroupIds.has(id)) {
+                if (children && children.length > 0 && (expandAll || expandedGroupIds.has(id))) {
                     traverse(children);
                 }
             }

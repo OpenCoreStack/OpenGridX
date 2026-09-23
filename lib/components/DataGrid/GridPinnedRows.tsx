@@ -39,7 +39,11 @@ export interface GridPinnedRowsProps<R extends GridRowModel> {
     rowSpanningCaches?: RowSpanningCaches;
     rowHeight: number;
     rowMetaMap: Map<GridRowId, GridRowMeta>;
+    /** Resolves a row's id; defaults to `row.id`. */
+    getRowId?: (row: R) => GridRowId;
 }
+
+const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 
 export function GridPinnedRows<R extends GridRowModel>({
     rows,
@@ -66,18 +70,22 @@ export function GridPinnedRows<R extends GridRowModel>({
     rowSpanningCaches,
     rowHeight,
     rowMetaMap,
+    getRowId = defaultGetRowId,
 }: GridPinnedRowsProps<R>) {
     if (rows.length === 0) return null;
 
     return (
         <div className={`ogx__pinned-rows ogx__pinned-rows--${position}`} role="rowgroup">
-            {rows.map((row, index) => (
+            {rows.map((row, index) => {
+                const id = getRowId(row);
+                return (
                 <Row<R>
-                    key={row.id}
+                    key={id}
                     row={row}
+                    rowId={id}
                     columns={columns}
                     rowIndex={index}
-                    isSelected={selectedRowIds.has(row.id)}
+                    isSelected={selectedRowIds.has(id)}
                     checkboxSelection={checkboxSelection}
                     onRowClick={onRowClick}
                     onRowDoubleClick={onRowDoubleClick}
@@ -87,19 +95,20 @@ export function GridPinnedRows<R extends GridRowModel>({
                     pinnedColumns={pinnedColumns}
                     pinnedRows={pinnedRows}
                     hasDetailPanel={hasDetailPanel}
-                    isDetailPanelExpanded={expandedRowIds.has(row.id)}
-                    detailPanelContent={getDetailPanelContent && !rowMetaMap.get(row.id)?.isGroupRow ? getDetailPanelContent({ row, id: row.id, rowIndex: index }) : null}
-                    detailPanelHeight={(rowMetaMap.get(row.id)?.isGroupRow ? undefined : getDetailPanelHeight?.({ row, id: row.id, rowIndex: index })) || 200}
+                    isDetailPanelExpanded={expandedRowIds.has(id)}
+                    detailPanelContent={getDetailPanelContent && !rowMetaMap.get(id)?.isGroupRow ? getDetailPanelContent({ row, id, rowIndex: index }) : null}
+                    detailPanelHeight={(rowMetaMap.get(id)?.isGroupRow ? undefined : getDetailPanelHeight?.({ row, id, rowIndex: index })) || 200}
                     onDetailPanelToggle={onDetailPanelToggle}
                     pinCheckboxColumn={pinCheckboxColumn}
                     pinExpandColumn={pinExpandColumn}
-                    focusedCellField={focusedCell?.id === row.id ? focusedCell.field : null}
+                    focusedCellField={focusedCell?.id === id ? focusedCell.field : null}
                     colspanMap={colspanMap}
                     rowSpanningCaches={rowSpanningCaches}
                     rowHeight={rowHeight}
-                    rowMeta={rowMetaMap.get(row.id)}
+                    rowMeta={rowMetaMap.get(id)}
                 />
-            ))}
+                );
+            })}
         </div>
     );
 }
