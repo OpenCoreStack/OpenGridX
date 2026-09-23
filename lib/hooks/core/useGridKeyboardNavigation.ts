@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { scrollRowIntoView } from '../../utils/scroll';
-import type { GridRowModel, GridRowId, GridColDef, GridCellParams, GridSortItem, GridSortDirection } from '../../types';
+import { getCellValue, resolveCellEditable } from '../../utils/editing';
+import type { GridRowModel, GridRowId, GridColDef, GridCellParams, GridSortItem, GridSortDirection, GridRowMeta } from '../../types';
 import type { GridEditingState } from '../features/useGridEditing';
 
 interface ColumnMetrics {
@@ -21,7 +22,7 @@ interface VirtualizationSnapshot {
 
 export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
     allRenderableRows: R[];
-    navigationColumns: { field: string; editable?: boolean; sortable?: boolean }[];
+    navigationColumns: { field: string; editable?: boolean; sortable?: boolean; valueGetter?: GridColDef<R>['valueGetter'] }[];
     checkboxSelection: boolean;
     selectedRowIds: Set<GridRowId>;
     handleSelectionChange: (id: GridRowId, selected: boolean) => void;
@@ -41,6 +42,8 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
     viewportRef: React.RefObject<HTMLDivElement | null>;
     /** Number of top-pinned rows at the start of allRenderableRows. */
     pinnedTopRowCount?: number;
+    /** Hierarchy metadata, so synthetic group rows are never edited. */
+    rowMetaMap?: Map<GridRowId, GridRowMeta>;
 }
 
 export interface FocusedCell {
@@ -76,6 +79,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         virtualization,
         viewportRef,
         pinnedTopRowCount = 0,
+        rowMetaMap,
     } = params;
 
     const [focusedCell, setFocusedCell] = useState<FocusedCell | null>(null);
@@ -106,6 +110,9 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
     const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
         setKeyboardMode(true);
 
+        // While an IME is composing, Enter / Escape / arrows confirm or navigate candidates.
+        if (event.nativeEvent?.isComposing || event.keyCode === 229) return;
+
         if (!focusedCell) return;
 
         const { id, field } = focusedCell;
@@ -130,11 +137,16 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
             if (isEditing) {
                 editingHandlers.stopCellEdit();
             } else {
-                const col = navigationColumns.find(c => c.field === field);
-                if (col?.editable) {
-                    const row = allRenderableRows.find(r => r.id === id);
-                    if (row) {
-                        editingHandlers.startCellEdit({ id, field, value: (row as R & Record<string, unknown>)[field] });
+                // Same rule and starting value as double-click (see Row / resolveCellEditable).
+                const colIndex = navigationColumns.findIndex(c => c.field === field);
+                const rowIndex = allRenderableRows.findIndex(r => r.id === id);
+                const col = navigationColumns[colIndex];
+                const row = allRenderableRows[rowIndex];
+                if (col && row) {
+                    const colDef = col as GridColDef<R>;
+                    const value = getCellValue(row, colDef);
+                    if (resolveCellEditable({ row, field, value, colDef, rowIndex, colIndex, rowMeta: rowMetaMap?.get(id) }, isCellEditable)) {
+                        editingHandlers.startCellEdit({ id, field, value });
                     }
                 }
             }
@@ -236,22 +248,16 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
                 const row = allRenderableRows[r];
                 const col = navigationColumns[c];
                 const isInteractable = ['__checkbox_col__', '__expand_col__', '__reorder_col__'].includes(col.field);
-                let cellEditable = col.editable || isInteractable;
-
-                if (isCellEditable && !isInteractable) {
-                    try {
-                        cellEditable = isCellEditable({
-                            row,
-                            field: col.field,
-                            value: (row as R & Record<string, unknown>)[col.field],
-                            colDef: col as GridColDef<R>,
-                            rowIndex: r,
-                            colIndex: c
-                        });
-                    } catch {
-                        // isCellEditable threw — treat cell as non-editable
-                    }
-                }
+                const colDef = col as GridColDef<R>;
+                const cellEditable = isInteractable || resolveCellEditable({
+                    row,
+                    field: col.field,
+                    value: getCellValue(row, colDef),
+                    colDef,
+                    rowIndex: r,
+                    colIndex: c,
+                    rowMeta: rowMetaMap?.get(row.id),
+                }, isCellEditable);
 
                 if (cellEditable) return { r, c };
             }
@@ -363,6 +369,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         pageSize,
         viewportRef,
         pinnedTopRowCount,
+        rowMetaMap,
     ]);
 
     return { focusedCell, setFocusedCell, handleFocus, handleBlur, handleKeyDown };

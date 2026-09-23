@@ -18,6 +18,7 @@ import { GridErrorOverlay } from './GridErrorOverlay';
 import { Header } from '../Header/Header';
 import { Pagination } from '../Pagination/Pagination';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
+import { useNormalizedRows } from '../../hooks/core/useNormalizedRows';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useTreeData } from '../../hooks/useTreeData';
 import { useRowGrouping } from '../../hooks/useRowGrouping';
@@ -259,13 +260,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // createInitialState and SET_ROWS both key the internal store by row.id,
     // so rows without a native id field collide on undefined without this.
     // When getRowId is the default (row) => row.id this is a no-op per row.
-    const normalizedRows = useMemo(
-        () => activeRows.map(row => {
-            const id = effectiveGetRowId(row);
-            return id === row.id ? row : ({ ...row, id } as R);
-        }),
-        [activeRows, effectiveGetRowId]
-    );
+    // Stable across renders with an inline getRowId, so it does not reset the store (and edits).
+    const normalizedRows = useNormalizedRows(activeRows, effectiveGetRowId);
 
     // Keyboard-mode flag: toggled via DOM classname — no React state needed
     // so the ring appears instantly without a re-render cycle.
@@ -371,14 +367,17 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const editingHandlers = useGridEditing({
         rows: effectiveRows,
         getRowId: effectiveGetRowId,
+        columns: activeColumns,
         processRowUpdate,
         onProcessRowUpdateError,
-        onRowChange: (updatedRow) => {
-            // Dispatch a proper state update so React re-renders with the new row value
+        onRowChange: (updatedRow, rowId) => {
+            // Dispatch a proper state update so React re-renders with the new row value.
+            // Match on the edited row's id: the row processRowUpdate returns may lack the normalised `id`.
             const { dispatch } = gridData;
+            const storedRow = (updatedRow.id === rowId ? updatedRow : { ...updatedRow, id: rowId }) as R;
             const currentRows = Array.from(gridData.state.rows.idRowsLookup.values());
             const nextRows = currentRows.map(r =>
-                r.id === updatedRow.id ? updatedRow : r
+                r.id === rowId ? storedRow : r
             );
             dispatch({ type: 'SET_ROWS', payload: nextRows });
         },
@@ -785,6 +784,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         virtualization,
         viewportRef,
         pinnedTopRowCount: pinnedTopRows.length,
+        rowMetaMap,
     });
 
     const handleCellClick = useCallback((params: GridCellParams<R>) => {
@@ -801,8 +801,12 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         const isEditing = Boolean(editingHandlers.editingCell);
 
         if (wasEditing && !isEditing) {
-
-            gridRef.current?.focus({ preventScroll: true });
+            // Only reclaim focus the editor took with it (focus is on <body> once the editor unmounts).
+            // If the edit ended because the user moved focus somewhere else, leave it there.
+            const active = document.activeElement;
+            if (!active || active === document.body) {
+                gridRef.current?.focus({ preventScroll: true });
+            }
         }
 
         prevEditingCellRef.current = editingHandlers.editingCell;
@@ -1114,6 +1118,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             pinExpandColumn={pinExpandColumn}
                             rowReorderHandlers={rowReorderHandlers}
                             editingHandlers={editingHandlers}
+                            isCellEditable={isCellEditable}
                             focusedCell={focusedCell}
                             colspanMap={spanning.colspanMap}
                             rowSpanningCaches={spanning.rowSpanningState.caches}

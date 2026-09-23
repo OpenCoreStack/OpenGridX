@@ -22,7 +22,7 @@ import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/us
 interface RowEditingHandlers {
     editingCell: GridEditingState['editingCell'];
     startCellEdit: (params: { id: GridRowId; field: string; value: unknown }) => void;
-    stopCellEdit: (params?: { cancel?: boolean }) => void;
+    stopCellEdit: (params?: { cancel?: boolean; id?: GridRowId; field?: string }) => void;
     setEditCellValue: (params: { id: GridRowId; field: string; value: unknown }) => void;
 }
 
@@ -54,6 +54,7 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     pinExpandColumn?: boolean;
     rowReorderHandlers: UseRowReorderReturn;
     editingHandlers: RowEditingHandlers;
+    isCellEditable?: (params: GridCellParams<R>) => boolean;
     focusedCell: { id: GridRowId; field: string } | null;
     colspanMap?: Map<GridRowId, Record<string, CellColSpanInfo>>;
     rowSpanningCaches?: RowSpanningCaches;
@@ -94,6 +95,7 @@ export function GridVirtualRows<R extends GridRowModel>({
     pinExpandColumn,
     rowReorderHandlers,
     editingHandlers,
+    isCellEditable,
     focusedCell,
     colspanMap,
     rowSpanningCaches,
@@ -185,6 +187,7 @@ export function GridVirtualRows<R extends GridRowModel>({
                             onEditStart={editingHandlers.startCellEdit}
                             onEditStop={editingHandlers.stopCellEdit}
                             onEditCellValueChange={editingHandlers.setEditCellValue}
+                            isCellEditable={isCellEditable}
                             focusedCellField={focusedCell != null && focusedCell.id === row.id ? focusedCell.field : null}
                             colspanMap={colspanMap}
                             rowSpanningCaches={rowSpanningCaches}
