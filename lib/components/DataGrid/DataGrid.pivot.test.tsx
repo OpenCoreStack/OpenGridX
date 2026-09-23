@@ -63,13 +63,19 @@ describe('pivot mode — rows and ids', () => {
         expect(column(container, 'dept')).toEqual(['Eng', 'HR', 'Ops', 'Grand Total']);
     });
 
-    it('renders with a source valueFormatter that reads other row fields', () => {
+    it('renders, in the default format, when a source valueFormatter reads row fields a pivot row does not have', () => {
         const cols: GridColDef[] = [
             ...COLS.slice(0, 2),
             { field: 'salary', type: 'number', valueFormatter: ({ value, row }) => `${(row as unknown as { cur: { s: string } }).cur.s}${String(value)}` },
         ];
         const rows: GridRowModel[] = ROWS.map(r => ({ ...r, cur: { s: '$' } }));
         const { container } = render(<DataGrid rows={rows} columns={cols} pivotMode pivotModel={MODEL} />);
+        expect(column(container, SUM)).toEqual(['3,000', '3,500', '500', '7,000']);
+    });
+
+    it('formats pivot values with a source valueFormatter that only uses the value', () => {
+        const cols: GridColDef[] = [...COLS.slice(0, 2), { field: 'salary', type: 'number', valueFormatter: ({ value }) => `$${String(value)}` }];
+        const { container } = render(<DataGrid rows={ROWS} columns={cols} pivotMode pivotModel={MODEL} />);
         expect(column(container, SUM)).toEqual(['$3000', '$3500', '$500', '$7000']);
     });
 });

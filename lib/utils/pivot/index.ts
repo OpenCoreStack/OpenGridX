@@ -82,10 +82,11 @@ function compareTuples(a: unknown[], b: unknown[]): number {
     return 0;
 }
 
-function aggregate(values: unknown[] | undefined, fn: GridPivotAggFn): number | null {
+// A number, or a Date for min / max of dates.
+function aggregate(values: unknown[] | undefined, fn: GridPivotAggFn): number | Date | null {
     if (!values || values.length === 0) return null;
     const result = AGGREGATION_FUNCTIONS[fn](values);
-    return typeof result === 'number' ? result : null;
+    return typeof result === 'number' || result instanceof Date ? result : null;
 }
 
 const isFilterGroup = (item: GridFilterItem | GridFilterGroup): item is GridFilterGroup =>
@@ -120,26 +121,25 @@ export function splitPivotFilterModel(
     };
 }
 
-interface CellBucket {
-    sample: GridRowModel;
-    values: Map<string, unknown[]>;
-}
-
 interface GroupEntry {
     labels: unknown[];
+    /** First source row of the group: the `row` given to the row-field column's formatter and renderer. */
     sample: GridRowModel;
-    cells: Map<string, CellBucket>;
+    /** Column key → value field → raw values. */
+    cells: Map<string, Map<string, unknown[]>>;
 }
 
 interface ColumnKeyInfo {
     values: unknown[];
+    /** First source row with this column key: the `row` given to the header label's formatter. */
     sample?: GridRowModel;
 }
 
 /**
  * Builds pivot rows and columns from source rows. Values are read through each column's
- * `valueGetter`, aggregated with the shared `lib/utils/aggregation` functions, and formatted with the
- * source column's `valueFormatter` (given a real source row). Row and column fields on a
+ * `valueGetter`, aggregated with the shared `lib/utils/aggregation` functions, and formatted with
+ * `formatAggregateForColumn` (the source column's `valueFormatter` for sum / avg / min / max, with the
+ * pivot row as its `row`, as for group rows and exports). Row and column fields on a
  * `groupable: false` column, and value fields whose function the column's
  * `availableAggregationFunctions` does not allow, are skipped.
  */
@@ -192,16 +192,16 @@ export function computePivot(
 
         let cell = entry.cells.get(ck);
         if (!cell) {
-            cell = { sample: row, values: new Map() };
+            cell = new Map();
             entry.cells.set(ck, cell);
         }
         for (const f of valueSourceFields) {
             const v = get(row, f);
             if (isEmptyAggregateValue(v)) continue;
-            let bucket = cell.values.get(f);
+            let bucket = cell.get(f);
             if (!bucket) {
                 bucket = [];
-                cell.values.set(f, bucket);
+                cell.set(f, bucket);
             }
             bucket.push(v);
         }
@@ -224,7 +224,7 @@ export function computePivot(
         row.id = index++;
         for (const ck of colKeys) {
             const cell = entry.cells.get(ck);
-            for (const vf of valueFields) row[cellField(ck, vf)] = aggregate(cell?.values.get(vf.field), vf.aggFn);
+            for (const vf of valueFields) row[cellField(ck, vf)] = aggregate(cell?.get(vf.field), vf.aggFn);
         }
         entryByRowId.set(row.id, entry);
         kept.push({ row, entry });
@@ -257,7 +257,7 @@ export function computePivot(
             for (const f of valueSourceFields) {
                 const values: unknown[] = [];
                 for (const { entry } of kept) {
-                    const bucket = entry.cells.get(ck)?.values.get(f);
+                    const bucket = entry.cells.get(ck)?.get(f);
                     if (bucket) for (const v of bucket) values.push(v);
                 }
                 for (const vf of valueFields) {
@@ -272,11 +272,6 @@ export function computePivot(
     const firstSample = kept[0]?.entry.sample;
     const groupSample = (id: GridRowId | undefined): GridRowModel | undefined =>
         id === PIVOT_GRAND_TOTAL_ID ? firstSample : id === undefined ? undefined : entryByRowId.get(id)?.sample;
-    const cellSample = (id: GridRowId | undefined, ck: string): GridRowModel | undefined => {
-        if (id === PIVOT_GRAND_TOTAL_ID) return colKeyInfo.get(ck)?.sample ?? firstSample;
-        const entry = id === undefined ? undefined : entryByRowId.get(id);
-        return entry?.cells.get(ck)?.sample ?? entry?.sample;
-    };
 
     const pivotColumns: GridColDef[] = rowFields.map((f) => buildRowFieldColumn(f, colDefMap.get(f), groupSample));
 
@@ -301,8 +296,7 @@ export function computePivot(
                 align: 'right',
                 headerAlign: 'right',
                 sortable: true,
-                valueFormatter: ({ value, row }) =>
-                    formatAggregateForColumn(value, vf.aggFn, orig, cellSample(row?.id, ck)),
+                valueFormatter: ({ value, row }) => formatAggregateForColumn(value, vf.aggFn, orig, row),
             });
         }
     }

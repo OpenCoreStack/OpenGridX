@@ -206,7 +206,10 @@ describe('usePivot — with columnFields', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('usePivot — large datasets and shared aggregation semantics', () => {
-    it('computes min / max grand totals over more rows than a spread argument list allows', () => {
+    // Regression: Math.min(...values) threw RangeError past ~125k values. This checks correctness, not
+    // speed, so it gets a generous timeout for a loaded CI machine; the same guarantee is tested on the
+    // aggregation functions directly in lib/utils/aggregation/aggregation.test.ts.
+    it('computes min / max grand totals over more rows than a spread argument list allows', { timeout: 60_000 }, () => {
         const rows = Array.from({ length: 200_000 }, (_, i) => ({ id: i, dept: i % 2 ? 'Eng' : 'HR', salary: i }));
         const model: GridPivotModel = {
             rowFields: ['dept'],
@@ -296,10 +299,7 @@ describe('usePivot — value fields', () => {
 describe('usePivot — formatting', () => {
     const cols: GridColDef[] = [
         { field: 'dept' },
-        {
-            field: 'salary', type: 'number',
-            valueFormatter: ({ value, row }) => `${(row as unknown as { currency: { symbol: string } }).currency.symbol}${Number(value).toFixed(2)}`,
-        },
+        { field: 'salary', type: 'number', valueFormatter: ({ value }) => `$${Number(value).toFixed(2)}` },
     ];
     const rows = [
         { id: 1, dept: 'Eng', salary: 10, currency: { symbol: '$' } },
@@ -310,7 +310,7 @@ describe('usePivot — formatting', () => {
         valueFields: [{ field: 'salary', aggFn: 'sum' }, { field: 'salary', aggFn: 'avg' }, { field: 'salary', aggFn: 'count' }],
     };
 
-    it('formats sum and avg with the source valueFormatter, giving it a real source row', () => {
+    it('formats sum and avg with the source valueFormatter, on data rows and on Grand Total', () => {
         const { result } = renderHook(() => usePivot(rows, cols, model, true));
         const eng = result.current.pivotRows.find(r => r.dept === 'Eng')!;
         const col = (f: string) => result.current.pivotColumns.find(c => c.field === f)!;
@@ -320,6 +320,30 @@ describe('usePivot — formatting', () => {
         expect(col('salary\u001fsum').valueFormatter!({ value: gt['salary\u001fsum'], row: gt, field: 'salary\u001fsum' })).toBe('$25.00');
     });
 
+    it('gives the source valueFormatter the pivot row, the record of aggregated values, as its row', () => {
+        const seen: unknown[] = [];
+        const spyCols: GridColDef[] = [{ field: 'dept' }, { field: 'salary', valueFormatter: ({ value, row }) => { seen.push(row); return String(value); } }];
+        const { result } = renderHook(() => usePivot(rows, spyCols, { ...model, valueFields: [{ field: 'salary', aggFn: 'sum' }] }, true));
+        const eng = result.current.pivotRows.find(r => r.dept === 'Eng')!;
+        result.current.pivotColumns[1].valueFormatter!({ value: 25, row: eng, field: 'salary\u001fsum' });
+        expect(seen).toEqual([eng]);
+    });
+
+    it('returns min / max of a date field as dates', () => {
+        const early = new Date(2020, 1, 1);
+        const late = new Date(2022, 1, 1);
+        const dateRows = [{ id: 1, dept: 'Eng', joined: late }, { id: 2, dept: 'Eng', joined: early }];
+        const dateCols: GridColDef[] = [{ field: 'dept' }, { field: 'joined', type: 'date' }];
+        const { result } = renderHook(() => usePivot(dateRows, dateCols, {
+            rowFields: ['dept'], columnFields: [], valueFields: [{ field: 'joined', aggFn: 'min' }, { field: 'joined', aggFn: 'max' }],
+        }, true));
+        const [eng] = result.current.pivotRows;
+        expect(eng['joined\u001fmin']).toBe(early);
+        expect(grandTotalRow(result.current.pivotRows)['joined\u001fmax']).toBe(late);
+        const minCol = result.current.pivotColumns.find(c => c.field === 'joined\u001fmin')!;
+        expect(minCol.valueFormatter!({ value: early, row: eng, field: minCol.field })).toBe(early.toLocaleDateString());
+    });
+
     it('does not apply the source valueFormatter to count', () => {
         const { result } = renderHook(() => usePivot(rows, cols, model, true));
         const eng = result.current.pivotRows.find(r => r.dept === 'Eng')!;
@@ -327,10 +351,15 @@ describe('usePivot — formatting', () => {
         expect(col.valueFormatter!({ value: eng['salary\u001fcount'], row: eng, field: col.field })).toBe('2');
     });
 
-    it('falls back to the default format instead of throwing when the formatter needs row data it does not get', () => {
-        const { result } = renderHook(() => usePivot(rows, cols, model, true));
+    it('falls back to the default format instead of throwing when the formatter needs row data a pivot row does not have', () => {
+        const rowReading: GridColDef[] = [
+            { field: 'dept' },
+            { field: 'salary', valueFormatter: ({ value, row }) => `${(row as unknown as { currency: { symbol: string } }).currency.symbol}${String(value)}` },
+        ];
+        const { result } = renderHook(() => usePivot(rows, rowReading, model, true));
+        const eng = result.current.pivotRows.find(r => r.dept === 'Eng')!;
         const col = result.current.pivotColumns.find(c => c.field === 'salary\u001fsum')!;
-        expect(col.valueFormatter!({ value: 1234, row: {} as GridRowModel, field: col.field })).toBe('1,234');
+        expect(col.valueFormatter!({ value: 1234, row: eng, field: col.field })).toBe('1,234');
     });
 
     it('formats avg with thousands separators when the column has no formatter', () => {

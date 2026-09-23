@@ -1,6 +1,5 @@
 import type { GridAggregationModel, GridColDef, GridGroupedExportRow, GridRowModel } from '../../types';
-import { formatAggregationValue } from '../../hooks/features/useAggregation';
-import { computeAggregations } from '../aggregation';
+import { computeAggregations, formatAggregateForColumn } from '../aggregation';
 
 /**
  * Helpers shared by every exporter (CSV, HTML .xls, JSON, print, PDF and advanced XLSX), so the
@@ -87,28 +86,14 @@ export function formatExportValue<R extends GridRowModel>(row: R, col: GridColDe
     return String(col.valueFormatter({ value, row, field: col.field }) ?? '');
 }
 
-const COUNT_FUNCTIONS = new Set(['count', 'unique']);
-
-/** Whether an aggregation result is a count of values rather than a value of the column's kind. */
-export function isCountAggregation(fnName: string | undefined): boolean {
-    return fnName !== undefined && COUNT_FUNCTIONS.has(fnName);
-}
+export { isCountAggregation, normalizeAggregateValue } from '../aggregation';
 
 /**
- * The aggregation result in the column's own terms. `lib/utils/aggregation` reduces dates to epoch
- * milliseconds, so `min` / `max` on a date column are turned back into a Date.
- */
-export function normalizeAggregateValue<R extends GridRowModel>(col: GridColDef<R>, fnName: string | undefined, value: unknown): unknown {
-    if (col.type === 'date' && (fnName === 'min' || fnName === 'max') && typeof value === 'number' && Number.isFinite(value)) {
-        return new Date(value);
-    }
-    return value;
-}
-
-/**
- * Text for an aggregate cell, shared by the text exporters.
- * - `count` / `unique` are plain counts, formatted as the grid footer does; the column's
- *   `valueFormatter` is not applied (a count of a currency column is not an amount).
+ * Text for an aggregate cell, shared by the text exporters: the grid's own aggregate formatting
+ * (`formatAggregateForColumn`, also used by the footer, group rows and pivot cells), with an empty cell
+ * for a missing value.
+ * - `count` / `unique` are plain counts; the column's `valueFormatter` is not applied (a count of a
+ *   currency column is not an amount).
  * - `sum`, `avg`, `min`, `max` go through the column's `valueFormatter`, whose `row` is the record
  *   of aggregated values (as in the grid's group rows). A formatter that throws falls back to the
  *   footer formatting instead of aborting the export.
@@ -120,17 +105,7 @@ export function formatExportAggregate<R extends GridRowModel>(
     aggregates: Record<string, unknown>,
 ): string {
     if (value == null) return '';
-    if (isCountAggregation(fnName)) return formatAggregationValue(value, fnName ?? '');
-    const normalized = normalizeAggregateValue(col, fnName, value);
-    if (col.valueFormatter) {
-        try {
-            return String(col.valueFormatter({ value: normalized, row: aggregates as R, field: col.field }) ?? '');
-        } catch {
-            // fall through to the footer formatting
-        }
-    }
-    if (normalized instanceof Date) return Number.isNaN(normalized.getTime()) ? '' : normalized.toLocaleDateString();
-    return formatAggregationValue(normalized, fnName ?? '');
+    return formatAggregateForColumn(value, fnName ?? '', col, aggregates);
 }
 
 /**

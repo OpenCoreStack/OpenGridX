@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { formatAggregateForColumn } from '../../utils/aggregation';
-import type { GridColDef, GridAggregationModel, GridAggregationResult, GridColumnPinning, GridRowModel } from '../../types';
+import type { GridColDef, GridAggregationModel, GridAggregationResult, GridColumnPinning } from '../../types';
 import { calculatePinnedPositions, isColumnPinned } from '../../utils/pinning';
 
 const SYSTEM_COLUMN_WIDTH = 48;
@@ -24,8 +24,6 @@ interface GridAggregationFooterProps {
     pinnedColumns?: GridColumnPinning;
     /** A server aggregation request is in flight. */
     loading?: boolean;
-    /** A row from the aggregated set, handed to column valueFormatters that read row data. */
-    sampleRow?: GridRowModel;
 }
 
 export function GridAggregationFooter({
@@ -41,7 +39,6 @@ export function GridAggregationFooter({
     pinExpandColumn = true,
     pinnedColumns,
     loading = false,
-    sampleRow,
 }: GridAggregationFooterProps) {
     // Same offsets as Row, so pinned totals sit exactly under their pinned body cells.
     const pinnedOffsets = useMemo(
@@ -127,7 +124,7 @@ export function GridAggregationFooter({
                             <>
                                 <span className="ogx__aggregation-label">{fnName}</span>
                                 <span className="ogx__aggregation-value">
-                                    {formatAggregateForColumn(rawValue, fnName, col, sampleRow)}
+                                    {formatAggregateForColumn(rawValue, fnName, col, aggregationResult)}
                                 </span>
                             </>
                         ) : null}

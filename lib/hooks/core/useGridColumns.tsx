@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useColumnReorder } from '../useColumnReorder';
 import { ExpandIcon } from '../../components/ui/ExpandIcon';
 import { isColumnPinned } from '../../utils/pinning';
+import { formatAggregateForColumn } from '../../utils/aggregation';
 import type {
     GridColDef,
     GridRowModel,
@@ -9,11 +10,36 @@ import type {
     GridColumnOrderChangeParams,
     GridColumnPinning,
     GridRenderCellParams,
+    GridAggregationModel,
 } from '../../types';
 import type { GridInitialState } from '../../state/types';
 
 interface HierarchyHandlers {
     toggleExpansion: (id: GridRowId) => void;
+}
+
+// A group row carries each column's aggregate in the column's field. It is shown like the footer
+// shows totals: the stored aggregate (a valueGetter would recompute it from fields a group row does
+// not have), formatted with formatAggregateForColumn (so a count is never put in a currency format).
+function withGroupRowAggregates<R extends GridRowModel>(
+    col: GridColDef<R>,
+    fnName: string | undefined,
+    groupingRows: ReadonlyMap<GridRowId, unknown> | undefined,
+): Pick<GridColDef<R>, 'valueGetter' | 'valueFormatter'> {
+    if (!fnName || !groupingRows) return { valueGetter: col.valueGetter, valueFormatter: col.valueFormatter };
+    const isGroupRow = (row: R) => groupingRows.has(row.id);
+    const ownGetter = col.valueGetter;
+    const ownFormatter = col.valueFormatter;
+    return {
+        valueGetter: ownGetter
+            ? (p) => (isGroupRow(p.row) ? p.value : ownGetter(p))
+            : undefined,
+        valueFormatter: (p) => {
+            if (isGroupRow(p.row)) return formatAggregateForColumn(p.value, fnName, col, p.row);
+            if (ownFormatter) return ownFormatter(p);
+            return p.value == null ? '' : String(p.value);
+        },
+    };
 }
 
 // Injected hierarchy renderers replace the plain-cell path in Cell, so they must
@@ -38,6 +64,10 @@ export interface UseGridColumnsParams<R extends GridRowModel> {
     initialState?: GridInitialState;
     setColumns: (cols: GridColDef[]) => void;
     pinnedColumns?: GridColumnPinning;
+    /** Formats the aggregates on row-grouping group rows. */
+    aggregationModel?: GridAggregationModel;
+    /** Row grouping only: the synthetic group rows, keyed by id. */
+    groupingRows?: ReadonlyMap<GridRowId, unknown>;
 }
 
 export interface UseGridColumnsResult<R extends GridRowModel> {
@@ -72,6 +102,8 @@ export function useGridColumns<R extends GridRowModel>(
         initialState,
         setColumns,
         pinnedColumns,
+        aggregationModel,
+        groupingRows,
     } = params;
 
     // ── Column order ──────────────────────────────────────────────────────────
@@ -133,10 +165,14 @@ export function useGridColumns<R extends GridRowModel>(
     const effectiveColumns = useMemo<GridColDef<R>[]>(() => {
         if (!isHierarchyEnabled) return activeColumns;
 
+        const groupRows = isRowGrouping ? groupingRows : undefined;
+
         return activeColumns.map((col) => {
+            const groupRowAggregates = withGroupRowAggregates(col, aggregationModel?.[col.field], groupRows);
             if (col.field === hierarchyField) {
                 return {
                     ...col,
+                    ...groupRowAggregates,
                     renderCell: (cellParams: GridRenderCellParams<R>) => {
                         const meta = cellParams.rowMeta;
                         const depth = meta?.treeDepth ?? 0;
@@ -193,6 +229,7 @@ export function useGridColumns<R extends GridRowModel>(
 
             return {
                 ...col,
+                ...groupRowAggregates,
                 renderCell: (cellParams: GridRenderCellParams<R>) => {
                     const meta = cellParams.rowMeta;
                     const hasChildren = Boolean(meta?.hasChildren);
@@ -210,7 +247,7 @@ export function useGridColumns<R extends GridRowModel>(
                 }
             };
         }) as GridColDef<R>[];
-    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers, hierarchyField]);
+    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers, hierarchyField, aggregationModel, groupingRows]);
 
     // ── Column widths ─────────────────────────────────────────────────────────
     const [columnWidths, setColumnWidths] = useState<Record<string, number>>(

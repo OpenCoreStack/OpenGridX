@@ -507,6 +507,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         initialState,
         setColumns,
         pinnedColumns: effectivePinnedColumns,
+        aggregationModel,
+        groupingRows: isRowGrouping ? rowGroupingHandlers.groupingRows : undefined,
     });
 
     useGridStateSnapshot({
@@ -1168,7 +1170,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                 pinExpandColumn={pinExpandColumn}
                                 pinnedColumns={effectivePinnedColumns}
                                 loading={isAggregationLoading}
-                                sampleRow={dataRows[0] as GridRowModel | undefined}
                             />
                         )}
 

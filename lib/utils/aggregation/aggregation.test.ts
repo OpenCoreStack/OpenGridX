@@ -30,7 +30,14 @@ describe('AGGREGATION_FUNCTIONS', () => {
 
     it('still accepts numeric strings and dates', () => {
         expect(AGGREGATION_FUNCTIONS.sum(['12', 3])).toBe(15);
-        expect(AGGREGATION_FUNCTIONS.max([new Date(1000), new Date(5000)])).toBe(5000);
+        expect(AGGREGATION_FUNCTIONS.min(['10', 9])).toBe(9);
+    });
+
+    it('returns the date itself for min / max over dates, not its epoch milliseconds', () => {
+        const early = new Date(2024, 0, 15);
+        const late = new Date(2024, 5, 1);
+        expect(AGGREGATION_FUNCTIONS.min([late, null, early])).toBe(early);
+        expect(AGGREGATION_FUNCTIONS.max([early, late])).toBe(late);
     });
 
     it('does not count or distinguish blank strings', () => {
@@ -63,8 +70,18 @@ describe('formatAggregateForColumn', () => {
         expect(formatAggregateForColumn(10, 'min', money)).toBe('$10');
     });
 
-    it('passes the sample row to the valueFormatter', () => {
-        expect(formatAggregateForColumn(5, 'max', money, { id: 1, cur: '€' } as GridRowModel)).toBe('€5');
+    it('passes the record of aggregated values to the valueFormatter as its row', () => {
+        expect(formatAggregateForColumn(5, 'max', money, { cur: '€', salary: 5 })).toBe('€5');
+    });
+
+    it('formats date min / max as dates: through the valueFormatter, else as a locale date', () => {
+        const dateCol: GridColDef = { field: 'joined', type: 'date' };
+        const withFormatter: GridColDef = { ...dateCol, valueFormatter: ({ value }) => (value as Date).toISOString().slice(0, 10) };
+        const day = new Date(Date.UTC(2024, 0, 15));
+        expect(formatAggregateForColumn(day, 'min', dateCol)).toBe(day.toLocaleDateString());
+        expect(formatAggregateForColumn(day, 'max', withFormatter)).toBe('2024-01-15');
+        // a server may return epoch milliseconds for a date column
+        expect(formatAggregateForColumn(day.getTime(), 'max', withFormatter)).toBe('2024-01-15');
     });
 
     it('does not apply the valueFormatter to count or unique, which are not in the column unit', () => {
