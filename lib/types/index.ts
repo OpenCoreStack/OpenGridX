@@ -611,7 +611,11 @@ export interface GridAggregationModel {
 
 export type GridAggregationResult = Record<string, unknown>;
 
-export type GridAggregationPosition = 'footer' | 'inline' | 'both';
+/**
+ * Where a group's aggregates are shown, as returned by `getAggregationPosition`: `'inline'` on the group row,
+ * `'footer'` on a subtotal row after the group's children, `null` hidden.
+ */
+export type GridAggregationPosition = 'inline' | 'footer' | null;
 
 export type GridPivotAggFn = 'sum' | 'avg' | 'count' | 'min' | 'max';
 
@@ -779,7 +783,7 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
    */
   disableClipboardCopy?: boolean;
 
-  /** If true, a loading shimmer/skeleton is displayed. */
+  /** Loading state. With no rows the body shows skeleton rows (or `slots.loadingOverlay`); with rows, they stay and a progress bar (or `slots.loadingOverlay`) is shown over them. */
   loading?: boolean;
   /** Visual density of the grid. */
   density?: 'compact' | 'standard' | 'comfortable';
@@ -864,8 +868,8 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
    */
   getTreeDataPath?: (row: R) => string[];
   /**
-   * Configures the synthetic `__group__` column shown while `rowGroupingModel` is active. Every key is
-   * optional: `field` is always `'__group__'` (a `field` you pass is ignored).
+   * Adds a dedicated grouping column (pinned left) under row grouping or tree data, configured by these
+   * fields. Every key is optional: `field` is always `'__group__'` (a `field` you pass is ignored).
    */
   groupingColDef?: Partial<GridColDef<R>>;
   /** Initial expansion depth for Tree Data. */

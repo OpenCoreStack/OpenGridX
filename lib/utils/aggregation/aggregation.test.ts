@@ -56,6 +56,15 @@ describe('computeAggregations', () => {
         const result = computeAggregations(rows, { total: 'sum' }, new Map([['total', total]]), 'test');
         expect(result.total).toBe(16);
     });
+
+    it('skips a column marked aggregable: false even when the model names it', () => {
+        const rows: GridRowModel[] = [{ id: 5, qty: 1 }, { id: 7, qty: 2 }];
+        const lookup = new Map<string, GridColDef>([
+            ['id', { field: 'id', type: 'number', aggregable: false }],
+            ['qty', { field: 'qty', type: 'number' }],
+        ]);
+        expect(computeAggregations(rows, { id: 'sum', qty: 'sum' }, lookup, 'test')).toEqual({ qty: 3 });
+    });
 });
 
 describe('formatAggregateForColumn', () => {

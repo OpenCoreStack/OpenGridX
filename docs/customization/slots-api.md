@@ -37,6 +37,8 @@ function CustomToolbar({ rows, columns }) {
 />
 ```
 
+`toolbar` accepts any React component type: function, class, `React.memo`, `forwardRef` or `lazy`. A plain function toolbar may be defined inline inside your own component: the grid keys it on its source code, so it keeps its state (open panels, typed search) when your component re-renders and remounts only when you pass a toolbar with different code. A class, memo or forwardRef toolbar is rendered as a normal element, so define it outside render to keep its identity stable.
+
 ### 2. `pagination`
 Replace the default pagination component.
 

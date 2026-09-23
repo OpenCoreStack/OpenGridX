@@ -21,6 +21,7 @@ import { useGridColumnLookup } from '../../hooks/core/useGridColumnLookup';
 import { useGridPageCorrection } from '../../hooks/core/useGridPageCorrection';
 import { useGridColumnsPanel } from '../../hooks/core/useGridColumnsPanel';
 import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
+import { GridToolbarSlot } from './GridToolbarSlot';
 import { scrollRowIntoView, scrollColumnIntoView } from '../../utils/scroll';
 import { upsertSortItem } from '../../utils/sorting';
 import { getAriaRowLayout } from '../../utils/aria';
@@ -46,6 +47,7 @@ import { PIVOT_GRAND_TOTAL_ID } from '../../utils/pivot';
 import { isServerDrivenDataSource, getDataSourceErrorMessage } from '../../utils/dataSource';
 import { useGridClipboard } from '../../hooks/features/useGridClipboard';
 import { GridListView } from './GridListView';
+import { GridLoadingOverlay } from './GridLoadingOverlay';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
@@ -137,7 +139,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         // Column Visibility
         columnVisibilityModel: propColumnVisibilityModel,
         onColumnVisibilityModelChange,
-        listView = false,
+        listView: listViewRequested = false,
         listViewColumn,
         columnGroupingModel,
         noRowsLabel = 'No Data',
@@ -147,36 +149,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     } = props;
 
     const effectiveNoRowsLabel = localeText?.noRowsLabel ?? noRowsLabel;
+    // List view needs a listViewColumn to render its items; without one the grid view is shown
+    // (useGridDevWarnings says so) instead of an empty container.
+    const listView = listViewRequested && Boolean(listViewColumn);
 
     // Stable defaults
     const defaultRowGroupingModel = useMemo(() => [], []);
     const rowGroupingModel = propRowGroupingModel || defaultRowGroupingModel;
-
-    // ─── Stabilize toolbar component identity ────────────────────────────────
-    // Problem: demos/users often define their toolbar as an inline function
-    // INSIDE their component body, e.g.:
-    //   const MyToolbar = (props) => <GridToolbar {...props} />  // inside render!
-    // This creates a NEW function reference on every parent re-render. React
-    // reconciles by component *identity*, so a new reference = unmount old
-    // toolbar + mount fresh one = all toolbar state (search expansion, filter
-    // open, typed text) is destroyed on every keystroke.
-    //
-    // Fix: a stable wrapper component created ONCE via useRef. Its identity
-    // never changes, so React keeps it mounted. It reads the latest toolbar
-    // from a separate ref that is updated on every render, so the rendered
-    // output is always current — zero stale closures.
-    const latestToolbarRef = useRef(slots?.toolbar);
-    latestToolbarRef.current = slots?.toolbar;
-    // The wrapper itself has a stable identity (created once via useRef).
-    // We call latestToolbarRef.current(props) as a PLAIN FUNCTION — not via
-    // React.createElement — so React never sees a changing component type.
-    // The elements the toolbar function returns are reconciled normally, so
-    // GridToolbar's internal state (filterOpen, search expansion) is preserved
-    // even when the toolbar is defined as an inline function inside the parent.
-    const StableToolbar = useRef((props: Record<string, unknown>) => {
-        const Toolbar = latestToolbarRef.current;
-        return Toolbar ? (Toolbar as (p: typeof props) => React.ReactElement | null)(props) : null;
-    }).current;
 
     const controlledState = useGridControlledState({
         initialState,
@@ -249,26 +228,29 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const activeRows = pivot.rows as unknown as R[];
     const baseColumns = pivot.columns as unknown as GridColDef<R>[];
 
-    // When groupingColDef is provided and row grouping is active, prepend a
+    // When groupingColDef is provided and row grouping or tree data is active, prepend a
     // dedicated synthetic __group__ column at position 0 (pinned-left).
     const isRowGroupingActive = hierarchyRowGroupingModel.length > 0;
+    const hasGroupingColumn = Boolean(groupingColDef) && (isRowGroupingActive || isTreeData);
 
     // Auto-pin __group__ column to the left when groupingColDef is active.
     // Both values MUST be memoized: without useMemo they produce a new array/object
     // reference every render, which cascades through useRowGrouping's memos and
     // effects into an infinite setState loop (Maximum update depth exceeded).
     const effectivePinnedColumns = useMemo(() => (
-        (groupingColDef && isRowGroupingActive)
+        hasGroupingColumn
             ? { ...pinnedColumns, left: ['__group__', ...((pinnedColumns?.left ?? []).filter(f => f !== '__group__'))] }
             : pinnedColumns
-    ), [groupingColDef, isRowGroupingActive, pinnedColumns]);
+    ), [hasGroupingColumn, pinnedColumns]);
 
     const activeColumns = useMemo(() => (
-        (groupingColDef && isRowGroupingActive)
+        hasGroupingColumn
             ? [
                 {
                     headerName: 'Group',
                     width: 220,
+                    // Tree data: a row's own entry in the hierarchy is the last segment of its path.
+                    ...(isTreeData && getTreeDataPath ? { valueGetter: ({ row }: { row: R }) => { const path = getTreeDataPath(row); return path[path.length - 1]; } } : {}),
                     ...groupingColDef,
                     field: '__group__',
                     hideable: false,
@@ -280,7 +262,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 ...baseColumns,
               ]
             : baseColumns
-    ), [groupingColDef, isRowGroupingActive, baseColumns]);
+    ), [groupingColDef, hasGroupingColumn, isTreeData, getTreeDataPath, baseColumns]);
 
     const columnLookup = useGridColumnLookup(activeColumns, columnVisibilityModel);
 
@@ -889,6 +871,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         totalRowCount: pinnedTopRows.length + (pagination ? paginatedUnpinnedRows.length : sortedUnpinnedRows.length) + pinnedBottomRows.length,
         pinnedRowsIgnored: isHierarchyEnabled && Boolean(pinnedRows?.top?.length || pinnedRows?.bottom?.length),
         scrollHeight: virtualization.totalHeight,
+        listViewWithoutColumn: listViewRequested && !listViewColumn,
     });
 
     const { allSelected, someSelected } = rowSelection;
@@ -903,6 +886,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const NoRowsOverlaySlot = slots?.noRowsOverlay;
     const LoadingOverlaySlot = slots?.loadingOverlay;
     const FooterSlot = slots?.footer;
+    // Loading with rows on screen: the rows stay and an indicator runs over them. With no rows the
+    // body shows skeletons or the loading overlay instead, and infinite scroll appends skeleton rows.
+    const showLoadingOverRows = effectiveLoading && allRenderableRows.length > 0 && paginationMode !== 'infinite';
+    const ToolbarSlot = slots?.toolbar;
 
     const toolbarProps = React.useMemo(() => {
         if (!slots?.toolbar) return null;
@@ -952,9 +939,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             } as unknown as React.CSSProperties}
             aria-busy={effectiveLoading}
         >
-            {toolbarProps && (
+            {ToolbarSlot && toolbarProps && (
                 <GridToolbarHostContext.Provider value={columnsPanel.toolbarHost}>
-                    <StableToolbar {...toolbarProps} />
+                    <GridToolbarSlot component={ToolbarSlot} toolbarProps={toolbarProps} />
                 </GridToolbarHostContext.Provider>
             )}
 
@@ -1009,6 +996,12 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     onRowsScrollEnd={onRowsScrollEnd}
                     getRowId={getRowIdOf}
                     multiselectable={rowSelectionEnabled && !disableMultipleRowSelection}
+                    selectable={rowSelectionEnabled}
+                    onToggleExpansion={activeHierarchyHandlers?.toggleExpansion}
+                    loading={effectiveLoading}
+                    loadingOverlay={LoadingOverlaySlot ? <LoadingOverlaySlot {...slotProps?.loadingOverlay} /> : undefined}
+                    noRowsOverlay={NoRowsOverlaySlot ? <NoRowsOverlaySlot {...slotProps?.noRowsOverlay} /> : undefined}
+                    showPaginationControls={!FooterSlot}
                 />
             )}
 
@@ -1250,7 +1243,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 </div>
             )}
 
-            {!listView && FooterSlot && (
+            {FooterSlot && (
                 <FooterSlot
                     apiRef={gridData.apiRef}
                     aggregationModel={aggregationModel}
@@ -1296,6 +1289,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             : ''
                 )}
             </div>
+
+            {showLoadingOverRows && (
+                <GridLoadingOverlay overlay={LoadingOverlaySlot ? <LoadingOverlaySlot {...slotProps?.loadingOverlay} /> : undefined} />
+            )}
 
             <GridErrorOverlay error={state.dataSource.error} onRetry={dataSource ? dataSourceHandlers.fetchRows : undefined} />
         </div>

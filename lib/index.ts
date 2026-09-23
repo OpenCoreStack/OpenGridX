@@ -104,6 +104,7 @@ export type {
     GridRowGroupingModel,
     GridAggregationModel,
     GridAggregationResult,
+    GridAggregationPosition,
     DataGridProps,
     GridDataSource,
     GridGetRowsParams,

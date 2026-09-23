@@ -31,6 +31,15 @@
   background: var(--ogx-color-gray-50, #f8fafc);
 }
 
+/* Keyboard focus (roving tab stop between list rows). */
+.ogx-list-view__row:focus {
+  outline: none;
+}
+.ogx-list-view__row:focus-visible {
+  outline: 2px solid var(--ogx-color-primary);
+  outline-offset: -2px;
+}
+
 .ogx-list-view__row--selected {
   background: var(--ogx-selection-bg, rgba(59, 130, 246, 0.08));
 }
@@ -40,6 +49,13 @@
 }
 
 /* ─── Checkbox column inside list row ────────────────────────────────────── */
+.ogx-list-view__expand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 32px;
+}
+
 .ogx-list-view__checkbox {
   display: flex;
   align-items: center;
@@ -109,4 +125,13 @@
   .ogx--list-auto .ogx-list-view {
     display: none;
   }
+}
+
+/* Loading with no rows yet: a progress bar, or slots.loadingOverlay centred. */
+.ogx-list-view__loading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
 }

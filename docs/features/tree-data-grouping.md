@@ -81,7 +81,7 @@ Tree data is used for data that has a natural parent-child relationship (e.g., a
 
 ## 🎨 Customizing the Group Column
 
-When `rowGroupingModel` is active, pass `groupingColDef` to configure a dedicated `__group__` column that is prepended at position 0 and auto-pinned left, separate from your data columns. It accepts any `GridColDef` fields except `field` (always `'__group__'`).
+When `rowGroupingModel` or `treeData` is active, pass `groupingColDef` to configure a dedicated `__group__` column that is prepended at position 0 and auto-pinned left, separate from your data columns. It accepts any `GridColDef` fields except `field` (always `'__group__'`). With tree data (v3.0) the column shows the last segment of each row's path, and a `valueGetter` in `groupingColDef` can show something else (for example the whole path).
 
 ```tsx
 <DataGrid

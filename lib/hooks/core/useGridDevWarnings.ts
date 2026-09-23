@@ -11,6 +11,8 @@ export interface UseGridDevWarningsParams {
     pinnedRowsIgnored?: boolean;
     /** Pixel height of the scrollable content. */
     scrollHeight?: number;
+    /** `listView` is set but `listViewColumn` is not, so the grid view is shown. */
+    listViewWithoutColumn?: boolean;
 }
 
 // Below this many rows, rendering everything is harmless, so an unbounded container is not worth a warning.
@@ -23,11 +25,21 @@ const UNBOUNDED_WARN_THRESHOLD = 200;
 export const MAX_SCROLLABLE_HEIGHT = 17_800_000;
 
 export function useGridDevWarnings(params: UseGridDevWarningsParams): void {
-    const { paginationRequested, isRowGrouping, autoHeight, viewportHeight, renderedRowCount, totalRowCount, pinnedRowsIgnored = false, scrollHeight = 0 } = params;
+    const { paginationRequested, isRowGrouping, autoHeight, viewportHeight, renderedRowCount, totalRowCount, pinnedRowsIgnored = false, scrollHeight = 0, listViewWithoutColumn = false } = params;
     const warnedPaginationRef = useRef(false);
     const warnedUnboundedRef = useRef(false);
     const warnedPinnedRowsRef = useRef(false);
     const warnedHeightRef = useRef(false);
+    const warnedListViewRef = useRef(false);
+
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'production' || warnedListViewRef.current || !listViewWithoutColumn) return;
+        warnedListViewRef.current = true;
+        console.warn(
+            '[OpenGridX] `listView` is set without a `listViewColumn`, so the grid view is shown instead. ' +
+            'Pass `listViewColumn` to render list items. See docs/features/list-view.md.'
+        );
+    }, [listViewWithoutColumn]);
 
     useEffect(() => {
         if (process.env.NODE_ENV === 'production' || warnedPinnedRowsRef.current || !pinnedRowsIgnored) return;

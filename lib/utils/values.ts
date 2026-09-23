@@ -82,3 +82,44 @@ export function toLocalDateString(value: unknown): string {
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+
+type ValueOption = string | number | { value: unknown; label: string };
+
+/** The label of the `valueOptions` entry for `value`, or undefined when no option matches. */
+export function getValueOptionLabel(options: readonly ValueOption[] | undefined, value: unknown): string | undefined {
+    if (!options) return undefined;
+    const optionValue = (option: ValueOption): unknown => (typeof option === 'object' ? option.value : option);
+    const optionLabel = (option: ValueOption): string => (typeof option === 'object' ? option.label : String(option));
+    // Exact match first; then by text, so a numeric option still labels a value read back as a string.
+    const match = options.find(option => Object.is(optionValue(option), value))
+        ?? options.find(option => String(optionValue(option)) === String(value));
+    return match === undefined ? undefined : optionLabel(match);
+}
+
+/**
+ * Default display text for a cell whose column has no `valueFormatter`, by column `type`:
+ * - `date`: the local calendar date (`toLocaleDateString()`) of a Date, timestamp or date string;
+ *   text that does not parse as a date is shown as is.
+ * - `boolean`: `Yes` / `No` for `true` / `false`.
+ * - `singleSelect`: the matching `valueOptions` label; a value with no option is shown as is.
+ * - anything else (and `image`, whose cell renders an image of this URL): `String(value)`.
+ * null and undefined are ''. The grid cells and the text exporters (CSV, print, PDF) use this, so
+ * a file shows what the grid shows.
+ */
+export function formatValueByType(value: unknown, colDef: Pick<GridColDef, 'type' | 'valueOptions'> | undefined): string {
+    if (value === null || value === undefined) return '';
+    switch (colDef?.type) {
+        case 'date': {
+            const date = toDate(value);
+            return date ? date.toLocaleDateString() : String(value);
+        }
+        case 'boolean':
+            if (value === true) return 'Yes';
+            if (value === false) return 'No';
+            return String(value);
+        case 'singleSelect':
+            return getValueOptionLabel(colDef.valueOptions, value) ?? String(value);
+        default:
+            return String(value);
+    }
+}

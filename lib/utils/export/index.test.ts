@@ -418,3 +418,18 @@ describe('printGrid — HTML injection', () => {
         expect(html).not.toContain('Alice');
     });
 });
+
+describe('exportToCsv — column type formatting', () => {
+    it('writes what the grid shows for date, boolean and singleSelect columns without a formatter', async () => {
+        const date = new Date(2024, 0, 2);
+        exportToCsv(
+            [{ id: 1, d: date, b: true, s: 2 }],
+            [
+                { field: 'd', type: 'date' },
+                { field: 'b', type: 'boolean' },
+                { field: 's', type: 'singleSelect', valueOptions: [{ value: 2, label: 'Active' }] },
+            ],
+        );
+        expect((await csvLines())[1]).toBe(`${csvField(date.toLocaleDateString())},Yes,Active`);
+    });
+});

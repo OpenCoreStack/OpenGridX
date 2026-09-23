@@ -1,5 +1,6 @@
 import React from 'react';
-import { getCellValue } from '../../utils/values';
+import { formatValueByType, getCellValue } from '../../utils/values';
+import { ExpandIcon } from '../ui/ExpandIcon';
 import type { GridColDef, GridRowModel, GridRowId, GridRowMeta, GridListViewColDef, GridRenderCellParams } from '../../types';
 
 export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
@@ -21,6 +22,12 @@ export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
     onRowClick?: (row: R) => void;
     onRowDoubleClick?: (row: R) => void;
     onSelectionChange?: (rowId: GridRowId, isSelected: boolean) => void;
+    /** Roving tab stop: 0 for the one row the list's Tab stop lands on, -1 for the others. */
+    tabIndex?: number;
+    /** Called when the row element itself receives focus. */
+    onFocus?: (rowIndex: number) => void;
+    /** Expands / collapses a row with children. When set, hierarchy rows get an expand chevron. */
+    onToggleExpansion?: (rowId: GridRowId) => void;
 }
 
 export function ListViewRow<R extends GridRowModel = GridRowModel>({
@@ -37,6 +44,9 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
     onRowClick,
     onRowDoubleClick,
     onSelectionChange,
+    tabIndex = -1,
+    onFocus,
+    onToggleExpansion,
 }: ListViewRowProps<R>) {
     const id = rowId ?? row.id;
     const field = listViewColumn.field;
@@ -44,7 +54,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
     const value = getCellValue(row, field, gridColumn as GridColDef | undefined);
     const formattedValue = gridColumn?.valueFormatter
         ? gridColumn.valueFormatter({ value, row, field })
-        : value == null ? '' : String(value);
+        : formatValueByType(value, gridColumn);
 
     const params: GridRenderCellParams<R> = {
         row,
@@ -71,6 +81,11 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
             role="row"
             aria-rowindex={ariaRowIndex ?? rowIndex + 1}
             aria-selected={isSelected}
+            aria-level={rowMeta?.treeDepth !== undefined ? rowMeta.treeDepth + 1 : undefined}
+            aria-expanded={rowMeta?.hasChildren ? rowMeta.isExpanded === true : undefined}
+            data-rowindex={rowIndex}
+            tabIndex={tabIndex}
+            onFocus={onFocus ? (e) => { if (e.target === e.currentTarget) onFocus(rowIndex); } : undefined}
         >
             {checkboxSelection && (
                 <div className="ogx-list-view__checkbox" onClick={(e) => e.stopPropagation()}>
@@ -79,7 +94,23 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
                         checked={isSelected}
                         onChange={handleCheckboxChange}
                         aria-label={`Select row ${id}`}
+                        // Not a Tab stop of its own: the list is one Tab stop, Shift+Space selects the focused row.
+                        tabIndex={-1}
                     />
+                </div>
+            )}
+            {rowMeta && onToggleExpansion && (
+                // Tree data / row grouping: indentation by depth, and a chevron on rows with children
+                // (not a Tab stop: Enter or Alt+Arrow toggle the focused row).
+                <div
+                    className="ogx-list-view__expand"
+                    style={{ paddingLeft: (rowMeta.treeDepth ?? 0) * 16 }}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                >
+                    {rowMeta.hasChildren && (
+                        <ExpandIcon isExpanded={rowMeta.isExpanded === true} onClick={() => onToggleExpansion(id)} tabIndex={-1} />
+                    )}
                 </div>
             )}
             <div className="ogx-list-view__cell" role="gridcell">

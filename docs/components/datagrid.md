@@ -51,7 +51,7 @@ function MyGrid() {
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `rowGroupingModel` | `string[]` | `[]` | Fields to group by (in order). |
-| `groupingColDef` | `Partial<GridColDef<R>>` | — | Config for the dedicated `__group__` column created at position 0, auto-pinned left, when grouping is active. Every key is optional; `field` is always `'__group__'`. |
+| `groupingColDef` | `Partial<GridColDef<R>>` | — | Config for the dedicated `__group__` column created at position 0, auto-pinned left, when row grouping or tree data is active. Every key is optional; `field` is always `'__group__'`. |
 
 ## 🖱️ Interaction & Events
 

@@ -32,6 +32,7 @@ The `<Cell />` component applies various BEM classes for styling:
 - `.ogx__cell--editing`: During active cell editing.
 - `.ogx__cell--pinned-left`: Sticky to the left.
 - `.ogx__cell--pinned-right`: Sticky to the right.
+- `.ogx__cell-image`: The default `<img>` of a `type: 'image'` column without `renderCell`.
 
 ## 🛠️ Custom Rendering
 
