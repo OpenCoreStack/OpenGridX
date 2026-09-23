@@ -37,7 +37,7 @@ GridVisibleRow<R>[]
 // where GridVisibleRow<R> = { row: R; rowIndex: number }
 ```
 
-`rowIndex` is the absolute position in the full (non-virtual) row list — used by `<Row>` to compute `aria-rowindex` and by the zebra-stripe CSS class.
+`rowIndex` is the position in the renderable rows (top-pinned + the current page's centre rows + bottom-pinned) — it becomes the row's `data-rowindex`, the `rowIndex` in `onRowClick` / `getDetailPanelContent` params and the zebra-stripe class. `aria-rowindex` is computed separately (`lib/utils/aria`, `getAriaRowLayout`): it adds the header rows and, for centre rows, the rows on earlier pages, and puts bottom-pinned rows after every page. `GridPinnedRows` receives the bottom rows' offset (`topPinned + centerCount`) so they no longer restart at 0.
 
 ---
 

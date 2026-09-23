@@ -1,0 +1,65 @@
+# Keyboard Navigation & Accessibility
+
+The grid follows the [WAI-ARIA data grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/): it is a single Tab stop, and the arrow keys move a focused cell inside it. This page lists the keys, explains how focus behaves, and documents the ARIA structure the grid exposes (v3.0).
+
+## Focus model
+
+- **One Tab stop.** The grid viewport (`role="grid"`) is in the page Tab order. Tabbing in puts focus on the last focused cell, or on the first cell (the select-all header checkbox with `checkboxSelection`, the first column header when there are no rows). While focus is inside the grid the viewport leaves the Tab order, so **Tab** and **Shift+Tab** leave the grid in one press.
+- **Tab is not captured** outside edit mode. It moves to the next focusable element in the page, which may be a control you render in a cell (`renderCell`) or inside an expanded detail panel.
+- **Focus is remembered.** Leaving the grid (Tab, clicking elsewhere, switching window) keeps the focused cell; coming back restores it. The focus ring is only drawn while the grid has focus and the keyboard is in use.
+- **Focus survives virtualization.** When the focused row scrolls out of the render window, focus stays on the grid so keys keep working; the cell gets DOM focus back when it is rendered again. The grid never takes focus back from an element outside it.
+- **Rows and columns that disappear.** If the focused row is removed or filtered out, focus moves to the row now at the same position; if the focused column is hidden, to the first visible data column; with no rows left, to the header.
+- **Your own controls keep their keys.** Keys pressed in text inputs, textareas, selects and editable content rendered in cells, and anything inside a detail panel, are left to that element. On a button, link or checkbox rendered in a cell, **Enter** and **Space** activate it and the arrow keys still move grid focus.
+
+## Keys
+
+### Cells
+
+| Key | Action |
+| :--- | :--- |
+| **Arrow keys** | Move one cell. Left/Right wrap to the previous/next row. Up from the first row moves to the header. Merged (spanned) cells count as one cell. |
+| **Home** / **End** | First / last column of the row. |
+| **Ctrl+Home** / **Ctrl+End** (Cmd on macOS) | First column of the header row / last column of the last row. |
+| **PageUp** / **PageDown** | Up / down one page (`pageSize` with pagination, otherwise 10 rows). |
+| **Enter** | Editable cell: open the editor. Other cells: same as clicking the row — fires `onRowClick`, toggles selection unless `disableRowSelectionOnClick`, and expands or collapses a group / tree-parent row. |
+| **Shift+Space** | Select or deselect the focused row (when rows can be selected: `checkboxSelection`, or click selection not disabled). Synthetic group rows are not selectable. |
+| **Space** | On the row checkbox: toggle the row. On the detail-panel toggle: expand or collapse the panel. Elsewhere it does nothing (it never scrolls the grid). |
+| **Ctrl+A** (Cmd+A) | Select every row, when several rows can be selected. |
+| **Ctrl+C** (Cmd+C) | Copy the selected rows (see [Clipboard](clipboard.md)). |
+
+Arrow, Home/End, PageUp/PageDown and Space are always consumed, so the viewport does not scroll natively when focus cannot move further.
+
+### While editing
+
+| Key | Action |
+| :--- | :--- |
+| **Enter** | Commit. |
+| **Escape** | Cancel. |
+| **Tab** / **Shift+Tab** | Commit and open the next / previous editable cell (checkbox, expand and reorder columns are skipped). With no editable cell left, focus leaves the grid and the edit commits. |
+
+When an edit ends, focus returns to the edited cell unless you moved it elsewhere.
+
+### Column headers
+
+| Key | Action |
+| :--- | :--- |
+| **Enter** / **Space** | Sort the column (asc → desc → none). On the select-all header: select or clear all rows. |
+| **Alt+ArrowDown** or **Ctrl+Enter** (Cmd+Enter) | Open the column menu. |
+| **ArrowDown** | Move to the first row. |
+
+In the column menu, **ArrowUp** / **ArrowDown** / **Home** / **End** move between items, **Enter** / **Space** choose one, and **Escape** or **Tab** closes the menu. Focus returns to the column header.
+
+## ARIA structure
+
+| Element | Attributes |
+| :--- | :--- |
+| Viewport | `role="grid"`, `aria-rowcount`, `aria-colcount`, `aria-multiselectable` (true when several rows can be selected), `aria-busy`. |
+| Header rows | `role="row"` with `aria-rowindex`: column-group rows first, then the column header row. |
+| Data rows | `role="row"`, `aria-rowindex` counted across the whole dataset (page 2 continues after page 1; bottom-pinned rows come after every page), `aria-selected`. Tree-data and row-grouping rows add `aria-level`; rows with children add `aria-expanded`. |
+| Cells and headers | `aria-colindex`, identical for a header and the body cells below it. The system columns (reorder handle, detail-panel toggle, checkbox) come first. |
+| Sorted headers | Only the primary sort column has `aria-sort="ascending"` / `"descending"`; with several sort keys every sorted header also gets an `aria-description` such as "Sorted descending, sort priority 2 of 2". |
+| Detail panel | A `role="row"` with one `role="gridcell"` spanning every column (`aria-colspan`). The expand cell has `aria-expanded` and, while open, `aria-controls` pointing at the panel. |
+
+`aria-rowcount` counts the header rows plus top-pinned, centre and bottom-pinned rows; under server-side pagination it uses `rowCount`. `aria-colcount` counts the rendered columns: visible data columns (including the `groupingColDef` column and generated pivot columns) plus the system columns.
+
+`GridCellParams.colIndex` / `GridRenderCellParams.colIndex` (and `renderHeader`'s `colIndex`) are the zero-based position of the column among the **visible data columns in render order** (left-pinned, unpinned, right-pinned). They do not change with horizontal scrolling. `aria-colindex` is `colIndex + 1 +` the number of system columns.

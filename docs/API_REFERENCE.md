@@ -630,6 +630,8 @@ interface GridRowMeta {
 
 These interfaces describe the parameter objects passed to every event callback prop.
 
+Keyboard activation uses the same callbacks: **Enter** on a cell that is not editable runs the row-click handling (`onRowClick`, click-to-select, group expansion). See [Keyboard & Accessibility](features/keyboard-navigation.md) for every key and the ARIA structure.
+
 ### `GridRowParams<R>`
 Passed to `onRowClick`.
 
@@ -637,7 +639,7 @@ Passed to `onRowClick`.
 | :--- | :--- | :--- |
 | `row` | `R` | The full row data object. |
 | `id` | `GridRowId` | Unique identifier of the row. |
-| `rowIndex` | `number` | Zero-based index of the row in the visible dataset. |
+| `rowIndex` | `number` | Zero-based index of the row among the rendered rows: top-pinned, then the current page, then bottom-pinned (the row's `data-rowindex`). |
 
 ### `GridCellParams<R>`
 Passed to `onCellClick` and `isCellEditable`.
@@ -648,8 +650,8 @@ Passed to `onCellClick` and `isCellEditable`.
 | `field` | `string` | The column field name. |
 | `value` | `unknown` | The cell value (after `valueGetter`, before `valueFormatter`). |
 | `colDef` | `GridColDef<R>` | The column definition. |
-| `rowIndex` | `number` | Zero-based row index in the visible dataset. |
-| `colIndex` | `number` | Zero-based column index. |
+| `rowIndex` | `number` | Zero-based index of the row among the rendered rows: top-pinned, then the current page, then bottom-pinned. |
+| `colIndex` | `number` | Zero-based position of the column among the visible data columns in render order (left-pinned, unpinned, right-pinned); system columns are not counted. It does not change with horizontal scrolling (v3.0). |
 
 ### `GridRenderEditCellParams<R>`
 Passed to `renderEditCell` (v3.0+). Everything in `GridRenderCellParams` (`value` is the pending, uncommitted value), plus:
@@ -703,7 +705,7 @@ Passed to `getDetailPanelContent` and `getDetailPanelHeight`.
 | :--- | :--- | :--- |
 | `row` | `R` | The full row data object. |
 | `id` | `GridRowId` | Unique identifier of the row. |
-| `rowIndex` | `number` | Zero-based index of the row in the visible dataset. |
+| `rowIndex` | `number` | Zero-based index of the row among the rendered rows: top-pinned, then the current page, then bottom-pinned (the row's `data-rowindex`). |
 
 ---
 

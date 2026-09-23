@@ -16,7 +16,7 @@ Selection and copying follow standard spreadsheet metaphors:
 | :--- | :--- |
 | `Ctrl + C` / `Cmd + C` | Copy currently selected rows to the clipboard. |
 
-> **Note**: The copy action is ignored if an input, textarea, or another editable element currently has focus.
+> **Note**: The shortcut only copies while focus is inside the grid (a cell, a header, the toolbar), so with several grids on a page only the one in use copies, and Ctrl+C elsewhere on the page is never taken over (v3.0). It is also ignored while an input, textarea, or another editable element has focus, and while the page has a text selection, which the browser copies as usual. `apiRef.current.copySelectedRows()` is not affected by focus.
 
 ---
 
