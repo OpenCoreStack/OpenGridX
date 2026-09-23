@@ -20,6 +20,9 @@
   "files": [
     "dist",
     "lib",
+    "!lib/**/*.test.ts",
+    "!lib/**/*.test.tsx",
+    "!lib/**/__screenshots__",
     "docs/components",
     "docs/customization",
     "docs/features",
@@ -105,8 +108,8 @@
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
-    "@vitest/browser-playwright": "^4.0.18",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/browser-playwright": "^4.1.11",
+    "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
@@ -122,6 +125,6 @@
     "typescript-eslint": "^8.65.0",
     "vite": "^7.2.4",
     "vite-plugin-dts": "^4.5.4",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.11"
   }
 }
