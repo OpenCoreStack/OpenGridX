@@ -548,21 +548,21 @@ export default function CellSpanningShowcase() {
             <RowSpanningExample />
 
             <div className="spanning-warning-box">
-                <strong>⚠️ Important: Feature Compatibility with Column Spanning</strong>
+                <strong>How column spans interact with other features</strong>
                 <p>
-                    When using <code>colSpan</code>, some features may be pointless or may not work as expected.
-                    To avoid a confusing grid layout, consider <strong>disabling the following features</strong> for any columns affected by <code>colSpan</code>:
+                    Spans are computed from the grid as it is rendered, so they follow the current column order,
+                    visibility, pinning and row order:
                 </p>
                 <ul>
-                    <li><strong>Sorting</strong> - Set <code>sortable: false</code> (all examples above disable this)</li>
-                    <li><strong>Filtering</strong> - Avoid using filters on spanned columns</li>
-                    <li><strong>Column Reorder</strong> - Reordering can break the spanning logic</li>
-                    <li><strong>Hiding Columns</strong> - Hidden columns can cause misalignment</li>
-                    <li><strong>Column Pinning</strong> - Pinning spanned columns may cause layout issues</li>
+                    <li><strong>Sorting &amp; filtering</strong> - Spans are recomputed for the new rows; a span driven by row data (like <code>row.isTotal</code>) moves with its row. Set <code>sortable: false</code> when a summary row must stay in place (all examples above do)</li>
+                    <li><strong>Hiding columns</strong> - Hidden columns are skipped: a span covers the next visible columns</li>
+                    <li><strong>Column reorder</strong> - A span covers the columns that follow its origin in the current order</li>
+                    <li><strong>Column pinning</strong> - A span stops at the edge of its pinned section</li>
+                    <li><strong>Resizing &amp; flex widths</strong> - A merged cell is always exactly as wide as the columns it covers</li>
                 </ul>
                 <p style={{ fontSize: '0.95em', fontStyle: 'italic' }}>
-                    💡 <strong>Best Practice:</strong> Use column spanning primarily for display purposes in read-only grids
-                    or tables where interactive features are not required.
+                    💡 <strong>Tip:</strong> Span values are clamped to the columns that exist, and a span function that throws
+                    renders the cell without a span instead of breaking the grid.
                 </p>
             </div>
         </DocsLayout>

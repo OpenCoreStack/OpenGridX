@@ -151,9 +151,18 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
   /** If true, the column kebab/hamburger menu is disabled. */
   disableColumnMenu?: boolean;
 
-  /** Number of columns this cell should occupy horizontally. */
+  /**
+   * Number of columns this cell should occupy horizontally: the origin plus the next visible columns
+   * in render order, clamped to the end of the origin's pinned section. Fractions are floored,
+   * `Infinity` means "to the end", and NaN / values below 1 mean no span. `params.value` is the
+   * `valueGetter` result. A function that throws is treated as 1.
+   */
   colSpan?: number | ((params: GridRenderCellParams<R>) => number);
-  /** Number of rows this cell should occupy vertically. */
+  /**
+   * Number of rows this cell should occupy vertically, clamped to the end of its row section
+   * (top-pinned, scrolling or bottom-pinned rows) and to the first row with an expanded detail
+   * panel. Normalised like `colSpan`. With both set, the origin covers the whole rectangle.
+   */
   rowSpan?: number | ((params: GridRenderCellParams<R>) => number);
 
   /**
@@ -205,7 +214,7 @@ export interface GridColumnGroup {
   groupId: string;
   /** Text displayed in the group header cell. */
   headerName: string;
-  /** Optional override for the header cell background color. */
+  /** CSS class(es) added to this group's header cell(s). */
   headerClassName?: string;
   /**
    * Either an array of column field strings (leaf group)
