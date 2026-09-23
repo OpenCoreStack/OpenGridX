@@ -85,7 +85,7 @@ The main component for displaying and interacting with data.
 | :--- | :--- | :--- | :--- |
 | `pinnedColumns` | `GridColumnPinning` | — | Columns pinned to the left or right viewport edges. See [Column & Row Pinning](#-column--row-pinning). |
 | `onPinnedColumnsChange` | `(model: GridColumnPinning) => void` | — | Fired when column pinning changes. |
-| `pinnedRows` | `GridRowPinning` | — | Row IDs pinned to the top or bottom of the viewport. |
+| `pinnedRows` | `GridRowPinning` | — | Row IDs pinned to the top or bottom of the viewport. Pinned rows still have to pass the filter. Ignored (with a development warning) under tree data and row grouping, where the rows stay in the hierarchy. |
 | `pinCheckboxColumn` | `boolean` | `true` | Keeps the checkbox column visible during horizontal scrolling. |
 | `pinExpandColumn` | `boolean` | `true` | Keeps the Master-Detail expansion column visible during horizontal scrolling. |
 
@@ -708,7 +708,7 @@ These interfaces describe the parameter objects passed to every event callback p
 Keyboard activation uses the same callbacks: **Enter** on a cell that is not editable runs the row-click handling (`onRowClick`, click-to-select, group expansion). See [Keyboard & Accessibility](features/keyboard-navigation.md) for every key and the ARIA structure.
 
 ### `GridRowParams<R>`
-Passed to `onRowClick`.
+Passed to `onRowClick` and `onRowDoubleClick`.
 
 | Property | Type | Description |
 | :--- | :--- | :--- |

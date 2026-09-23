@@ -1,7 +1,8 @@
 /**
  * Keeps the package entry (lib/index.ts) and the reference docs in step:
  * - every type, component, hook and function that docs/API_REFERENCE.md or docs/components/*.md
- *   names as public is exported from the package root;
+ *   names as public, and everything a code sample in docs/ or the README imports from the
+ *   package, is exported from the package root;
  * - documented usages that depend on the public types (groupingColDef without `field`,
  *   `slotProps.toolbar` render props, a typed custom toolbar) compile under strict settings.
  *
@@ -143,13 +144,25 @@ const componentDocs = fs.readdirSync(COMPONENT_DOCS_DIR)
     .map((f) => ({ file: `docs/components/${f}`, text: readDoc(path.join(COMPONENT_DOCS_DIR, f)) }));
 const allDocs = [{ file: 'docs/API_REFERENCE.md', text: readDoc(API_REFERENCE) }, ...componentDocs];
 
+/** Every Markdown page under docs/ plus the README: their code samples import from the package. */
+function listMarkdown(dir: string): string[] {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) return listMarkdown(full);
+        return entry.name.endsWith('.md') ? [full] : [];
+    });
+}
+const sampleDocs = [...listMarkdown(path.join(ROOT, 'docs')), path.join(ROOT, 'README.md')]
+    .map((file) => ({ file: path.relative(ROOT, file), text: readDoc(file) }));
+
 /** Names imported from the package in the docs' code samples. */
 function documentedImports(): Map<string, string> {
     const found = new Map<string, string>();
-    const importRe = /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+'@opencorestack\/opengridx'/g;
-    for (const { file, text } of allDocs) {
+    const importRe = /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+['"]@opencorestack\/opengridx['"]/g;
+    for (const { file, text } of sampleDocs) {
         for (const match of text.matchAll(importRe)) {
-            for (const raw of match[1].split(',')) {
+            const list = match[1].replace(/\/\/[^\n]*/g, '');
+            for (const raw of list.split(',')) {
                 const name = raw.replace(/^\s*type\s+/, '').split(/\s+as\s+/)[0].trim();
                 if (name) found.set(name, file);
             }
