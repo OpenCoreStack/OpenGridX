@@ -1,215 +1,327 @@
 
-import type { GridRowModel, GridFilterItem, GridFilterModel, GridFilterGroup } from '../../types';
+import type { GridRowModel, GridFilterItem, GridFilterModel, GridFilterGroup, GridFilterOperator, GridColDef } from '../../types';
+import type { GridColumnLookup } from '../columnLookup';
+import { getCellValue, toLocalDateString, toLocalDayKey, toNumber } from '../values';
 
-export const FILTER_OPERATORS = {
-  contains: (value: unknown, filterValue: unknown): boolean => {
+/** Compares a cell value with the filter item's value. */
+export type GridFilterOperatorFn = (value: unknown, filterValue?: unknown) => boolean;
+
+type RowPredicate = (row: GridRowModel) => boolean;
+
+/** Operators that take no value. Every other operator ignores an item whose value is empty. */
+export const NO_VALUE_OPERATORS: ReadonlySet<string> = new Set<GridFilterOperator>(['isEmpty', 'isNotEmpty']);
+
+/**
+ * True for a filter value that means "nothing entered yet": undefined, null, a blank string or an
+ * empty array. Items with such a value (other than isEmpty / isNotEmpty) do not filter.
+ */
+export function isEmptyFilterValue(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === 'string') return value.trim() === '';
+  if (Array.isArray(value)) return value.length === 0;
+  return false;
+}
+
+function isBlankCell(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === 'number') return Number.isNaN(value);
+  return typeof value === 'string' && value.trim() === '';
+}
+
+const numeric = (compare: (a: number, b: number) => boolean): GridFilterOperatorFn => (value, filterValue) => {
+  const a = toNumber(value);
+  const b = toNumber(filterValue);
+  if (a === null || b === null) return false;
+  return compare(a, b);
+};
+
+const byDay = (compare: (a: number, b: number) => boolean): GridFilterOperatorFn => (value, filterValue) => {
+  const a = toLocalDayKey(value);
+  const b = toLocalDayKey(filterValue);
+  if (a === null || b === null) return false;
+  return compare(a, b);
+};
+
+/** Same local calendar day. Accepts Date objects, epoch milliseconds and date strings on both sides. */
+const dateIs: GridFilterOperatorFn = byDay((a, b) => a === b);
+
+/** A different local calendar day. Empty or unparsable cells count as "not that day". */
+const dateNot: GridFilterOperatorFn = (value, filterValue) => {
+  const a = toLocalDayKey(value);
+  const b = toLocalDayKey(filterValue);
+  if (a === null || b === null) return true;
+  return a !== b;
+};
+
+export const FILTER_OPERATORS: Record<GridFilterOperator, GridFilterOperatorFn> = {
+  contains: (value, filterValue) => {
     if (value == null || filterValue == null) return false;
     return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
   },
 
-  equals: (value: unknown, filterValue: unknown): boolean => {
+  equals: (value, filterValue) => {
     if (value == null && filterValue == null) return true;
     if (value == null || filterValue == null) return false;
     return String(value).toLowerCase() === String(filterValue).toLowerCase();
   },
 
-  startsWith: (value: unknown, filterValue: unknown): boolean => {
+  startsWith: (value, filterValue) => {
     if (value == null || filterValue == null) return false;
     return String(value).toLowerCase().startsWith(String(filterValue).toLowerCase());
   },
 
-  endsWith: (value: unknown, filterValue: unknown): boolean => {
+  endsWith: (value, filterValue) => {
     if (value == null || filterValue == null) return false;
     return String(value).toLowerCase().endsWith(String(filterValue).toLowerCase());
   },
 
-  isEmpty: (value: unknown): boolean => {
+  isEmpty: (value) => {
     return value == null || String(value).trim() === '';
   },
 
-  isNotEmpty: (value: unknown): boolean => {
+  isNotEmpty: (value) => {
     return value != null && String(value).trim() !== '';
   },
 
-  '>': (value: unknown, filterValue: unknown): boolean => {
-    if (value == null || filterValue == null) return false;
-    const numValue = Number(value);
-    const numFilter = Number(filterValue);
-    if (isNaN(numValue) || isNaN(numFilter)) return false;
-    return numValue > numFilter;
-  },
+  // Numeric operators: blank cells and non-numeric values never match (a blank cell is not 0).
+  '=': numeric((a, b) => a === b),
+  '>': numeric((a, b) => a > b),
+  '>=': numeric((a, b) => a >= b),
+  '<': numeric((a, b) => a < b),
+  '<=': numeric((a, b) => a <= b),
 
-  '>=': (value: unknown, filterValue: unknown): boolean => {
-    if (value == null || filterValue == null) return false;
-    const numValue = Number(value);
-    const numFilter = Number(filterValue);
-    if (isNaN(numValue) || isNaN(numFilter)) return false;
-    return numValue >= numFilter;
-  },
-
-  '<': (value: unknown, filterValue: unknown): boolean => {
-    if (value == null || filterValue == null) return false;
-    const numValue = Number(value);
-    const numFilter = Number(filterValue);
-    if (isNaN(numValue) || isNaN(numFilter)) return false;
-    return numValue < numFilter;
-  },
-
-  '<=': (value: unknown, filterValue: unknown): boolean => {
-    if (value == null || filterValue == null) return false;
-    const numValue = Number(value);
-    const numFilter = Number(filterValue);
-    if (isNaN(numValue) || isNaN(numFilter)) return false;
-    return numValue <= numFilter;
-  },
-
-  '!=': (value: unknown, filterValue: unknown): boolean => {
-    if (filterValue == null || filterValue === '') return true;
-    // Numeric comparison if both are numbers, otherwise string
-    const numV = Number(value);
-    const numF = Number(filterValue);
-    if (!isNaN(numV) && !isNaN(numF)) return numV !== numF;
+  '!=': (value, filterValue) => {
+    if (isEmptyFilterValue(filterValue)) return true;
+    const a = toNumber(value);
+    const b = toNumber(filterValue);
+    if (a !== null && b !== null) return a !== b;
+    // An empty cell is "not equal" to every value, whatever that value is.
+    if (isBlankCell(value)) return true;
     return String(value).toLowerCase() !== String(filterValue).toLowerCase();
   },
 
-  isAnyOf: (value: unknown, filterValue: unknown[]): boolean => {
-    if (value == null || !Array.isArray(filterValue)) return false;
-    return filterValue.some(v =>
-      String(value).toLowerCase() === String(v).toLowerCase()
-    );
+  // A scalar value is treated as a one-element list, so a typed "Active" works like ["Active"].
+  isAnyOf: (value, filterValue) => {
+    if (value == null) return false;
+    const options = Array.isArray(filterValue) ? filterValue : [filterValue];
+    const cell = String(value).toLowerCase();
+    return options.some(option => option != null && String(option).toLowerCase() === cell);
   },
 
-  not: (value: unknown, filterValue: unknown): boolean => {
-      if (value == null && filterValue == null) return false;
-      if (value == null || filterValue == null) return true;
-      return String(value).toLowerCase() !== String(filterValue).toLowerCase();
+  // Used by boolean and singleSelect (case-insensitive string comparison), and by dates.
+  not: (value, filterValue) => {
+    if (value instanceof Date) return dateNot(value, filterValue);
+    if (value == null && filterValue == null) return false;
+    if (value == null || filterValue == null) return true;
+    return String(value).toLowerCase() !== String(filterValue).toLowerCase();
   },
 
-  // Used by boolean and singleSelect — case-insensitive string comparison
-  is: (value: unknown, filterValue: unknown): boolean => {
-      if (filterValue == null || filterValue === '') return true;
-      const rowStr = String(value).toLowerCase();
-      const filterStr = String(filterValue).toLowerCase();
-      return rowStr === filterStr;
+  is: (value, filterValue) => {
+    if (filterValue == null || filterValue === '') return true;
+    if (value instanceof Date) return dateIs(value, filterValue);
+    return String(value).toLowerCase() === String(filterValue).toLowerCase();
   },
 
-  '=': (value: unknown, filterValue: unknown): boolean => {
-      if (value == null || filterValue == null || filterValue === '') return false;
-      return Number(value) === Number(filterValue);
-  },
+  // Date operators compare local calendar days.
+  after: byDay((a, b) => a > b),
+  onOrAfter: byDay((a, b) => a >= b),
+  before: byDay((a, b) => a < b),
+  onOrBefore: byDay((a, b) => a <= b),
 };
+
+/** Date columns compare `is` / `not` by calendar day, so ISO strings and Date objects match the typed day. */
+const DATE_COLUMN_OPERATORS: Partial<Record<GridFilterOperator, GridFilterOperatorFn>> = {
+  is: dateIs,
+  not: dateNot,
+};
+
+function resolveOperator(operator: string, colDef: GridColDef | undefined): GridFilterOperatorFn | undefined {
+  if (!Object.prototype.hasOwnProperty.call(FILTER_OPERATORS, operator)) return undefined;
+  const op = operator as GridFilterOperator;
+  if (colDef?.type === 'date') {
+    const dateFn = DATE_COLUMN_OPERATORS[op];
+    if (dateFn) return dateFn;
+  }
+  return FILTER_OPERATORS[op];
+}
+
+function isFilterGroup(item: GridFilterItem | GridFilterGroup): item is GridFilterGroup {
+  return 'items' in item && Array.isArray(item.items);
+}
+
+interface CompileContext {
+  columns?: GridColumnLookup;
+  /** Unknown operators already reported in this pass, so the warning fires once per pass, not per row. */
+  warned: Set<string>;
+}
+
+function compileItem(item: GridFilterItem, ctx: CompileContext): RowPredicate | null {
+  const { field, operator, value } = item;
+  // An item whose value has not been entered yet (or was cleared) does not filter.
+  if (!NO_VALUE_OPERATORS.has(operator) && isEmptyFilterValue(value)) return null;
+
+  const colDef = ctx.columns?.byField.get(field);
+  const operatorFn = resolveOperator(operator, colDef);
+  if (!operatorFn) {
+    if (!ctx.warned.has(operator)) {
+      ctx.warned.add(operator);
+      console.warn(`Unknown filter operator: ${operator}`);
+    }
+    return null;
+  }
+  return (row) => operatorFn(getCellValue(row, field, colDef), value);
+}
+
+function compileGroup(
+  items: (GridFilterItem | GridFilterGroup)[],
+  logicOperator: 'and' | 'or',
+  ctx: CompileContext
+): RowPredicate | null {
+  const predicates: RowPredicate[] = [];
+  for (const item of items) {
+    const predicate = isFilterGroup(item)
+      ? compileGroup(item.items, item.logicOperator, ctx)
+      : compileItem(item, ctx);
+    if (predicate) predicates.push(predicate);
+  }
+  if (predicates.length === 0) return null;
+  if (predicates.length === 1) return predicates[0];
+  return logicOperator === 'or'
+    ? (row) => predicates.some(p => p(row))
+    : (row) => predicates.every(p => p(row));
+}
+
+function pushSearchText(out: string[], value: unknown): void {
+  if (value == null) return;
+  switch (typeof value) {
+    case 'string':
+      out.push(value.toLowerCase());
+      return;
+    case 'number':
+      if (!Number.isNaN(value)) out.push(String(value));
+      return;
+    case 'boolean':
+    case 'bigint':
+      out.push(String(value));
+      return;
+    default:
+      break;
+  }
+  if (value instanceof Date) {
+    // Search the calendar day, not Date.toString()'s "Wed Jan 10 2024 ... GMT+0000".
+    const day = toLocalDateString(value);
+    if (day) out.push(day);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      if (entry == null || typeof entry !== 'object') pushSearchText(out, entry);
+    }
+  }
+  // Other objects have no meaningful text ("[object Object]") and are skipped.
+}
+
+function getQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | undefined): string[] {
+  const texts: string[] = [];
+  if (!columns) {
+    for (const value of Object.values(row)) pushSearchText(texts, value);
+    return texts;
+  }
+  for (const col of columns.quickFilterColumns) {
+    const value = getCellValue(row, col.field, col);
+    if (col.valueFormatter) {
+      const formatted = col.valueFormatter({ value, row, field: col.field });
+      if (formatted != null && formatted !== '') texts.push(String(formatted).toLowerCase());
+    }
+    pushSearchText(texts, value);
+  }
+  return texts;
+}
+
+function compileQuickFilter(values: readonly string[] | undefined, columns: GridColumnLookup | undefined): RowPredicate | null {
+  const terms = (values ?? [])
+    .map(value => String(value ?? '').trim().toLowerCase())
+    .filter(term => term !== '');
+  if (terms.length === 0) return null;
+  return (row) => {
+    const texts = getQuickFilterTexts(row, columns);
+    return terms.every(term => texts.some(text => text.includes(term)));
+  };
+}
+
+/**
+ * Compile a filter model into a row predicate. Returns null when the model filters nothing
+ * (no items with a value and no quick-filter terms), so callers can skip the pass entirely.
+ *
+ * Pass `columns` so that cells are read through `valueGetter`, date columns use calendar-day
+ * comparison and the quick filter searches only visible, filterable columns (including their
+ * `valueFormatter` text). Without it, `row[field]` is read and the quick filter searches every
+ * primitive value in the row.
+ */
+export function createRowFilter(
+  filterModel: GridFilterModel | GridFilterGroup | null | undefined,
+  columns?: GridColumnLookup
+): RowPredicate | null {
+  if (!filterModel) return null;
+  const ctx: CompileContext = { columns, warned: new Set() };
+  const quickFilterValues = 'quickFilterValues' in filterModel ? filterModel.quickFilterValues : undefined;
+  const quick = compileQuickFilter(quickFilterValues, columns);
+  const itemsPredicate = compileGroup(filterModel.items ?? [], filterModel.logicOperator ?? 'and', ctx);
+  if (quick && itemsPredicate) return (row) => quick(row) && itemsPredicate(row);
+  return quick ?? itemsPredicate;
+}
 
 /**
  * Apply a single filter item to a row
  */
 export function applyFilterItem<R extends GridRowModel>(
   row: R,
-  filterItem: GridFilterItem
+  filterItem: GridFilterItem,
+  colDef?: GridColDef
 ): boolean {
-  const { field, operator, value } = filterItem;
-
-  // Get the value from the row
-  const rowValue = row[field];
-
-  // Get the operator function
-  const operatorFn = FILTER_OPERATORS[operator];
-  if (!operatorFn) {
-    console.warn(`Unknown filter operator: ${operator}`);
-    return true;
-  }
-
-  // Apply the operator
-  return (operatorFn as (a: unknown, b: unknown) => boolean)(rowValue, value);
+  const columns: GridColumnLookup | undefined = colDef
+    ? { byField: new Map([[filterItem.field, colDef]]), quickFilterColumns: [] }
+    : undefined;
+  const predicate = compileItem(filterItem, { columns, warned: new Set() });
+  return predicate ? predicate(row) : true;
 }
 
 /**
- * Apply quick filter (global search across all fields)
+ * Apply the quick filter (global search). Every term must be found in at least one searched value.
  */
 export function applyQuickFilter<R extends GridRowModel>(
   row: R,
-  quickFilterValues: string[]
+  quickFilterValues: string[],
+  columns?: GridColumnLookup
 ): boolean {
-  if (!quickFilterValues || quickFilterValues.length === 0) {
-    return true;
-  }
-
-  // Check if any quick filter value matches any field in the row
-  return quickFilterValues.every(filterValue => {
-    const searchTerm = filterValue.toLowerCase();
-    return Object.values(row).some(value => {
-      if (value == null) return false;
-      return String(value).toLowerCase().includes(searchTerm);
-    });
-  });
+  const predicate = compileQuickFilter(quickFilterValues, columns);
+  return predicate ? predicate(row) : true;
 }
 
 /**
- * Filter rows based on filter model
- */
-/**
- * Check if a row matches the filter model
+ * Check if a row matches the filter model. Compiles the model on every call: to test many rows,
+ * build a predicate once with createRowFilter.
  */
 export function isRowMatchingFilter<R extends GridRowModel>(
   row: R,
-  filterModel: GridFilterModel | GridFilterGroup // Accept Model or Group (similar structure)
+  filterModel: GridFilterModel | GridFilterGroup,
+  columns?: GridColumnLookup
 ): boolean {
-  // Normalize input: GridFilterModel matches GridFilterGroup shape largely, but let's be safe
-
-  const items = filterModel.items ?? [];
-  const logicOperator = filterModel.logicOperator ?? 'and';
-  const quickFilterValues = ('quickFilterValues' in filterModel ? filterModel.quickFilterValues : undefined) ?? [];
-
-  if (quickFilterValues.length > 0 && !applyQuickFilter(row, quickFilterValues)) {
-    return false;
-  }
-
-  if (items.length === 0) {
-    return true;
-  }
-
-  const evaluateItem = (item: GridFilterItem | GridFilterGroup): boolean => {
-    if ('logicOperator' in item && 'items' in item) {
-
-       const group = item as GridFilterGroup;
-       const groupItems = group.items;
-       if (groupItems.length === 0) return true;
-
-       if (group.logicOperator === 'and') {
-           return groupItems.every(evaluateItem);
-       } else {
-           return groupItems.some(evaluateItem);
-       }
-    } else {
-
-       return applyFilterItem(row, item as GridFilterItem);
-    }
-  };
-
-  if (logicOperator === 'and') {
-
-    return items.every(evaluateItem);
-  } else {
-
-    return items.some(evaluateItem);
-  }
+  const predicate = createRowFilter(filterModel, columns);
+  return predicate ? predicate(row) : true;
 }
 
 export function filterRows<R extends GridRowModel>(
   rows: R[],
-  filterModel: GridFilterModel
+  filterModel: GridFilterModel,
+  columns?: GridColumnLookup
 ): R[] {
-  if (!filterModel) return rows;
-
-  const { items = [], quickFilterValues = [] } = filterModel;
-
-  if (items.length === 0 && (!quickFilterValues || quickFilterValues.length === 0)) {
-    return rows;
-  }
-
-  return rows.filter(row => isRowMatchingFilter(row, filterModel));
+  const predicate = createRowFilter(filterModel, columns);
+  if (!predicate) return rows;
+  return rows.filter(row => predicate(row));
 }
 
-export function getDefaultOperator(type?: string): string {
+export function getDefaultOperator(type?: string): GridFilterOperator {
   switch (type) {
     case 'number':
       return '=';
@@ -224,7 +336,7 @@ export function getDefaultOperator(type?: string): string {
   }
 }
 
-export function getOperatorsForType(type?: string): string[] {
+export function getOperatorsForType(type?: string): GridFilterOperator[] {
   switch (type) {
     case 'number':
       return ['=', '!=', '>', '>=', '<', '<=', 'isEmpty', 'isNotEmpty'];

@@ -530,7 +530,9 @@ export function GridToolbar({
     const handleSearchChange = useCallback((value: string) => {
         if (!onFilterModelChange) return;
 
-        const values = value ? [value] : [];
+        // Each whitespace-separated word is its own term; a row matches when every term is found
+        // in some column, so "john london" finds first = John, city = London.
+        const values = value.trim().split(/\s+/).filter(Boolean);
         const nextModel = {
             ...(filterModel || {}),
             quickFilterValues: values,
@@ -539,7 +541,7 @@ export function GridToolbar({
         onFilterModelChange(nextModel);
     }, [filterModel, onFilterModelChange]);
 
-    const searchValue = filterModel?.quickFilterValues?.[0] || '';
+    const searchValue = (filterModel?.quickFilterValues ?? []).join(' ');
     const activeFilterCount = (filterModel?.items?.length || 0);
 
     // Column Visibility Logic

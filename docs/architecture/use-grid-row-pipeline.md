@@ -52,8 +52,11 @@ interface UseGridRowPipelineParams<R extends GridRowModel> {
     pinnedRows?: GridRowPinning;              // { top: GridRowId[], bottom: GridRowId[] }
     isLoading: boolean;
     pageSize: number;
+    columnLookup?: GridColumnLookup;          // from useGridColumnLookup(activeColumns, columnVisibilityModel)
 }
 ```
+
+`columnLookup` (built by `useGridColumnLookup`, `lib/utils/columnLookup.ts`) gives `filterRows` / `sortRows` the column definitions: cells are read through `valueGetter` (`getCellValue` in `lib/utils/values.ts`), the column `type` selects numeric / date comparison, and the quick filter searches only the visible, filterable columns. `DataGrid` passes the same lookup to `useTreeData` and `useRowGrouping`, which compile the filter once per pass with `createRowFilter` and sort with `compareRowsBySortModel` / `compareValues`. The lookup's identity changes only when the columns or the set of hidden columns change, so an inline `columnVisibilityModel` object does not re-run filter and sort.
 
 > **`GridRowPinning` vs `GridPinnedRows<R>`** — `GridRowPinning` (used here) holds `top: GridRowId[]`; `GridPinnedRows<R>` holds `top: R[]`. These are distinct types. `getPinnedRowGroups` expects `GridRowPinning`.
 

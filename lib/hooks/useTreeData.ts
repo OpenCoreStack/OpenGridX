@@ -1,8 +1,9 @@
 import { useMemo, useState, useCallback } from 'react';
 import { GridRowModel, GridRowId, GridTreeNode, GridFilterModel, GridSortItem } from '../types';
 import type { GridRowMeta } from '../types';
-import { isRowMatchingFilter } from '../utils/filtering';
-import { compareValues } from '../utils/sorting';
+import { createRowFilter } from '../utils/filtering';
+import { compareRowsBySortModel } from '../utils/sorting';
+import type { GridColumnLookup } from '../utils/columnLookup';
 
 const EMPTY_OVERRIDES: Map<GridRowId, boolean> = new Map();
 
@@ -20,6 +21,8 @@ interface UseTreeDataProps<R extends GridRowModel> {
     filterModel?: GridFilterModel;
     sortModel?: GridSortItem[];
     onRowExpansionChange?: (node: GridTreeNode) => void;
+    /** Column definitions, so filter and sort read cells through valueGetter and use the column type. */
+    columnLookup?: GridColumnLookup;
 }
 
 export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) {
@@ -31,7 +34,8 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
         defaultGroupingExpansionDepth = 0, 
         filterModel,
         sortModel,
-        onRowExpansionChange
+        onRowExpansionChange,
+        columnLookup
     } = props;
 
     const { treeNodes, rootIds, groupingRows } = useMemo(() => {
@@ -211,7 +215,9 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
         rows.forEach(r => rowLookup.set(getRowId(r), r));
         groupingRows.forEach(r => rowLookup.set(r.id, r));
 
-        const matchesFilter = (row: GridRowModel) => (filterModel ? isRowMatchingFilter(row, filterModel) : true);
+        // Compiled once per pass, not once per row.
+        const rowFilter = createRowFilter(filterModel, columnLookup);
+        const matchesFilter = (row: GridRowModel) => (rowFilter ? rowFilter(row) : true);
 
         const filterCache = new Map<GridRowId, boolean>();
 
@@ -246,13 +252,7 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
             const rowB = rowLookup.get(bId);
             if (!rowA || !rowB) return 0;
 
-            for (const sortItem of sortModel) {
-                 const valA = rowA[sortItem.field];
-                 const valB = rowB[sortItem.field];
-                 const comp = compareValues(valA, valB, sortItem.sort);
-                 if (comp !== 0) return comp;
-            }
-            return 0;
+            return compareRowsBySortModel(rowA, rowB, sortModel, columnLookup);
         };
 
         const result: GridRowModel[] = [];
@@ -287,7 +287,7 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
         traverse(rootIds);
         return result;
 
-    }, [treeData, rows, groupingRows, rootIds, treeNodes, expandedGroupIds, filterModel, sortModel, getRowId]);
+    }, [treeData, rows, groupingRows, rootIds, treeNodes, expandedGroupIds, filterModel, sortModel, getRowId, columnLookup]);
 
     const isGroupExpanded = useCallback((id: GridRowId) => expandedGroupIds.has(id), [expandedGroupIds]);
     const getNode = useCallback((id: GridRowId) => treeNodes.get(id), [treeNodes]);

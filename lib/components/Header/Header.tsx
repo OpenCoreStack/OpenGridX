@@ -141,6 +141,19 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         }
     };
 
+    // Column menu: act on this column only. "Unsort" removes just this key, and picking a direction
+    // for a column that is already sorted keeps the other keys. A new sort replaces the model
+    // unless multiSort is on, matching a plain header click.
+    const handleMenuSort = (field: string, direction: GridSortDirection) => {
+        const isSorted = sortModel.some(item => item.field === field);
+        const keepOtherKeys = direction === null || isSorted || multiSort;
+        if (onSortAdd && (keepOtherKeys || !onSort)) {
+            onSortAdd(field, direction);
+        } else {
+            onSort?.(field, direction);
+        }
+    };
+
     const getSortIcon = (field: string) => {
         const sortItem = sortModel.find(item => item.field === field);
         if (!sortItem) return null;
@@ -479,7 +492,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                     <ColumnMenu
                         colDef={menuOpenParams.colDef as unknown as GridColDef<GridRowModel>}
                         sortModel={sortModel}
-                        onSort={onSort}
+                        onSort={onSort || onSortAdd ? handleMenuSort : undefined}
                         onHide={onHideColumn}
                         onPin={onPinColumn}
                         pinnedColumns={pinnedColumns}
