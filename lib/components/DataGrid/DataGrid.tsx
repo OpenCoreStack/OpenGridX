@@ -83,6 +83,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         disableColumnReorder = false,
         columnOrder,
         onColumnOrderChange,
+        onColumnOrderModelChange,
         height,
         rowReordering = false,
         onRowOrderChange,
@@ -478,8 +479,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         columnIndexMap,
         columnWidths,
         effectiveColumnOrder,
-        setInternalColumnOrder,
         columnReorderHandlers,
+        moveColumn,
+        resetColumnOrder,
         handleColumnResize,
     } = useGridColumns<R>({
         activeColumns,
@@ -490,6 +492,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         columnVisibilityModel,
         columnOrder,
         onColumnOrderChange,
+        onColumnOrderModelChange,
         disableColumnReorder,
         pivotMode: isPivotActive,
         checkboxSelection,
@@ -595,8 +598,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         visibleColumns: visibleOrderedColumns as unknown as GridColDef[],
     });
 
+    // Indices address the consumer's own rows, whatever the sort, filter, page or pinning.
     const rowReorderHandlers = useRowReorder({
-        rows: pagination ? paginatedUnpinnedRows : sortedUnpinnedRows,
+        rows: effectiveRows,
         getRowId: getRowIdOf,
         onRowOrderChange,
         rowReordering
@@ -879,17 +883,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             ? undefined
             : (fromField: string, toField: string) => {
                 if (!canReorderWithinColumnGroups(columnGroupingModel, fromField, toField)) return;
-                const currentOrder = [...effectiveColumnOrder];
-                const fromIdx = currentOrder.indexOf(fromField);
-                const toIdx = currentOrder.indexOf(toField);
-                if (fromIdx === -1 || toIdx === -1) return;
-                const newOrder = [...currentOrder];
-                newOrder.splice(fromIdx, 1);
-                newOrder.splice(toIdx, 0, fromField);
-                // A controlled columnOrder names source columns; generated pivot columns keep their own order.
-                if (isPivotActive || !columnOrder) setInternalColumnOrder(newOrder);
-                const col = effectiveColumns.find(c => c.field === fromField);
-                if (col) onColumnOrderChange?.({ oldIndex: fromIdx, targetIndex: toIdx, column: col as unknown as GridColDef });
+                moveColumn(fromField, toField);
             };
         return {
             apiRef: gridData.apiRef,
@@ -906,15 +900,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             columnVisibilityModel,
             onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
             onColumnReorder: reorderHandler,
-            onColumnOrderReset: disableColumnReorder ? undefined : () => setInternalColumnOrder(columns.map(c => c.field)),
+            onColumnOrderReset: disableColumnReorder ? undefined : resetColumnOrder,
             forceColumnsOpen: columnsPanelOpen,
             onColumnsPanelClose: () => setColumnsPanelOpen(false),
             ...slotProps?.toolbar,
         };
     }, [
-        slots?.toolbar, disableColumnReorder, effectiveColumnOrder, orderedColumns, effectiveColumns,
-        columnOrder, onColumnOrderChange, setInternalColumnOrder, gridData.apiRef,
-        columns, aggregationModel, handleAggregationModelChange, pivotMode, isPivotActive,
+        slots?.toolbar, disableColumnReorder, moveColumn, resetColumnOrder, orderedColumns, gridData.apiRef,
+        columns, aggregationModel, handleAggregationModelChange, pivotMode,
         propPivotModel, onPivotModelChange, currentPivotModel, handlePivotModelChange,
         filterModel, handleFilterModelChange, columnVisibilityModel,
         handleColumnVisibilityModelChange, columnsPanelOpen, slotProps?.toolbar, columnGroupingModel,
@@ -951,15 +944,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     isOpen={columnsPanelOpen}
                     containerRef={containerRef}
                     panelRef={standalonePanelRef}
-                    effectiveColumns={effectiveColumns}
+                    columns={orderedColumns}
                     columnVisibilityModel={columnVisibilityModel}
-                    effectiveColumnOrder={effectiveColumnOrder}
-                    columnOrder={isPivotActive ? undefined : columnOrder}
                     disableColumnReorder={disableColumnReorder}
                     onClose={() => setColumnsPanelOpen(false)}
                     onColumnVisibilityChange={handleColumnVisibilityModelChange}
-                    onColumnOrderChange={onColumnOrderChange}
-                    setInternalColumnOrder={setInternalColumnOrder}
+                    onColumnMove={moveColumn}
+                    onColumnOrderReset={resetColumnOrder}
                     columnGroupingModel={columnGroupingModel}
                 />
             )}
@@ -1098,6 +1089,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                         <GridPinnedRows<R>
                             rows={pinnedTopRows}
                             position="top"
+                            rowReordering={rowReordering}
                             ariaRowIndexBase={ariaRows.topBase}
                             columnIndexMap={columnIndexMap}
                             editingHandlers={editingHandlers}
@@ -1173,6 +1165,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                         <GridPinnedRows<R>
                             rows={pinnedBottomRows}
                             position="bottom"
+                            rowReordering={rowReordering}
                             rowIndexOffset={ariaRows.bottomRowIndexOffset}
                             ariaRowIndexBase={ariaRows.bottomBase}
                             columnIndexMap={columnIndexMap}

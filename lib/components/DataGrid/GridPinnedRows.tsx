@@ -57,6 +57,11 @@ export interface GridPinnedRowsProps<R extends GridRowModel> {
     /** Pinned rows are edited like any other row. */
     editingHandlers?: PinnedRowEditingHandlers;
     isCellEditable?: (params: GridCellParams<R>) => boolean;
+    /**
+     * Renders the (empty, non-draggable) reorder cell so the row lines up with the header and the
+     * centre rows. Pinned rows cannot be dragged.
+     */
+    rowReordering?: boolean;
 }
 
 const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
@@ -92,6 +97,7 @@ export function GridPinnedRows<R extends GridRowModel>({
     columnIndexMap,
     editingHandlers,
     isCellEditable,
+    rowReordering = false,
 }: GridPinnedRowsProps<R>) {
     if (rows.length === 0) return null;
 
@@ -135,6 +141,7 @@ export function GridPinnedRows<R extends GridRowModel>({
                     onEditStop={editingHandlers?.stopCellEdit}
                     onEditCellValueChange={editingHandlers?.setEditCellValue}
                     isCellEditable={isCellEditable}
+                    rowReordering={rowReordering}
                 />
                 );
             })}

@@ -73,9 +73,10 @@ The main component for displaying and interacting with data.
 | :--- | :--- | :--- | :--- |
 | `disableColumnReorder` | `boolean` | `false` | Disables drag-and-drop column reordering. |
 | `columnOrder` | `GridColumnOrder` | — | Controlled ordered array of column field names. |
-| `onColumnOrderChange` | `(params: GridColumnOrderChangeParams) => void` | — | Fired after a column is dragged to a new position. |
+| `onColumnOrderChange` | `(params: GridColumnOrderChangeParams) => void` | — | Fired after the user moves one column (header drag or Columns panel drag). Indices are positions in the grid's full column order. |
+| `onColumnOrderModelChange` | `(columnOrder: GridColumnOrder) => void` | — | Fired with the whole new column order after every change, including the Columns panel's **Reset**. Use it to keep a controlled `columnOrder` in sync (v3.0+). Not fired for generated pivot columns. |
 | `rowReordering` | `boolean` | `false` | Enables drag-and-drop row reordering. |
-| `onRowOrderChange` | `(params: GridRowOrderChangeParams) => void` | — | Fired after a row is dragged to a new position. |
+| `onRowOrderChange` | `(params: GridRowOrderChangeParams) => void` | — | Fired after a row is dragged onto another row. Indices are positions in your `rows` prop. |
 
 #### Pinning
 
@@ -284,8 +285,8 @@ Defines the behavior and appearance of a single column.
 | `headerName` | `string` | — | Text shown in the column header cell. |
 | `description` | `string` | — | Tooltip shown on column header hover (rendered as the HTML `title` attribute — improves accessibility). |
 | `width` | `number \| string` | `100` | Fixed width in pixels or a percentage string. |
-| `minWidth` | `number` | — | Minimum width in pixels (enforced during resize). |
-| `maxWidth` | `number` | — | Maximum width in pixels (enforced during resize). |
+| `minWidth` | `number` | — | Minimum width in pixels (enforced during resize; 50 when omitted, or the column's own width if that is smaller). |
+| `maxWidth` | `number` | — | Maximum width in pixels (enforced during resize; no limit when omitted). |
 | `flex` | `number` | — | Flex grow factor — distributes remaining space proportionally. Mutually exclusive with a fixed `width`. |
 | `align` | `'left' \| 'center' \| 'right'` | `'left'` | Horizontal alignment of cell content. |
 | `headerAlign` | `'left' \| 'center' \| 'right'` | `'left'` | Horizontal alignment of the header cell content. |
@@ -338,7 +339,7 @@ Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative 
 | `filterable` | `boolean` | `true` | Enable/disable filtering for this column. `false` also removes it from the quick-filter search. |
 | `resizable` | `boolean` | `true` | Allow the user to drag-resize this column. |
 | `hideable` | `boolean` | `true` | Allow the user to hide this column via the panel. |
-| `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. |
+| `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. Does not affect drag-reordering (v3.0+). |
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header kebab/context menu. |
 | `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, PDF and Print exports (including their subtotals and totals). |
 | `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`, or used as a pivot row or column field (the pivot panel does not offer it). |
@@ -677,17 +678,19 @@ Passed to `onColumnOrderChange`.
 | Property | Type | Description |
 | :--- | :--- | :--- |
 | `column` | `GridColDef` | The column definition that was moved. |
-| `oldIndex` | `number` | Previous column index. |
-| `targetIndex` | `number` | New column index after the move. |
+| `oldIndex` | `number` | The column's position before the move, in the grid's full column order: every current column (hidden ones and the row-grouping `__group__` column included), in its current order. |
+| `targetIndex` | `number` | Its position after the move, in the same order. |
+
+Splicing the full order with these indices gives the new order. A controlled `columnOrder` that lists only some columns, or no `__group__`, is not that order: use `onColumnOrderModelChange`, which hands you the whole new order.
 
 ### `GridRowOrderChangeParams<R>`
 Passed to `onRowOrderChange`.
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `row` | `R` | The row data object that was moved. |
-| `oldIndex` | `number` | Previous row index. |
-| `targetIndex` | `number` | New row index after the move. |
+| `row` | `R` | The row that was dragged: your own object from `rows`. |
+| `oldIndex` | `number` | Its position in your `rows` prop (`rows[oldIndex] === row`), whatever the sort, filter, page or pinned rows on screen. |
+| `targetIndex` | `number` | The position in `rows` of the row it was dropped on. Remove the row at `oldIndex` and insert it at `targetIndex`. |
 
 ### `GridRowScrollEndParams`
 Passed to `onRowsScrollEnd`.

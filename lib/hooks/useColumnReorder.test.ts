@@ -252,3 +252,41 @@ describe('useColumnReorder', () => {
         });
     });
 });
+
+describe('useColumnReorder drag identity', () => {
+    const withTypes = (types: string[]) => {
+        const { fake, event } = makeEvent();
+        Object.assign(fake.dataTransfer, { types });
+        return { fake, event };
+    };
+
+    it('stores a column token so drop targets can recognise the drag', () => {
+        const { result } = setup();
+        const { fake, event } = makeEvent();
+        act(() => { result.current.onDragStart?.('b')(event); });
+        expect(fake.dataTransfer.setData).toHaveBeenCalledWith('application/x-ogx-column', 'b');
+    });
+
+    it('does not accept a drag that carries other data (a file, a row), and forgets the stale drag', () => {
+        const { result, onColumnOrderChange } = setup();
+        act(() => { result.current.onDragStart?.('a')(makeEvent().event); });
+        const over = withTypes(['Files']);
+        act(() => { result.current.onDragOver?.('c')(over.event); });
+        expect(over.fake.preventDefault).not.toHaveBeenCalled();
+        expect(result.current.draggedColumn).toBeNull();
+        act(() => { result.current.onDrop?.('c')(withTypes(['Files']).event); });
+        expect(onColumnOrderChange).not.toHaveBeenCalled();
+    });
+
+    it('a column with pinnable: false can be reordered', () => {
+        const { result, onColumnOrderChange } = setup({ columns: [{ field: 'a', pinnable: false }, ...COLUMNS.slice(1)] });
+        drag(result, 'a', 'c');
+        expect(onColumnOrderChange).toHaveBeenCalledWith(expect.objectContaining({ oldIndex: 0, targetIndex: 2 }));
+    });
+
+    it('a column whose field is an empty string can be reordered', () => {
+        const { result, onColumnOrderChange } = setup({ columns: [{ field: '' }, ...COLUMNS] });
+        drag(result, '', 'b');
+        expect(onColumnOrderChange).toHaveBeenCalledWith(expect.objectContaining({ oldIndex: 0, targetIndex: 2 }));
+    });
+});

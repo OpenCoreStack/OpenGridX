@@ -1,8 +1,9 @@
-
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { GridColDef, GridRowModel, GridColumnOrderChangeParams } from '../types';
+import { COLUMN_DRAG_MIME, hasDragToken, onNativeDragEnd, setDragToken } from '../utils/dragData';
 
 export interface UseColumnReorderProps<R extends GridRowModel = GridRowModel> {
+  /** Every current column, in the grid's column order. Reported indices are positions in it. */
   columns: GridColDef<R>[];
   onColumnOrderChange?: (params: GridColumnOrderChangeParams) => void;
   disableColumnReorder?: boolean;
@@ -24,84 +25,77 @@ export function useColumnReorder<R extends GridRowModel = GridRowModel>(
 
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
-  const draggedIndexRef = useRef<number>(-1);
+  const detachDragEndRef = useRef<() => void>(() => {});
+
+  const handleDragEnd = useCallback(() => {
+    detachDragEndRef.current();
+    detachDragEndRef.current = () => {};
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+  }, []);
+
+  useEffect(() => () => detachDragEndRef.current(), []);
 
   const handleDragStart = useCallback(
     (field: string) => (event: React.DragEvent) => {
       if (disableColumnReorder) return;
-
-      const columnIndex = columns.findIndex(col => col.field === field);
-      const column = columns[columnIndex];
-
-      if (column?.pinnable === false) {
+      if (!columns.some(col => col.field === field)) {
         event.preventDefault();
         return;
       }
 
+      detachDragEndRef.current();
+      // Ends the drag even if the header unmounts (column virtualization) before dragend.
+      detachDragEndRef.current = onNativeDragEnd(event.currentTarget, handleDragEnd);
       setDraggedColumn(field);
-      draggedIndexRef.current = columnIndex;
 
       if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', field);
+        setDragToken(event, COLUMN_DRAG_MIME, field);
       }
     },
-    [columns, disableColumnReorder]
+    [columns, disableColumnReorder, handleDragEnd]
   );
 
   const handleDragOver = useCallback(
     (field: string) => (event: React.DragEvent) => {
-      if (disableColumnReorder || !draggedColumn) return;
+      if (disableColumnReorder || draggedColumn === null) return;
+      if (!hasDragToken(event, COLUMN_DRAG_MIME)) {
+        // Some other drag (a file, text, a row): any column drag we remember is over.
+        handleDragEnd();
+        return;
+      }
 
-      event.preventDefault(); 
-      event.dataTransfer.dropEffect = 'move';
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
 
       setDragOverColumn(field);
     },
-    [draggedColumn, disableColumnReorder]
+    [draggedColumn, disableColumnReorder, handleDragEnd]
   );
 
   const handleDrop = useCallback(
     (targetField: string) => (event: React.DragEvent) => {
       event.preventDefault();
-
-      if (disableColumnReorder || !draggedColumn || draggedColumn === targetField) {
-        setDraggedColumn(null);
-        setDragOverColumn(null);
+      if (disableColumnReorder || draggedColumn === null || !hasDragToken(event, COLUMN_DRAG_MIME)) {
+        handleDragEnd();
         return;
       }
 
       const oldIndex = columns.findIndex(col => col.field === draggedColumn);
       const targetIndex = columns.findIndex(col => col.field === targetField);
+      handleDragEnd();
 
-      if (oldIndex === -1 || targetIndex === -1) {
-        setDraggedColumn(null);
-        setDragOverColumn(null);
-        return;
-      }
+      if (oldIndex === -1 || targetIndex === -1 || oldIndex === targetIndex) return;
 
-      const column = columns[oldIndex];
-
-      if (onColumnOrderChange) {
-        onColumnOrderChange({
-          column: column as unknown as GridColDef,
-          oldIndex,
-          targetIndex,
-        });
-      }
-
-      setDraggedColumn(null);
-      setDragOverColumn(null);
-      draggedIndexRef.current = -1;
+      onColumnOrderChange?.({
+        column: columns[oldIndex] as unknown as GridColDef,
+        oldIndex,
+        targetIndex,
+      });
     },
-    [columns, draggedColumn, disableColumnReorder, onColumnOrderChange]
+    [columns, draggedColumn, disableColumnReorder, onColumnOrderChange, handleDragEnd]
   );
-
-  const handleDragEnd = useCallback(() => {
-    setDraggedColumn(null);
-    setDragOverColumn(null);
-    draggedIndexRef.current = -1;
-  }, []);
 
   return {
     draggedColumn,

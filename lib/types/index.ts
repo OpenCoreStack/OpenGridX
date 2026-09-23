@@ -805,8 +805,17 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   disableColumnReorder?: boolean; 
   /** Controlled horizontal order of column fields. */
   columnOrder?: GridColumnOrder; 
-  /** Callback fired when column order changes. */
-  onColumnOrderChange?: (params: GridColumnOrderChangeParams) => void; 
+  /**
+   * Fired when the user moves one column (header drag or Columns panel). `oldIndex` / `targetIndex`
+   * are positions in the grid's full column order: every current column, in order.
+   */
+  onColumnOrderChange?: (params: GridColumnOrderChangeParams) => void;
+  /**
+   * Fired with the whole new column order after every change: a header drag, a Columns panel drag
+   * and the panel's Reset. The easiest way to keep a controlled `columnOrder` in sync.
+   * Not fired for the generated columns of pivot mode.
+   */
+  onColumnOrderModelChange?: (columnOrder: GridColumnOrder) => void;
 
   /** If true, rows can be reordered via drag-and-drop. */
   rowReordering?: boolean; 
