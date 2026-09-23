@@ -1,5 +1,6 @@
 import React from 'react';
 import { Row } from '../Row/Row';
+import { resolveDetailPanelHeight } from '../../utils/detailPanel';
 import type {
     GridRowModel,
     GridRowId,
@@ -40,6 +41,8 @@ export interface GridPinnedRowsProps<R extends GridRowModel> {
     getDetailPanelContent?: (params: GridDetailPanelParams<R>) => React.ReactNode;
     getDetailPanelHeight?: (params: GridDetailPanelParams<R>) => GridDetailPanelHeight;
     onDetailPanelToggle: (rowId: GridRowId) => void;
+    /** Receives the rendered height of `'auto'` detail panels. */
+    onDetailPanelHeightChange?: (rowId: GridRowId, height: number) => void;
     pinCheckboxColumn?: boolean;
     pinExpandColumn?: boolean;
     focusedCell: { id: GridRowId | null; field: string } | null;
@@ -79,6 +82,7 @@ export function GridPinnedRows<R extends GridRowModel>({
     getDetailPanelContent,
     getDetailPanelHeight,
     onDetailPanelToggle,
+    onDetailPanelHeightChange,
     pinCheckboxColumn,
     pinExpandColumn,
     focusedCell,
@@ -121,7 +125,8 @@ export function GridPinnedRows<R extends GridRowModel>({
                     hasDetailPanel={hasDetailPanel}
                     isDetailPanelExpanded={expandedRowIds.has(id)}
                     detailPanelContent={getDetailPanelContent && !rowMetaMap.get(id)?.isGroupRow ? getDetailPanelContent({ row, id, rowIndex }) : null}
-                    detailPanelHeight={(rowMetaMap.get(id)?.isGroupRow ? undefined : getDetailPanelHeight?.({ row, id, rowIndex })) || 200}
+                    detailPanelHeight={resolveDetailPanelHeight(rowMetaMap.get(id)?.isGroupRow ? undefined : getDetailPanelHeight?.({ row, id, rowIndex }))}
+                    onDetailPanelHeightChange={onDetailPanelHeightChange}
                     onDetailPanelToggle={onDetailPanelToggle}
                     pinCheckboxColumn={pinCheckboxColumn}
                     pinExpandColumn={pinExpandColumn}

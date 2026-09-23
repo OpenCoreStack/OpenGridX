@@ -44,13 +44,21 @@ function withGroupRowAggregates<R extends GridRowModel>(
     };
 }
 
-/** Stable-sorts columns into render order: left-pinned, unpinned, right-pinned. */
+/**
+ * Columns in render order: left-pinned in `pinnedColumns.left` order, unpinned in column order,
+ * right-pinned in `pinnedColumns.right` order — the order useLayout renders them in.
+ */
 function inPinnedRenderOrder<C extends { field: string }>(columns: C[], pinnedColumns?: GridColumnPinning): C[] {
-    const pinRank = (col: C) => {
+    if (!pinnedColumns) return columns;
+    const left = pinnedColumns.left ?? [];
+    const right = pinnedColumns.right ?? [];
+    const rank = (col: C) => {
         const side = isColumnPinned(col.field, pinnedColumns);
-        return side === 'left' ? 0 : side === 'right' ? 2 : 1;
+        if (side === 'left') return left.indexOf(col.field) - left.length;
+        if (side === 'right') return 1 + right.indexOf(col.field);
+        return 0;
     };
-    return [...columns].sort((a, b) => pinRank(a) - pinRank(b));
+    return [...columns].sort((a, b) => rank(a) - rank(b));
 }
 
 // Injected hierarchy renderers replace the plain-cell path in Cell, so they must

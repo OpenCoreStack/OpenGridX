@@ -99,7 +99,8 @@ function childWithField(parent: Element | null, field: string): HTMLElement | nu
 /** The DOM element that should hold focus for `cell`, or `null` while it is not rendered. */
 export function findFocusTarget(viewport: HTMLElement, cell: FocusedCell, rowIndex: number): HTMLElement | null {
     if (cell.id === null) {
-        const header = viewport.querySelector(':scope > .ogx__content > .ogx__header-wrap > .ogx__header');
+        // The header sits in the sticky top block together with the top-pinned rows.
+        const header = viewport.querySelector(':scope > .ogx__content > .ogx__sticky-top > .ogx__header-wrap > .ogx__header');
         const el = childWithField(header, cell.field);
         if (el && cell.field === CHECKBOX_FIELD) return el.querySelector('input') ?? el;
         return el;
@@ -107,7 +108,8 @@ export function findFocusTarget(viewport: HTMLElement, cell: FocusedCell, rowInd
     if (rowIndex < 0) return null;
     const row = viewport.querySelector(
         `:scope > .ogx__content > .ogx__virtual-container > .ogx__rows > [data-rowindex="${rowIndex}"],` +
-        `:scope > .ogx__content > .ogx__pinned-rows > [data-rowindex="${rowIndex}"]`
+        `:scope > .ogx__content > .ogx__sticky-top > .ogx__pinned-rows > [data-rowindex="${rowIndex}"],` +
+        `:scope > .ogx__content > .ogx__sticky-bottom > .ogx__pinned-rows > [data-rowindex="${rowIndex}"]`
     );
     return childWithField(row, cell.field);
 }

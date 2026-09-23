@@ -99,7 +99,7 @@ The main component for displaying and interacting with data.
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `getDetailPanelContent` | `(params: GridDetailPanelParams) => ReactNode` | — | Returns the JSX content rendered inside the expandable detail panel. |
-| `getDetailPanelHeight` | `(params: GridDetailPanelParams) => number \| 'auto'` | `'auto'` | Controls the panel height in pixels, or `'auto'` to fit content. |
+| `getDetailPanelHeight` | `(params: GridDetailPanelParams) => number \| 'auto'` | `200` | Panel height in pixels (`0` is a 0px panel), or `'auto'` to fit the content. An `'auto'` panel is measured when it renders and whenever its size changes, and the rows below it are laid out at that height. Without this prop every panel is a fixed 200px scroll box. |
 | `detailPanelExpandedRowIds` | `Set<GridRowId>` | — | Controlled set of currently-expanded detail panel row IDs. |
 | `onDetailPanelExpandedRowIdsChange` | `(ids: Set<GridRowId>) => void` | — | Fired when detail panels expand or collapse. |
 
@@ -133,7 +133,11 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
+<<<<<<< HEAD
+| `onRowsScrollEnd` | `(params: GridRowScrollEndParams) => void` | — | Fired once each time the end of the rows comes within 100px of the viewport bottom: when a vertical scroll arrives there, and after the rows change if the end is (still) in view, e.g. when the loaded rows do not fill the viewport. It fires again only after the user scrolls out of that zone or the row count changes. Horizontal scrolling never fires it. Use this to trigger the next page in infinite-scroll mode. |
+=======
 | `onRowsScrollEnd` | `(params: GridRowScrollEndParams) => void` | — | Fired when the user scrolls to within 100px of the bottom of the grid viewport, or of the list in `listView`. Use this to trigger the next page in infinite-scroll mode. |
+>>>>>>> main
 
 #### Accessibility & Appearance
 
@@ -283,7 +287,7 @@ Defines the behavior and appearance of a single column.
 | `field` | `string` | — | **Required.** Unique identifier matching the row object key. |
 | `headerName` | `string` | — | Text shown in the column header cell. |
 | `description` | `string` | — | Tooltip shown on column header hover (rendered as the HTML `title` attribute — improves accessibility). |
-| `width` | `number \| string` | `100` | Fixed width in pixels or a percentage string. |
+| `width` | `number \| string` | `100` | Fixed width in pixels, or a percentage string (`'30%'`): a share of the width left after the fixed-width columns, the same base for every percentage column. Pinned and unpinned columns are sized the same way. Every width, including a manual resize, is clamped to `minWidth` / `maxWidth`. |
 | `minWidth` | `number` | — | Minimum width in pixels (enforced during resize). |
 | `maxWidth` | `number` | — | Maximum width in pixels (enforced during resize). |
 | `flex` | `number` | — | Flex grow factor — distributes remaining space proportionally. Mutually exclusive with a fixed `width`. |

@@ -7,8 +7,13 @@ import { DragHandleIcon } from '../ui/DragHandleIcon';
 import { DetailPanel } from '../DetailPanel/DetailPanel';
 import type { GridRowModel, GridColDef, GridRowId, GridColumnPinning, GridRowPinning, GridRowParams, GridCellParams, GridDetailPanelHeight, GridRowMeta } from '../../types';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
-import { isColumnPinned, calculatePinnedPositions, isRowPinned } from '../../utils/pinning';
+import { isColumnPinned, calculatePinnedPositions, getPinnedEdgeFields, isRowPinned } from '../../utils/pinning';
 import { getCellValue, resolveCellEditable } from '../../utils/editing';
+import { getRenderedColumnWidth } from '../../utils/columnWidth';
+import { DEFAULT_DETAIL_PANEL_HEIGHT } from '../../utils/detailPanel';
+
+/** Sticky system cells (drag handle, detail toggle, checkbox) sit above scrolled, spanned and focused cells. */
+const SYSTEM_CELL_Z_INDEX = 12;
 
 
 /**
@@ -28,8 +33,7 @@ function mergeColSpan<R extends GridRowModel>(
     for (let i = originIndex; i < columns.length && covered < colSpan; i++) {
         const col = columns[i];
         if (col.isSpacer) break;
-        const w = columnWidths[col.field] ?? col.width;
-        width += typeof w === 'number' ? w : 100;
+        width += getRenderedColumnWidth(col, columnWidths);
         flexGrow += col.flex ?? 0;
         covered++;
     }
@@ -57,6 +61,8 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
     onDetailPanelToggle?: (rowId: GridRowId) => void;
     detailPanelContent?: React.ReactNode;
     detailPanelHeight?: GridDetailPanelHeight;
+    /** Called with the rendered height of an `'auto'` detail panel whenever it changes. */
+    onDetailPanelHeightChange?: (rowId: GridRowId, height: number) => void;
 
     pinCheckboxColumn?: boolean;
     pinExpandColumn?: boolean;
@@ -109,7 +115,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         isDetailPanelExpanded = false,
         onDetailPanelToggle,
         detailPanelContent,
-        detailPanelHeight = 200,
+        detailPanelHeight = DEFAULT_DETAIL_PANEL_HEIGHT,
+        onDetailPanelHeightChange,
         pinCheckboxColumn = true,
         pinExpandColumn = true,
         rowReordering = false,
@@ -155,6 +162,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
             rowReordering
         );
     }, [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]);
+
+    const pinnedEdges = React.useMemo(() => getPinnedEdgeFields(columns, pinnedColumns), [columns, pinnedColumns]);
 
     const isGroupRow = rowMeta?.hasChildren === true;
     // Group rows, subtotal rows and auto-created tree parents: not data, so no selection or detail panel.
@@ -280,7 +289,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         style={{
                             position: 'sticky',
                             left: 0,
-                            zIndex: 4
+                            zIndex: SYSTEM_CELL_Z_INDEX
                         }}
                         draggable={true}
                         onDragStart={onDragStart ? onDragStart(id) : undefined}
@@ -306,7 +315,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         style={{
                             position: pinExpandColumn ? 'sticky' : undefined,
                             left: pinExpandColumn ? (rowReordering ? 48 : 0) : undefined,
-                            zIndex: pinExpandColumn ? 5 : undefined
+                            zIndex: pinExpandColumn ? SYSTEM_CELL_Z_INDEX : undefined
                         }}
                         tabIndex={-1}
                         onClick={(e) => {
@@ -344,7 +353,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         style={{
                             position: pinCheckboxColumn ? 'sticky' : undefined,
                             left: pinCheckboxColumn ? ((rowReordering ? 48 : 0) + (hasDetailPanel && pinExpandColumn ? 48 : 0)) : undefined,
-                            zIndex: pinCheckboxColumn ? 11 : undefined
+                            zIndex: pinCheckboxColumn ? SYSTEM_CELL_Z_INDEX : undefined
                         }}
                         tabIndex={-1}
                         onClick={(e) => {
@@ -417,11 +426,15 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     const colSpanInfo = storedColSpanInfo && !storedColSpanInfo.spannedByColSpan && storedColSpanInfo.cellProps.colSpan > 1
                         ? mergeColSpan(columns, colIndex, storedColSpanInfo.cellProps.colSpan, columnWidths)
                         : storedColSpanInfo;
-                    // A right-pinned merged cell is anchored by the right edge of the last column it covers.
-                    const offsetField = pinnedPosition === 'right' && colSpanInfo && !colSpanInfo.spannedByColSpan
+                    // A merged cell ends at the last column it covers: a right-pinned one is anchored by
+                    // that column's right edge, and it is the left-pinned edge cell if that column is.
+                    const lastCoveredField = colSpanInfo && !colSpanInfo.spannedByColSpan
                         ? columns[colIndex + colSpanInfo.cellProps.colSpan - 1]?.field ?? colDef.field
                         : colDef.field;
+                    const offsetField = pinnedPosition === 'right' ? lastCoveredField : colDef.field;
                     const pinnedOffset = pinnedPosition ? pinnedPositions[offsetField] : undefined;
+                    const isPinnedEdge = (pinnedPosition === 'left' && lastCoveredField === pinnedEdges.lastLeft)
+                        || (pinnedPosition === 'right' && colDef.field === pinnedEdges.firstRight);
                     const rowSpan = rowSpanningCaches?.spannedCells[id]?.[colDef.field];
                     const isHiddenByRowSpan = rowSpanningCaches?.hiddenCells[id]?.[colDef.field] || false;
 
@@ -439,6 +452,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             width={effectiveWidth}
                             pinnedPosition={pinnedPosition}
                             pinnedOffset={pinnedOffset}
+                            isPinnedEdge={isPinnedEdge}
 
                             isFocused={focusedCellField === colDef.field}
                             isFocusVisible={isFocusVisible}
@@ -470,6 +484,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     content={detailPanelContent}
                     height={detailPanelHeight}
                     isExpanded={isDetailPanelExpanded}
+                    onHeightChange={onDetailPanelHeightChange}
                 />
             )}
         </>
