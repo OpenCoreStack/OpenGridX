@@ -8,6 +8,7 @@ import { DetailPanel } from '../DetailPanel/DetailPanel';
 import type { GridRowModel, GridColDef, GridRowId, GridColumnPinning, GridRowPinning, GridRowParams, GridCellParams, GridDetailPanelHeight, GridRowMeta } from '../../types';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
 import { isColumnPinned, calculatePinnedPositions, isRowPinned } from '../../utils/pinning';
+import { getCellValue, resolveCellEditable } from '../../utils/editing';
 
 
 export interface RowProps<R extends GridRowModel = GridRowModel> {
@@ -43,8 +44,11 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
 
     editingCell?: { id: GridRowId; field: string; value: unknown; } | null;
     onEditStart?: (params: { id: GridRowId, field: string, value: unknown }) => void;
-    onEditStop?: (params?: { cancel?: boolean }) => void;
+    /** `id` / `field` name the cell whose editor asked to stop. */
+    onEditStop?: (params?: { cancel?: boolean; id?: GridRowId; field?: string }) => void;
     onEditCellValueChange?: (params: { id: GridRowId, field: string, value: unknown }) => void;
+    /** Per-cell editability predicate (`DataGrid.isCellEditable`). */
+    isCellEditable?: (params: GridCellParams<R>) => boolean;
 
     focusedCellField?: string | null;
     isFocusVisible?: boolean;
@@ -88,6 +92,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         onEditStart,
         onEditStop,
         onEditCellValueChange,
+        isCellEditable,
 
         focusedCellField,
         isFocusVisible,
@@ -127,19 +132,19 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
 
     const isGroupRow = rowMeta?.hasChildren === true;
 
+    // Which cells may be edited is decided per cell below (resolveCellEditable), not per row:
+    // tree-data parents are real rows and stay editable; synthetic group rows never are.
     const handleCellEditStart = React.useCallback((field: string, value: unknown) => {
-        if (!isGroupRow) {
-            onEditStart?.({ id: row.id, field, value });
-        }
-    }, [isGroupRow, row.id, onEditStart]);
+        onEditStart?.({ id: row.id, field, value });
+    }, [row.id, onEditStart]);
 
     const handleCellValueChange = React.useCallback((field: string, newValue: unknown) => {
         onEditCellValueChange?.({ id: row.id, field, value: newValue });
     }, [onEditCellValueChange, row.id]);
 
-    const handleEditStopWrapper = React.useCallback((cancel?: boolean) => {
-        onEditStop?.({ cancel });
-    }, [onEditStop]);
+    const handleEditStopWrapper = React.useCallback((cancel?: boolean, field?: string) => {
+        onEditStop?.({ cancel, id: row.id, field });
+    }, [onEditStop, row.id]);
 
     // ── Skeleton row (shown during infinite-scroll fetch) ─────────────────────
     if (row._isSkeleton) {
@@ -161,16 +166,17 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         );
     }
 
+    // `.ogx__cell--editing` covers custom renderEditCell editors, which have no .ogx__edit-cell wrapper.
     const handleRowClick = (event: React.MouseEvent) => {
 
-        if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell')) {
+        if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell, .ogx__cell--editing')) {
             return;
         }
         onRowClick?.({ row, id: row.id, rowIndex });
     };
 
     const handleRowDoubleClick = (event: React.MouseEvent) => {
-        if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell')) {
+        if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell, .ogx__cell--editing')) {
             return;
         }
         onRowDoubleClick?.({ row, id: row.id, rowIndex });
@@ -327,15 +333,17 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             />
                         );
                     }
-                    const value = colDef.valueGetter
-                        ? colDef.valueGetter({ row, field: colDef.field, value: row[colDef.field] })
-                        : row[colDef.field];
+                    const value = getCellValue(row, colDef);
 
                     const effectiveWidth = columnWidths[colDef.field] ?? colDef.width;
 
                     const pinnedPosition = isColumnPinned(colDef.field, pinnedColumns);
                     const pinnedOffset = pinnedPosition ? pinnedPositions[colDef.field] : undefined;
 
+                    const isEditable = Boolean(onEditStart) && resolveCellEditable(
+                        { row, field: colDef.field, value, colDef, rowIndex, colIndex, rowMeta },
+                        isCellEditable
+                    );
                     const isEditing = editingCell?.id === row.id && editingCell?.field === colDef.field;
 
                     const cellValue = isEditing ? editingCell?.value : value;
@@ -361,7 +369,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             isFocused={focusedCellField === colDef.field}
                             isFocusVisible={isFocusVisible}
 
-                            isEditable={colDef.editable}
+                            isEditable={isEditable}
                             isEditing={isEditing}
                             onCellEditStart={handleCellEditStart}
                             onEditStop={handleEditStopWrapper}

@@ -779,6 +779,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         virtualization,
         viewportRef,
         pinnedTopRowCount: pinnedTopRows.length,
+        rowMetaMap,
     });
 
     const handleCellClick = useCallback((params: GridCellParams<R>) => {
@@ -1108,6 +1109,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             pinExpandColumn={pinExpandColumn}
                             rowReorderHandlers={rowReorderHandlers}
                             editingHandlers={editingHandlers}
+                            isCellEditable={isCellEditable}
                             focusedCell={focusedCell}
                             colspanMap={spanning.colspanMap}
                             rowSpanningCaches={spanning.rowSpanningState.caches}
