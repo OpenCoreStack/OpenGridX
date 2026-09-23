@@ -2,18 +2,34 @@ import type {
     GridColDef,
     GridRowModel,
     GridFilterModel,
+    GridFilterGroup,
+    GridFilterItem,
     PdfExportOptions,
     GridGroupedExportRow,
 } from '../../types';
-import { formatAggregationValue } from '../../hooks/features/useAggregation';
 import { groupHeaderLabel } from './groupLabel';
+import {
+    aggregationForExport,
+    formatExportAggregate,
+    formatExportValue,
+    getExportColumns,
+    getRawExportValue,
+    hasSelection,
+    rowsForExport,
+    shouldExportGrouped,
+    summaryLabelText,
+} from './exportShared';
+import { toWinAnsi } from './pdfText';
 
 interface JsPDFDoc {
     save: (filename: string) => void;
     setFontSize: (size: number) => void;
     setFont: (name: string, style: string) => void;
     setTextColor: (r: number, g: number, b: number) => void;
-    text: (text: string, x: number, y: number, opts?: { align?: string }) => void;
+    text: (text: string | string[], x: number, y: number, opts?: { align?: string }) => void;
+    splitTextToSize: (text: string, maxWidth: number) => string[];
+    addFileToVFS: (fileName: string, data: string) => void;
+    addFont: (fileName: string, fontName: string, fontStyle: string) => void;
     addImage: (data: string, format: string, x: number, y: number, w: number, h: number) => void;
     line: (x1: number, y1: number, x2: number, y2: number) => void;
     setDrawColor: (r: number, g: number, b: number) => void;
@@ -42,33 +58,22 @@ interface AutoTableOptions {
     margin?: { top: number; left: number; right: number; bottom: number };
 }
 
-function hexToRgb(hex: string): [number, number, number] {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!result) return [79, 70, 229];
-    return [
-        parseInt(result[1], 16),
-        parseInt(result[2], 16),
-        parseInt(result[3], 16),
-    ];
-}
+type Rgb = [number, number, number];
 
-function getExportColumns<R extends GridRowModel>(columns: GridColDef<R>[]): GridColDef<R>[] {
-    return columns.filter(col => {
-        if (col.exportable === false) return false;
-        if (col.field === '__check__' || col.field === '__actions__') return false;
-        return true;
-    });
+const DEFAULT_HEADER_BACKGROUND: Rgb = [79, 70, 229];
+const DEFAULT_HEADER_TEXT: Rgb = [255, 255, 255];
+
+/** '#rrggbb' or '#rgb' as RGB; invalid input gives `fallback` (the option's own default). */
+function hexToRgb(hex: string, fallback: Rgb): Rgb {
+    const clean = hex.trim().replace(/^#/, '');
+    const full = /^[a-f\d]{3}$/i.test(clean) ? clean.split('').map(c => c + c).join('') : clean;
+    const result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(full);
+    if (!result) return fallback;
+    return [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)];
 }
 
 function resolveValue<R extends GridRowModel>(row: R, col: GridColDef<R>): string {
-    let value: unknown = (row as GridRowModel)[col.field];
-    if (col.valueGetter) {
-        value = col.valueGetter({ row, field: col.field, value });
-    }
-    if (col.valueFormatter && value !== undefined && value !== null) {
-        value = col.valueFormatter({ value, row, field: col.field });
-    }
-    return String(value ?? '');
+    return formatExportValue(row, col, getRawExportValue(row, col));
 }
 
 function colWeight<R extends GridRowModel>(col: GridColDef<R>): number {
@@ -88,22 +93,53 @@ function computeColumnStyles<R extends GridRowModel>(
     return styles;
 }
 
+const NO_VALUE_OPERATORS = new Set(['isEmpty', 'isNotEmpty']);
+
+function describeFilterItem<R extends GridRowModel>(item: GridFilterItem, columns: GridColDef<R>[]): string | null {
+    const col = columns.find(c => c.field === item.field);
+    const label = col?.headerName ?? item.field;
+    if (NO_VALUE_OPERATORS.has(item.operator)) return `${label} ${item.operator}`;
+    const { value } = item;
+    // An item without a value is an unfinished rule in the filter panel, not a real condition.
+    if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) return null;
+    const text = Array.isArray(value) ? value.map(String).join(', ') : String(value);
+    return `${label} ${item.operator} "${text}"`;
+}
+
+function describeFilterItems<R extends GridRowModel>(
+    items: (GridFilterItem | GridFilterGroup)[],
+    logicOperator: 'and' | 'or',
+    columns: GridColDef<R>[],
+    nested: boolean,
+): string {
+    const parts = items
+        .map(item => ('items' in item
+            ? describeFilterItems(item.items, item.logicOperator, columns, true)
+            : describeFilterItem(item, columns)))
+        .filter((part): part is string => !!part);
+    if (parts.length === 0) return '';
+    const joined = parts.join(logicOperator === 'or' ? ' OR ' : ' AND ');
+    return nested && parts.length > 1 ? `(${joined})` : joined;
+}
+
+/**
+ * The applied filter as text: nested groups in parentheses, joined with their logic operator,
+ * plus the quick-search terms.
+ */
 function formatFilterSummary<R extends GridRowModel>(
     filterModel: GridFilterModel,
     columns: GridColDef<R>[]
 ): string {
-    if (!filterModel.items || filterModel.items.length === 0) return '';
-    return filterModel.items
-        .flatMap(item => {
-            // Only handle leaf GridFilterItem — skip GridFilterGroup (which has 'items')
-            if ('items' in item) return [];
-            const col = columns.find(c => c.field === item.field);
-            const label = col?.headerName ?? item.field;
-            const val = item.value !== undefined && item.value !== null ? String(item.value) : '';
-            return [`${label} ${item.operator} "${val}"`];
-        })
-        .join(' • ');
+    const parts: string[] = [];
+    const items = describeFilterItems(filterModel.items ?? [], filterModel.logicOperator ?? 'and', columns, false);
+    if (items) parts.push(items);
+    const search = (filterModel.quickFilterValues ?? []).filter(v => v.trim() !== '');
+    if (search.length > 0) parts.push(`Search: ${search.map(v => `"${v}"`).join(' ')}`);
+    return parts.join(' • ');
 }
+
+/** jsPDF's default line height factor, in mm per point of font size. */
+const LINE_HEIGHT_MM_PER_PT = 1.15 * 0.3528;
 
 export async function exportToPdf<R extends GridRowModel>(
     rows: R[],
@@ -140,6 +176,7 @@ export async function exportToPdf<R extends GridRowModel>(
         headerTextColor = '#ffffff',
         fontSize = 9,
         groupedRows,
+        font,
     } = options;
 
     const doc = new JsPDF({ orientation, unit: 'mm', format: 'a4' });
@@ -148,10 +185,33 @@ export async function exportToPdf<R extends GridRowModel>(
     const MARGIN = 14;
     const usableWidth = pageWidth - MARGIN * 2;
 
+    // --- Font ---
+    let fontName = 'helvetica';
+    if (font) {
+        doc.addFileToVFS(`${font.name}-normal.ttf`, font.data);
+        doc.addFont(`${font.name}-normal.ttf`, font.name, 'normal');
+        if (font.boldData) doc.addFileToVFS(`${font.name}-bold.ttf`, font.boldData);
+        doc.addFont(font.boldData ? `${font.name}-bold.ttf` : `${font.name}-normal.ttf`, font.name, 'bold');
+        fontName = font.name;
+    }
+
+    // Helvetica cannot draw text outside WinAnsi; keep what it can and replace the rest.
+    let replacedCharacters = false;
+    const pdfText = (text: string): string => {
+        if (font) return text;
+        const converted = toWinAnsi(text);
+        if (converted.lossy) replacedCharacters = true;
+        return converted.text;
+    };
+    const drawWrapped = (text: string, x: number, y: number, maxWidth: number, sizePt: number): number => {
+        const lines = doc.splitTextToSize(pdfText(text), maxWidth);
+        doc.text(lines.length === 1 ? lines[0] : lines, x, y);
+        return Math.max(0, lines.length - 1) * sizePt * LINE_HEIGHT_MM_PER_PT;
+    };
+
     const exportColumns = getExportColumns(columns);
-    const rowsToExport = selectedRows && selectedRows.length > 0
-        ? rows.filter(r => selectedRows.includes(r.id as string | number))
-        : rows;
+    const useGrouped = shouldExportGrouped(groupedRows, selectedRows);
+    const rowsToExport = rowsForExport(rows, selectedRows);
 
     // --- Header block ---
     let startY = MARGIN;
@@ -168,22 +228,23 @@ export async function exportToPdf<R extends GridRowModel>(
                 // logo failed to load — skip silently
             }
         }
+        const textWidth = pageWidth - MARGIN - cursorX;
 
         doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont(fontName, 'bold');
         doc.setTextColor(30, 41, 59);
-        doc.text(title, cursorX, cursorY);
+        cursorY += drawWrapped(title, cursorX, cursorY, textWidth, 16);
         cursorY += 6;
 
         doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(fontName, 'normal');
         doc.setTextColor(100, 116, 139);
         const exportedAt = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-        const rowCount = groupedRows
+        const rowCount = useGrouped
             ? groupedRows.filter(e => e.type === 'leaf').length
             : rowsToExport.length;
         doc.text(
-            `Exported: ${exportedAt}  •  ${rowCount} row${rowCount !== 1 ? 's' : ''}`,
+            pdfText(`Exported: ${exportedAt}  •  ${rowCount} row${rowCount !== 1 ? 's' : ''}`),
             cursorX,
             cursorY
         );
@@ -192,7 +253,7 @@ export async function exportToPdf<R extends GridRowModel>(
         if (filterModel) {
             const summary = formatFilterSummary(filterModel, columns);
             if (summary) {
-                doc.text(`Filters: ${summary}`, cursorX, cursorY);
+                cursorY += drawWrapped(`Filters: ${summary}`, cursorX, cursorY, textWidth, 8);
                 cursorY += 5;
             }
         }
@@ -204,83 +265,68 @@ export async function exportToPdf<R extends GridRowModel>(
     }
 
     // --- Build table data ---
-    const head = [exportColumns.map(col => col.headerName ?? col.field)];
+    const head = [exportColumns.map(col => pdfText(col.headerName ?? col.field))];
+    const aggMod = aggregationModel || {};
+    const aggregateTexts = (values: Record<string, unknown>): string[] =>
+        exportColumns.map(col => formatExportAggregate(col, aggMod[col.field], values[col.field], values));
 
     let body: string[][];
     let foot: string[][] | undefined;
 
-    if (groupedRows && groupedRows.length > 0) {
+    if (useGrouped) {
         // Grouped export: flatten the ordered list into body rows with indentation
         body = [];
-        const aggMod = aggregationModel || {};
         groupedRows.forEach((entry: GridGroupedExportRow) => {
+            const indent = '  '.repeat(entry.depth * 2);
             if (entry.type === 'group-header') {
-                const indent = '  '.repeat(entry.depth * 2);
                 const label = `${indent}${groupHeaderLabel(entry, columns)}`;
                 body.push(exportColumns.map((_, i) => i === 0 ? label : ''));
             } else if (entry.type === 'leaf' && entry.row) {
                 const row = entry.row as R;
-                const indent = '  '.repeat(entry.depth * 2);
                 body.push(exportColumns.map((col, i) => (i === 0 ? indent : '') + resolveValue(row, col)));
             } else if (entry.type === 'group-subtotal' && entry.aggregatedValues) {
-                const indent = '  '.repeat(entry.depth * 2);
-                body.push(exportColumns.map((col, i) => {
-                    if (i === 0) return `${indent}Subtotal`;
-                    const aggVal = entry.aggregatedValues![col.field];
-                    if (aggVal === undefined || aggVal === null) return '';
-                    let formatted: unknown = aggVal;
-                    if (col.valueFormatter) formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-                    else if (aggMod[col.field]) formatted = formatAggregationValue(aggVal, aggMod[col.field] as string);
-                    return String(formatted);
-                }));
+                const texts = aggregateTexts(entry.aggregatedValues);
+                body.push(texts.map((text, i) => (i === 0 ? `${indent}${summaryLabelText('Subtotal', text)}` : text)));
             } else if (entry.type === 'grand-total' && entry.aggregatedValues) {
-                const footRow = exportColumns.map((col, i) => {
-                    if (i === 0) return 'Grand Total';
-                    const aggVal = entry.aggregatedValues![col.field];
-                    if (aggVal === undefined || aggVal === null) return '';
-                    let formatted: unknown = aggVal;
-                    if (col.valueFormatter) formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-                    else if (aggMod[col.field]) formatted = formatAggregationValue(aggVal, aggMod[col.field] as string);
-                    return String(formatted);
-                });
-                foot = [footRow];
+                const texts = aggregateTexts(entry.aggregatedValues);
+                foot = [texts.map((text, i) => (i === 0 ? summaryLabelText('Grand Total', text) : text))];
             }
         });
     } else {
         body = rowsToExport.map(row => exportColumns.map(col => resolveValue(row, col)));
 
-        if (aggregationResult && aggregationModel) {
-            const footRow = exportColumns.map((col, i) => {
-                if (i === 0) {
-                    const hasAgg = exportColumns.some(c => aggregationModel[c.field]);
-                    return hasAgg ? 'TOTAL' : '';
-                }
-                const aggVal = aggregationResult[col.field];
-                if (aggVal === undefined || aggVal === null) return '';
-                let formatted: unknown = aggVal;
-                if (col.valueFormatter) {
-                    formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-                } else if (aggregationModel[col.field]) {
-                    formatted = formatAggregationValue(aggVal, aggregationModel[col.field] as string);
-                }
-                return String(formatted);
-            });
-            foot = [footRow];
+        const totals = aggregationModel
+            ? aggregationForExport(rowsToExport, hasSelection(selectedRows), columns, aggregationResult, aggregationModel)
+            : null;
+        if (totals && aggregationModel) {
+            const hasAgg = exportColumns.some(c => aggregationModel[c.field]);
+            const texts = aggregateTexts(totals);
+            foot = [texts.map((text, i) => (i === 0 && hasAgg ? summaryLabelText('TOTAL', text) : text))];
         }
+    }
+
+    body = body.map(cells => cells.map(pdfText));
+    if (foot) foot = foot.map(cells => cells.map(pdfText));
+
+    if (replacedCharacters) {
+        console.warn(
+            '[exportToPdf] Some characters cannot be drawn with the built-in Helvetica font and were replaced with "?". ' +
+            'Pass the `font` option (a Unicode .ttf, e.g. Noto Sans) to draw them.'
+        );
     }
 
     // --- Column widths ---
     const columnStyles = computeColumnStyles(exportColumns, usableWidth);
 
-    const [hr, hg, hb] = hexToRgb(headerBackgroundColor);
-    const [tr, tg, tb] = hexToRgb(headerTextColor);
+    const [hr, hg, hb] = hexToRgb(headerBackgroundColor, DEFAULT_HEADER_BACKGROUND);
+    const [tr, tg, tb] = hexToRgb(headerTextColor, DEFAULT_HEADER_TEXT);
 
     autoTable(doc, {
         head,
         body,
         ...(foot ? { foot } : {}),
         startY,
-        styles: { fontSize, cellPadding: 3, font: 'helvetica', overflow: 'linebreak' },
+        styles: { fontSize, cellPadding: 3, font: fontName, overflow: 'linebreak' },
         headStyles: {
             fillColor: [hr, hg, hb],
             textColor: [tr, tg, tb],

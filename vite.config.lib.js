@@ -22,11 +22,15 @@ export default defineConfig({
             fileName: (format) => `opengridx.${format}.js`
         },
         rollupOptions: {
-            external: ['react', 'react-dom', 'exceljs', 'jspdf', 'jspdf-autotable'],
+            // Externalise every react / react-dom entry point, including react/jsx-runtime.
+            // Bundling the JSX runtime pins the consumer to the React version it was built
+            // with: React 19's runtime creates elements React 18 refuses to render.
+            external: [/^react($|\/)/, /^react-dom($|\/)/, 'exceljs', 'jspdf', 'jspdf-autotable'],
             output: {
                 globals: {
                     react: 'React',
                     'react-dom': 'ReactDOM',
+                    'react/jsx-runtime': 'ReactJSXRuntime',
                     exceljs: 'ExcelJS',
                     'jspdf': 'jsPDF',
                     'jspdf-autotable': 'jspdfAutotable',
