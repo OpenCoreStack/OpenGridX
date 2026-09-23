@@ -15,6 +15,8 @@ export const Button: React.FC<ButtonProps> = ({
     color = 'default',
     disabled = false,
     className = '',
+    // A <button> defaults to type="submit"; the grid often sits inside a form.
+    type = 'button',
     children,
     ...props
 }) => {
@@ -29,6 +31,7 @@ export const Button: React.FC<ButtonProps> = ({
 
     return (
         <button
+            type={type}
             className={classNames}
             disabled={disabled}
             {...props}

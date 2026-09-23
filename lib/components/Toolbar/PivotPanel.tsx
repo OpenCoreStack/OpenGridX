@@ -128,7 +128,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                     Pivot Mode
                 </span>
                 {totalActive > 0 && (
-                    <button className="ogx-pivot-panel__reset-btn" onClick={reset} title="Reset pivot">
+                    <button type="button" className="ogx-pivot-panel__reset-btn" onClick={reset} title="Reset pivot">
                         Reset
                     </button>
                 )}
@@ -149,7 +149,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                         {model.rowFields.map((f) => (
                             <span key={f} className="ogx-pivot-chip ogx-pivot-chip--row">
                                 {colLabel(f)}
-                                <button className="ogx-pivot-chip__remove" onClick={() => removeRow(f)} title={`Remove ${colLabel(f)}`}>×</button>
+                                <button type="button" className="ogx-pivot-chip__remove" onClick={() => removeRow(f)} title={`Remove ${colLabel(f)}`}>×</button>
                             </span>
                         ))}
                     </div>
@@ -168,7 +168,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                         {model.columnFields.map((f) => (
                             <span key={f} className="ogx-pivot-chip ogx-pivot-chip--col">
                                 {colLabel(f)}
-                                <button className="ogx-pivot-chip__remove" onClick={() => removeCol(f)} title={`Remove ${colLabel(f)}`}>×</button>
+                                <button type="button" className="ogx-pivot-chip__remove" onClick={() => removeCol(f)} title={`Remove ${colLabel(f)}`}>×</button>
                             </span>
                         ))}
                     </div>
@@ -197,7 +197,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                                         <option key={fn} value={fn}>{fn.toUpperCase()}</option>
                                     ))}
                                 </select>
-                                <button className="ogx-pivot-chip__remove" onClick={() => removeValue(vf.field)} title={`Remove ${colLabel(vf.field)}`}>×</button>
+                                <button type="button" className="ogx-pivot-chip__remove" onClick={() => removeValue(vf.field)} title={`Remove ${colLabel(vf.field)}`}>×</button>
                             </span>
                         ))}
                     </div>
@@ -219,10 +219,10 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                                         {col.headerName ?? col.field}
                                     </span>
                                     <div className="ogx-pivot-field-actions">
-                                        <button className="ogx-pivot-add-btn ogx-pivot-add-btn--row" onClick={() => addRow(col.field)} title="Add to Row Fields">Row</button>
-                                        <button className="ogx-pivot-add-btn ogx-pivot-add-btn--col" onClick={() => addCol(col.field)} title="Add to Column Fields">Col</button>
+                                        <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--row" onClick={() => addRow(col.field)} title="Add to Row Fields">Row</button>
+                                        <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--col" onClick={() => addCol(col.field)} title="Add to Column Fields">Col</button>
                                         {isNum && (
-                                            <button className="ogx-pivot-add-btn ogx-pivot-add-btn--value" onClick={() => addValue(col.field)} title="Add to Value Fields">Val</button>
+                                            <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--value" onClick={() => addValue(col.field)} title="Add to Value Fields">Val</button>
                                         )}
                                     </div>
                                 </div>

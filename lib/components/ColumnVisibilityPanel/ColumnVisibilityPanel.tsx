@@ -181,6 +181,7 @@ export function ColumnVisibilityPanel<R extends GridRowModel = GridRowModel>(
                     </span>
                 </label>
                 <button
+                    type="button"
                     className="ogx-column-visibility-panel__reset-btn"
                     onClick={() => { onShowAll(); onColumnOrderReset?.(); }}
                 >

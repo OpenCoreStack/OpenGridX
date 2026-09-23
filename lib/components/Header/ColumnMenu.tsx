@@ -186,19 +186,19 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
             { }
             {onSort && colDef.sortable !== false && (
                 <>
-                    <button className={`ogx-menu-item${currentSort === 'asc' ? ' ogx-menu-item--active' : ''}`}
+                    <button type="button" className={`ogx-menu-item${currentSort === 'asc' ? ' ogx-menu-item--active' : ''}`}
                         onClick={() => handleSort('asc')} role="menuitemradio" aria-checked={currentSort === 'asc'}>
                         <span className="ogx-menu-item__indicator" aria-hidden="true">{currentSort === 'asc' ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
                         <span className="ogx-menu-item__icon" aria-hidden="true"><AscIcon /></span>
                         Sort Ascending
                     </button>
-                    <button className={`ogx-menu-item${currentSort === 'desc' ? ' ogx-menu-item--active' : ''}`}
+                    <button type="button" className={`ogx-menu-item${currentSort === 'desc' ? ' ogx-menu-item--active' : ''}`}
                         onClick={() => handleSort('desc')} role="menuitemradio" aria-checked={currentSort === 'desc'}>
                         <span className="ogx-menu-item__indicator" aria-hidden="true">{currentSort === 'desc' ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
                         <span className="ogx-menu-item__icon" aria-hidden="true"><DescIcon /></span>
                         Sort Descending
                     </button>
-                    <button className={`ogx-menu-item${isUnsorted ? ' ogx-menu-item--active' : ''}`}
+                    <button type="button" className={`ogx-menu-item${isUnsorted ? ' ogx-menu-item--active' : ''}`}
                         onClick={() => handleSort(null)} role="menuitemradio" aria-checked={isUnsorted}>
                         <span className="ogx-menu-item__indicator" aria-hidden="true">{isUnsorted ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
                         <span className="ogx-menu-item__icon" aria-hidden="true"><UnsortIcon /></span>
@@ -210,19 +210,19 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
 
             { }
             <div className="ogx-menu-section-label" aria-hidden="true">Pin column</div>
-            <button className={`ogx-menu-item${isPinnedLeft ? ' ogx-menu-item--active' : ''}`}
+            <button type="button" className={`ogx-menu-item${isPinnedLeft ? ' ogx-menu-item--active' : ''}`}
                 onClick={() => handlePin('left')} role="menuitemradio" aria-checked={isPinnedLeft} aria-label="Pin to left">
                 <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedLeft ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
                 <span className="ogx-menu-item__icon" aria-hidden="true"><PinLeftIcon /></span>
                 Pin to Left
             </button>
-            <button className={`ogx-menu-item${isPinnedRight ? ' ogx-menu-item--active' : ''}`}
+            <button type="button" className={`ogx-menu-item${isPinnedRight ? ' ogx-menu-item--active' : ''}`}
                 onClick={() => handlePin('right')} role="menuitemradio" aria-checked={isPinnedRight} aria-label="Pin to right">
                 <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedRight ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
                 <span className="ogx-menu-item__icon" aria-hidden="true"><PinRightIcon /></span>
                 Pin to Right
             </button>
-            <button className={`ogx-menu-item${isUnpinned ? ' ogx-menu-item--active' : ''}`}
+            <button type="button" className={`ogx-menu-item${isUnpinned ? ' ogx-menu-item--active' : ''}`}
                 onClick={() => handlePin(null)} role="menuitemradio" aria-checked={isUnpinned} aria-label="Unpin column">
                 <span className="ogx-menu-item__indicator" aria-hidden="true">{isUnpinned ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
                 <span className="ogx-menu-item__icon" aria-hidden="true"><UnpinIcon /></span>
@@ -231,14 +231,14 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
             <div className="ogx-menu-divider" />
 
             { }
-            <button className="ogx-menu-item" onClick={handleHide} role="menuitem" aria-label={`Hide ${colLabel} column`}>
+            <button type="button" className="ogx-menu-item" onClick={handleHide} role="menuitem" aria-label={`Hide ${colLabel} column`}>
                 <span className="ogx-menu-item__indicator" aria-hidden="true" />
                 <span className="ogx-menu-item__icon" aria-hidden="true"><HideIcon /></span>
                 Hide Column
             </button>
 
             <div className="ogx-menu-divider" />
-            <button className="ogx-menu-item" onClick={() => { onManageColumns?.(); onClose(); }} role="menuitem" aria-label="Manage all columns">
+            <button type="button" className="ogx-menu-item" onClick={() => { onManageColumns?.(); onClose(); }} role="menuitem" aria-label="Manage all columns">
                 <span className="ogx-menu-item__indicator" aria-hidden="true" />
                 <span className="ogx-menu-item__icon" aria-hidden="true"><ManageColumnsIcon /></span>
                 Manage columns

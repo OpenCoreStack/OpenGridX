@@ -143,7 +143,7 @@ export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', 
                 autoComplete="off"
             />
             {localValue && (
-                <button className="ogx-global-search__clear" onClick={handleClear} aria-label="Clear search">
+                <button type="button" className="ogx-global-search__clear" onClick={handleClear} aria-label="Clear search">
                     <CloseIcon />
                 </button>
             )}

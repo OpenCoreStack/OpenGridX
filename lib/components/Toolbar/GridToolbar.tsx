@@ -195,6 +195,7 @@ function AggregationPanel({
                 </span>
                 {activeCount > 0 && (
                     <button
+                        type="button"
                         className="ogx-toolbar__clear-btn"
                         onClick={onClearAll}
                         title="Clear all summaries"
@@ -221,6 +222,7 @@ function AggregationPanel({
                                 <div className="ogx-toolbar__agg-pills">
                                     {AGGREGATION_FUNCTIONS.map((fn) => (
                                         <button
+                                            type="button"
                                             key={fn}
                                             className={`ogx-toolbar__pill${currentFn === fn ? ' ogx-toolbar__pill--active' : ''}`}
                                             onClick={() => onFunctionChange(col.field, fn)}
@@ -412,6 +414,7 @@ function FilterPanelWrapper({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {activeFilterCount > 0 && (
                         <button
+                            type="button"
                             className="ogx-toolbar__clear-btn"
                             onClick={handleClearAll}
                             title="Clear all filters"
@@ -420,6 +423,7 @@ function FilterPanelWrapper({
                         </button>
                     )}
                     <button
+                        type="button"
                         className="ogx-toolbar__close-btn"
                         onClick={() => onCloseRef.current()}
                         title="Close filters"
@@ -613,6 +617,7 @@ export function GridToolbar({
                             : (
                                 <GridTooltip title="Columns">
                                     <button
+                                        type="button"
                                         ref={colsButtonRef}
                                         className={`ogx-toolbar__icon-btn${colsOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
                                         aria-label="Manage columns"
@@ -657,6 +662,7 @@ export function GridToolbar({
                             : (
                                 <GridTooltip title="Filters">
                                     <button
+                                        type="button"
                                         ref={filterButtonRef}
                                         className={`ogx-toolbar__icon-btn${filterOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
                                         aria-label="Advanced filters"
@@ -692,6 +698,7 @@ export function GridToolbar({
                     <div className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
                         <GridTooltip title="Pivot">
                             <button
+                                type="button"
                                 ref={pivotButtonRef}
                                 className={`ogx-toolbar__icon-btn${pivotOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
                                 aria-label="Configure pivot"
@@ -733,6 +740,7 @@ export function GridToolbar({
                         : (
                             <GridTooltip title="Summaries">
                                 <button
+                                    type="button"
                                     ref={aggButtonRef}
                                     className={`ogx-toolbar__icon-btn${aggOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
                                     aria-label="Configure summaries"

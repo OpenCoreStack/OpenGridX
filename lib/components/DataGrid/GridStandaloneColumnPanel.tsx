@@ -76,6 +76,7 @@ export function GridStandaloneColumnPanel<R extends GridRowModel>({
             }}
         >
             <button
+                type="button"
                 onClick={onClose}
                 style={{
                     position: 'absolute',
