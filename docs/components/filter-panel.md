@@ -24,7 +24,13 @@ renderCell: (params) => {
 
 ## 🔌 Integration
 
-The `<DataGrid />` manages the visibility of the Filter Panel via its internal state. It is usually triggered from the Column Menu or the Toolbar.
+Inside the grid, the Filter Panel opens from the toolbar's **Filters** button (`slots={{ toolbar: GridToolbar }}`). `FilterPanel` and `FilterPanelProps` are also exported, to host the editor yourself:
+
+| Prop | Type | Description |
+| :--- | :--- | :--- |
+| `filterModel` | `GridFilterModel` | The model to edit. |
+| `columns` | `GridColDef[]` | The columns offered (those with `filterable: false` are left out). |
+| `onFilterModelChange` | `(model: GridFilterModel) => void` | Called with the edited model. |
 
 ## 📝 Configuration
 
@@ -48,6 +54,6 @@ The panel shows one row per column with `filterable !== false` (the synthetic ro
 - Picking an operator without typing, or clearing the input, leaves an item with an empty value, which does not filter. The row's **×** button removes the item.
 - If the model is changed from outside the panel (the toolbar's **Clear all**, or your own code) while typing is still pending, the pending text is dropped instead of being re-applied.
 
-## 🎨 Slot Usage
+## 🎨 Customizing
 
-While the Filter Panel is a complex internal component, its appearance can be influenced by CSS variables or by providing a custom implementation to the `filterPanel` slot in advanced use cases.
+There is no slot for the Filter Panel. Restyle it with CSS (its classes start with `ogx-filter`) and the theme's overlay colours, replace only the toolbar's trigger with `renderFilterButton`, or render your own editor that writes a `GridFilterModel` to the grid's `filterModel` prop.

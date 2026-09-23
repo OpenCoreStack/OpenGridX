@@ -3,11 +3,11 @@ import './Docs.css';
 export default function APIDocumentation() {
     const gridProps = [
         // Core Data
-        { name: 'rows', type: 'GridRowModel[]', default: '[]', desc: 'Array of data objects to display.' },
-        { name: 'columns', type: 'GridColDef[]', default: '[]', desc: 'Column definitions controlling display, sorting, and editing.' },
+        { name: 'rows', type: 'R[]', default: 'required', desc: 'Array of data objects to display (pass [] when a dataSource supplies them).' },
+        { name: 'columns', type: 'GridColDef<R>[]', default: 'required', desc: 'Column definitions controlling display, sorting, and editing.' },
         { name: 'getRowId', type: '(row: GridRowModel) => GridRowId', default: 'row.id', desc: 'Returns a unique identifier for each row. Only keys the internal store; rows are never copied or given an id.' },
         // Layout
-        { name: 'height', type: 'number', default: 'undefined', desc: 'Fixed height in pixels. Overrides a parent container height.' },
+        { name: 'height', type: 'number | string', default: 'undefined', desc: 'Height of the grid container (pixels or a CSS length).' },
         { name: 'rowHeight', type: 'number', default: '52', desc: 'Height of each row in pixels.' },
         { name: 'headerHeight', type: 'number', default: '56', desc: 'Height of the header row in pixels.' },
         { name: 'autoHeight', type: 'boolean', default: 'false', desc: 'Expand the grid height to exactly fit all rows (no scrollbar).' },
@@ -36,7 +36,7 @@ export default function APIDocumentation() {
         { name: 'columnOrder', type: 'string[]', default: 'undefined', desc: 'Controlled column order by field name.' },
         { name: 'disableColumnReorder', type: 'boolean', default: 'false', desc: 'Disables drag-to-reorder column headers.' },
         // Row Features
-        { name: 'pinnedRows', type: 'GridPinnedRows', default: 'undefined', desc: 'Pin rows to the top or bottom of the grid.' },
+        { name: 'pinnedRows', type: 'GridRowPinning', default: 'undefined', desc: 'Row IDs pinned to the top or bottom of the grid.' },
         { name: 'rowReordering', type: 'boolean', default: 'false', desc: 'Allow users to drag rows to reorder them.' },
         { name: 'rowGroupingModel', type: 'string[]', default: 'undefined', desc: 'Fields to group rows by.' },
         // Tree Data
@@ -56,8 +56,9 @@ export default function APIDocumentation() {
         { name: 'listView', type: 'boolean', default: 'false', desc: 'Render rows using a single custom cell (card view).' },
         { name: 'listViewColumn', type: 'GridListViewColDef', default: '—', desc: 'The single column definition used in list view mode.' },
         // Customization
-        { name: 'slots', type: 'GridSlots', default: '{}', desc: 'Override internal components (toolbar, loading overlay, no-rows overlay, etc.).' },
-        { name: 'slotProps', type: 'Record<string, any>', default: '{}', desc: 'Props forwarded to slot components.' },
+        { name: 'slots', type: 'GridSlots', default: '—', desc: 'Override internal components: toolbar, pagination, noRowsOverlay, loadingOverlay, footer.' },
+        { name: 'slotProps', type: 'GridSlotProps', default: '—', desc: 'Props forwarded to slot components. slotProps.toolbar is typed as GridToolbarProps plus extra keys.' },
+        { name: 'groupingColDef', type: 'Partial<GridColDef<R>>', default: '—', desc: 'Configures the __group__ column shown while rowGroupingModel is active. No field needed.' },
         { name: 'className', type: 'string', default: '—', desc: 'Additional CSS class on the root grid element.' },
         { name: 'style', type: 'React.CSSProperties', default: '—', desc: 'Inline styles on the root grid element.' },
         { name: 'ariaLabel', type: 'string', default: '—', desc: 'Accessible label for the grid.' },
@@ -65,7 +66,7 @@ export default function APIDocumentation() {
         { name: 'onRowClick', type: '(params: GridRowParams) => void', default: '—', desc: 'Fired when a row is clicked.' },
         { name: 'onCellClick', type: '(params: GridCellParams) => void', default: '—', desc: 'Fired when a cell is clicked.' },
         { name: 'onStateChange', type: '(state: GridState) => void', default: '—', desc: 'Fired on mount and whenever the sort, filter, pagination, column or density state changes value.' },
-        { name: 'onRowsScrollEnd', type: '() => void', default: '—', desc: 'Fired when the user scrolls to the bottom of the grid.' },
+        { name: 'onRowsScrollEnd', type: '(params: GridRowScrollEndParams) => void', default: '—', desc: 'Fired once each time the viewport comes within 100px of the bottom of the rows.' },
         { name: 'onColumnOrderChange', type: '(params) => void', default: '—', desc: 'Fired after a column is reordered by drag.' },
         { name: 'onColumnOrderModelChange', type: '(columnOrder: string[]) => void', default: '—', desc: 'Fired with the whole new column order after every change, including the Columns panel Reset.' },
         { name: 'onRowOrderChange', type: '(params) => void', default: '—', desc: 'Fired after a row is reordered (rowReordering must be true). oldIndex / targetIndex are positions in rows.' },
@@ -91,13 +92,13 @@ export default function APIDocumentation() {
         { name: 'headerName', type: 'string', default: 'field', desc: 'Text label displayed in the column header.' },
         { name: 'description', type: 'string', default: '—', desc: 'Tooltip text shown on the header cell.' },
         // Sizing
-        { name: 'width', type: 'number | string', default: '100', desc: 'Column width in pixels or a percentage string.' },
+        { name: 'width', type: 'number | string', default: 'unset: flexes', desc: 'Column width in pixels or a percentage string. Unset, the column flexes like flex: 1.' },
         { name: 'minWidth', type: 'number', default: '—', desc: 'Minimum pixel width (enforced on resize).' },
         { name: 'maxWidth', type: 'number', default: '—', desc: 'Maximum pixel width.' },
         { name: 'flex', type: 'number', default: '—', desc: 'Flex-grow weight. Distributes remaining space proportionally.' },
         // Alignment
         { name: 'align', type: "'left' | 'center' | 'right'", default: "'left'", desc: 'Cell content alignment.' },
-        { name: 'headerAlign', type: "'left' | 'center' | 'right'", default: "'left'", desc: 'Header text alignment.' },
+        { name: 'headerAlign', type: "'left' | 'center' | 'right'", default: 'align', desc: 'Header text alignment. Falls back to align, then left.' },
         // Data
         { name: 'type', type: "'string' | 'number' | 'boolean' | 'date' | 'singleSelect' | 'image'", default: "'string'", desc: 'Column type — drives filtering operators and default formatting.' },
         { name: 'valueOptions', type: 'Array<string | { value; label }>', default: '—', desc: 'Options list for singleSelect type — the filter panel offers them as a select.' },
@@ -124,7 +125,7 @@ export default function APIDocumentation() {
         { name: 'rowSpan', type: 'number | ((params) => number)', default: '1', desc: 'Number of rows this cell spans vertically.' },
         // Advanced
         { name: 'groupable', type: 'boolean', default: 'true', desc: 'Allow this column to be used as a row grouping dimension.' },
-        { name: 'aggregable', type: 'boolean', default: 'true', desc: 'Allow aggregation functions (sum, avg, etc.) on this column.' },
+        { name: 'aggregable', type: 'boolean', default: '—', desc: 'Whether the Summaries and pivot panels offer this column. Unset: number columns only.' },
         { name: 'zIndex', type: 'number', default: '—', desc: 'Override the CSS z-index for this column (useful with pinning).' },
     ];
 
@@ -132,13 +133,14 @@ export default function APIDocumentation() {
         { name: 'columns', type: 'GridColDef[]', default: '[]', desc: 'Column definitions — injected automatically when used via slots.' },
         { name: 'baseColumns', type: 'GridColDef[]', default: '—', desc: 'Pre-pivot columns shown in the Pivot panel instead of synthetic pivot columns.' },
         { name: 'aggregationModel', type: 'GridAggregationModel', default: '{}', desc: 'Current aggregation configuration.' },
-        { name: 'onAggregationModelChange', type: '(model) => void', default: '—', desc: 'Called when the user changes aggregation settings.' },
-        { name: 'pivotModel', type: 'GridPivotModel', default: '—', desc: 'Current pivot configuration. Presence of this prop renders the Pivot button.' },
-        { name: 'onPivotModelChange', type: '(model) => void', default: '—', desc: 'Called when the user changes pivot settings.' },
-        { name: 'filterModel', type: 'GridFilterModel', default: '—', desc: 'Current filter model. Presence renders the search bar and Filter button.' },
-        { name: 'onFilterModelChange', type: '(model) => void', default: '—', desc: 'Called when the user changes filters or the quick-search value.' },
-        { name: 'columnVisibilityModel', type: 'Record<string, boolean>', default: '{}', desc: 'Current column visibility map. Presence renders the Columns button.' },
-        { name: 'onColumnVisibilityModelChange', type: '(model) => void', default: '—', desc: 'Called when the user shows or hides a column.' },
+        { name: 'onAggregationModelChange', type: '(model) => void', default: '—', desc: 'Called when the user changes aggregation settings. Presence renders the Summaries button.' },
+        { name: 'pivotModel', type: 'GridPivotModel', default: '—', desc: 'Current pivot configuration.' },
+        { name: 'onPivotModelChange', type: '(model) => void', default: '—', desc: 'Called when the user changes pivot settings. Presence renders the Pivot button.' },
+        { name: 'filterModel', type: 'GridFilterModel', default: '—', desc: 'Current filter model.' },
+        { name: 'onFilterModelChange', type: '(model) => void', default: '—', desc: 'Called when the user changes filters or the quick-search value. Presence renders the search bar and Filter button.' },
+        { name: 'columnVisibilityModel', type: 'Record<string, boolean>', default: '{}', desc: 'Current column visibility map.' },
+        { name: 'onColumnVisibilityModelChange', type: '(model) => void', default: '—', desc: 'Called when the user shows or hides a column. Presence renders the Columns button.' },
+        { name: 'showNonHideableColumns', type: 'boolean', default: 'false', desc: 'Show hideable: false columns in the Columns panel as disabled rows.' },
         { name: 'onColumnReorder', type: '(from, to) => void', default: '—', desc: 'Called when the user drags a column in the Columns panel.' },
         { name: 'onColumnOrderReset', type: '() => void', default: '—', desc: 'Called when the user clicks Reset order in the Columns panel.' },
         { name: 'children', type: 'ReactNode', default: '—', desc: 'Content rendered on the left side of the toolbar, before the spacer.' },

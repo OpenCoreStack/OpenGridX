@@ -6,7 +6,7 @@ The `ColumnVisibilityPanel` provides an interactive list for users to toggle the
 - **Auto-Generating List**: It automatically builds a list of all togglable columns from the grid's state.
 - **Searchable Interface**: Includes a quick search to find specific columns in grids with many fields.
 - **Toggle State**: Synchronizes instantly with the grid's `columnVisibilityModel`.
-- **Exclusion Logic**: Automatically hides special internal columns (e.g., checkboxes) and columns marked with `hideable: false`.
+- **Exclusion Logic**: Lists only the columns it is given, leaving out those marked `hideable: false` (unless `showNonHideableColumns`). The grid's system columns (checkbox, expand, drag handle) are not columns, and its row-grouping `__group__` column is `hideable: false`, so neither appears.
 - **Accessible names**: Each checkbox is labelled with its column's `headerName` (or `field`), and the footer checkbox with "Show/Hide All"; clicking the name toggles the column.
 
 ---
@@ -62,11 +62,9 @@ function Report({ rows, columns }: { rows: Row[]; columns: GridColDef<Row>[] }) 
 
 ## ⚙️ How it Works
 
-1. **Column Resolution**: The panel retrieves all columns defined in the `DataGrid`.
-2. **Filtration**: It ignores columns that should not be visible in the list:
-   - Columns starting with `__` (internal types).
-   - Columns explicitly marked as `hideable: false` in the `GridColDef`.
-3. **State Management**: When a user toggles a switch, it triggers an update to the grid's `columnVisibilityModel`, causing the grid to re-render only the affected columns.
+1. **Column Resolution**: The panel lists the `columns` it receives, in that order (the grid passes its current column order).
+2. **Filtration**: It leaves out columns marked `hideable: false`, unless `showNonHideableColumns` is set (then they are shown as disabled rows). There is no filtering by field name: a field starting with `__` is listed like any other.
+3. **State Management**: Toggling a checkbox calls `onVisibilityChange(field, isVisible)`; inside the grid that updates `columnVisibilityModel` and fires `onColumnVisibilityModelChange`.
 
 ---
 

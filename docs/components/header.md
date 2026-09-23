@@ -4,18 +4,23 @@ Manages the column headers, sorting triggers, column resizing, and column groupi
 
 ## ⚙️ Props
 
+`Header` and its props type `HeaderProps` are exported. The main props:
+
 | Prop | Type | Description |
 | :--- | :--- | :--- |
 | `columns` | `GridColDef[]` | Column definitions for the visible viewport. |
 | `allColumns` | `GridColDef[]` | Every rendered data column in render order (left-pinned, unpinned, right-pinned) with its resolved `width`. Column group rows are laid out over these. Defaults to `columns`. |
 | `columnGroupingModel` | `GridColumnGroupingModel` | Hierarchy for multi-level header spanning. |
-| `sortModel` | `GridSortModel` | Current sorting state for highlight and icons. |
+| `sortModel` | `GridSortItem[]` | Current sorting state for highlight, icons and priority badges. |
 | `onSort` | `(field, direction) => void` | Callback triggered on a plain click — replaces the sort model with a single key. |
 | `onSortAdd` | `(field, direction) => void` | Callback triggered on Shift+click or when `multiSort` is active — appends/cycles the key without replacing others (an existing key keeps its priority). Also used by the column menu for **Unsort** and for a direction change on an already-sorted column. |
 | `multiSort` | `boolean` | When `true`, every click routes to `onSortAdd` instead of `onSort`. Wired from the `multiSort` prop on `<DataGrid>`. |
-| `onColumnResize` | `Function` | Callback for manual column width changes. |
+| `onColumnResize` | `(field: string, newWidth: number) => void` | Callback for manual column width changes. Without it, headers are not resizable. |
+| `onHideColumn` / `onPinColumn` / `onManageColumns` | `(field) => void` / `(field, side \| null) => void` / `() => void` | Column menu actions. |
 | `pinnedColumns` | `GridColumnPinning` | Coordinates sticky positioning for headers. |
-| `checkboxSelection` | `boolean` | Renders the "Select All" checkbox. |
+| `checkboxSelection` | `boolean` | Reserves the checkbox column. The "Select All" checkbox is rendered only when `onSelectAll` is also passed (the grid omits it with `disableMultipleRowSelection`). |
+| `onSelectAll` | `(isSelected: boolean) => void` | Called by the "Select All" checkbox. |
+| `allSelected` / `someSelected` | `boolean` | Checked / indeterminate state of the "Select All" checkbox. |
 | `focusedCell` | `{ id: GridRowId \| null; field: string } \| null` | The grid's focus position. `id: null` means the header cell of `field` is focused (v3.0; it used to be the string `'HEADER'`, which a real row id could collide with). DOM focus is moved by the grid, not by `<Header />`. |
 | `columnIndexMap` | `Map<string, number>` | Position of each visible data column in render order. Used for `aria-colindex` and the `colIndex` passed to `renderHeader`, so they match the body cells and do not change with horizontal scrolling. |
 

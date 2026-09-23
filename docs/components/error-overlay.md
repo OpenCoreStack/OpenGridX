@@ -16,10 +16,14 @@ Internal component rendered when a `GridDataSource` fetch fails. Displays an err
 ```tsx
 <DataGrid
     dataSource={{
-        getRows: async ({ filterModel, sortModel, paginationModel }) => {
-            const res = await fetch('/api/employees');
+        getRows: async ({ startRow, endRow, sortModel, filterModel }) => {
+            const res = await fetch('/api/employees', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ startRow, endRow, sortModel, filterModel }),
+            });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json();
+            return res.json(); // { rows, rowCount }
         }
     }}
 />

@@ -1,6 +1,6 @@
 # `<ColumnResizeHandle />` & Resizing
 
-OpenGridX supports dynamic column resizing, allowing users to adjust the width of any column on the fly for better visibility of data. This is facilitated by the `ColumnResizeHandle`, which sits invisibly on the edge of each column header.
+OpenGridX supports dynamic column resizing, allowing users to adjust the width of any column on the fly for better visibility of data. This is facilitated by the `ColumnResizeHandle`, an internal component (not exported) that `<Header />` renders invisibly on the edge of each resizable column header.
 
 ## 📑 Overview
 - **Where the handle is**: on the right edge of each resizable column header. Right-pinned columns are anchored to the right edge of the grid and grow leftwards, so their handle is on their **left** edge, and the edge you grab follows the pointer.
