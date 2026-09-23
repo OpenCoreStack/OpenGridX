@@ -11,6 +11,8 @@ import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings } from '../../hooks/core/useGridDevWarnings';
 import { useGridColumnLookup } from '../../hooks/core/useGridColumnLookup';
 import { useGridPageCorrection } from '../../hooks/core/useGridPageCorrection';
+import { useGridColumnsPanel } from '../../hooks/core/useGridColumnsPanel';
+import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
 import { scrollRowIntoView } from '../../utils/scroll';
 import { upsertSortItem } from '../../utils/sorting';
 import { GridAggregationFooter } from './GridAggregationFooter';
@@ -836,9 +838,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const someSelected = selectedRowIds.size > 0 && selectedRowIds.size < rows.length;
 
     const hasRowSpanning = React.useMemo(() => effectiveColumns.some(c => !!c.rowSpan), [effectiveColumns]);
-    const [columnsPanelOpen, setColumnsPanelOpen] = React.useState(false);
+    const columnsPanel = useGridColumnsPanel();
     const containerRef = React.useRef<HTMLDivElement>(null);
-    const standalonePanelRef = React.useRef<HTMLDivElement>(null);
 
     const NoRowsOverlaySlot = slots?.noRowsOverlay;
     const LoadingOverlaySlot = slots?.loadingOverlay;
@@ -865,7 +866,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             columns: orderedColumns as unknown as GridColDef[],
             baseColumns: columns as unknown as GridColDef[],
             aggregationModel,
-            onAggregationModelChange: handleAggregationModelChange,
+            // Summaries have no effect in pivot mode (pivot rows are already aggregated and the
+            // footer is hidden), so the toolbar gets no handler and hides its Summaries button.
+            onAggregationModelChange: pivotMode ? undefined : handleAggregationModelChange,
             ...(pivotMode || propPivotModel || onPivotModelChange ? {
                 pivotModel: currentPivotModel,
                 onPivotModelChange: handlePivotModelChange,
@@ -876,8 +879,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
             onColumnReorder: reorderHandler,
             onColumnOrderReset: disableColumnReorder ? undefined : () => setInternalColumnOrder(columns.map(c => c.field)),
-            forceColumnsOpen: columnsPanelOpen,
-            onColumnsPanelClose: () => setColumnsPanelOpen(false),
+            forceColumnsOpen: columnsPanel.toolbarPanelRequested,
+            onColumnsPanelClose: columnsPanel.closeToolbarPanel,
             ...slotProps?.toolbar,
         };
     }, [
@@ -886,20 +889,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         columns, aggregationModel, handleAggregationModelChange, pivotMode,
         propPivotModel, onPivotModelChange, currentPivotModel, handlePivotModelChange,
         filterModel, onFilterModelChange, columnVisibilityModel,
-        handleColumnVisibilityModelChange, columnsPanelOpen, slotProps?.toolbar,
+        handleColumnVisibilityModelChange, columnsPanel.toolbarPanelRequested, columnsPanel.closeToolbarPanel, slotProps?.toolbar,
     ]);
-
-    // Click-outside handler for standalone column panel
-    useEffect(() => {
-        if (!columnsPanelOpen || slots?.toolbar) return;
-        function handleClickOutside(e: MouseEvent) {
-            if (standalonePanelRef.current && !standalonePanelRef.current.contains(e.target as Node)) {
-                setColumnsPanelOpen(false);
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [columnsPanelOpen, slots?.toolbar]);
 
     return (
         <div
@@ -913,24 +904,28 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             } as unknown as React.CSSProperties}
             aria-busy={effectiveLoading}
         >
-            {toolbarProps && <StableToolbar {...toolbarProps} />}
-
-            {!slots?.toolbar && (
-                <GridStandaloneColumnPanel<R>
-                    isOpen={columnsPanelOpen}
-                    containerRef={containerRef}
-                    panelRef={standalonePanelRef}
-                    effectiveColumns={effectiveColumns}
-                    columnVisibilityModel={columnVisibilityModel}
-                    effectiveColumnOrder={effectiveColumnOrder}
-                    columnOrder={columnOrder}
-                    disableColumnReorder={disableColumnReorder}
-                    onClose={() => setColumnsPanelOpen(false)}
-                    onColumnVisibilityChange={handleColumnVisibilityModelChange}
-                    onColumnOrderChange={onColumnOrderChange}
-                    setInternalColumnOrder={setInternalColumnOrder}
-                />
+            {toolbarProps && (
+                <GridToolbarHostContext.Provider value={columnsPanel.toolbarHost}>
+                    <StableToolbar {...toolbarProps} />
+                </GridToolbarHostContext.Provider>
             )}
+
+            {/* Used by the column menu's Manage columns when no GridToolbar can show the panel */}
+            <GridStandaloneColumnPanel<R>
+                isOpen={columnsPanel.standalonePanelOpen}
+                containerRef={containerRef}
+                panelRef={columnsPanel.standalonePanelRef}
+                effectiveColumns={effectiveColumns}
+                columnVisibilityModel={columnVisibilityModel}
+                effectiveColumnOrder={effectiveColumnOrder}
+                columnOrder={columnOrder}
+                disableColumnReorder={disableColumnReorder}
+                onClose={columnsPanel.closeStandalonePanel}
+                onColumnVisibilityChange={handleColumnVisibilityModelChange}
+                onColumnOrderChange={onColumnOrderChange}
+                setInternalColumnOrder={setInternalColumnOrder}
+            />
+
 
             {listView && listViewColumn && (
                 <GridListView<R>
@@ -1039,7 +1034,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                     [field]: false,
                                 });
                             }}
-                            onManageColumns={() => setColumnsPanelOpen(true)}
+                            onManageColumns={columnsPanel.openColumnsPanel}
                             onPinColumn={(field, side) => {
                                 const left = [...(pinnedColumns?.left ?? [])];
                                 const right = [...(pinnedColumns?.right ?? [])];

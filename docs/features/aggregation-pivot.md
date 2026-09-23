@@ -77,6 +77,8 @@ Built-in functions available:
 - `count`: Number of items.
 - `unique`: Number of unique items.
 
+The toolbar's Summaries panel offers these for each aggregable column, or only the ones listed in the column's `availableAggregationFunctions`. In pivot mode the Summaries button is hidden: pivot rows are already aggregated and the aggregation footer is not shown.
+
 ---
 
 ## 🎨 Formatting Totals

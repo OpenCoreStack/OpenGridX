@@ -12,7 +12,7 @@ The `ColumnVisibilityPanel` provides an interactive list for users to toggle the
 
 ## 🛠️ Usage
 
-The grid's toolbar and header menu already include this panel. Import it yourself (exported since v2.1) only when you want the list somewhere else, such as a sidebar or modal. It is a controlled component: you own the visibility model and pass it in.
+The grid's toolbar and header menu already include this panel. The column menu's **Manage columns** opens the toolbar's Columns panel when `slots.toolbar` renders a `GridToolbar` that receives the grid's slot props; otherwise (no toolbar, or a custom toolbar without `GridToolbar`) it opens a standalone panel at the grid's top-right corner. Both close on Escape or a click outside. Import it yourself (exported since v2.1) only when you want the list somewhere else, such as a sidebar or modal. It is a controlled component: you own the visibility model and pass it in.
 
 ```tsx
 import { useMemo, useState } from 'react';

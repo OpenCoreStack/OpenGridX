@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import ReactDOM from 'react-dom';
 import type { GridColDef } from '../../types';
 import type { GridPivotModel, GridPivotAggFn, GridPivotValueField } from '../../types';
+import { getViewportWidth } from '../../utils/viewport';
 
 const AGG_FNS: GridPivotAggFn[] = ['sum', 'avg', 'count', 'min', 'max'];
 
@@ -40,7 +41,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
     const computePos = useCallback(() => {
         if (!anchorRef.current) return { top: 0, right: 0 };
         const rect = anchorRef.current.getBoundingClientRect();
-        return { top: rect.bottom + 6, right: window.innerWidth - rect.right };
+        return { top: rect.bottom + 6, right: getViewportWidth() - rect.right };
     }, [anchorRef]);
 
     useEffect(() => {

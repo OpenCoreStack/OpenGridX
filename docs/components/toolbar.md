@@ -20,7 +20,11 @@ import { DataGrid, GridToolbar } from '@opencorestack/opengridx';
 />
 ```
 
-`GridToolbar` automatically hides buttons for features whose callbacks are not wired. For example, if you don't pass `onFilterModelChange` the search bar and filter button are not rendered.
+`GridToolbar` automatically hides buttons for features whose callbacks are not wired. For example, if you don't pass `onFilterModelChange` the search bar and filter button are not rendered, and without `onAggregationModelChange` there is no Summaries button.
+
+One panel is open at a time. Every panel closes on Escape; the Columns, Summaries and Pivot panels also close on a click outside them. Each trigger button has `aria-haspopup="dialog"` and an `aria-expanded` state.
+
+The Summaries panel lists each aggregable column with the functions it allows: its `availableAggregationFunctions` when set, otherwise every built-in function (`sum`, `avg`, `count`, `min`, `max`, `unique`). Names that are not built-in functions are not offered.
 
 ---
 
@@ -31,7 +35,7 @@ import { DataGrid, GridToolbar } from '@opencorestack/opengridx';
 | `columns` | `GridColDef[]` | `[]` | Column definitions (injected automatically when used via `slots`). |
 | `baseColumns` | `GridColDef[]` | — | Pre-pivot column definitions, used by the Pivot panel to avoid showing synthetic columns. |
 | `aggregationModel` | `GridAggregationModel` | `{}` | Current aggregation configuration. |
-| `onAggregationModelChange` | `(model) => void` | — | Called when the user changes aggregation settings. |
+| `onAggregationModelChange` | `(model) => void` | — | Called when the user changes aggregation settings. Presence of this prop shows the Summaries button. `DataGrid` does not pass it in pivot mode, where summaries have no effect. |
 | `pivotModel` | `GridPivotModel` | — | Current pivot configuration. |
 | `onPivotModelChange` | `(model) => void` | — | Called when the user changes pivot settings. Presence of this prop shows the Pivot button. |
 | `filterModel` | `GridFilterModel` | — | Current filter model. Presence of this prop shows the search bar and Filter button. |
@@ -40,8 +44,8 @@ import { DataGrid, GridToolbar } from '@opencorestack/opengridx';
 | `onColumnVisibilityModelChange` | `(model) => void` | — | Called when the user shows/hides columns. Presence shows the Columns button. |
 | `onColumnReorder` | `(from, to) => void` | — | Called when the user drags a column in the Columns panel. |
 | `onColumnOrderReset` | `() => void` | — | Called when the user clicks "Reset order" in the Columns panel. |
-| `forceColumnsOpen` | `boolean` | — | When `true`, opens the Columns panel immediately (used internally by the column header menu). |
-| `onColumnsPanelClose` | `() => void` | — | Called when the Columns panel closes after a `forceColumnsOpen`. |
+| `forceColumnsOpen` | `boolean` | — | When it becomes `true`, opens the Columns panel. `DataGrid` sets it for the column menu's **Manage columns**. A `GridToolbar` that receives it from the grid (spread the slot props into it) shows the panel; when no such toolbar is rendered, the grid opens its standalone Columns panel instead. |
+| `onColumnsPanelClose` | `() => void` | — | Called whenever the Columns panel closes: its button, a custom `renderColumnsButton`, another panel opening, click-outside or Escape. |
 | `children` | `ReactNode` | — | Content rendered in the **left** side of the toolbar (before the spacer). |
 | `rightContent` | `ReactNode` | — | Content rendered in the **right** side of the toolbar (after all built-in buttons). |
 | `className` | `string` | — | Additional CSS class applied to the toolbar root `<div>`. Use for visual overrides without replacing the component. |

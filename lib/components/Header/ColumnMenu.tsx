@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning } from '../../types';
+import { getViewportWidth, getViewportHeight } from '../../utils/viewport';
 
 
 interface ColumnMenuProps {
@@ -125,8 +126,8 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
 
         const anchorRect = anchorEl.getBoundingClientRect();
         const menuRect = menuRef.current.getBoundingClientRect();
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
+        const vw = getViewportWidth();
+        const vh = getViewportHeight();
         const margin = 8;
 
         let left = anchorRect.left;

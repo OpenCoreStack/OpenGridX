@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { DataGrid } from '../DataGrid/DataGrid';
-import type { GridColDef } from '../../types';
+import type { GridColDef, GridRowModel } from '../../types';
 
-const ROWS = [
+const ROWS: GridRowModel[] = [
     { id: 1, name: 'a', age: 1, team: 'x' },
     { id: 2, name: 'b', age: 2, team: 'y' },
 ];
@@ -58,7 +58,7 @@ describe('ColumnMenu — pinnable', () => {
     it('offers neither hide nor pin actions for the synthetic grouping column', () => {
         const cols: GridColDef[] = [{ field: 'team', headerName: 'Team' }, { field: 'name', headerName: 'Name' }];
         const { container } = render(
-            <DataGrid rows={ROWS} columns={cols} rowGroupingModel={['team']} groupingColDef={{ headerName: 'Group' }} />
+            <DataGrid rows={ROWS} columns={cols} rowGroupingModel={['team']} groupingColDef={{ field: 'group', headerName: 'Group' }} />
         );
 
         openMenu(container, '__group__');
