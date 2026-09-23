@@ -74,6 +74,17 @@ describe('D6 — onRowDoubleClick', () => {
         fireEvent.doubleClick(screen.getByText('$800'));
         expect(onRowDoubleClick).toHaveBeenCalledWith(expect.objectContaining({ id: 2, row: ROWS[1] }));
     });
+
+    it('fires in list view as well', () => {
+        const onRowDoubleClick = vi.fn();
+        render(
+            <DataGrid rows={ROWS} columns={COLUMNS} listView
+                listViewColumn={{ field: 'card', renderCell: ({ row }) => <span>card-{row.id}</span> }}
+                onRowDoubleClick={onRowDoubleClick} />
+        );
+        fireEvent.doubleClick(screen.getByText('card-3'));
+        expect(onRowDoubleClick).toHaveBeenCalledWith(expect.objectContaining({ id: 3, row: ROWS[2] }));
+    });
 });
 
 describe('Row grouping — expansion survives row edits', () => {

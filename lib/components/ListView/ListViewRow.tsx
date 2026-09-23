@@ -9,6 +9,7 @@ export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
     checkboxSelection?: boolean;
     rowHeight?: number;
     onRowClick?: (row: R) => void;
+    onRowDoubleClick?: (row: R) => void;
     onSelectionChange?: (rowId: GridRowId, isSelected: boolean) => void;
 }
 
@@ -20,6 +21,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
     checkboxSelection = false,
     rowHeight,
     onRowClick,
+    onRowDoubleClick,
     onSelectionChange,
 }: ListViewRowProps<R>) {
     const params: GridRenderCellParams<R> = {
@@ -41,6 +43,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
             className={`ogx-list-view__row${isSelected ? ' ogx-list-view__row--selected' : ''}`}
             style={rowHeight ? { minHeight: rowHeight } : undefined}
             onClick={() => onRowClick?.(row)}
+            onDoubleClick={onRowDoubleClick ? () => onRowDoubleClick(row) : undefined}
             role="row"
             aria-rowindex={rowIndex + 2}
             aria-selected={isSelected}

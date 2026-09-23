@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { scrollRowIntoView } from '../../utils/scroll';
 import type { GridRowModel, GridRowId, GridColDef, GridCellParams, GridSortItem, GridSortDirection } from '../../types';
 import type { GridEditingState } from '../features/useGridEditing';
 
@@ -14,6 +15,7 @@ interface ColumnMetrics {
 interface VirtualizationSnapshot {
     cumulativeHeights: number[];
     pinnedTopHeight: number;
+    pinnedBottomHeight: number;
     columnMetrics: ColumnMetrics | null;
 }
 
@@ -37,6 +39,8 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
     pageSize: number;
     virtualization: VirtualizationSnapshot;
     viewportRef: React.RefObject<HTMLDivElement | null>;
+    /** Number of top-pinned rows at the start of allRenderableRows. */
+    pinnedTopRowCount?: number;
 }
 
 export interface FocusedCell {
@@ -71,6 +75,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         pageSize,
         virtualization,
         viewportRef,
+        pinnedTopRowCount = 0,
     } = params;
 
     const [focusedCell, setFocusedCell] = useState<FocusedCell | null>(null);
@@ -311,21 +316,13 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
 
                 const el = viewportRef.current;
                 if (el) {
-                    const { cumulativeHeights, pinnedTopHeight, columnMetrics } = virtualization;
-                    const { clientHeight, clientWidth, scrollTop, scrollLeft } = el;
+                    const { cumulativeHeights, pinnedBottomHeight, columnMetrics } = virtualization;
+                    const { clientWidth, scrollLeft } = el;
 
-                    const rowTop = nextRowIndex <= 0 ? 0 : cumulativeHeights[nextRowIndex - 1];
-                    const rowBottom = cumulativeHeights[nextRowIndex];
-                    const visibleTop = scrollTop + pinnedTopHeight;
-                    const visibleBottom = scrollTop + clientHeight;
-
-                    let newScrollTop = scrollTop;
-                    if (rowTop < visibleTop) {
-                        newScrollTop = Math.max(0, rowTop - pinnedTopHeight);
-                    } else if (rowBottom > visibleBottom) {
-                        newScrollTop = rowBottom - clientHeight;
+                    // allRenderableRows = pinned top + center + pinned bottom; pinned rows are sticky and always visible.
+                    if (nextRowIndex >= 0) {
+                        scrollRowIntoView(el, nextRowIndex - pinnedTopRowCount, cumulativeHeights, pinnedBottomHeight);
                     }
-                    if (newScrollTop !== scrollTop) el.scrollTop = newScrollTop;
 
                     if (columnMetrics) {
                         const { leftPinnedWidth, rightPinnedWidth, unpinnedAccWidths, unpinnedCols, totalSpecialsWidth, pinnedSpecialsWidth } = columnMetrics;
@@ -365,6 +362,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         pagination,
         pageSize,
         viewportRef,
+        pinnedTopRowCount,
     ]);
 
     return { focusedCell, setFocusedCell, handleFocus, handleBlur, handleKeyDown };

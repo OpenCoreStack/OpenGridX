@@ -9,6 +9,7 @@ import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
 import { useGridScrollSync } from '../../hooks/core/useGridScrollSync';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings } from '../../hooks/core/useGridDevWarnings';
+import { scrollRowIntoView } from '../../utils/scroll';
 import { GridAggregationFooter } from './GridAggregationFooter';
 import { GridEmptyState } from './GridEmptyState';
 import { GridErrorOverlay } from './GridErrorOverlay';
@@ -654,14 +655,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             if (!el) return;
 
             if (rowIndex !== undefined && rowIndex >= 0) {
-                const rowTop = rowIndex > 0 ? layout.cumulativeHeights[rowIndex - 1] : 0;
-                const rowBottom = layout.cumulativeHeights[rowIndex] ?? rowTop;
-                const { scrollTop, clientHeight } = el;
-                if (rowTop < scrollTop) {
-                    el.scrollTop = rowTop;
-                } else if (rowBottom > scrollTop + clientHeight) {
-                    el.scrollTop = rowBottom - clientHeight;
-                }
+                scrollRowIntoView(el, rowIndex, layout.cumulativeHeights, layout.pinnedBottomHeight);
             }
 
             if (colIndex !== undefined && colIndex >= 0) {
@@ -781,6 +775,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         pageSize: effectivePaginationModel.pageSize,
         virtualization,
         viewportRef,
+        pinnedTopRowCount: pinnedTopRows.length,
     });
 
     const handleCellClick = useCallback((params: GridCellParams<R>) => {
@@ -946,6 +941,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                         paginationPage: localeText.paginationPage,
                     } : undefined}
                     onRowClick={handleRowClick}
+                    onRowDoubleClick={onRowDoubleClick}
                     onSelectionChange={handleSelectionChange}
                     onPaginationModelChange={handlePaginationModelChange}
                 />

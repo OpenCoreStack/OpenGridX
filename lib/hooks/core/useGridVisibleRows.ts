@@ -43,8 +43,9 @@ export function useGridVisibleRows<R extends GridRowModel>(
             rowIndex: topPinnedCount + centerRows.length + index,
         }));
 
-        const centerStartIndex = Math.max(0, firstRowIndex - topPinnedCount);
-        const centerEndIndex = Math.min(centerRows.length, lastRowIndex - topPinnedCount + 1);
+        // renderContext indices come from the unpinned-row layout, so they index centerRows directly.
+        const centerStartIndex = Math.max(0, firstRowIndex);
+        const centerEndIndex = Math.min(centerRows.length, lastRowIndex + 1);
 
         const centerVisible = centerRows
             .slice(centerStartIndex, centerEndIndex)

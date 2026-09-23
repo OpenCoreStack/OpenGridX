@@ -30,6 +30,7 @@ export interface GridListViewProps<R extends GridRowModel> {
     paginationSlotProps?: Record<string, unknown>;
     localeText?: Pick<GridLocaleText, 'paginationRowsPerPage' | 'paginationOf' | 'paginationPage'>;
     onRowClick: (params: GridRowParams<R>) => void;
+    onRowDoubleClick?: (params: GridRowParams<R>) => void;
     onSelectionChange: (rowId: GridRowId, isSelected: boolean) => void;
     onPaginationModelChange: (model: GridPaginationModel) => void;
 }
@@ -53,6 +54,7 @@ export function GridListView<R extends GridRowModel>({
     paginationSlotProps,
     localeText,
     onRowClick,
+    onRowDoubleClick,
     onSelectionChange,
     onPaginationModelChange,
 }: GridListViewProps<R>) {
@@ -97,6 +99,7 @@ export function GridListView<R extends GridRowModel>({
                             checkboxSelection={checkboxSelection}
                             rowHeight={rowHeight}
                             onRowClick={(r) => onRowClick({ row: r, id: r.id, rowIndex: idx })}
+                            onRowDoubleClick={onRowDoubleClick ? (r) => onRowDoubleClick({ row: r, id: r.id, rowIndex: idx }) : undefined}
                             onSelectionChange={onSelectionChange}
                         />
                     ))
