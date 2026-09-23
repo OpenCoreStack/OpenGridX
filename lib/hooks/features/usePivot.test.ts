@@ -94,8 +94,8 @@ describe('usePivot — basic', () => {
         const eng = rows.find(r => r.dept === 'Eng')!;
         const hr  = rows.find(r => r.dept === 'HR')!;
 
-        expect(eng['salarysum']).toBe(80000);
-        expect(hr['salarysum']).toBe(90000);
+        expect(eng['salary\u001fsum']).toBe(80000);
+        expect(hr['salary\u001fsum']).toBe(90000);
     });
 });
 
@@ -111,7 +111,7 @@ describe('usePivot — grand total regression', () => {
         };
         const { result } = renderHook(() => usePivot(ROWS, COLS, model, true));
         const gt = grandTotalRow(result.current.pivotRows);
-        expect(gt['salarysum']).toBe(170000);
+        expect(gt['salary\u001fsum']).toBe(170000);
     });
 
     it('grand total avg = raw mean, NOT average of per-group averages', () => {
@@ -127,8 +127,8 @@ describe('usePivot — grand total regression', () => {
         const correct = (30000 + 50000 + 90000) / 3;
         const bugged  = (40000 + 90000) / 2;
 
-        expect(gt['salaryavg']).toBeCloseTo(correct, 2);
-        expect(gt['salaryavg']).not.toBeCloseTo(bugged, 2);
+        expect(gt['salary\u001favg']).toBeCloseTo(correct, 2);
+        expect(gt['salary\u001favg']).not.toBeCloseTo(bugged, 2);
     });
 
     it('grand total min = minimum across ALL raw rows, not minimum of per-group minimums', () => {
@@ -140,7 +140,7 @@ describe('usePivot — grand total regression', () => {
         };
         const { result } = renderHook(() => usePivot(ROWS, COLS, model, true));
         const gt = grandTotalRow(result.current.pivotRows);
-        expect(gt['salarymin']).toBe(30000);
+        expect(gt['salary\u001fmin']).toBe(30000);
     });
 
     it('grand total max = maximum across ALL raw rows', () => {
@@ -150,7 +150,7 @@ describe('usePivot — grand total regression', () => {
         };
         const { result } = renderHook(() => usePivot(ROWS, COLS, model, true));
         const gt = grandTotalRow(result.current.pivotRows);
-        expect(gt['salarymax']).toBe(90000);
+        expect(gt['salary\u001fmax']).toBe(90000);
     });
 
     it('grand total count = total number of non-null raw values', () => {
@@ -161,7 +161,7 @@ describe('usePivot — grand total regression', () => {
         const { result } = renderHook(() => usePivot(ROWS, COLS, model, true));
         const gt = grandTotalRow(result.current.pivotRows);
         // sum of per-group counts = 2 + 1 = 3, which also equals total count here.
-        expect(gt['salarycount']).toBe(3);
+        expect(gt['salary\u001fcount']).toBe(3);
     });
 
     it('grand total avg ignores null salary values', () => {
@@ -178,7 +178,7 @@ describe('usePivot — grand total regression', () => {
 
         // null must be excluded: (30000+50000+90000)/3 not /4
         const correct = (30000 + 50000 + 90000) / 3;
-        expect(gt['salaryavg']).toBeCloseTo(correct, 2);
+        expect(gt['salary\u001favg']).toBeCloseTo(correct, 2);
     });
 });
 
@@ -198,5 +198,37 @@ describe('usePivot — with columnFields', () => {
         expect(result.current.colKeys).toEqual(['US']);
         // Total pivot columns = 1 row-field col + 1 value col
         expect(result.current.pivotColumns).toHaveLength(2);
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared aggregation semantics (v2.1.1)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('usePivot — large datasets and shared aggregation semantics', () => {
+    it('computes min / max grand totals over more rows than a spread argument list allows', () => {
+        const rows = Array.from({ length: 200_000 }, (_, i) => ({ id: i, dept: i % 2 ? 'Eng' : 'HR', salary: i }));
+        const model: GridPivotModel = {
+            rowFields: ['dept'],
+            columnFields: [],
+            valueFields: [{ field: 'salary', aggFn: 'min' }, { field: 'salary', aggFn: 'max' }],
+        };
+        const { result } = renderHook(() => usePivot(rows, COLS, model, true));
+        const gt = grandTotalRow(result.current.pivotRows);
+        expect(gt['salary\u001fmin']).toBe(0);
+        expect(gt['salary\u001fmax']).toBe(199_999);
+    });
+
+    it('counts non-null values of any type, matching the footer and row grouping', () => {
+        const rows = [
+            { id: 1, dept: 'Eng', region: 'US' },
+            { id: 2, dept: 'Eng', region: 'EU' },
+            { id: 3, dept: 'Eng', region: null },
+        ];
+        const model: GridPivotModel = { rowFields: ['dept'], columnFields: [], valueFields: [{ field: 'region', aggFn: 'count' }] };
+        const { result } = renderHook(() => usePivot(rows, COLS, model, true));
+        const eng = result.current.pivotRows.find(r => r.dept === 'Eng')!;
+        expect(eng['region\u001fcount']).toBe(2);
+        expect(grandTotalRow(result.current.pivotRows)['region\u001fcount']).toBe(2);
     });
 });
