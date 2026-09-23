@@ -23,6 +23,14 @@ import { getCellValue } from '../values';
 
 /** Row id of the Grand Total row that closes every pivot. */
 export const PIVOT_GRAND_TOTAL_ID = '__pivot_grand_total__';
+/**
+ * Prefix of every pivot data row id. Pivot rows are keyed by their row-field values
+ * (`__pivot_row__:["North","Q1"]`), so their ids never collide with source row ids (a selection
+ * made on the source rows never marks an unrelated pivot row) and stay the same for the same
+ * group when the source data changes.
+ */
+export const PIVOT_ROW_ID_PREFIX = '__pivot_row__:';
+const pivotRowId = (groupKey: string): string => `${PIVOT_ROW_ID_PREFIX}${JSON.stringify(groupKey.split(SEP_COL))}`;
 const GRAND_TOTAL_LABEL = 'Grand Total';
 
 // Joins the values of several column fields into one column key.
@@ -218,11 +226,10 @@ export function computePivot(
     // ── Data rows ────────────────────────────────────────────────────────────
     const entryByRowId = new Map<GridRowId, GroupEntry>();
     let kept: { row: GridRowModel; entry: GroupEntry }[] = [];
-    let index = 0;
-    for (const entry of groups.values()) {
-        const row: GridRowModel = { id: index };
+    for (const [groupKey, entry] of groups) {
+        const row: GridRowModel = { id: pivotRowId(groupKey) };
         rowFields.forEach((f, i) => { row[labelKey(f)] = entry.labels[i]; });
-        row.id = index++;
+        row.id = pivotRowId(groupKey);
         for (const ck of colKeys) {
             const cell = entry.cells.get(ck);
             for (const vf of valueFields) row[cellField(ck, vf)] = aggregate(cell?.get(vf.field), vf.aggFn);

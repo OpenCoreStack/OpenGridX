@@ -42,7 +42,7 @@ describe('pivot mode — Grand Total row', () => {
         const onSelection = vi.fn();
         render(<DataGrid rows={ROWS} columns={COLS} pivotMode pivotModel={MODEL} checkboxSelection onRowSelectionModelChange={onSelection} />);
         fireEvent.click(screen.getByLabelText('Select all rows'));
-        expect(onSelection).toHaveBeenLastCalledWith([0, 1, 2]);
+        expect(onSelection).toHaveBeenLastCalledWith(['__pivot_row__:["Eng"]', '__pivot_row__:["HR"]', '__pivot_row__:["Ops"]']);
     });
 
     it('is not rendered, and the no-rows overlay is, when there are no source rows', () => {

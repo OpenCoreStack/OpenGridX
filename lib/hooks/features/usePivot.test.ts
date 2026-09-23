@@ -428,7 +428,7 @@ describe('usePivot — keys, ids and ordering', () => {
         const rows = [{ id: 'x', salary: 1 }, { id: 'y', salary: 2 }];
         const model: GridPivotModel = { rowFields: ['id'], columnFields: [], valueFields: [{ field: 'salary', aggFn: 'sum' }] };
         const { result } = renderHook(() => usePivot(rows, cols, model, true));
-        expect(result.current.pivotRows.map(r => r.id)).toEqual([0, 1, GT_ID]);
+        expect(result.current.pivotRows.map(r => r.id)).toEqual(['__pivot_row__:["x"]', '__pivot_row__:["y"]', GT_ID]);
         const idCol = result.current.pivotColumns.find(c => c.field === 'id')!;
         const labels = result.current.pivotRows.map(r => idCol.valueGetter!({ row: r, field: 'id', value: r.id }));
         expect(labels).toEqual(['x', 'y', 'Grand Total']);

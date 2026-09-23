@@ -13,6 +13,7 @@ import { getDetailPanelRowIds } from '../../utils/detailPanel';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings } from '../../hooks/core/useGridDevWarnings';
 import { useGridRowSelection } from '../../hooks/core/useGridRowSelection';
+import { useGridLiveRowSelection } from '../../hooks/core/useGridLiveRowSelection';
 import { useGridApiMethods } from '../../hooks/core/useGridApiMethods';
 import { buildGroupedExportRows } from '../../utils/grouping/groupedExportRows';
 import { useGridColumnLookup } from '../../hooks/core/useGridColumnLookup';
@@ -215,7 +216,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         handlePivotModelChange,
         effectivePaginationModel,
         handlePaginationModelChange,
-        selectedRowIds,
+        selectedRowIds: selectionModelRowIds,
         handleRowSelectionModelChange,
         density: effectiveDensity,
     } = controlledState;
@@ -339,7 +340,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // Ctrl/Cmd+C only copies while focus is inside this grid (containerRef is assigned on render).
     const getGridRootElement = useCallback(() => containerRef.current, []);
     const { copySelectedRows } = useGridClipboard({
-        selectedRowIds,
+        selectedRowIds: selectionModelRowIds,
         columns: activeColumns as unknown as GridColDef[],
         getVisibleRows: () => apiRef.current.getVisibleRows(),
         getRowId: getRowIdOf,
@@ -412,6 +413,16 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         if (isRowGrouping) return rowGroupingHandlers.rowMetaMap;
         return EMPTY_ROW_META_MAP;
     }, [isTreeData, treeDataHandlers.rowMetaMap, isRowGrouping, rowGroupingHandlers.rowMetaMap]);
+
+    // The selection without ids of removed rows. Only client-owned rows are pruned: a server page
+    // or a pivot of the rows does not hold every row a selection may name.
+    const selectedRowIds = useGridLiveRowSelection({
+        selectedRowIds: selectionModelRowIds,
+        rowsLookup: state.rows.idRowsLookup,
+        rowMetaMap,
+        enabled: !dataSource && !isPivotActive && paginationMode === 'client' && filterMode === 'client',
+        onSelectionModelChange: handleRowSelectionModelChange,
+    });
 
     // Infinite scroll loads rows as the user scrolls; it has no pages to show or slice.
     const pagination = propPagination && !isRowGrouping && paginationMode !== 'infinite';
