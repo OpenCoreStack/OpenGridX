@@ -141,6 +141,17 @@
   padding-right: 28px;
   cursor: pointer;
 }
+.ogx-filter__value-multiselect {
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.ogx-filter__hidden-note {
+  padding: 6px var(--ogx-spacing-md);
+  border-bottom: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
+  font-family: var(--ogx-font-family);
+  font-size: var(--ogx-font-size-xs);
+  color: var(--ogx-overlay-text, var(--ogx-color-gray-400));
+}
 .ogx-filter__row-clear {
   display: inline-flex;
   align-items: center;

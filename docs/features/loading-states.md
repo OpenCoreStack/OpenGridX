@@ -56,13 +56,13 @@ Add the toolbar and wire a filter model — the toolbar's search bar activates a
 ```
 
 ### Controlled Search
-You can also control the search value externally via the `filterModel`.
+You can also control the search value externally via the `filterModel`. Each entry is one term, and a row matches when every term is found in some visible column (the toolbar box splits typed text on whitespace the same way).
 
 ```tsx
 <DataGrid
   filterModel={{
     items: [],
-    quickFilterValues: ['search term']
+    quickFilterValues: ['john', 'london']
   }}
 />
 ```

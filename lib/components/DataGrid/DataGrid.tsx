@@ -9,7 +9,9 @@ import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
 import { useGridScrollSync } from '../../hooks/core/useGridScrollSync';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings } from '../../hooks/core/useGridDevWarnings';
+import { useGridColumnLookup } from '../../hooks/core/useGridColumnLookup';
 import { scrollRowIntoView } from '../../utils/scroll';
+import { upsertSortItem } from '../../utils/sorting';
 import { GridAggregationFooter } from './GridAggregationFooter';
 import { GridEmptyState } from './GridEmptyState';
 import { GridErrorOverlay } from './GridErrorOverlay';
@@ -244,6 +246,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     field: '__group__',
                     hideable: false,
                     sortable: false,
+                    filterable: false,
                     pinnable: false,
                     exportable: false,
                 } as unknown as GridColDef<R>,
@@ -251,6 +254,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
               ]
             : baseColumns
     ), [groupingColDef, isRowGroupingActive, baseColumns]);
+
+    const columnLookup = useGridColumnLookup(activeColumns, columnVisibilityModel);
 
     // getRows-provided totals, dropped as soon as the aggregation model they were computed for changes.
     const [serverAggregationResults, setServerAggregationResults] = useServerAggregationResults(aggregationModel);
@@ -355,7 +360,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         filterModel,
 
         sortModel,
-        onRowExpansionChange: handleNodeExpansion
+        onRowExpansionChange: handleNodeExpansion,
+        columnLookup,
     });
 
     useEffect(() => {
@@ -371,7 +377,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         defaultGroupingExpansionDepth,
         filterModel,
         sortModel,
-        getAggregationPosition
+        getAggregationPosition,
+        columnLookup,
     });
 
     const editingHandlers = useGridEditing({
@@ -536,6 +543,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         pinnedRows,
         isLoading: state.dataSource.loading,
         pageSize: effectivePaginationModel.pageSize,
+        columnLookup,
     });
     const filteredRows        = rowPipeline.filteredRows        as R[];
     const dataRows            = rowPipeline.dataRows            as R[];
@@ -758,10 +766,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     }, [isSortControlled, onSortModelChange, setInternalSortModel]);
 
     const handleSortAdd = useCallback((field: string, direction: GridSortDirection) => {
-        const existing = sortModel.filter(item => item.field !== field);
-        const newSortModel: GridSortItem[] = direction
-            ? [...existing, { field, sort: direction }]
-            : existing;
+        const newSortModel = upsertSortItem(sortModel, field, direction);
 
         if (!isSortControlled) {
             setInternalSortModel(newSortModel);

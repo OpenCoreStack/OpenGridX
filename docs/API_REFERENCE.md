@@ -219,8 +219,8 @@ Passed to `renderQuickFilter`.
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `value` | `string` | Current search string. |
-| `onChange` | `(value: string) => void` | Call with the updated string when the input changes. |
+| `value` | `string` | Current search string: `filterModel.quickFilterValues` joined with spaces. |
+| `onChange` | `(value: string) => void` | Call with the updated string when the input changes. The toolbar splits it on whitespace into `quickFilterValues` terms. |
 
 ---
 
@@ -295,9 +295,9 @@ Defines the behavior and appearance of a single column.
 | Property | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `type` | `'string' \| 'number' \| 'date' \| 'boolean' \| 'singleSelect' \| 'image'` | `'string'` | Data type — determines default filter operators and cell formatting. |
-| `valueOptions` | `Array<string \| number \| { value: unknown; label: string }>` | — | Allowed values for `type: 'singleSelect'` — used in the filter dropdown and edit cell. |
-| `valueGetter` | `(params: GridValueGetterParams) => unknown` | — | Derive a computed value from the row object. Runs before `valueFormatter` and `renderCell`. |
-| `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format the value into a display string (e.g. currency, dates). Does not affect editing or sorting. |
+| `valueOptions` | `Array<string \| number \| { value: unknown; label: string }>` | — | Allowed values for `type: 'singleSelect'` — the filter panel offers them as a (multi-)select, and the edit cell uses them. |
+| `valueGetter` | `(params: GridValueGetterParams) => unknown` | — | Derive a computed value from the row object. Runs before `valueFormatter` and `renderCell`. Client-side sorting, column filters and the quick filter use this value. |
+| `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format the value into a display string (e.g. currency, dates). Does not affect editing, sorting or column filters; the quick filter also searches the formatted text. |
 
 #### Rendering
 
@@ -332,7 +332,7 @@ Defines the behavior and appearance of a single column.
 | Property | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `sortable` | `boolean` | `true` | Enable/disable sorting for this column. |
-| `filterable` | `boolean` | `true` | Enable/disable filtering for this column. |
+| `filterable` | `boolean` | `true` | Enable/disable filtering for this column. `false` also removes it from the quick-filter search. |
 | `resizable` | `boolean` | `true` | Allow the user to drag-resize this column. |
 | `hideable` | `boolean` | `true` | Allow the user to hide this column via the panel. |
 | `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. |
@@ -847,7 +847,7 @@ interface GridFilterModel {
 | :--- | :--- | :--- | :--- |
 | `items` | `(GridFilterItem \| GridFilterGroup)[]` | `[]` | Root-level filter conditions or nested groups. |
 | `logicOperator` | `'and' \| 'or'` | `'and'` | How to combine the root `items`. |
-| `quickFilterValues` | `string[]` | `[]` | Each string must match at least one field in the row (all strings must match). Applied before `items`. |
+| `quickFilterValues` | `string[]` | `[]` | Search terms. Every term must be found (case-insensitive substring) in at least one visible, filterable column, read through `valueGetter` and, if set, `valueFormatter`. The row `id` and non-column fields are not searched. Blank terms are ignored. Applied together with `items`. The toolbar search box splits the typed text on whitespace. |
 
 ### `GridFilterItem`
 
@@ -858,7 +858,7 @@ A single column filter condition.
 | `id` | `string \| number` | No | Optional stable identifier for this item (useful for controlled updates). |
 | `field` | `string` | Yes | The column field to filter on. |
 | `operator` | `GridFilterOperator` | Yes | The comparison operator to apply. |
-| `value` | `unknown` | No | The value to compare against. Not required for `isEmpty` / `isNotEmpty`. |
+| `value` | `unknown` | No | The value to compare against. Not required for `isEmpty` / `isNotEmpty`. For every other operator, an empty value (`undefined`, `null`, a blank string or an empty array) means the item does not filter. |
 
 ### `GridFilterGroup`
 
@@ -876,13 +876,25 @@ A nested group of filter conditions combined with a logical operator. Groups can
 type GridFilterOperator =
   | 'contains' | 'equals' | 'startsWith' | 'endsWith'
   | 'isEmpty'  | 'isNotEmpty' | 'isAnyOf'
-  | '>'  | '>=' | '<' | '<=' | '!='
-  | 'is' | 'not';
+  | '=' | '>'  | '>=' | '<' | '<=' | '!='
+  | 'is' | 'not'
+  | 'after' | 'onOrAfter' | 'before' | 'onOrBefore';
 ```
+
+| Operator | Matches when the cell… |
+| :--- | :--- |
+| `contains` / `startsWith` / `endsWith` / `equals` | contains / starts with / ends with / equals the value (case-insensitive text). |
+| `=` `!=` `>` `>=` `<` `<=` | compares numerically with the value (numeric strings accepted). A blank cell never matches, except for `!=`, which it always matches. |
+| `is` / `not` | equals / does not equal the value (case-insensitive). On `type: 'date'` columns and `Date` cells: the same / a different local calendar day. |
+| `after` / `onOrAfter` / `before` / `onOrBefore` | is a later / same-or-later / earlier / same-or-earlier local calendar day. |
+| `isAnyOf` | equals any value in the array (a single value counts as a one-element array). |
+| `isEmpty` / `isNotEmpty` | is / is not `null`, `undefined` or blank. No value needed. |
+
+Dates can be `Date` objects, epoch milliseconds or date strings; a `'YYYY-MM-DD'` string is read as a local date. Cells are read through the column's `valueGetter`.
 
 ### Default Operators per Column Type
 
-The filter panel shows only the operators relevant to each column's `type`. These are also the operators used when the grid applies client-side filtering.
+The filter panel shows only the operators relevant to each column's `type`; an operator set programmatically that the type does not list is still shown and applied. Every operator works in a programmatic `filterModel` on any column.
 
 | Column `type` | Default operator | Available operators |
 | :--- | :--- | :--- |

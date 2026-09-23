@@ -3,7 +3,7 @@
 OpenGridX provides a robust filtering system with support for both client-side and server-side operations.
 
 ## 📑 Overview
-- **Quick Filter**: Search across all columns simultaneously.
+- **Quick Filter**: Search across all visible columns simultaneously.
 - **Column Filters**: Specific operators for different data types (string, number, date, etc.).
 - **Multi-Filter Groups**: Support for `AND`/`OR` logic operators.
 - **Server-Side Filtering**: Offload complex queries to your backend.
@@ -62,12 +62,35 @@ interface GridFilterItem {
 ```
 
 ### Supported Operators
+
+The filter panel offers these operators per column `type` (the first one is the default):
+
 | Type | Operators |
 | :--- | :--- |
-| **String** | `contains`, `equals`, `startsWith`, `endsWith`, `isEmpty`, `isNotEmpty`, `isAnyOf` |
-| **Number** | `equals`, `!=`, `>`, `>=`, `<`, `<=`, `isEmpty`, `isNotEmpty` |
-| **Date** | `is`, `not`, `isEmpty`, `isNotEmpty` |
+| **String** (default) | `contains`, `equals`, `startsWith`, `endsWith`, `isEmpty`, `isNotEmpty` |
+| **Number** | `=`, `!=`, `>`, `>=`, `<`, `<=`, `isEmpty`, `isNotEmpty` |
+| **Date** | `is`, `not`, `after`, `onOrAfter`, `before`, `onOrBefore`, `isEmpty`, `isNotEmpty` |
 | **Boolean** | `is` |
+| **singleSelect** | `isAnyOf`, `is`, `not` |
+
+Every operator in `GridFilterOperator` also works in a programmatic `filterModel` on any column; the panel shows such an operator as it is.
+
+### How values are matched
+
+- **Empty values do not filter.** An item whose `value` is `undefined`, `null`, a blank string or an empty array is ignored, so picking an operator before typing (or clearing the input) leaves the grid unfiltered. `isEmpty` / `isNotEmpty` need no value.
+- **Computed columns.** Cells are read through the column's `valueGetter`, so a computed column filters by the value it displays.
+- **Text operators** (`contains`, `equals`, `startsWith`, `endsWith`, `is`, `not`) compare case-insensitively.
+- **Number operators** compare numerically and accept numeric strings. A blank cell is empty, not `0`: it never matches `=`, `>`, `<` … and always matches `!=`.
+- **Date operators** compare local calendar days. Cells and values can be `Date` objects, epoch milliseconds or date strings; a `'YYYY-MM-DD'` string is read as a local date (not UTC midnight). `not` matches empty cells; the other date operators never do.
+- **`isAnyOf`** takes an array of allowed values. A single value is treated as a one-element list; an empty array does not filter.
+
+### Quick Filter
+
+`quickFilterValues` is a list of terms. A row matches when **every** term is found (case-insensitive substring) in at least one searched column.
+
+- Only **visible** columns with `filterable !== false` are searched. The row `id` and fields that are not columns are not searched.
+- Each column is searched by its value after `valueGetter` and, when the column has a `valueFormatter`, by the formatted text as well. `Date` values are searched as `YYYY-MM-DD`; objects are skipped.
+- The toolbar search box splits what the user types on whitespace, so `john london` becomes `['john', 'london']` and matches a row with first name John and city London.
 
 ---
 
@@ -82,4 +105,4 @@ The filter panel is accessible through the built-in `GridToolbar`. To use your o
 />
 ```
 
-The `FilterPanel` component is also exported from `@opencorestack/opengridx` if you need to embed it inside a custom layout.
+The `FilterPanel` component is also exported from `@opencorestack/opengridx` if you need to embed it inside a custom layout. See [`<FilterPanel />`](../components/filter-panel.md) for how it edits the model.

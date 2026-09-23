@@ -34,9 +34,19 @@ OpenGridX supports two modes of multi-column sorting:
 
 Each active sort column shows a numbered priority badge (`1`, `2`, `3`…) next to its arrow.
 
-- Clicking (or shift-clicking) an already-sorted column cycles its direction: `asc → desc → removed`.
+- Clicking (or shift-clicking) an already-sorted column cycles its direction: `asc → desc → removed`. The column keeps its priority while its direction changes; it is not moved to the end of the sort model.
 - A plain click *without* `multiSort` and without Shift always resets to a single-key sort on that column.
+- The column menu acts on that column only: **Unsort** removes just that key, and **Sort Ascending / Descending** on a column that is already sorted changes its direction in place. On a column that is not sorted yet it appends with `multiSort` and replaces the model without it, like a plain click.
 - Set `sortable: false` on a column to exclude it entirely.
+
+### How values are compared (client-side)
+
+- Cells are read through the column's `valueGetter`, so computed columns sort by the value they display.
+- `type: 'number'` columns compare numerically even when the data holds numeric strings (`'9'` sorts before `'10'`). `type: 'date'` columns parse date strings (`'YYYY-MM-DD'` is read as a local date) and compare chronologically.
+- Strings use language-aware ordering (`Intl.Collator`): case is ignored, accented letters sort next to their base letter (`'Émile'` between `'Adam'` and `'Zoe'`), and digit runs compare by value (`'item9'` before `'item10'`).
+- `null`, `undefined`, `NaN`, an Invalid Date and, in number / date columns, values that cannot be parsed are "empty": they sort last in ascending order and first in descending order.
+- A column that mixes kinds of value (numbers and strings, say) is ordered by kind first — numbers, dates, booleans, strings — so the order does not depend on the input order.
+- Ties keep the rows' original order.
 
 ```tsx
 // Controlled multi-sort — set programmatically or drive from UI with multiSort:
