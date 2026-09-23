@@ -7,6 +7,7 @@ The `ColumnVisibilityPanel` provides an interactive list for users to toggle the
 - **Searchable Interface**: Includes a quick search to find specific columns in grids with many fields.
 - **Toggle State**: Synchronizes instantly with the grid's `columnVisibilityModel`.
 - **Exclusion Logic**: Automatically hides special internal columns (e.g., checkboxes) and columns marked with `hideable: false`.
+- **Accessible names**: Each checkbox is labelled with its column's `headerName` (or `field`), and the footer checkbox with "Show/Hide All"; clicking the name toggles the column.
 
 ---
 
