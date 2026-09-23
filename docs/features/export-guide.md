@@ -414,6 +414,10 @@ await exportToExcelAdvanced(rows, columns, {
 });
 ```
 
+### Columns without a `valueFormatter`
+
+CSV, Excel (HTML), print and PDF write the text the grid shows. Without a `valueFormatter`, that is the column type's default (v3.0): a `date` column writes the local calendar date, `boolean` writes Yes / No, and `singleSelect` writes the `valueOptions` label. JSON and the advanced XLSX export keep raw values.
+
 ### Respect `valueFormatter` for styled columns
 
 The advanced export keeps **raw values** for typed columns (`number`, `date`, `boolean`) so Excel can format them natively with `numFmt`. For `string` columns, `valueFormatter` is applied before writing.

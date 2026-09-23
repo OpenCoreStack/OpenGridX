@@ -107,7 +107,7 @@ The generated value columns are named `<field>␟<aggFn>` (for example `'salary\
 - **Row-label columns** keep the source column's `valueFormatter`, `renderCell`, `type`, alignment and `valueOptions` (the formatter and renderer receive a source row of that group). They always show, even if `columnVisibilityModel` hides the source column of the same field, and are `hideable: false`.
 - **Value columns** are formatted like every other aggregate (see [Formatting Totals](#-formatting-totals)).
 - **Column keys** are ordered by value: numbers and dates numerically, strings naturally (`'9'` before `'10'`), blanks last. Column-field header labels use the source column's `valueFormatter` (a boolean column formatted as Yes / No reads `Active: Yes — Salary (sum)`).
-- **Column rules.** A row or column field on a `groupable: false` column is skipped (as in row grouping), and a value field whose function the column's `availableAggregationFunctions` does not allow is skipped. Listing the same field and function twice produces one column. The toolbar's pivot panel offers only what these rules allow and never offers an `aggregable: false` column as a value.
+- **Column rules.** A row or column field on a `groupable: false` column is skipped (as in row grouping), and a value field on an `aggregable: false` column, or whose function the column's `availableAggregationFunctions` does not allow, is skipped. Listing the same field and function twice produces one column. The toolbar's pivot panel offers only what these rules allow and never offers an `aggregable: false` column as a value.
 - **Column order.** The generated columns keep an order of their own: reordering them (in the header or the Columns panel) does not change your column order, and a controlled `columnOrder` (which names source columns) does not apply to them. When pivot mode is turned off, the previous column order is back.
 
 ### Not combined with pivot mode
@@ -130,7 +130,7 @@ Built-in functions available (the same functions drive the footer, group rows, p
 
 `sum`, `avg`, `min` and `max` use numbers, numeric strings and dates. Empty values (`null`, `undefined`, and strings that are empty or only whitespace), booleans and other values are ignored, so a blank cell never counts as `0`. `count` and `unique` ignore empty values too. `min` and `max` of dates return the date itself.
 
-The toolbar's Summaries panel offers these for each aggregable column, or only the ones listed in the column's `availableAggregationFunctions`.
+The toolbar's Summaries panel offers these for each aggregable column, or only the ones listed in the column's `availableAggregationFunctions`. The same rules bind `aggregationModel` itself: an entry for an `aggregable: false` column, or with a function the column does not allow, is ignored by the footer, group rows and exports.
 
 ---
 

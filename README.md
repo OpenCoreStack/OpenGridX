@@ -136,7 +136,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `maxWidth` | `number` | — | Maximum width in px (layout and resizing). |
 | `align` | `'left' \| 'center' \| 'right'` | `'left'` | Cell content alignment. |
 | `headerAlign` | `'left' \| 'center' \| 'right'` | `'left'` | Header content alignment. |
-| `type` | `'string' \| 'number' \| 'date' \| 'boolean' \| 'singleSelect' \| 'image'` | `'string'` | Drives filter operators and default formatting. |
+| `type` | `'string' \| 'number' \| 'date' \| 'boolean' \| 'singleSelect' \| 'image'` | `'string'` | Drives filter operators and, without a `valueFormatter`, the cell text: local date, Yes / No, `singleSelect` label, `<img>` for `image`. |
 | `valueOptions` | `Array<string \| number \| { value, label }>` | — | Options list for `type: 'singleSelect'`. |
 | `editable` | `boolean` | `false` | Enables inline cell editing. Pair with `processRowUpdate`. |
 | `valueGetter` | `(params) => unknown` | — | Derive a computed cell value from the row. Sorting, filtering, quick search, aggregation, copy and export use it. |

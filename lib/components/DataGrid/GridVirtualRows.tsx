@@ -1,5 +1,6 @@
 import React from 'react';
 import { Row } from '../Row/Row';
+import { DetailPanelContent } from '../DetailPanel/DetailPanelContent';
 import { SkeletonRow } from '../SkeletonRow';
 import { resolveDetailPanelHeight } from '../../utils/detailPanel';
 import type {
@@ -182,7 +183,7 @@ export function GridVirtualRows<R extends GridRowModel>({
                             pinnedColumns={pinnedColumns}
                             hasDetailPanel={hasDetailPanel}
                             isDetailPanelExpanded={expandedRowIds.has(id)}
-                            detailPanelContent={expandedRowIds.has(id) && getDetailPanelContent ? getDetailPanelContent({ row, id: id, rowIndex: actualIndex }) : null}
+                            detailPanelContent={expandedRowIds.has(id) && getDetailPanelContent ? <DetailPanelContent<R> getContent={getDetailPanelContent} params={{ row, id, rowIndex: actualIndex }} /> : null}
                             detailPanelHeight={expandedRowIds.has(id) ? resolveDetailPanelHeight(getDetailPanelHeight?.({ row, id: id, rowIndex: actualIndex })) : undefined}
                             onDetailPanelHeightChange={onDetailPanelHeightChange}
                             onDetailPanelToggle={onDetailPanelToggle}

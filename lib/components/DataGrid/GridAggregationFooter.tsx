@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatAggregateForColumn } from '../../utils/aggregation';
+import { formatAggregateForColumn, isAggregationAllowed } from '../../utils/aggregation';
 import type { GridColDef, GridAggregationModel, GridAggregationResult, GridColumnPinning } from '../../types';
 import { calculatePinnedPositions, getPinnedEdgeFields, isColumnPinned } from '../../utils/pinning';
 import { getRenderedColumnWidth } from '../../utils/columnWidth';
@@ -92,7 +92,10 @@ export function GridAggregationFooter({
                     return <div key={col.field} style={{ width, minWidth: width, flexShrink: 0 }} aria-hidden="true" />;
                 }
 
-                const fnName = (aggregationModel as Record<string, string>)[col.field];
+                // A model entry the column forbids (aggregable: false, or a function outside
+                // availableAggregationFunctions) shows nothing, as the engine computes nothing for it.
+                const modelFn = (aggregationModel as Record<string, string>)[col.field];
+                const fnName = modelFn && isAggregationAllowed(col, modelFn) ? modelFn : undefined;
                 const rawValue = aggregationResult[col.field];
                 const colWidth = getRenderedColumnWidth(col, columnWidths, 120);
 

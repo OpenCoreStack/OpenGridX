@@ -88,7 +88,7 @@ Hierarchy information is never written onto your row objects: read it from `para
 
 ## 🎨 Customizing the Group Column
 
-When `rowGroupingModel` is active, pass `groupingColDef` to configure a dedicated `__group__` column that is prepended at position 0 and auto-pinned left, separate from your data columns. Its type is `GridColDef<R>`, so TypeScript requires a `field`; the grid replaces it with `'__group__'`. It also forces `hideable`, `sortable`, `filterable`, `pinnable` and `exportable` to `false`. Defaults: `headerName: 'Group'`, `width: 220`.
+When `rowGroupingModel` or `treeData` is active, pass `groupingColDef` to configure a dedicated `__group__` column that is prepended at position 0 and auto-pinned left, separate from your data columns. Its type is `GridColDef<R>`, so TypeScript requires a `field`; the grid always replaces it with `'__group__'`. It also forces `hideable`, `sortable`, `filterable`, `pinnable` and `exportable` to `false`. Defaults: `headerName: 'Group'`, `width: 220`. With tree data (v3.0) the column shows the last segment of each row's path, and a `valueGetter` in `groupingColDef` can show something else (for example the whole path).
 
 ```tsx
 <DataGrid

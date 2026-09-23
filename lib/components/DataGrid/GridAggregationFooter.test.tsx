@@ -104,3 +104,18 @@ describe('GridAggregationFooter values', () => {
         expect(container.querySelector('.ogx__aggregation-value')?.textContent).toBe('15');
     });
 });
+
+describe('GridAggregationFooter column rules', () => {
+    it('shows no total for an aggregable: false column named in the model', () => {
+        const cols: GridColDef[] = [
+            { field: 'name', width: 150 },
+            { field: 'id', width: 100, type: 'number', aggregable: false },
+            { field: 'age', width: 100, type: 'number' },
+        ];
+        const rows: GridRowModel[] = [{ id: 5, name: 'a', age: 1 }, { id: 7, name: 'b', age: 2 }];
+        const { container } = render(<DataGrid rows={rows} columns={cols} aggregationModel={{ id: 'sum', age: 'sum' }} />);
+        const cells = footerCells(container);
+        expect(cells[1].textContent).toBe('');
+        expect(cells[2].textContent).toBe('sum3');
+    });
+});

@@ -79,4 +79,9 @@ describe('computePivot options', () => {
         // Eng (1000, 2000) and HR (3500) are kept: 6500 / 3, not the average of the averages 1500 and 3500
         expect(pivotRows.find(r => r.id === PIVOT_GRAND_TOTAL_ID)!['salary\u001favg']).toBeCloseTo(6500 / 3, 6);
     });
+
+    it('skips value fields on an aggregable: false column', () => {
+        const cols: GridColDef[] = COLS.map(c => (c.field === 'salary' ? { ...c, aggregable: false } : c));
+        expect(computePivot(ROWS, cols, MODEL).pivotRows).toEqual([]);
+    });
 });

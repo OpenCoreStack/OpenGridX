@@ -5,6 +5,7 @@ import type { CellColSpanInfo } from '../../hooks/features/useGridSpanning';
 
 import { GridEditInputCell } from './GridEditInputCell';
 import { CellErrorBoundary } from './CellErrorBoundary';
+import { formatValueByType } from '../../utils/values';
 
 export interface CellProps<R extends GridRowModel = GridRowModel> {
     onCellClick?: (params: GridCellParams<R>) => void;
@@ -106,11 +107,8 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
             }
         }
 
-        if (value === null || value === undefined) {
-            return { formattedValue: '' };
-        }
-
-        return { formattedValue: String(value) };
+        // Without a formatter the column type decides: locale date, Yes / No, singleSelect label.
+        return { formattedValue: formatValueByType(value, colDef) };
     }, [value, row, colDef, isSyntheticRow]);
 
     const resolvedCellClassName = React.useMemo(() => {
@@ -325,6 +323,8 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                             rowMeta,
                         })}
                     />
+                ) : colDef.type === 'image' && typeof value === 'string' && value !== '' ? (
+                    <img className="ogx__cell-image" src={value} alt={colDef.headerName ?? colDef.field} loading="lazy" />
                 ) : (
                     formattedValue
                 )}

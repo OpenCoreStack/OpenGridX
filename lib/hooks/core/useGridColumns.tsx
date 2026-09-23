@@ -253,10 +253,10 @@ export function useGridColumns<R extends GridRowModel>(
         if (!isHierarchyEnabled) return undefined;
         const orderIndex = new Map(effectiveColumnOrder.map((field, idx) => [field, idx]));
         const rank = (col: GridColDef<R>) => orderIndex.get(col.field) ?? activeColumns.indexOf(col);
-        const ordered = disableColumnReorder ? activeColumns : [...activeColumns].sort((a, b) => rank(a) - rank(b));
+        const ordered = [...activeColumns].sort((a, b) => rank(a) - rank(b));
         const onScreen = inPinnedRenderOrder(ordered.filter(col => columnVisibilityModel[col.field] !== false), pinnedColumns);
         return (onScreen[0] ?? activeColumns[0])?.field;
-    }, [isHierarchyEnabled, effectiveColumnOrder, activeColumns, disableColumnReorder, columnVisibilityModel, pinnedColumns]);
+    }, [isHierarchyEnabled, effectiveColumnOrder, activeColumns, columnVisibilityModel, pinnedColumns]);
 
     // ── Effective columns (hierarchy cell renderer injection) ─────────────────
     const effectiveColumns = useMemo<GridColDef<R>[]>(() => {
@@ -336,16 +336,16 @@ export function useGridColumns<R extends GridRowModel>(
     }, [activeColumns, setColumns]);
 
     // ── Ordered / visible columns ─────────────────────────────────────────────
+    // A controlled or initial column order always applies. disableColumnReorder only removes the
+    // user's ways to change it (header drag, Columns-panel reorder).
     const orderedColumns = useMemo<GridColDef<R>[]>(() => {
-        if (disableColumnReorder) return effectiveColumns;
-
         const orderMap = new Map(effectiveColumnOrder.map((field, idx) => [field, idx]));
         return [...effectiveColumns].sort((a, b) => {
             const ai = orderMap.get(a.field) ?? effectiveColumns.indexOf(a);
             const bi = orderMap.get(b.field) ?? effectiveColumns.indexOf(b);
             return ai - bi;
         });
-    }, [effectiveColumns, effectiveColumnOrder, disableColumnReorder]);
+    }, [effectiveColumns, effectiveColumnOrder]);
 
     const visibleOrderedColumns = useMemo<GridColDef<R>[]>(
         () => orderedColumns.filter(isColumnShown),

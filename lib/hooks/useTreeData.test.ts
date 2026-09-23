@@ -278,11 +278,14 @@ describe('useTreeData — build cost', () => {
             expect(result.current.getNode('root')?.children).toHaveLength(n);
             return elapsed;
         };
+        // Best of three per size: a load spike on the shared machine can only slow a run down, so
+        // the minimum is the closest to the real cost.
+        const best = (n: number) => Math.min(build(n), build(n), build(n));
         build(5_000); // warm-up
-        const small = build(20_000);
-        const large = build(80_000);
+        const small = best(20_000);
+        const large = best(80_000);
         // 4x the rows: about 4x the time when linear, about 16x when quadratic (the old build took
-        // ~14 s for 100k children). A ratio does not depend on how loaded the machine is.
+        // ~14 s for 100k children).
         expect(large / small).toBeLessThan(9);
     }, 120_000);
 });

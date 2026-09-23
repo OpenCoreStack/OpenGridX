@@ -778,7 +778,7 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
    */
   disableClipboardCopy?: boolean;
 
-  /** If true, a loading shimmer/skeleton is displayed. */
+  /** Loading state. With no rows the body shows skeleton rows (or `slots.loadingOverlay`); with rows, they stay and a progress bar (or `slots.loadingOverlay`) is shown over them. */
   loading?: boolean;
   /** Visual density of the grid. */
   density?: 'compact' | 'standard' | 'comfortable';
@@ -859,7 +859,7 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
    * function identity stable (module scope or useCallback); a new function rebuilds the tree.
    */
   getTreeDataPath?: (row: R) => string[];
-  /** Optional override for the grouping column. */
+  /** Adds a dedicated grouping column (`field: '__group__'`, pinned left) under row grouping or tree data, configured by these fields. */
   groupingColDef?: GridColDef<R>;
   /** Initial expansion depth for Tree Data. */
   defaultGroupingExpansionDepth?: number;

@@ -140,3 +140,34 @@ describe('DataGrid list view rows', () => {
         expect(names()[0]).toBe('r11');
     });
 });
+
+describe('DataGrid list view tree data', () => {
+    const TREE = [
+        { id: 1, name: 'parent', path: ['parent'] },
+        { id: 2, name: 'child', path: ['parent', 'child'] },
+    ];
+    const LIST_COL = { field: 'name', renderCell: (p: GridRenderCellParams) => <span>{String(p.row.name)}</span> };
+
+    it('expands and collapses a parent with its chevron, without firing onRowClick', () => {
+        const onRowClick = vi.fn();
+        const { container } = render(
+            <DataGrid rows={TREE} columns={COLS} listView listViewColumn={LIST_COL} onRowClick={onRowClick}
+                treeData getTreeDataPath={(r) => r.path as string[]} />
+        );
+        const rows = () => container.querySelectorAll('.ogx-list-view__row');
+        expect(rows()).toHaveLength(1);
+        fireEvent.click(screen.getByLabelText('Expand row'));
+        expect(rows()).toHaveLength(2);
+        // The leaf has no chevron, only the indentation slot
+        expect(rows()[1].querySelector('.ogx-list-view__expand .ogx-expand-icon')).toBeNull();
+        fireEvent.click(screen.getByLabelText('Collapse row'));
+        expect(rows()).toHaveLength(1);
+        expect(onRowClick).not.toHaveBeenCalled();
+        expect(screen.getByLabelText('Expand row').getAttribute('tabindex')).toBe('-1');
+    });
+
+    it('adds no expand column to a flat list', () => {
+        const { container } = render(<DataGrid rows={TREE} columns={COLS} listView listViewColumn={LIST_COL} />);
+        expect(container.querySelector('.ogx-list-view__expand')).toBeNull();
+    });
+});

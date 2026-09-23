@@ -14,6 +14,7 @@ import type {
 import {
     AGGREGATION_FUNCTIONS,
     formatAggregateForColumn,
+    isAggregationAllowed,
     isEmptyAggregateValue,
 } from '../aggregation';
 import { createRowFilter } from '../filtering';
@@ -149,8 +150,8 @@ interface ColumnKeyInfo {
  * `valueGetter`, aggregated with the shared `lib/utils/aggregation` functions, and formatted with
  * `formatAggregateForColumn` (the source column's `valueFormatter` for sum / avg / min / max, with the
  * pivot row as its `row`, as for group rows and exports). Row and column fields on a
- * `groupable: false` column, and value fields whose function the column's
- * `availableAggregationFunctions` does not allow, are skipped.
+ * `groupable: false` column, and value fields on an `aggregable: false` column or whose function
+ * the column's `availableAggregationFunctions` does not allow, are skipped.
  */
 export function computePivot(
     rows: GridRowModel[],
@@ -165,8 +166,7 @@ export function computePivot(
 
     const seenValueFields = new Set<string>();
     const valueFields: GridPivotValueField[] = model.valueFields.filter((vf) => {
-        const allowed = colDefMap.get(vf.field)?.availableAggregationFunctions;
-        if (allowed && !allowed.includes(vf.aggFn)) return false;
+        if (!isAggregationAllowed(colDefMap.get(vf.field), vf.aggFn)) return false;
         const id = `${vf.field}${PIVOT_FIELD_SEPARATOR}${vf.aggFn}`;
         if (seenValueFields.has(id)) return false;
         seenValueFields.add(id);

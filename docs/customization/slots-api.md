@@ -58,6 +58,8 @@ function CustomToolbar(props: Record<string, unknown>) {
 <DataGrid rows={rows} columns={columns} slots={{ toolbar: CustomToolbar }} />
 ```
 
+`toolbar` accepts any React component type: function, class, `React.memo`, `forwardRef` or `lazy`. A plain function toolbar may be defined inline inside your own component: the grid keys it on its source code, so it keeps its state (open panels, typed search) when your component re-renders and remounts only when you pass a toolbar with different code. A class, memo or forwardRef toolbar is rendered as a normal element, so define it outside render to keep its identity stable.
+
 ### 2. `pagination`
 Replace the default pagination component. It is rendered only while pagination is in effect (`pagination` set, no row grouping, `paginationMode` not `"infinite"`), is not rendered when a `footer` slot is set, and is used by list view too.
 
