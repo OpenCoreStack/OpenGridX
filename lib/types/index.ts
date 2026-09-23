@@ -348,7 +348,9 @@ export interface PdfExportOptions {
   orientation?: 'portrait' | 'landscape';
 
   /**
-   * If provided, only rows whose id is in this array are exported.
+   * If provided, only rows whose id is in this array are exported. A non-empty selection takes
+   * precedence over `groupedRows` (the selected rows are exported flat), and the footer totals
+   * are recomputed over the selected rows.
    */
   selectedRows?: (string | number)[];
 
@@ -389,10 +391,29 @@ export interface PdfExportOptions {
   fontSize?: number;
 
   /**
+   * A TrueType font for the whole document. The built-in Helvetica font only covers Latin-1 and
+   * WinAnsi punctuation (é, ü, €, “ ”, •). Without this option other characters (₹, Greek,
+   * Cyrillic, CJK, Devanagari, U+202F used by some locales as a thousands separator) are
+   * replaced with `?` (spaces and minus signs with their ASCII forms) and a warning is logged.
+   * `data` is the `.ttf` file as a base64 string; `boldData` is an optional bold face for the
+   * title, header and totals (the regular face is used when omitted). jsPDF does not shape
+   * complex scripts, so Devanagari or Arabic ligatures may not join.
+   * @since v3.0
+   */
+  font?: {
+    /** Font family name, e.g. 'NotoSans'. */
+    name: string;
+    /** Base64-encoded .ttf file. */
+    data: string;
+    /** Base64-encoded bold .ttf file. Default: `data`. */
+    boldData?: string;
+  };
+
+  /**
    * Pre-built grouped export rows from `apiRef.current.getGroupedExportRows()`.
    * When provided, the PDF table reflects the grouping structure (group headers,
    * leaf rows, per-group subtotals, grand total) instead of a flat row list.
-   * Has no effect when the grid has no active `rowGroupingModel`.
+   * Has no effect when the grid has no active `rowGroupingModel`, or when `selectedRows` is non-empty.
    */
   groupedRows?: GridGroupedExportRow[];
 }

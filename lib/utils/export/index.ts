@@ -1,18 +1,72 @@
 
 import type { GridColDef, GridRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
-import { formatAggregationValue } from '../../hooks/features/useAggregation';
 import { groupHeaderLabel } from './groupLabel';
+import {
+    aggregationForExport,
+    escapeHTML,
+    formatExportAggregate,
+    formatExportValue,
+    getExportColumns,
+    getRawExportValue,
+    hasSelection,
+    isNonTextValue,
+    neutralizeFormula,
+    pickExportedAggregates,
+    rowsForExport,
+    sanitizeSheetName,
+    shouldExportGrouped,
+    summaryLabelText,
+} from './exportShared';
 
 export interface CsvExportOptions {
     fileName?: string;
     includeHeaders?: boolean;
     delimiter?: string;
+    /**
+     * Export only these row IDs. A non-empty selection takes precedence over `groupedRows` (the
+     * selected rows are exported flat), and the totals row is recomputed over the selected rows.
+     */
     selectedRows?: (string | number)[];
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     /** When provided, emits group headers, leaf rows, subtotals, and a grand total instead of a flat row list. */
     groupedRows?: GridGroupedExportRow[];
+    /**
+     * Prefix text cells that start with `=`, `+`, `-`, `@`, tab or carriage return with `'`, so
+     * spreadsheet apps show them as text instead of running them as formulas (CSV injection).
+     * Plain signed numbers are left alone. Default: `true`
+     * @since v3.0
+     */
+    escapeFormulas?: boolean;
+    /**
+     * Start the file with a UTF-8 byte-order mark, so Excel reads non-ASCII text (é, ü, ₹, 中文)
+     * correctly. Default: `true`
+     * @since v3.0
+     */
+    bom?: boolean;
 }
+
+/** One exported cell of a data row: its text, and whether that text was formatted from a non-text value. */
+interface ExportCell {
+    text: string;
+    raw: unknown;
+}
+
+function exportCell<R extends GridRowModel>(row: R, col: GridColDef<R>): ExportCell {
+    const raw = getRawExportValue(row, col);
+    return { text: formatExportValue(row, col, raw), raw };
+}
+
+/** Aggregate text per export column for one subtotal / total record. */
+function aggregateTexts<R extends GridRowModel>(
+    exportColumns: GridColDef<R>[],
+    aggregates: Record<string, unknown>,
+    aggModel: GridAggregationModel,
+): string[] {
+    return exportColumns.map(col => formatExportAggregate(col, aggModel[col.field], aggregates[col.field], aggregates));
+}
+
+const UTF8_BOM = String.fromCharCode(0xfeff);
 
 export function exportToCsv<R extends GridRowModel>(
     rows: R[],
@@ -25,141 +79,129 @@ export function exportToCsv<R extends GridRowModel>(
         delimiter = ',',
         selectedRows,
         groupedRows,
+        escapeFormulas = true,
+        bom = true,
     } = options;
 
-    const exportColumns = columns.filter(col => {
-        if (col.exportable === false) return false;
-        if (col.field === '__check__' || col.field === '__actions__') return false;
-        return true;
-    });
+    const exportColumns = getExportColumns(columns);
+    const aggModel = options.aggregationModel || {};
+    const field = (text: string, fromNonText = false): string =>
+        escapeCSV(escapeFormulas ? neutralizeFormula(text, fromNonText) : text, delimiter);
+    const headerLine = () => exportColumns.map(col => field(col.headerName || col.field)).join(delimiter) + '\n';
 
     let csvContent = '';
 
-    if (groupedRows && groupedRows.length > 0) {
+    if (shouldExportGrouped(groupedRows, selectedRows)) {
         // Grouped export path
-        if (includeHeaders) {
-            csvContent += exportColumns.map(col => escapeCSV(col.headerName || col.field)).join(delimiter) + '\n';
-        }
+        if (includeHeaders) csvContent += headerLine();
         groupedRows.forEach(entry => {
+            const indent = '  '.repeat(entry.depth);
             if (entry.type === 'group-header') {
-                const indent = '  '.repeat(entry.depth);
-                const label = `${indent}${groupHeaderLabel(entry, columns)}`;
-                const cells = exportColumns.map((_, i) => i === 0 ? escapeCSV(label) : '');
-                csvContent += cells.join(delimiter) + '\n';
+                const labelText = groupHeaderLabel(entry, columns);
+                const label = escapeCSV(indent + (escapeFormulas ? neutralizeFormula(labelText) : labelText), delimiter);
+                csvContent += exportColumns.map((_, i) => (i === 0 ? label : '')).join(delimiter) + '\n';
             } else if (entry.type === 'leaf' && entry.row) {
                 const row = entry.row as R;
-                const indent = '  '.repeat(entry.depth);
                 const cells = exportColumns.map((col, i) => {
-                    let value: unknown = (row as GridRowModel)[col.field];
-                    if (col.valueGetter) value = col.valueGetter({ row, field: col.field, value });
-                    if (col.valueFormatter && value !== undefined && value !== null) {
-                        value = col.valueFormatter({ value, row, field: col.field });
-                    }
-                    return escapeCSV((i === 0 ? indent : '') + String(value ?? ''));
+                    const cell = exportCell(row, col);
+                    const text = escapeFormulas ? neutralizeFormula(cell.text, isNonTextValue(cell.raw)) : cell.text;
+                    return escapeCSV((i === 0 ? indent : '') + text, delimiter);
                 });
                 csvContent += cells.join(delimiter) + '\n';
-            } else if (entry.type === 'group-subtotal' && entry.aggregatedValues) {
-                const indent = '  '.repeat(entry.depth);
-                const aggModel = options.aggregationModel || {};
-                const cells = exportColumns.map((col, i) => {
-                    if (i === 0) return escapeCSV(`${indent}Subtotal`);
-                    const aggVal = entry.aggregatedValues![col.field];
-                    if (aggVal !== undefined && aggVal !== null) {
-                        let formatted: unknown = aggVal;
-                        if (col.valueFormatter) {
-                            formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-                        } else if (aggModel[col.field]) {
-                            formatted = formatAggregationValue(aggVal, aggModel[col.field]);
-                        }
-                        return escapeCSV(String(formatted));
-                    }
-                    return '';
-                });
-                csvContent += cells.join(delimiter) + '\n';
-            } else if (entry.type === 'grand-total' && entry.aggregatedValues) {
-                const aggModel = options.aggregationModel || {};
-                const cells = exportColumns.map((col, i) => {
-                    if (i === 0) return escapeCSV('Grand Total');
-                    const aggVal = entry.aggregatedValues![col.field];
-                    if (aggVal !== undefined && aggVal !== null) {
-                        let formatted: unknown = aggVal;
-                        if (col.valueFormatter) {
-                            formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-                        } else if (aggModel[col.field]) {
-                            formatted = formatAggregationValue(aggVal, aggModel[col.field]);
-                        }
-                        return escapeCSV(String(formatted));
-                    }
-                    return '';
-                });
+            } else if ((entry.type === 'group-subtotal' || entry.type === 'grand-total') && entry.aggregatedValues) {
+                const values = entry.aggregatedValues;
+                const label = entry.type === 'grand-total' ? 'Grand Total' : `${indent}Subtotal`;
+                const texts = aggregateTexts(exportColumns, values, aggModel);
+                const cells = exportColumns.map((col, i) => (i === 0
+                    ? escapeCSV(summaryLabelText(label, texts[0]), delimiter)
+                    : field(texts[i], isNonTextValue(values[col.field]))));
                 csvContent += cells.join(delimiter) + '\n';
             }
         });
     } else {
-        // Flat export path (existing behavior)
-        const rowsToExport = selectedRows && selectedRows.length > 0
-            ? rows.filter(r => selectedRows.includes(r.id))
-            : rows;
+        const rowsToExport = rowsForExport(rows, selectedRows);
 
         if (rowsToExport.length === 0) {
             console.warn('No rows to export');
             return;
         }
 
-        if (includeHeaders) {
-            csvContent += exportColumns.map(col => escapeCSV(col.headerName || col.field)).join(delimiter) + '\n';
-        }
+        if (includeHeaders) csvContent += headerLine();
 
         rowsToExport.forEach(row => {
             const values = exportColumns.map(col => {
-                let value: unknown = (row as GridRowModel)[col.field];
-                if (col.valueGetter) value = col.valueGetter({ row, field: col.field, value });
-                if (col.valueFormatter && value !== undefined && value !== null) {
-                    value = col.valueFormatter({ value, row, field: col.field });
-                }
-                return escapeCSV(String(value ?? ''));
+                const cell = exportCell(row, col);
+                return field(cell.text, isNonTextValue(cell.raw));
             });
             csvContent += values.join(delimiter) + '\n';
         });
 
-        if (options.aggregationResult) {
-            const aggResult = options.aggregationResult;
-            const aggModel = options.aggregationModel || {};
-            const aggLabels = exportColumns.map(col => escapeCSV(aggModel[col.field] ? aggModel[col.field].toUpperCase() : ''));
+        const aggResult = aggregationForExport(rowsToExport, hasSelection(selectedRows), columns, options.aggregationResult, options.aggregationModel);
+        if (aggResult) {
+            const aggLabels = exportColumns.map(col => field(aggModel[col.field] ? aggModel[col.field].toUpperCase() : ''));
             csvContent += aggLabels.join(delimiter) + '\n';
-            const aggValues = exportColumns.map(col => {
-                const aggVal = aggResult[col.field];
-                if (aggVal !== undefined && aggVal !== null) {
-                    let formatted: unknown = aggVal;
-                    if (col.valueFormatter) formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-                    else if (aggModel[col.field]) formatted = formatAggregationValue(aggVal, aggModel[col.field]);
-                    return escapeCSV(String(formatted));
-                }
-                return '';
-            });
-            csvContent += aggValues.join(delimiter) + '\n';
+            const texts = aggregateTexts(exportColumns, aggResult, aggModel);
+            csvContent += exportColumns.map((col, i) => field(texts[i], isNonTextValue(aggResult[col.field]))).join(delimiter) + '\n';
         }
     }
 
-    downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
+    downloadFile((bom ? UTF8_BOM : '') + csvContent, fileName, 'text/csv;charset=utf-8;');
 }
 
-function escapeCSV(value: string): string {
-    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+/** Quote a CSV field when it contains the delimiter, a quote, or a line break (LF or a bare CR). */
+function escapeCSV(value: string, delimiter: string): string {
+    if ((delimiter !== '' && value.includes(delimiter)) || value.includes('"') || value.includes('\n') || value.includes('\r')) {
         return `"${value.replace(/"/g, '""')}"`;
     }
     return value;
 }
 
 export interface ExcelExportOptions {
+    /**
+     * Output filename. The file is an HTML table that Excel opens as a legacy `.xls` workbook, so a
+     * `.xlsx` extension is replaced with `.xls` (Excel refuses HTML content named `.xlsx`). Use
+     * `exportToExcelAdvanced` for a real `.xlsx`. Default: `'export.xls'`
+     */
     fileName?: string;
+    /** Sheet tab name. Characters Excel rejects are replaced and the name is cut to 31 characters. Default: `'Sheet1'` */
     sheetName?: string;
     includeHeaders?: boolean;
+    /**
+     * Export only these row IDs. A non-empty selection takes precedence over `groupedRows` (the
+     * selected rows are exported flat), and the totals rows are recomputed over the selected rows.
+     */
     selectedRows?: (string | number)[];
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     /** When provided, emits group headers, leaf rows, subtotals, and a grand total instead of a flat row list. */
     groupedRows?: GridGroupedExportRow[];
+    /**
+     * Prefix text cells that start with `=`, `+`, `-`, `@`, tab or carriage return with `'`, so
+     * Excel does not run them as formulas. Default: `true`
+     * @since v3.0
+     */
+    escapeFormulas?: boolean;
+}
+
+/** Excel's text number format: the cell keeps its text as typed (leading zeros, long ids, "1-2"). */
+const XLS_TEXT_CLASS = 'ogx-xls-text';
+
+/**
+ * Whether an HTML-Excel data cell should be marked as text. Number, date and boolean columns, and
+ * values that are numbers, dates or booleans, are left for Excel to type.
+ */
+function isXlsTextCell<R extends GridRowModel>(col: GridColDef<R>, raw: unknown): boolean {
+    return col.type !== 'number' && col.type !== 'date' && col.type !== 'boolean' && !isNonTextValue(raw);
+}
+
+function xlsFileName(fileName: string): string {
+    if (!/\.xlsx$/i.test(fileName)) return fileName;
+    const corrected = fileName.replace(/\.xlsx$/i, '.xls');
+    console.warn(
+        `[exportToExcel] "${fileName}" renamed to "${corrected}": exportToExcel writes an HTML table that Excel ` +
+        'refuses to open as .xlsx. Use exportToExcelAdvanced for a real .xlsx file.'
+    );
+    return corrected;
 }
 
 export function exportToExcel<R extends GridRowModel>(
@@ -173,76 +215,62 @@ export function exportToExcel<R extends GridRowModel>(
         includeHeaders = true,
         selectedRows,
         groupedRows,
+        escapeFormulas = true,
     } = options;
 
-    const exportColumns = columns.filter(col => {
-        if (col.exportable === false) return false;
-        if (col.field === '__check__' || col.field === '__actions__') return false;
-        return true;
-    });
+    const exportColumns = getExportColumns(columns);
+    const aggModel = options.aggregationModel || {};
+    const cellText = (text: string, fromNonText = false): string =>
+        escapeHTML(escapeFormulas ? neutralizeFormula(text, fromNonText) : text);
+    const textTd = (html: string): string => `<td class="${XLS_TEXT_CLASS}">${html}</td>`;
 
     const header = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">'
         + '<head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>'
-        + `<x:Name>${sheetName}</x:Name>`
+        + `<x:Name>${escapeHTML(sanitizeSheetName(sheetName))}</x:Name>`
         + '<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->'
-        + '<meta charset="UTF-8"></head><body><table border="1">';
+        + `<meta charset="UTF-8"><style>.${XLS_TEXT_CLASS}{mso-number-format:"\\@";}</style></head><body><table border="1">`;
 
     let html = header;
 
     if (includeHeaders) {
         html += '<thead><tr>';
-        exportColumns.forEach(col => { html += `<th>${escapeHTML(col.headerName || col.field)}</th>`; });
+        exportColumns.forEach(col => { html += `<th class="${XLS_TEXT_CLASS}">${cellText(col.headerName || col.field)}</th>`; });
         html += '</tr></thead>';
     }
 
     html += '<tbody>';
 
-    if (groupedRows && groupedRows.length > 0) {
-        const aggModel = options.aggregationModel || {};
+    const dataCell = (cell: ExportCell, col: GridColDef<R>, prefix = ''): string => {
+        const content = prefix + cellText(cell.text, isNonTextValue(cell.raw));
+        return isXlsTextCell(col, cell.raw) ? textTd(content) : `<td>${content}</td>`;
+    };
+
+    if (shouldExportGrouped(groupedRows, selectedRows)) {
         groupedRows.forEach(entry => {
+            const indent = '  '.repeat(entry.depth * 2);
             if (entry.type === 'group-header') {
-                const indent = '  '.repeat(entry.depth * 2);
-                const label = `${indent}${groupHeaderLabel(entry, columns)}`;
                 html += `<tr style="font-weight:bold;background:#e8eaf6;">`;
-                html += `<td colspan="${exportColumns.length}">${escapeHTML(label)}</td>`;
+                html += `<td colspan="${exportColumns.length}" class="${XLS_TEXT_CLASS}">${escapeHTML(indent)}${cellText(groupHeaderLabel(entry, columns))}</td>`;
                 html += '</tr>';
             } else if (entry.type === 'leaf' && entry.row) {
                 const row = entry.row as R;
-                const indent = '  '.repeat(entry.depth * 2);
                 html += '<tr>';
-                exportColumns.forEach((col, i) => {
-                    let value: unknown = (row as GridRowModel)[col.field];
-                    if (col.valueGetter) value = col.valueGetter({ row, field: col.field, value });
-                    if (col.valueFormatter && value !== undefined && value !== null) {
-                        value = col.valueFormatter({ value, row, field: col.field });
-                    }
-                    html += `<td>${escapeHTML((i === 0 ? indent : '') + String(value ?? ''))}</td>`;
-                });
+                exportColumns.forEach((col, i) => { html += dataCell(exportCell(row, col), col, i === 0 ? escapeHTML(indent) : ''); });
                 html += '</tr>';
             } else if ((entry.type === 'group-subtotal' || entry.type === 'grand-total') && entry.aggregatedValues) {
-                const isGrand = entry.type === 'grand-total';
-                const indent = isGrand ? '' : '  '.repeat(entry.depth * 2);
-                const label = isGrand ? 'Grand Total' : `${indent}Subtotal`;
+                const values = entry.aggregatedValues;
+                const label = entry.type === 'grand-total' ? 'Grand Total' : `${indent}Subtotal`;
+                const texts = aggregateTexts(exportColumns, values, aggModel);
                 html += `<tr style="font-weight:bold;background:#f5f5f5;">`;
                 exportColumns.forEach((col, i) => {
-                    if (i === 0) { html += `<td>${escapeHTML(label)}</td>`; return; }
-                    const aggVal = entry.aggregatedValues![col.field];
-                    if (aggVal !== undefined && aggVal !== null) {
-                        let formatted: unknown = aggVal;
-                        if (col.valueFormatter) formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-                        else if (aggModel[col.field]) formatted = formatAggregationValue(aggVal, aggModel[col.field]);
-                        html += `<td style="text-align:right;">${escapeHTML(String(formatted))}</td>`;
-                    } else {
-                        html += '<td></td>';
-                    }
+                    if (i === 0) { html += textTd(escapeHTML(summaryLabelText(label, texts[0]))); return; }
+                    html += texts[i] ? `<td style="text-align:right;">${cellText(texts[i], isNonTextValue(values[col.field]))}</td>` : '<td></td>';
                 });
                 html += '</tr>';
             }
         });
     } else {
-        const rowsToExport = selectedRows && selectedRows.length > 0
-            ? rows.filter(r => selectedRows.includes(r.id))
-            : rows;
+        const rowsToExport = rowsForExport(rows, selectedRows);
 
         if (rowsToExport.length === 0) {
             console.warn('No rows to export');
@@ -251,20 +279,12 @@ export function exportToExcel<R extends GridRowModel>(
 
         rowsToExport.forEach(row => {
             html += '<tr>';
-            exportColumns.forEach(col => {
-                let value: unknown = (row as GridRowModel)[col.field];
-                if (col.valueGetter) value = col.valueGetter({ row, field: col.field, value });
-                if (col.valueFormatter && value !== undefined && value !== null) {
-                    value = col.valueFormatter({ value, row, field: col.field });
-                }
-                html += `<td>${escapeHTML(String(value ?? ''))}</td>`;
-            });
+            exportColumns.forEach(col => { html += dataCell(exportCell(row, col), col); });
             html += '</tr>';
         });
 
-        if (options.aggregationResult) {
-            const aggResult = options.aggregationResult;
-            const aggModel = options.aggregationModel || {};
+        const aggResult = aggregationForExport(rowsToExport, hasSelection(selectedRows), columns, options.aggregationResult, options.aggregationModel);
+        if (aggResult) {
             html += '<tr style="font-size: 11px; color: #666; background-color: #f5f5f5;">';
             exportColumns.forEach(col => {
                 html += aggModel[col.field]
@@ -272,32 +292,16 @@ export function exportToExcel<R extends GridRowModel>(
                     : '<td></td>';
             });
             html += '</tr><tr style="font-weight:bold;background-color:#f5f5f5;">';
-            exportColumns.forEach(col => {
-                const aggVal = aggResult[col.field];
-                if (aggVal !== undefined && aggVal !== null) {
-                    let formatted: unknown = aggVal;
-                    if (col.valueFormatter) formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-                    else if (aggModel[col.field]) formatted = formatAggregationValue(aggVal, aggModel[col.field]);
-                    html += `<td style="text-align:right;">${escapeHTML(String(formatted))}</td>`;
-                } else {
-                    html += '<td></td>';
-                }
+            const texts = aggregateTexts(exportColumns, aggResult, aggModel);
+            exportColumns.forEach((col, i) => {
+                html += texts[i] ? `<td style="text-align:right;">${cellText(texts[i], isNonTextValue(aggResult[col.field]))}</td>` : '<td></td>';
             });
             html += '</tr>';
         }
     }
 
     html += '</tbody></table></body></html>';
-    downloadFile(html, fileName, 'application/vnd.ms-excel');
-}
-
-function escapeHTML(value: string): string {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+    downloadFile(html, xlsFileName(fileName), 'application/vnd.ms-excel');
 }
 
 // ============================================================================
@@ -307,6 +311,10 @@ function escapeHTML(value: string): string {
 export interface JsonExportOptions {
     fileName?: string;
     pretty?: boolean;
+    /**
+     * Export only these row IDs. A non-empty selection takes precedence over `groupedRows` (the
+     * selected rows are exported flat), and the aggregation values are recomputed over them.
+     */
     selectedRows?: (string | number)[];
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
@@ -315,7 +323,8 @@ export interface JsonExportOptions {
 }
 
 /**
- * Export data to JSON format
+ * Export data to JSON format. Values are written raw (after `valueGetter`, without
+ * `valueFormatter`), including aggregation values, so the output can be parsed as data.
  */
 export function exportToJson<R extends GridRowModel>(
     rows: R[],
@@ -329,11 +338,7 @@ export function exportToJson<R extends GridRowModel>(
         groupedRows,
     } = options;
 
-    const exportColumns = columns.filter(col => {
-        if (col.exportable === false) return false;
-        if (col.field === '__check__' || col.field === '__actions__') return false;
-        return true;
-    });
+    const exportColumns = getExportColumns(columns);
 
     type GroupNode = {
         group: string;
@@ -349,9 +354,15 @@ export function exportToJson<R extends GridRowModel>(
         | { data: Record<string, unknown>[]; aggregation: { labels: Record<string, unknown>; values: Record<string, unknown> } }
         | { groups: GroupNode[]; grandTotal?: Record<string, unknown> };
 
+    const rowObject = (row: R): Record<string, unknown> => {
+        const obj: Record<string, unknown> = {};
+        exportColumns.forEach(col => { obj[col.field] = getRawExportValue(row, col); });
+        return obj;
+    };
+
     let outData: JsonPayload;
 
-    if (groupedRows && groupedRows.length > 0) {
+    if (shouldExportGrouped(groupedRows, selectedRows)) {
         // Build nested tree from the flat ordered list
         const stack: GroupNode[] = [];
         const roots: GroupNode[] = [];
@@ -374,56 +385,34 @@ export function exportToJson<R extends GridRowModel>(
                 }
                 stack.push(node);
             } else if (entry.type === 'leaf' && entry.row) {
-                const row = entry.row as R;
-                const obj: Record<string, unknown> = {};
-                exportColumns.forEach(col => {
-                    let value: unknown = (row as GridRowModel)[col.field];
-                    if (col.valueGetter) value = col.valueGetter({ row, field: col.field, value });
-                    obj[col.field] = value;
-                });
-                if (stack.length > 0) stack[stack.length - 1].rows.push(obj);
+                if (stack.length > 0) stack[stack.length - 1].rows.push(rowObject(entry.row as R));
             } else if (entry.type === 'group-subtotal' && entry.aggregatedValues && stack.length > 0) {
-                stack[stack.length - 1].subtotals = { ...entry.aggregatedValues };
+                stack[stack.length - 1].subtotals = pickExportedAggregates(entry.aggregatedValues, exportColumns);
                 stack.pop();
             } else if (entry.type === 'grand-total' && entry.aggregatedValues) {
-                grandTotal = { ...entry.aggregatedValues };
+                grandTotal = pickExportedAggregates(entry.aggregatedValues, exportColumns);
             }
         });
 
         outData = grandTotal ? { groups: roots, grandTotal } : { groups: roots };
     } else {
-        const rowsToExport = selectedRows && selectedRows.length > 0
-            ? rows.filter(r => selectedRows.includes(r.id))
-            : rows;
+        const rowsToExport = rowsForExport(rows, selectedRows);
 
         if (rowsToExport.length === 0) {
             console.warn('No rows to export');
             return;
         }
 
-        const data = rowsToExport.map(row => {
-            const obj: Record<string, unknown> = {};
-            exportColumns.forEach(col => {
-                let value: unknown = (row as GridRowModel)[col.field];
-                if (col.valueGetter) value = col.valueGetter({ row, field: col.field, value });
-                obj[col.field] = value;
-            });
-            return obj;
-        });
+        const data = rowsToExport.map(rowObject);
 
-        if (options.aggregationResult) {
-            const aggResult = options.aggregationResult;
+        const aggResult = aggregationForExport(rowsToExport, hasSelection(selectedRows), columns, options.aggregationResult, options.aggregationModel);
+        if (aggResult) {
             const aggModel = options.aggregationModel || {};
             const summaryLabelObj: Record<string, unknown> = {};
             exportColumns.forEach(col => { if (aggModel[col.field]) summaryLabelObj[col.field] = aggModel[col.field].toUpperCase(); });
             const summaryDataObj: Record<string, unknown> = {};
             exportColumns.forEach(col => {
-                if (aggResult[col.field] !== undefined && aggResult[col.field] !== null) {
-                    let aggVal: unknown = aggResult[col.field];
-                    if (col.valueFormatter) aggVal = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-                    else if (aggModel[col.field]) aggVal = formatAggregationValue(aggVal, aggModel[col.field]);
-                    summaryDataObj[col.field] = aggVal;
-                }
+                if (aggResult[col.field] !== undefined && aggResult[col.field] !== null) summaryDataObj[col.field] = aggResult[col.field];
             });
             outData = { data, aggregation: { labels: summaryLabelObj, values: summaryDataObj } };
         } else {
@@ -440,11 +429,30 @@ export function exportToJson<R extends GridRowModel>(
 
 export interface PrintOptions {
     title?: string;
+    /**
+     * Print only these row IDs. A non-empty selection takes precedence over `groupedRows` (the
+     * selected rows are printed flat), and the totals are recomputed over the selected rows.
+     */
     selectedRows?: (string | number)[];
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     /** When provided, emits group headers, leaf rows, subtotals, and a grand total instead of a flat row list. */
     groupedRows?: GridGroupedExportRow[];
+}
+
+const SAFE_IMAGE_URL = /^(?:https?:|data:image\/|blob:)/i;
+const URL_SCHEME = /^[a-z][a-z\d+.-]*:/i;
+
+/**
+ * The URL to use as an `<img src>` in the print window, or null when it is not an image URL:
+ * http(s), `data:image/…`, `blob:` and relative URLs are allowed; `javascript:`, `data:text/html`,
+ * `file:` and other schemes are not.
+ */
+function printableImageUrl(value: string): string | null {
+    const url = value.trim();
+    if (!url) return null;
+    if (SAFE_IMAGE_URL.test(url)) return url;
+    return URL_SCHEME.test(url) ? null : url;
 }
 
 /**
@@ -508,22 +516,21 @@ export async function printGrid<R extends GridRowModel>(
             groupedRows = titleOrOptions.groupedRows;
         }
 
-        const exportColumns = columns.filter(col => {
-            if (col.exportable === false) return false;
-            if (col.field === '__check__' || col.field === '__actions__') return false;
-            return true;
-        });
+        const exportColumns = getExportColumns(columns);
+        const aggModel = aggregationModel || {};
 
-        let html = `<!DOCTYPE html><html><head><title>${title || 'Print'}</title><style>
+        // Group-row rules are qualified with `tr` so they outrank the stripe rule, which has the same
+        // specificity, by coming later.
+        let html = `<!DOCTYPE html><html><head><title>${escapeHTML(title || 'Print')}</title><style>
             body{font-family:Arial,sans-serif;margin:20px;}
             h1{font-size:24px;margin-bottom:20px;}
             table{border-collapse:collapse;width:100%;}
             th,td{border:1px solid #ddd;padding:8px;text-align:left;}
             th{background-color:#f5f5f5;font-weight:bold;}
             tr:nth-child(even){background-color:#f9f9f9;}
-            .group-header{background:#e8eaf6;font-weight:bold;}
-            .group-subtotal{background:#f0f4ff;font-style:italic;}
-            .grand-total{background:#f5f5f5;font-weight:bold;}
+            tr.group-header{background:#e8eaf6;font-weight:bold;}
+            tr.group-subtotal{background:#f0f4ff;font-style:italic;}
+            tr.grand-total{background:#f5f5f5;font-weight:bold;}
             @media print{body{margin:0;}@page{margin:1cm;}}
         </style></head><body>`;
 
@@ -532,55 +539,42 @@ export async function printGrid<R extends GridRowModel>(
         exportColumns.forEach(col => { html += `<th>${escapeHTML(col.headerName || col.field)}</th>`; });
         html += '</tr></thead><tbody>';
 
-        if (groupedRows && groupedRows.length > 0) {
-            const aggModel = aggregationModel || {};
+        const dataCell = (row: R, col: GridColDef<R>, prefixHtml = '', centerImage = false): string => {
+            const { text } = exportCell(row, col);
+            const src = col.type === 'image' ? printableImageUrl(text) : null;
+            if (src !== null) {
+                const img = `<img src="${escapeHTML(src)}" alt="${escapeHTML(col.headerName || col.field)}" style="max-height:40px;border-radius:4px;">`;
+                return centerImage ? `<td><div style="display:flex;justify-content:center;">${img}</div></td>` : `<td>${img}</td>`;
+            }
+            return `<td>${prefixHtml}${escapeHTML(text)}</td>`;
+        };
+
+        if (shouldExportGrouped(groupedRows, selectedRows)) {
             groupedRows.forEach(entry => {
+                const indent = '&nbsp;'.repeat(entry.depth * 4);
                 if (entry.type === 'group-header') {
-                    const indent = '&nbsp;'.repeat(entry.depth * 4);
-                    const label = `${indent}${escapeHTML(groupHeaderLabel(entry, columns))}`;
-                    html += `<tr class="group-header"><td colspan="${exportColumns.length}">${label}</td></tr>`;
+                    html += `<tr class="group-header"><td colspan="${exportColumns.length}">${indent}${escapeHTML(groupHeaderLabel(entry, columns))}</td></tr>`;
                 } else if (entry.type === 'leaf' && entry.row) {
                     const row = entry.row as R;
-                    const indent = '&nbsp;'.repeat(entry.depth * 4);
                     html += '<tr>';
-                    exportColumns.forEach((col, i) => {
-                        let value: unknown = (row as GridRowModel)[col.field];
-                        if (col.valueGetter) value = col.valueGetter({ row, field: col.field, value });
-                        if (col.valueFormatter && value !== undefined && value !== null) {
-                            value = col.valueFormatter({ value, row, field: col.field });
-                        }
-                        if (col.type === 'image' && value) {
-                            html += `<td><img src="${value}" style="max-height:40px;border-radius:4px;"></td>`;
-                        } else {
-                            html += `<td>${(i === 0 ? indent : '') + escapeHTML(String(value ?? ''))}</td>`;
-                        }
-                    });
+                    exportColumns.forEach((col, i) => { html += dataCell(row, col, i === 0 ? indent : ''); });
                     html += '</tr>';
                 } else if ((entry.type === 'group-subtotal' || entry.type === 'grand-total') && entry.aggregatedValues) {
                     const isGrand = entry.type === 'grand-total';
-                    const indent = isGrand ? '' : '&nbsp;'.repeat(entry.depth * 4);
-                    const label = isGrand ? 'Grand Total' : `${indent}Subtotal`;
-                    const cls = isGrand ? 'grand-total' : 'group-subtotal';
-                    html += `<tr class="${cls}">`;
-                    exportColumns.forEach((col, i) => {
-                        if (i === 0) { html += `<td>${label}</td>`; return; }
-                        const aggVal = entry.aggregatedValues![col.field];
-                        if (aggVal !== undefined && aggVal !== null) {
-                            let formatted: unknown = aggVal;
-                            if (col.valueFormatter) formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-                            else if (aggModel[col.field]) formatted = formatAggregationValue(aggVal, aggModel[col.field]);
-                            html += `<td style="text-align:right;">${escapeHTML(String(formatted))}</td>`;
-                        } else {
-                            html += '<td></td>';
+                    const texts = aggregateTexts(exportColumns, entry.aggregatedValues, aggModel);
+                    html += `<tr class="${isGrand ? 'grand-total' : 'group-subtotal'}">`;
+                    exportColumns.forEach((_, i) => {
+                        if (i === 0) {
+                            html += `<td>${isGrand ? '' : indent}${escapeHTML(summaryLabelText(isGrand ? 'Grand Total' : 'Subtotal', texts[0]))}</td>`;
+                            return;
                         }
+                        html += texts[i] ? `<td style="text-align:right;">${escapeHTML(texts[i])}</td>` : '<td></td>';
                     });
                     html += '</tr>';
                 }
             });
         } else {
-            const rowsToExport = selectedRows && selectedRows.length > 0
-                ? rows.filter(r => selectedRows.includes(r.id))
-                : rows;
+            const rowsToExport = rowsForExport(rows, selectedRows);
 
             if (rowsToExport.length === 0) {
                 printWindow.document.body.innerHTML = '<h3>No rows to export</h3>';
@@ -589,23 +583,12 @@ export async function printGrid<R extends GridRowModel>(
 
             rowsToExport.forEach(row => {
                 html += '<tr>';
-                exportColumns.forEach(col => {
-                    let value: unknown = (row as GridRowModel)[col.field];
-                    if (col.valueGetter) value = col.valueGetter({ row, field: col.field, value });
-                    if (col.valueFormatter && value !== undefined && value !== null) {
-                        value = col.valueFormatter({ value, row, field: col.field });
-                    }
-                    if (col.type === 'image' && value) {
-                        html += `<td><div style="display:flex;justify-content:center;"><img src="${value}" alt="${col.headerName}" style="max-height:40px;border-radius:4px;"></div></td>`;
-                    } else {
-                        html += `<td>${escapeHTML(String(value ?? ''))}</td>`;
-                    }
-                });
+                exportColumns.forEach(col => { html += dataCell(row, col, '', true); });
                 html += '</tr>';
             });
 
-            if (aggregationResult) {
-                const aggModel = aggregationModel || {};
+            const aggResult = aggregationForExport(rowsToExport, hasSelection(selectedRows), columns, aggregationResult, aggregationModel);
+            if (aggResult) {
                 html += '<tfoot><tr style="font-size:11px;color:#666;background-color:#f5f5f5;">';
                 exportColumns.forEach(col => {
                     html += aggModel[col.field]
@@ -613,16 +596,8 @@ export async function printGrid<R extends GridRowModel>(
                         : '<td></td>';
                 });
                 html += '</tr><tr style="font-weight:bold;background-color:#f5f5f5;">';
-                exportColumns.forEach(col => {
-                    const aggVal = aggregationResult![col.field];
-                    if (aggVal !== undefined && aggVal !== null) {
-                        let formatted: unknown = aggVal;
-                        if (col.valueFormatter) formatted = col.valueFormatter({ value: aggVal, row: {} as R, field: col.field });
-                        else if (aggModel[col.field]) formatted = formatAggregationValue(aggVal, aggModel[col.field]);
-                        html += `<td style="text-align:right;">${escapeHTML(String(formatted))}</td>`;
-                    } else {
-                        html += '<td></td>';
-                    }
+                aggregateTexts(exportColumns, aggResult, aggModel).forEach(text => {
+                    html += text ? `<td style="text-align:right;">${escapeHTML(text)}</td>` : '<td></td>';
                 });
                 html += '</tr></tfoot>';
             }
@@ -667,7 +642,7 @@ export async function printGrid<R extends GridRowModel>(
         console.error('Print generation failed:', e);
         if (printWindow && !printWindow.closed) {
             const message = e instanceof Error ? e.message : String(e);
-            printWindow.document.body.innerHTML = `<div style="color: red; padding: 20px;"><h3>Error Generating Print Preview</h3><p>${message}</p></div>`;
+            printWindow.document.body.innerHTML = `<div style="color: red; padding: 20px;"><h3>Error Generating Print Preview</h3><p>${escapeHTML(message)}</p></div>`;
         }
     }
 }

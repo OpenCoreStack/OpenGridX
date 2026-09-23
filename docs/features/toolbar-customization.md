@@ -144,7 +144,7 @@ const apiRef = useGridApiRef();
   slotProps={{
     toolbar: {
       renderExportButton: () => (
-        <button onClick={() => exportToCsv(apiRef.current.getAllRows(), columns, { filename: 'export' })}>
+        <button onClick={() => exportToCsv(apiRef.current.getAllRows(), columns, { fileName: 'export.csv' })}>
           Export CSV
         </button>
       ),

@@ -41,6 +41,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build library (fails if React is bundled)
+        run: npm run build:lib
+
       - name: Publish
         run: npm publish --access public
         env:
