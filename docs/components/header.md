@@ -45,6 +45,10 @@ Clicking the menu icon opens a popover with actions to:
 
 **Keyboard** (v3.0): with a header cell focused, **Alt+ArrowDown** or **Ctrl+Enter** / **Cmd+Enter** opens its menu. Focus moves to the first item (also when the menu is opened with the mouse); **ArrowUp** / **ArrowDown** / **Home** / **End** move between items, and **Escape**, **Tab** or choosing an item closes the menu and returns focus to the header cell. See [Keyboard & Accessibility](../features/keyboard-navigation.md).
 
+**Alt+ArrowRight** / **Alt+ArrowLeft** on a focused header widen / narrow its column by 10px (**Shift** for 50px), unless the column has `resizable: false`.
+
+**Drag-reorder**: unpinned headers are draggable. Pinned headers (and the row-grouping column) are not, and are not drop targets.
+
 ## ♿ Accessibility
 
 - Header rows carry `aria-rowindex` (column-group rows first). Header cells carry `aria-colindex`, matching the body cells of the same column; the system columns (reorder, detail-panel toggle, select-all) come first and are focusable from the keyboard.

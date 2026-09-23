@@ -13,6 +13,31 @@ export interface GridThemeColors {
   warning?: string;
   error?: string;
   info?: string;
+
+  /** Page-level surface colour (`--ogx-color-white`): inputs, buttons, checkbox fallbacks. */
+  white?: string;
+  /** Strongest text colour (`--ogx-color-black`). */
+  black?: string;
+  /**
+   * The neutral scale (`--ogx-color-gray-50` … `--ogx-color-gray-900`) used by group rows, detail
+   * panels, inputs, buttons and panels. The theme's `mode` supplies a complete scale; override
+   * single steps here.
+   */
+  gray?: GridThemeGrayScale;
+}
+
+/** Steps of the neutral scale; 50 is the lightest surface in light mode, the darkest in dark mode. */
+export interface GridThemeGrayScale {
+  50?: string;
+  100?: string;
+  200?: string;
+  300?: string;
+  400?: string;
+  500?: string;
+  600?: string;
+  700?: string;
+  800?: string;
+  900?: string;
 }
 
 export interface GridThemeTypography {
@@ -76,8 +101,6 @@ export interface GridThemeScrollbar {
 export interface GridThemeSkeleton {
     baseColor?: string;
     highlightColor?: string;
-    darkBaseColor?: string;
-    darkHighlightColor?: string;
 }
 
 export interface GridThemeSpacing {
@@ -108,11 +131,20 @@ export interface GridThemeShadows {
   xl?: string;
 }
 
+/**
+ * Row and header heights are read by the grid itself (they drive virtualization), so they must be
+ * pixel values such as `'36px'` or `'36'`. The `rowHeight` / `headerHeight` props win over them;
+ * `rowHeightCompact` / `rowHeightComfortable` apply with `density="compact"` / `"comfortable"`.
+ */
 export interface GridThemeGrid {
     rowHeightCompact?: string;
   rowHeightStandard?: string;
   rowHeightComfortable?: string;
     headerHeight?: string;
+    /** Font size of body cells (`--ogx-grid-cell-font-size`, default 13px). */
+    cellFontSize?: string;
+    /** Font size of header cells (`--ogx-grid-header-font-size`, default 13px). */
+    headerFontSize?: string;
     cellPaddingX?: string;
   cellPaddingY?: string;
     background?: string;
@@ -141,6 +173,12 @@ export interface GridThemeTransitions {
 }
 
 export interface GridTheme {
+  /**
+   * The complete base palette the theme starts from (default `'light'`). The provider pins every
+   * colour token, so the grid follows the theme whatever the operating-system colour scheme is.
+   * Use `'dark'` for a dark theme; the other keys override single tokens on top of it.
+   */
+  mode?: 'light' | 'dark';
   colors?: GridThemeColors;
   typography?: GridThemeTypography;
   spacing?: GridThemeSpacing;

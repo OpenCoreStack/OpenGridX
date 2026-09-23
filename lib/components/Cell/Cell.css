@@ -22,7 +22,7 @@
 }
 /* Show ring when keyboard navigation is active */
 .ogx--kb .ogx__cell--focused {
-  outline: 2px solid var(--ogx-color-primary, #2563eb);
+  outline: 2px solid var(--ogx-grid-cell-focus-border, var(--ogx-color-primary, #2563eb));
   outline-offset: -2px;
 }
 .ogx__cell--editable {

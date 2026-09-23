@@ -61,6 +61,11 @@ export interface GridPinnedRowsProps<R extends GridRowModel> {
     /** Pinned rows are edited like any other row. */
     editingHandlers?: PinnedRowEditingHandlers;
     isCellEditable?: (params: GridCellParams<R>) => boolean;
+    /**
+     * Renders the (empty, non-draggable) reorder cell so the row lines up with the header and the
+     * centre rows. Pinned rows cannot be dragged.
+     */
+    rowReordering?: boolean;
 }
 
 const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
@@ -97,11 +102,9 @@ export function GridPinnedRows<R extends GridRowModel>({
     columnIndexMap,
     editingHandlers,
     isCellEditable,
+    rowReordering = false,
 }: GridPinnedRowsProps<R>) {
     if (rows.length === 0) return null;
-
-    // Detail callbacks run only for an expanded data row: never for collapsed rows or synthetic group rows.
-    const showDetail = (id: GridRowId) => expandedRowIds.has(id) && rowMetaMap.get(id)?.isGroupRow !== true;
 
     return (
         <div className={`ogx__pinned-rows ogx__pinned-rows--${position}`} role="rowgroup">
@@ -128,8 +131,8 @@ export function GridPinnedRows<R extends GridRowModel>({
                     pinnedRows={pinnedRows}
                     hasDetailPanel={hasDetailPanel}
                     isDetailPanelExpanded={expandedRowIds.has(id)}
-                    detailPanelContent={showDetail(id) && getDetailPanelContent ? <DetailPanelContent<R> getContent={getDetailPanelContent} params={{ row, id, rowIndex }} /> : null}
-                    detailPanelHeight={resolveDetailPanelHeight(showDetail(id) ? getDetailPanelHeight?.({ row, id, rowIndex }) : undefined)}
+                    detailPanelContent={expandedRowIds.has(id) && getDetailPanelContent ? <DetailPanelContent<R> getContent={getDetailPanelContent} params={{ row, id, rowIndex }} /> : null}
+                    detailPanelHeight={expandedRowIds.has(id) ? resolveDetailPanelHeight(getDetailPanelHeight?.({ row, id, rowIndex })) : undefined}
                     onDetailPanelHeightChange={onDetailPanelHeightChange}
                     onDetailPanelToggle={onDetailPanelToggle}
                     pinCheckboxColumn={pinCheckboxColumn}
@@ -144,6 +147,7 @@ export function GridPinnedRows<R extends GridRowModel>({
                     onEditStop={editingHandlers?.stopCellEdit}
                     onEditCellValueChange={editingHandlers?.setEditCellValue}
                     isCellEditable={isCellEditable}
+                    rowReordering={rowReordering}
                 />
                 );
             })}

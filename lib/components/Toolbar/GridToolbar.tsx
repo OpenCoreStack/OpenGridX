@@ -155,7 +155,7 @@ function AggregationPanel({
 }) {
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<PanelPosition>({ top: 0, right: 0 });
-    const [portalContainer, setPortalContainer] = useState<Element>(document.body);
+    const [portalContainer, setPortalContainer] = useState<Element | null>(null);
 
     useLayoutEffect(() => {
         setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
@@ -260,7 +260,7 @@ function AggregationPanel({
         </div>
     );
 
-    return ReactDOM.createPortal(panel, portalContainer);
+    return portalContainer ? ReactDOM.createPortal(panel, portalContainer) : null;
 }
 
 function ColumnsPanelWrapper({
@@ -288,7 +288,7 @@ function ColumnsPanelWrapper({
 }) {
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<PanelPosition>({ top: 0, right: 0 });
-    const [portalContainer, setPortalContainer] = useState<Element>(document.body);
+    const [portalContainer, setPortalContainer] = useState<Element | null>(null);
 
     useLayoutEffect(() => {
         setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
@@ -354,7 +354,7 @@ function ColumnsPanelWrapper({
         </div>
     );
 
-    return ReactDOM.createPortal(panel, portalContainer);
+    return portalContainer ? ReactDOM.createPortal(panel, portalContainer) : null;
 }
 
 function FilterPanelWrapper({
@@ -377,7 +377,7 @@ function FilterPanelWrapper({
     // which could fire the close callback during the re-register window.
     const onCloseRef = useRef(onClose);
     useLayoutEffect(() => { onCloseRef.current = onClose; }, [onClose]);
-    const [portalContainer, setPortalContainer] = useState<Element>(document.body);
+    const [portalContainer, setPortalContainer] = useState<Element | null>(null);
 
     useLayoutEffect(() => {
         setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
@@ -470,7 +470,7 @@ function FilterPanelWrapper({
         </div>
     );
 
-    return ReactDOM.createPortal(panel, portalContainer);
+    return portalContainer ? ReactDOM.createPortal(panel, portalContainer) : null;
 }
 
 const EMPTY_PIVOT: GridPivotModel = { rowFields: [], columnFields: [], valueFields: [] };

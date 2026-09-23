@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { GridColDef, GridRowModel, GridRowId, GridColumnPinning, GridDetailPanelHeight, GridRowMeta } from '../../types';
+import type { GridColDef, GridRowModel, GridRowId, GridColumnPinning, GridDetailPanelHeight } from '../../types';
 import { getPinnedColumnGroups, SYSTEM_COLUMN_WIDTH } from '../../utils/pinning';
 import { clampColumnWidth } from '../../utils/columnWidth';
 import { getDetailPanelLayoutHeight } from '../../utils/detailPanel';
@@ -9,10 +9,9 @@ export interface UseLayoutParams<R extends GridRowModel> {
     pagination: boolean;
     paginatedUnpinnedRows: R[];
     sortedUnpinnedRows: R[];
+    /** Rows whose detail panel is open; the caller leaves out synthetic group rows (getDetailPanelRowIds). */
     expandedRowIds: Set<GridRowId>;
     getDetailPanelHeight?: (params: { row: R; id: GridRowId; rowIndex: number }) => GridDetailPanelHeight;
-    /** Hierarchy metadata: synthetic group / subtotal rows never have a detail panel. */
-    rowMetaMap?: Map<GridRowId, GridRowMeta>;
     /** Rendered heights of `'auto'` detail panels, by row id (measured by the panels themselves). */
     detailPanelHeights?: Map<GridRowId, number>;
     pinnedTopRowsLength: number;
@@ -226,7 +225,6 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
         sortedUnpinnedRows,
         expandedRowIds,
         getDetailPanelHeight,
-        rowMetaMap,
         detailPanelHeights,
         pinnedTopRowsLength,
         pinnedBottomRowsLength,
@@ -252,7 +250,7 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
 
         const heightOf = (row: R, rowIndex: number) => {
             const id = getRowId(row);
-            if (!expandedRowIds.has(id) || rowMetaMap?.get(id)?.isGroupRow) return rowHeight;
+            if (!expandedRowIds.has(id)) return rowHeight;
             const panelHeight = getDetailPanelHeight?.({ row, id, rowIndex });
             return rowHeight + getDetailPanelLayoutHeight(panelHeight, detailPanelHeights?.get(id));
         };
@@ -348,7 +346,6 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
         sortedUnpinnedRows,
         expandedRowIds,
         getDetailPanelHeight,
-        rowMetaMap,
         detailPanelHeights,
         pinnedTopRowsLength,
         pinnedBottomRowsLength,

@@ -142,6 +142,8 @@ export interface UseGridColumnsParams<R extends GridRowModel> {
     columnVisibilityModel: Record<string, boolean>;
     columnOrder?: string[];
     onColumnOrderChange?: (params: GridColumnOrderChangeParams) => void;
+    /** Receives the whole new column order after every reorder and reset (not in pivot mode). */
+    onColumnOrderModelChange?: (columnOrder: string[]) => void;
     disableColumnReorder: boolean;
     pivotMode: boolean;
     checkboxSelection: boolean;
@@ -174,6 +176,10 @@ export interface UseGridColumnsResult<R extends GridRowModel> {
     effectiveColumnOrder: string[];
     setInternalColumnOrder: React.Dispatch<React.SetStateAction<string[]>>;
     columnReorderHandlers: ReturnType<typeof useColumnReorder>;
+    /** Moves `fromField` to the position of `toField` in the column order (Columns panel drag). */
+    moveColumn: (fromField: string, toField: string) => void;
+    /** Restores the columns' definition order. */
+    resetColumnOrder: () => void;
     handleColumnResize: (field: string, newWidth: number) => void;
 }
 
@@ -189,6 +195,7 @@ export function useGridColumns<R extends GridRowModel>(
         columnVisibilityModel,
         columnOrder,
         onColumnOrderChange,
+        onColumnOrderModelChange,
         disableColumnReorder,
         pivotMode,
         checkboxSelection,
@@ -345,19 +352,47 @@ export function useGridColumns<R extends GridRowModel>(
         [orderedColumns, isColumnShown]
     );
 
-    // ── Column reorder handlers ───────────────────────────────────────────────
+    // ── Column reorder ────────────────────────────────────────────────────────
+    // Every move works on the full current order (orderedColumns: all columns, including ones added
+    // after mount or missing from a stored/controlled order, and the synthetic __group__ column),
+    // so the reported indices and the stored order always describe the same list.
+    const commitColumnOrder = useCallback((newOrder: string[], change?: GridColumnOrderChangeParams) => {
+        // A controlled columnOrder names source columns; generated pivot columns keep their own order.
+        if (pivotMode || !columnOrder) setInternalColumnOrder(newOrder);
+        if (change) onColumnOrderChange?.(change);
+        if (!pivotMode) onColumnOrderModelChange?.(newOrder);
+    }, [pivotMode, columnOrder, setInternalColumnOrder, onColumnOrderChange, onColumnOrderModelChange]);
+
+    const applyColumnMove = useCallback((oldIndex: number, targetIndex: number) => {
+        const newOrder = orderedColumns.map(col => col.field);
+        const [movedField] = newOrder.splice(oldIndex, 1);
+        newOrder.splice(targetIndex, 0, movedField);
+        commitColumnOrder(newOrder, {
+            column: orderedColumns[oldIndex] as unknown as GridColDef,
+            oldIndex,
+            targetIndex,
+        });
+    }, [orderedColumns, commitColumnOrder]);
+
     const columnReorderHandlers = useColumnReorder({
         columns: orderedColumns,
-        onColumnOrderChange: useCallback((reorderParams: GridColumnOrderChangeParams) => {
-            const { oldIndex, targetIndex } = reorderParams;
-            const newOrder = [...effectiveColumnOrder];
-            const [movedField] = newOrder.splice(oldIndex, 1);
-            newOrder.splice(targetIndex, 0, movedField);
-            if (pivotMode || !columnOrder) setInternalColumnOrder(newOrder);
-            onColumnOrderChange?.(reorderParams);
-        }, [effectiveColumnOrder, pivotMode, columnOrder, setInternalColumnOrder, onColumnOrderChange]),
+        onColumnOrderChange: useCallback(
+            ({ oldIndex, targetIndex }: GridColumnOrderChangeParams) => applyColumnMove(oldIndex, targetIndex),
+            [applyColumnMove]
+        ),
         disableColumnReorder,
     });
+
+    const moveColumn = useCallback((fromField: string, toField: string) => {
+        const oldIndex = orderedColumns.findIndex(col => col.field === fromField);
+        const targetIndex = orderedColumns.findIndex(col => col.field === toField);
+        if (oldIndex === -1 || targetIndex === -1 || oldIndex === targetIndex) return;
+        applyColumnMove(oldIndex, targetIndex);
+    }, [orderedColumns, applyColumnMove]);
+
+    const resetColumnOrder = useCallback(() => {
+        commitColumnOrder(naturalOrder);
+    }, [commitColumnOrder, naturalOrder]);
 
     // ── Navigation columns (system cols + rendered data cols, in render order) ─
     // Mirrors what Row and Header render, so arrow keys follow the screen and never
@@ -391,6 +426,8 @@ export function useGridColumns<R extends GridRowModel>(
         effectiveColumnOrder,
         setInternalColumnOrder,
         columnReorderHandlers,
+        moveColumn,
+        resetColumnOrder,
         handleColumnResize,
     };
 }

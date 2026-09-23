@@ -38,13 +38,27 @@ export default function App() {
 
 The `DataGridThemeProvider` resolves each key in the `GridTheme` object to its corresponding `--ogx-*` CSS variable and applies it as an inline style on a wrapper `div`. **No CSS-in-JS, no runtime overhead.**
 
+How the provider builds the variables (v3.0+):
+
+- **It pins a complete palette.** It starts from a full light palette (or a full dark one with `mode: 'dark'`) that sets every colour token, neutral scale included, and then applies your keys on top. A light theme therefore stays light, and readable, when the operating system is in dark mode, and a dark theme needs no other CSS.
+- **Accents follow `colors.primary`.** The toolbar's primary button, active chips, search focus ring, selected menu items, selected rows and the keyboard focus ring are all derived from the `colors.primary*` tokens (with `var()` / `color-mix()`), so a theme that only sets `colors.primary` recolours all of them. Set the specific `toolbar.*`, `overlays.*` or `grid.*` key to override one.
+- **Toolbar tokens follow the grid surface.** Unless you set `toolbar.*`, the toolbar uses the header background, header text and grid border colours.
+- **Row and header heights reach the layout.** `grid.rowHeightStandard` / `grid.headerHeight` (and `rowHeightCompact` / `rowHeightComfortable` with `density`) are read by the grid itself, which virtualizes from them. They must be pixel values (`'36px'` or `'36'`); other units are ignored. The `rowHeight` / `headerHeight` props win over the theme.
+
 > **Sizing:** the wrapper `div` (`.ogx-theme-provider`) is a normal auto-height block. If the grid uses `height="100%"`, pass `style={{ height: '100%' }}` (or a `className` that sets a height) to the provider too. Otherwise the wrapper grows to fit every row and row virtualization is effectively off. See [Virtualization → The grid needs a bounded height](../features/virtualization.md#the-grid-needs-a-bounded-height).
 
 ---
 
 ## Dark Mode
 
-The grid automatically switches to its dark palette via `@media (prefers-color-scheme: dark)`. If your app manages dark mode manually (e.g. via a `data-theme` attribute), override the dark tokens with:
+Without a provider, the grid automatically switches to its dark palette via `@media (prefers-color-scheme: dark)`. Inside a `DataGridThemeProvider` the theme decides instead: `darkTheme` (or any theme with `mode: 'dark'`) is dark and every other theme is light, whatever the operating-system setting. To follow the OS with the provider, pick the theme in your app:
+
+```tsx
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+<DataGridThemeProvider theme={prefersDark ? darkTheme : roseTheme}>…</DataGridThemeProvider>
+```
+
+If your app manages dark mode manually without the provider (e.g. via a `data-theme` attribute), override the dark tokens with:
 
 ```css
 [data-theme="dark"] {
@@ -62,19 +76,22 @@ The grid automatically switches to its dark palette via `@media (prefers-color-s
 
 ```ts
 interface GridTheme {
-  colors?:      GridThemeColors;
+  mode?:        'light' | 'dark';     // base palette, default 'light'
+  colors?:      GridThemeColors;      // primary*, secondary*, success/warning/error/info, white, black, gray: { 50…900 }
   typography?:  GridThemeTypography;
   spacing?:     GridThemeSpacing;
   borders?:     GridThemeBorders;
   shadows?:     GridThemeShadows;
-  grid?:        GridThemeGrid;
+  grid?:        GridThemeGrid;        // surfaces, heights (px), cellPaddingX/Y, cellFontSize, headerFontSize, …
   toolbar?:     GridThemeToolbar;
   overlays?:    GridThemeOverlays;
   scrollbar?:   GridThemeScrollbar;
-  skeleton?:    GridThemeSkeleton;
+  skeleton?:    GridThemeSkeleton;    // baseColor, highlightColor
   transitions?: GridThemeTransitions;
 }
 ```
+
+All sub-theme types (`GridThemeColors`, `GridThemeGrayScale`, `GridThemeTypography`, `GridThemeSpacing`, `GridThemeBorders`, `GridThemeShadows`, `GridThemeGrid`, `GridThemeToolbar`, `GridThemeOverlays`, `GridThemeScrollbar`, `GridThemeSkeleton`, `GridThemeTransitions`) are exported from the package.
 
 ---
 
@@ -167,16 +184,16 @@ interface GridTheme {
 
 | Token | Default | Description |
 |---|---|---|
-| `--ogx-row-height` | `52px` | Default row height |
-| `--ogx-header-height` | `56px` | Column header row height |
-| `--ogx-grid-row-height-compact` | `32px` | Compact density preset |
-| `--ogx-grid-row-height-standard` | `52px` | Standard density preset |
-| `--ogx-grid-row-height-comfortable` | `72px` | Comfortable density preset |
-| `--ogx-grid-header-height` | `56px` | Header height (grid-specific) |
+| `--ogx-row-height` | `52px` | Row height. The grid sets it inline on `.ogx` from the `rowHeight` / `density` props (or the provider's `grid.rowHeight*`); read it in custom CSS, don't set it. |
+| `--ogx-header-height` | `56px` | Column header row height; set inline by the grid like `--ogx-row-height`. |
+| `--ogx-grid-row-height-compact` | `32px` | Informational copy of the theme's `grid.rowHeightCompact`; the grid reads the theme value, not this variable |
+| `--ogx-grid-row-height-standard` | `52px` | Informational copy of `grid.rowHeightStandard` |
+| `--ogx-grid-row-height-comfortable` | `72px` | Informational copy of `grid.rowHeightComfortable` |
+| `--ogx-grid-header-height` | `56px` | Informational copy of `grid.headerHeight` |
 | `--ogx-grid-cell-padding-x` | `10px` | Horizontal cell padding |
 | `--ogx-grid-cell-padding-y` | `8px` | Vertical cell padding |
-| `--ogx-grid-cell-font-size` | `13px` | Body cell font size |
-| `--ogx-grid-header-font-size` | `13px` | Header cell font size |
+| `--ogx-grid-cell-font-size` | `13px` | Body cell font size (`grid.cellFontSize`) |
+| `--ogx-grid-header-font-size` | `13px` | Header cell font size (`grid.headerFontSize`) |
 | `--ogx-grid-line-height` | `var(--ogx-line-height-normal)` | Row line height |
 
 ### Grid Colors
@@ -199,6 +216,26 @@ interface GridTheme {
 | `--ogx-grid-pinned-right-shadow` | `-4px 0 24px...` | (darker) | Shadow on right-pinned columns |
 | `--ogx-checkbox-bg` | — | `#1e293b` | Checkbox background (dark only) |
 | `--ogx-checkbox-border` | — | `#64748b` | Checkbox border (dark only) |
+
+### Toolbar, Overlay and Scrollbar Colors
+
+Read with a fallback, so a grid without a provider looks the same as before. Inside a provider they come from `toolbar.*`, `overlays.*` and `scrollbar.*`, or from the derivations described above.
+
+| Token | Theme key | Default | Used by |
+|---|---|---|---|
+| `--ogx-toolbar-background` / `-text` / `-border` | `toolbar.background` / `text` / `border` | header background / header text / grid border | Toolbar bar |
+| `--ogx-toolbar-btn-bg` / `-btn-hover` / `-btn-text` | `toolbar.buttonBackground` / `buttonHoverBackground` / `buttonText` | transparent / header hover / header text | Toolbar icon buttons |
+| `--ogx-toolbar-btn-primary-bg` / `-hover` / `-text` | `toolbar.buttonPrimary*` | primary / primary-dark / white | Active summary pills |
+| `--ogx-toolbar-btn-danger-bg` / `-hover` / `-text` | `toolbar.buttonDanger*` | red tints | Clear buttons |
+| `--ogx-toolbar-input-bg` / `-text` / `-border` | `toolbar.inputBackground` / `inputText` / `inputBorder` | grid background / row text / gray-300 | Quick search |
+| `--ogx-toolbar-input-focus-border` / `-focus-shadow` | `toolbar.inputFocus*` | primary / 12% primary | Focused quick search |
+| `--ogx-toolbar-chip-bg` / `-text` | `toolbar.chipBackground` / `chipText` | transparent / row text | Summary pills |
+| `--ogx-toolbar-chip-active-bg` / `-text` | `toolbar.chipActive*` | 12% primary / primary-dark | Active pills, filter chips, pivot chips |
+| `--ogx-overlay-*` | `overlays.*` | white surface, gray border | Menus, panels, tooltips |
+| `--ogx-overlay-item-selected-bg` / `-text` | `overlays.itemSelected*` | 8% primary / primary-dark | Selected menu item |
+| `--ogx-overlay-item-danger-bg` / `-text` | `overlays.itemDanger*` | red tints | Remove-condition button in the filter panel |
+| `--ogx-scrollbar-thumb` / `-track` / `-size` | `scrollbar.thumbColor` / `trackColor` / `size` | gray-300 / transparent / 8px | Grid viewport scrollbars |
+| `--ogx-skeleton-base` / `-highlight` | `skeleton.baseColor` / `highlightColor` | light grays | Loading skeleton rows |
 
 ### Transitions
 
@@ -249,16 +286,24 @@ You can theme the grid without the `DataGridThemeProvider` by overriding variabl
 
 ## Built-in Presets
 
-OpenGridX ships with two presets accessible from `'opengridx'`:
+OpenGridX exports five presets as named exports:
 
 ```tsx
-import { DataGridThemeProvider, themes } from '@opencorestack/opengridx';
+import { DataGridThemeProvider, darkTheme } from '@opencorestack/opengridx';
+// Also: roseTheme, emeraldTheme, amberTheme, compactTheme
 
-// Available: themes.light, themes.dark, themes.compact, themes.comfortable
-<DataGridThemeProvider theme={themes.dark}>
+<DataGridThemeProvider theme={darkTheme}>
   <DataGrid ... />
 </DataGridThemeProvider>
 ```
+
+| Preset | What it sets |
+|---|---|
+| `darkTheme` | `mode: 'dark'` plus a dark grid, toolbar and overlay palette |
+| `roseTheme`, `emeraldTheme`, `amberTheme` | A brand primary colour and tinted header / selection backgrounds on the light palette |
+| `compactTheme` | 36px rows, 40px header (28px rows with `density="compact"`), tighter cell padding and 12px cell / header text |
+
+Presets are plain objects, so you can combine them: `theme={{ ...compactTheme, ...roseTheme, grid: { ...compactTheme.grid, ...roseTheme.grid } }}`.
 
 ---
 

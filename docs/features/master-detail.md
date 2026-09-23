@@ -22,7 +22,7 @@ To enable detail panels, provided two main props: `getDetailPanelContent` and `g
 />
 ```
 
-**When the callbacks run.** `getDetailPanelContent` and `getDetailPanelHeight` are called only for expanded rows, never for collapsed ones, so they can do real work (fetching, building large subtrees). Under row grouping, the synthetic group rows have no detail panel and no `+` toggle: the callbacks always receive one of your own rows (tree-data parents that are your own rows keep their panel; auto-created parents do not have one). If `getDetailPanelContent` throws, that panel shows an error marker and the rest of the grid keeps working.
+`getDetailPanelContent` and `getDetailPanelHeight` are called only for **expanded** rows, while they render (v3.0+). A collapsed row costs nothing, and the callbacks may read fields that only data rows have. Synthetic hierarchy rows (row-grouping group rows and generated tree-data parents) have no detail panel: they keep an empty cell in the expand column, are never passed to the callbacks, and their ids in `detailPanelExpandedRowIds` are ignored. Tree-data parents that are real rows do get a panel. If `getDetailPanelContent` throws, that panel shows an error marker and the rest of the grid keeps working.
 
 ---
 

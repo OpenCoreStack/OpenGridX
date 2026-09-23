@@ -772,6 +772,11 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   disableRowSelectionOnClick?: boolean;
   /** If true, the user can only select a single row at a time. */
   disableMultipleRowSelection?: boolean;
+  /**
+   * If true, Ctrl/Cmd+C does not copy the selected rows, so the page (or your own handler) owns
+   * the shortcut. `apiRef.current.copySelectedRows()` still works. Default: false.
+   */
+  disableClipboardCopy?: boolean;
 
   /** Loading state. With no rows the body shows skeleton rows (or `slots.loadingOverlay`); with rows, they stay and a progress bar (or `slots.loadingOverlay`) is shown over them. */
   loading?: boolean;
@@ -829,8 +834,17 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   disableColumnReorder?: boolean; 
   /** Controlled horizontal order of column fields. */
   columnOrder?: GridColumnOrder; 
-  /** Callback fired when column order changes. */
-  onColumnOrderChange?: (params: GridColumnOrderChangeParams) => void; 
+  /**
+   * Fired when the user moves one column (header drag or Columns panel). `oldIndex` / `targetIndex`
+   * are positions in the grid's full column order: every current column, in order.
+   */
+  onColumnOrderChange?: (params: GridColumnOrderChangeParams) => void;
+  /**
+   * Fired with the whole new column order after every change: a header drag, a Columns panel drag
+   * and the panel's Reset. The easiest way to keep a controlled `columnOrder` in sync.
+   * Not fired for the generated columns of pivot mode.
+   */
+  onColumnOrderModelChange?: (columnOrder: GridColumnOrder) => void;
 
   /** If true, rows can be reordered via drag-and-drop. */
   rowReordering?: boolean; 
@@ -1038,9 +1052,11 @@ export interface GridApi {
   scrollToIndexes: (params: { rowIndex?: number; colIndex?: number }) => void;
 
   /**
-   * Programmatically copies all currently selected rows to the clipboard as TSV.
-   * Equivalent to the user pressing Ctrl+C / Cmd+C.
-   * @returns A Promise that resolves when the copy completes.
+   * Programmatically copies all currently selected rows to the clipboard as TSV: every selected
+   * row that passes the filter (other pages, collapsed groups and pinned rows included), with the
+   * visible columns in screen order. Equivalent to the user pressing Ctrl+C / Cmd+C.
+   * @returns A Promise that resolves when the text is written (or when no selected row was found,
+   * in which case nothing is written) and rejects when the clipboard write fails.
    */
   copySelectedRows: () => Promise<void>;
 }

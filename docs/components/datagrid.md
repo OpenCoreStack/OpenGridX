@@ -27,10 +27,11 @@ function MyGrid() {
 | `getRowId` | `(row: R) => GridRowId` | `row.id` | Unique ID for each row. Only keys the grid's store; row objects are never copied or given an `id` (v3.0+). Duplicate ids keep the first row and log a development warning. |
 | `height` | `number \| string` | `undefined` | Height of the grid container. |
 | `loading` | `boolean` | `false` | Displays a loading skeleton/shimmer. |
-| `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Row height preset: compact = 32 px, standard = `rowHeight`, comfortable = 72 px. |
+| `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Row height preset: compact = 32 px, standard = `rowHeight`, comfortable = 72 px. Inside a `DataGridThemeProvider`, the theme's `grid.rowHeightCompact` / `rowHeightStandard` / `rowHeightComfortable` replace these defaults (an explicit `rowHeight` still wins for standard). |
 | `checkboxSelection` | `boolean` | `false` | Enable row checkboxes. |
 | `disableRowSelectionOnClick` | `boolean` | `false` | When `true`, clicking a row does not toggle its selection. |
 | `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time. |
+| `disableClipboardCopy` | `boolean` | `false` | When `true`, Ctrl+C / Cmd+C does not copy the selected rows. `apiRef.current.copySelectedRows()` still works. |
 | `pagination` | `boolean` | `false` | Enable/Disable bottom pagination bar. |
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). Omit for uncontrolled; use `initialState` to set the initial page/pageSize. |
 | `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. |

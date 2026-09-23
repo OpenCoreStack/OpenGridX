@@ -1,59 +1,127 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useLayoutEffect, useRef } from 'react';
 import type { GridColDef, GridRowModel, GridRowId } from '../../types';
+import { getCellValue } from '../../utils/values';
+import { getExportColumns, formatExportValue } from '../../utils/export/exportShared';
+import { CHECKBOX_FIELD, EXPAND_FIELD, REORDER_FIELD } from '../../utils/focus';
 
-interface UseGridClipboardProps {
-  /** The currently selected row IDs — must come from the live selection source (not state.selection which is stale). */
-  selectedRowIds: Set<GridRowId>;
-  columns: GridColDef[];
-  getVisibleRows: () => GridRowModel[];
+export interface UseGridClipboardProps {
+  /**
+   * The live selection. Read at copy time, so a copy made right after a selection change (from
+   * `onRowSelectionModelChange`, or after `apiRef.selectRows`) sees the new selection.
+   */
+  getSelectedRowIds: () => Iterable<GridRowId>;
+  /** The columns on screen, in screen order (hidden columns left out). */
+  getColumns: () => GridColDef[];
+  /**
+   * Every data row the selection can refer to, in display order: pinned rows, rows on other
+   * pages and rows inside collapsed groups included; rows removed by the filter and synthetic
+   * group rows left out.
+   */
+  getRows: () => GridRowModel[];
+  /** The grid's key for a row. Never the consumer's getRowId on a grid-made row. */
   getRowId: (row: GridRowModel) => GridRowId;
   /**
    * Returns the grid's root element. When given, Ctrl/Cmd+C only copies while focus is inside it,
    * so a page with several grids (or other content) is not affected by a grid that is not in use.
    */
   getRootElement?: () => HTMLElement | null;
+  /** Turns the Ctrl/Cmd+C shortcut off. `copySelectedRows` still works. */
+  disableKeyboardShortcut?: boolean;
 }
 
+/** Grid-made columns that never hold row data. */
+const SYSTEM_FIELDS = new Set<string>([CHECKBOX_FIELD, EXPAND_FIELD, REORDER_FIELD]);
+
+const TSV_SPECIAL = /[\t\n\r"]/;
+
+/**
+ * One TSV field as Excel, Google Sheets and LibreOffice read it: a field holding a tab, line break
+ * or double quote is wrapped in double quotes, with inner quotes doubled.
+ */
+export function escapeTsvField(text: string): string {
+  return TSV_SPECIAL.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+/** The copied columns: the on-screen columns minus system columns and `exportable: false` ones. */
+export function getClipboardColumns(columns: GridColDef[]): GridColDef[] {
+  return getExportColumns(columns).filter(col => !SYSTEM_FIELDS.has(col.field));
+}
+
+/** Header line plus one line per row, with values read and formatted the way the cells show them. */
+export function buildClipboardTsv(rows: GridRowModel[], columns: GridColDef[]): string {
+  const header = columns.map(col => escapeTsvField(col.headerName || col.field)).join('\t');
+  const lines = rows.map(row =>
+    columns
+      .map(col => escapeTsvField(formatExportValue(row, col, getCellValue(row, col.field, col))))
+      .join('\t')
+  );
+  return [header, ...lines].join('\n');
+}
+
+/**
+ * The textarea + execCommand fallback, for browsers without the async Clipboard API (plain http)
+ * or when it rejects. It has to focus the textarea, so focus and the page selection are put back
+ * afterwards: the focused grid cell (or button) keeps focus.
+ */
 function copyTextSynchronous(text: string): boolean {
+  if (typeof document.execCommand !== 'function') return false;
+  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const selection = document.getSelection();
+  const previousRanges: Range[] = [];
+  if (selection) {
+    for (let i = 0; i < selection.rangeCount; i++) previousRanges.push(selection.getRangeAt(i));
+  }
+
   const textarea = document.createElement('textarea');
   textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.setAttribute('aria-hidden', 'true');
   textarea.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
   document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
   let success = false;
   try {
+    textarea.focus({ preventScroll: true });
+    textarea.select();
     success = document.execCommand('copy');
   } finally {
     document.body.removeChild(textarea);
+    if (previousFocus && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
+    if (selection) {
+      selection.removeAllRanges();
+      previousRanges.forEach(range => selection.addRange(range));
+    }
   }
   return success;
 }
 
 /**
- * Writes text to clipboard.
- * Uses both execCommand (synchronous, needed for non-HTTPS or non-async-gesture environments)
- * and navigator.clipboard for modern browser support.
+ * Writes text to the clipboard: the async Clipboard API when there is one, the execCommand
+ * fallback when it is missing or rejects. Rejects when neither worked.
  */
 async function writeToClipboard(text: string): Promise<void> {
-  let fallbackSuccess = false;
-  try {
-    fallbackSuccess = copyTextSynchronous(text);
-  } catch {
-    // Ignore fallback errors
-  }
-
-  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+  const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+  if (clipboard && typeof clipboard.writeText === 'function') {
     try {
-      await navigator.clipboard.writeText(text);
+      await clipboard.writeText(text);
       return;
-    } catch (e) {
-      if (fallbackSuccess) return;
-      throw e;
+    } catch (error) {
+      if (copyTextSynchronous(text)) return;
+      throw error;
     }
-  } else if (!fallbackSuccess) {
+  }
+  if (!copyTextSynchronous(text)) {
     throw new Error('Clipboard API not available and fallback failed.');
   }
+}
+
+/** Ctrl/Cmd+C, also with Caps Lock on ("C") and on non-Latin layouts (the key printed "c" is KeyC). */
+function isCopyShortcut(event: KeyboardEvent): boolean {
+  if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return false;
+  const key = event.key ?? '';
+  if (key.toLowerCase() === 'c') return true;
+  // A layout whose KeyC types a non-Latin letter (Cyrillic, Greek, ...): browsers copy on KeyC.
+  // A Latin layout that puts another letter there (Dvorak) copies on its own "c" key instead.
+  return event.code === 'KeyC' && !/^[a-z]$/i.test(key);
 }
 
 /**
@@ -62,61 +130,36 @@ async function writeToClipboard(text: string): Promise<void> {
  * Also exposes `copySelectedRows` for programmatic use via apiRef.
  */
 export function useGridClipboard(props: UseGridClipboardProps) {
-  const { selectedRowIds, columns, getVisibleRows, getRowId, getRootElement } = props;
+  const latestRef = useRef(props);
+  useLayoutEffect(() => {
+    latestRef.current = props;
+  });
 
-  const copySelectedRows = useCallback(async () => {
+  /** Copies the selected rows. Resolves without writing when no selected row is found; rejects when the write fails. */
+  const copySelectedRows = useCallback(async (): Promise<void> => {
+    const { getSelectedRowIds, getColumns, getRows, getRowId } = latestRef.current;
+    const selected = new Set<GridRowId>(getSelectedRowIds());
+    if (selected.size === 0) return;
 
-    if (selectedRowIds.size === 0) return;
-
-    const visibleRows = getVisibleRows();
-    const rowsToCopy = visibleRows.filter((row) => selectedRowIds.has(getRowId(row)));
-
-
-
+    const rowsToCopy = getRows().filter(row => selected.has(getRowId(row)));
     if (rowsToCopy.length === 0) return;
 
-    // Exclude internal grid columns (checkbox, expand, reorder)
-    const visibleColumns = columns.filter((col) => !col.field.startsWith('__'));
+    const text = buildClipboardTsv(rowsToCopy, getClipboardColumns(getColumns()));
+    await writeToClipboard(text);
+  }, []);
 
-    // Header row
-    const headerRow = visibleColumns
-      .map((col) => col.headerName || col.field)
-      .join('\t');
+  const disableKeyboardShortcut = Boolean(props.disableKeyboardShortcut);
 
-    // Data rows
-    const dataRows = rowsToCopy
-      .map((row) =>
-        visibleColumns
-          .map((col) => {
-            const value = row[col.field];
-            if (col.valueFormatter) {
-              return col.valueFormatter({ value, row, field: col.field });
-            }
-            return value ?? '';
-          })
-          .join('\t')
-      )
-      .join('\n');
-
-    const fullContent = `${headerRow}\n${dataRows}`;
-
-    try {
-      await writeToClipboard(fullContent);
-
-    } catch (err) {
-      console.error('[OpenGridX] Failed to copy to clipboard:', err);
-    }
-  }, [selectedRowIds, columns, getVisibleRows, getRowId]);
-
-  // Keyboard shortcut: Ctrl+C / Cmd+C
+  // Keyboard shortcut: Ctrl+C / Cmd+C. Registered once; it reads the latest props through the ref.
   useEffect(() => {
+    if (disableKeyboardShortcut) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || event.key !== 'c') return;
+      if (event.defaultPrevented || !isCopyShortcut(event)) return;
 
       // Don't intercept when user is typing in an input / editor
-      const activeEl = document.activeElement as HTMLElement;
+      const activeEl = document.activeElement as HTMLElement | null;
       const tag = activeEl?.tagName.toLowerCase();
-      const type = (activeEl as HTMLInputElement)?.type;
+      const type = (activeEl as HTMLInputElement | null)?.type;
 
       // Skip capturing Ctrl+C if we are genuinely inside a text input
       if (
@@ -128,6 +171,7 @@ export function useGridClipboard(props: UseGridClipboardProps) {
       if (activeEl?.isContentEditable) return;
 
       // Only the grid that has focus copies.
+      const { getRootElement } = latestRef.current;
       if (getRootElement) {
         const root = getRootElement();
         if (!root || !activeEl || !root.contains(activeEl)) return;
@@ -136,12 +180,14 @@ export function useGridClipboard(props: UseGridClipboardProps) {
       const selection = window.getSelection();
       if (selection && !selection.isCollapsed && selection.toString() !== '') return;
 
-      copySelectedRows();
+      copySelectedRows().catch((err: unknown) => {
+        console.error('[OpenGridX] Failed to copy to clipboard:', err);
+      });
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [copySelectedRows, getRootElement]);
+  }, [copySelectedRows, disableKeyboardShortcut]);
 
   return { copySelectedRows };
 }

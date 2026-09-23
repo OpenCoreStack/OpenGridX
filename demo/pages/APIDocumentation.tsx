@@ -67,7 +67,8 @@ export default function APIDocumentation() {
         { name: 'onStateChange', type: '(state: GridState) => void', default: '—', desc: 'Fired on mount and whenever the sort, filter, pagination, column or density state changes value.' },
         { name: 'onRowsScrollEnd', type: '() => void', default: '—', desc: 'Fired when the user scrolls to the bottom of the grid.' },
         { name: 'onColumnOrderChange', type: '(params) => void', default: '—', desc: 'Fired after a column is reordered by drag.' },
-        { name: 'onRowOrderChange', type: '(params) => void', default: '—', desc: 'Fired after a row is reordered (rowReordering must be true).' },
+        { name: 'onColumnOrderModelChange', type: '(columnOrder: string[]) => void', default: '—', desc: 'Fired with the whole new column order after every change, including the Columns panel Reset.' },
+        { name: 'onRowOrderChange', type: '(params) => void', default: '—', desc: 'Fired after a row is reordered (rowReordering must be true). oldIndex / targetIndex are positions in rows.' },
     ];
 
     const apiRefMethods = [

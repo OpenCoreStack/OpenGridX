@@ -174,17 +174,17 @@
 }
 .ogx__header-cell--drag-over {
   border-left: 2px solid var(--ogx-color-primary) !important;
-  background: var(--ogx-color-blue-50);
+  background: var(--ogx-color-primary-light);
 }
 /* Show ring on header cells during keyboard navigation */
 .ogx--kb .ogx__header-cell--focused {
-  outline: 2px solid var(--ogx-color-primary, #2563eb);
+  outline: 2px solid var(--ogx-grid-cell-focus-border, var(--ogx-color-primary, #2563eb));
   outline-offset: -2px;
   background-color: var(--ogx-grid-header-hover-background);
   z-index: 6;
 }
 .ogx__header-cell--focus-visible {
-  outline: 2px solid var(--ogx-color-primary);
+  outline: 2px solid var(--ogx-grid-cell-focus-border, var(--ogx-color-primary));
   outline-offset: -2px;
   background-color: var(--ogx-grid-header-hover-background);
   z-index: 6; 

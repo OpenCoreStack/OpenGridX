@@ -15,8 +15,8 @@ The main component for displaying and interacting with data.
 | `rows` | `GridRowModel[]` | `[]` | Array of data objects. |
 | `columns` | `GridColDef[]` | `[]` | Definitions for the columns. |
 | `getRowId` | `(row: GridRowModel) => GridRowId` | `row.id` | Returns a unique identifier for each row. It only keys the grid's internal store: rows reach `renderCell`, events, `apiRef` and `processRowUpdate` unchanged, and the id is never written to `row.id` (v3.0+). Pass it to export functions as `getRowId` when you export `selectedRows`. |
-| `rowHeight` | `number` | `52` | Height of each row in pixels. |
-| `headerHeight` | `number` | `56` | Height of the header row. |
+| `rowHeight` | `number` | `52` | Height of each row in pixels. Without it, an enclosing `DataGridThemeProvider`'s `grid.rowHeightStandard` applies (v3.0+). |
+| `headerHeight` | `number` | `56` | Height of the header row. Without it, the theme's `grid.headerHeight` applies (v3.0+). |
 | `autoHeight` | `boolean` | `false` | Adjust grid height to match row total. |
 | `overscanRowCount` | `number` | `3` | Minimum rows rendered outside the visible viewport. The grid adapts this upward automatically based on scroll velocity — this prop sets the floor. |
 | `loading` | `boolean` | `false` | With no rows, the body shows skeleton rows (or `slots.loadingOverlay`). With rows already shown, they stay and a progress bar runs along the top of the grid (or `slots.loadingOverlay` is shown over them). Works in list view too. |
@@ -28,7 +28,7 @@ The main component for displaying and interacting with data.
 | `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. The uncontrolled default page size is 100 when offered, else the first option. |
 | `rowCount` | `number` | — | Server total for `paginationMode="server"` when you fetch pages yourself (read on every render). With a `dataSource`, the response's `rowCount` is used and this is only the fallback before the first response. |
 | `height` | `number \| string` | `undefined` | Total height of the grid container. |
-| `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density. |
+| `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density: compact = the theme's `grid.rowHeightCompact` or 32 px, standard = `rowHeight`, comfortable = the theme's `grid.rowHeightComfortable` or 72 px. |
 | `initialState` | `GridInitialState` | `undefined` | Starting state (sort, filter, pagination, columns, density), read on mount. Seeds the grid's uncontrolled state; see [State Persistence](features/state-persistence.md). |
 | `slots` | `GridSlots` | `{}` | Custom component overrides: `toolbar`, `pagination`, `noRowsOverlay`, `loadingOverlay`, `footer`. See [Slots API](customization/slots-api.md). |
 | `slotProps` | `Record<string, unknown>` | `{}` | Props passed to custom slots. |
@@ -59,6 +59,7 @@ The main component for displaying and interacting with data.
 | `onRowSelectionModelChange` | `(model: GridRowSelectionModel) => void` | — | Fired when the selection changes. |
 | `disableRowSelectionOnClick` | `boolean` | `false` | When `true`, clicking a row does not toggle its selection. |
 | `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time — by click, checkbox, Space or `apiRef` — and the header select-all checkbox is not shown. |
+| `disableClipboardCopy` | `boolean` | `false` | When `true`, Ctrl+C / Cmd+C does not copy the selected rows, so the page or your own handler owns the shortcut. `apiRef.current.copySelectedRows()` still works. See [Clipboard](features/clipboard.md). |
 
 #### Column Visibility
 
@@ -73,9 +74,10 @@ The main component for displaying and interacting with data.
 | :--- | :--- | :--- | :--- |
 | `disableColumnReorder` | `boolean` | `false` | Disables drag-and-drop and Columns-panel reordering. A controlled `columnOrder` or `initialState.columns.columnOrder` still applies. |
 | `columnOrder` | `GridColumnOrder` | — | Controlled ordered array of column field names. |
-| `onColumnOrderChange` | `(params: GridColumnOrderChangeParams) => void` | — | Fired after a column is dragged to a new position. |
+| `onColumnOrderChange` | `(params: GridColumnOrderChangeParams) => void` | — | Fired after the user moves one column (header drag or Columns panel drag). Indices are positions in the grid's full column order. |
+| `onColumnOrderModelChange` | `(columnOrder: GridColumnOrder) => void` | — | Fired with the whole new column order after every change, including the Columns panel's **Reset**. Use it to keep a controlled `columnOrder` in sync (v3.0+). Not fired for generated pivot columns. |
 | `rowReordering` | `boolean` | `false` | Enables drag-and-drop row reordering. |
-| `onRowOrderChange` | `(params: GridRowOrderChangeParams) => void` | — | Fired after a row is dragged to a new position. |
+| `onRowOrderChange` | `(params: GridRowOrderChangeParams) => void` | — | Fired after a row is dragged onto another row. Indices are positions in your `rows` prop. |
 
 #### Pinning
 
@@ -133,11 +135,7 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-<<<<<<< HEAD
-| `onRowsScrollEnd` | `(params: GridRowScrollEndParams) => void` | — | Fired once each time the end of the rows comes within 100px of the viewport bottom: when a vertical scroll arrives there, and after the rows change if the end is (still) in view, e.g. when the loaded rows do not fill the viewport. It fires again only after the user scrolls out of that zone or the row count changes. Horizontal scrolling never fires it. Use this to trigger the next page in infinite-scroll mode. |
-=======
 | `onRowsScrollEnd` | `(params: GridRowScrollEndParams) => void` | — | Fired when the user scrolls to within 100px of the bottom of the grid viewport, or of the list in `listView`. Use this to trigger the next page in infinite-scroll mode. |
->>>>>>> main
 
 #### Accessibility & Appearance
 
@@ -254,7 +252,7 @@ Access these methods via the `apiRef` prop.
 | `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
 | `getAllFilteredRows()` | `GridRowModel[]` | Get every row that passes the filter, sorted, regardless of pagination, including pinned rows. Under row grouping and tree data it returns the data rows (no group rows) in hierarchy order with every group expanded. Use for full-dataset exports. |
 | `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total), sorted and filtered like the screen. Collapsed groups are included with their rows, and subtotals are computed over each group's exported rows. Group-header and subtotal entries carry `groupLabel`, the label the grid shows (v3.0+). Returns `null` when row grouping is not active. |
-| `copySelectedRows()` | `Promise<void>` | Copy selected rows to clipboard as TSV. |
+| `copySelectedRows()` | `Promise<void>` | Copy every selected row that passes the filter (other pages, collapsed groups and pinned rows included) as TSV, with the visible columns in screen order. Resolves without writing when no selected row is found; rejects when the clipboard write fails. |
 
 ---
 
@@ -288,8 +286,8 @@ Defines the behavior and appearance of a single column.
 | `headerName` | `string` | — | Text shown in the column header cell. |
 | `description` | `string` | — | Tooltip shown on column header hover (rendered as the HTML `title` attribute — improves accessibility). |
 | `width` | `number \| string` | `100` | Fixed width in pixels, or a percentage string (`'30%'`): a share of the width left after the fixed-width columns, the same base for every percentage column. Pinned and unpinned columns are sized the same way. Every width, including a manual resize, is clamped to `minWidth` / `maxWidth`. |
-| `minWidth` | `number` | — | Minimum width in pixels (enforced during resize). |
-| `maxWidth` | `number` | — | Maximum width in pixels (enforced during resize). |
+| `minWidth` | `number` | — | Minimum width in pixels (enforced during resize; 50 when omitted, or the column's own width if that is smaller). |
+| `maxWidth` | `number` | — | Maximum width in pixels (enforced during resize; no limit when omitted). |
 | `flex` | `number` | — | Flex grow factor — distributes remaining space proportionally. Mutually exclusive with a fixed `width`. |
 | `align` | `'left' \| 'center' \| 'right'` | `'left'` | Horizontal alignment of cell content. |
 | `headerAlign` | `'left' \| 'center' \| 'right'` | `'left'` | Horizontal alignment of the header cell content. |
@@ -342,7 +340,7 @@ Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative 
 | `filterable` | `boolean` | `true` | Enable/disable filtering for this column. `false` also removes it from the quick-filter search. |
 | `resizable` | `boolean` | `true` | Allow the user to drag-resize this column. |
 | `hideable` | `boolean` | `true` | Allow the user to hide this column from the UI. `false` removes it from the Columns panel (unless `showNonHideableColumns`) and removes **Hide Column** from its column menu. |
-| `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. `false` removes the pin actions from its column menu. |
+| `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. `false` removes the pin actions from its column menu. Does not affect drag-reordering (v3.0+). |
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header kebab/context menu. |
 | `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, PDF and Print exports (including their subtotals and totals). |
 | `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`, or used as a pivot row or column field (the pivot panel does not offer it). |
@@ -383,9 +381,14 @@ Every exporter's options also accept `getRowId?: (row) => GridRowId`. Pass the g
 Context provider for overriding the grid's visual system.
 
 #### `GridTheme` Object
-- **Colors**: `primary`, `secondary`, `header`, `border`, `rowHover`, `rowSelected`.
-- **Typography**: `fontFamily`, `fontSize`, `fontWeight`.
-- **Spacing**: `cellPadding`, `headerHeight`, `rowHeight`.
+- **`mode`**: `'light'` (default) or `'dark'`: the complete base palette the provider pins before applying the other keys (v3.0+).
+- **`colors`**: `primary`, `primaryDark`, `primaryLight`, `primaryFocus`, `secondary*`, `success`, `warning`, `error`, `info`, `white`, `black`, `gray` (`{ 50 … 900 }`). Toolbar, menu, selection and focus accents derive from `primary*` unless set directly.
+- **`typography`**: `fontFamily`, `fontFamilyMono`, `fontSizeXs` … `fontSizeXl`.
+- **`spacing`**: `xs` … `xxl`. **`borders`**: `widthThin/Medium/Thick`, `radiusSm` … `radiusXl`, `color`, `colorHover`. **`shadows`**: `sm` … `xl`.
+- **`grid`**: surfaces (`background`, `borderColor`, `headerBackground`, `headerText`, `headerHoverBackground`, `headerSortedBackground`, `rowText`, `rowHoverBackground`, `rowAlternateBackground`, `rowSelectedBackground`, `rowSelectedHoverBackground`, `cellFocusBorder`, `pinnedLeftShadow`, `pinnedRightShadow`, `checkboxBg`, `checkboxBorder`), sizing (`rowHeightCompact`, `rowHeightStandard`, `rowHeightComfortable`, `headerHeight` in px, read by the grid's layout; the `rowHeight` / `headerHeight` props win), `cellPaddingX`, `cellPaddingY`, `cellFontSize`, `headerFontSize`.
+- **`toolbar`**, **`overlays`**, **`scrollbar`** (`thumbColor`, `trackColor`, `size`), **`skeleton`** (`baseColor`, `highlightColor`), **`transitions`**.
+
+Presets: `darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compactTheme`. See [Theming](customization/theming.md).
 
 ---
 
@@ -491,7 +494,7 @@ const { pivotRows, pivotColumns, isValid } = usePivot(
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `pivotRows` | `GridRowModel[]` | One row per row-field combination (ids `0, 1, …`), then the Grand Total row (id `'__pivot_grand_total__'`). There is no Grand Total row when `rawRows` is empty. |
+| `pivotRows` | `GridRowModel[]` | One row per row-field combination (ids `'__pivot_row__:["value", …]'`, from its row-field values), then the Grand Total row (id `'__pivot_grand_total__'`). There is no Grand Total row when `rawRows` is empty. |
 | `pivotColumns` | `GridColDef[]` | Row-label columns (keeping the source column's formatter, renderer, type and alignment; `hideable: false`), then one value column per column key and value field. Value columns format aggregates like the footer. |
 | `colKeys` | `string[]` | The distinct column-field value combinations, ordered by value (numbers numerically, strings naturally, blanks last). `['']` when there are no column fields. |
 | `isValid` | `boolean` | `false` if the model has no usable row field or value field (fields on `groupable: false` columns and value fields whose function `availableAggregationFunctions` does not allow are skipped). |
@@ -682,17 +685,19 @@ Passed to `onColumnOrderChange`.
 | Property | Type | Description |
 | :--- | :--- | :--- |
 | `column` | `GridColDef` | The column definition that was moved. |
-| `oldIndex` | `number` | Previous column index. |
-| `targetIndex` | `number` | New column index after the move. |
+| `oldIndex` | `number` | The column's position before the move, in the grid's full column order: every current column (hidden ones and the row-grouping `__group__` column included), in its current order. |
+| `targetIndex` | `number` | Its position after the move, in the same order. |
+
+Splicing the full order with these indices gives the new order. A controlled `columnOrder` that lists only some columns, or no `__group__`, is not that order: use `onColumnOrderModelChange`, which hands you the whole new order.
 
 ### `GridRowOrderChangeParams<R>`
 Passed to `onRowOrderChange`.
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `row` | `R` | The row data object that was moved. |
-| `oldIndex` | `number` | Previous row index. |
-| `targetIndex` | `number` | New row index after the move. |
+| `row` | `R` | The row that was dragged: your own object from `rows`. |
+| `oldIndex` | `number` | Its position in your `rows` prop (`rows[oldIndex] === row`), whatever the sort, filter, page or pinned rows on screen. |
+| `targetIndex` | `number` | The position in `rows` of the row it was dropped on. Remove the row at `oldIndex` and insert it at `targetIndex`. |
 
 ### `GridRowScrollEndParams`
 Passed to `onRowsScrollEnd`.

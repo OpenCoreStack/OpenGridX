@@ -140,10 +140,9 @@ Allows users to rearrange rows by dragging a handle.
 
 ```tsx
 <DataGrid
+  rows={rows}
   rowReordering={true}
-  onRowOrderChange={(params) => {
-    const { oldIndex, targetIndex } = params;
-    // Move logic
+  onRowOrderChange={({ oldIndex, targetIndex }) => {
     const newRows = [...rows];
     const [moved] = newRows.splice(oldIndex, 1);
     newRows.splice(targetIndex, 0, moved);
@@ -152,8 +151,19 @@ Allows users to rearrange rows by dragging a handle.
 />
 ```
 
-> [!IMPORTANT]
-> Row reordering is usually disabled when sorting or filtering is active to prevent index confusion.
+### What the indices mean
+`oldIndex` and `targetIndex` are positions in **your `rows` prop** (v3.0+), so `rows[oldIndex] === params.row` and the splice above always moves the row that was dragged. This holds on every page, with pinned rows, and while the grid is sorted or filtered. (Before v3.0 they were positions in the visible page, which moved the wrong row in all of those cases.)
+
+`params.row` is your own row object, also with `getRowId`.
+
+While the grid is sorted, the new position in `rows` does not change where the row shows up: the sort decides that. Turn sorting off if the drag should visibly move the row.
+
+### Which rows can be dragged
+- Every data row you passed in `rows` can be dragged and dropped on.
+- Pinned rows (`pinnedRows`) keep their place. They show an empty handle cell, so their cells line up with the header, but cannot be dragged or dropped on.
+- Rows the grid makes itself cannot be dragged or dropped on: row-grouping group rows and the tree-data parents generated for missing path segments.
+- While pivot mode is active, row reordering is off (no handle column): pivot rows are generated, so their positions mean nothing in `rows`. It comes back when pivoting ends.
+- Only the grid's own row drags are accepted: dropping a file, a text selection or a header on a row does nothing.
 
 ---
 
@@ -171,25 +181,23 @@ Use the `disableColumnReorder` prop to control this feature globally.
 `disableColumnReorder` only removes the user's ways to reorder (header drag, Columns-panel reorder). A controlled `columnOrder` or `initialState.columns.columnOrder` still sets the order, so you can fix a custom order and stop users from changing it.
 
 ### Controlled Column Order
-You can manage the column order state explicitly using `columnOrder` and `onColumnOrderChange`.
+Manage the order yourself with `columnOrder` and `onColumnOrderModelChange`, which receives the whole new order after every change: a header drag, a drag in the Columns panel, and the panel's **Reset**.
 
 ```tsx
 const [colOrder, setColOrder] = useState(['id', 'name', 'status']);
 
 <DataGrid
   columnOrder={colOrder}
-  onColumnOrderChange={(params) => {
-    // params: { column: GridColDef, oldIndex: number, targetIndex: number }
-    const newOrder = [...colOrder];
-    const [moved] = newOrder.splice(params.oldIndex, 1);
-    newOrder.splice(params.targetIndex, 0, moved);
-    setColOrder(newOrder);
-  }}
+  onColumnOrderModelChange={setColOrder}
 />
 ```
 
+`onColumnOrderChange` still fires for every single move, with `{ column, oldIndex, targetIndex }`. The indices are positions in the grid's **full** column order: every current column (hidden columns and the row-grouping `__group__` column included), in its current order. Splicing your `columnOrder` with them is only right when it lists every column; prefer `onColumnOrderModelChange`. The panel's Reset does not fire `onColumnOrderChange`.
+
+Columns missing from `columnOrder` (added later, for example) are still shown, placed by their position in `columns`.
+
 ### Non-Reorderable Columns
-To prevent all columns from being reordered, use `disableColumnReorder` on the grid. For individual column control, pin the column using `pinnedColumns` at the grid level — pinned columns do not participate in drag-reorder.
+To prevent all columns from being reordered, use `disableColumnReorder` on the grid. Pinned columns (`pinnedColumns`, and the row-grouping column) keep their place: their headers cannot be dragged, and a header dropped on them does nothing. Unpin a column to move it. `pinnable: false` only stops a column from being pinned; it can still be reordered (v3.0+).
 
 ```tsx
 // Disable reordering globally
@@ -198,3 +206,5 @@ To prevent all columns from being reordered, use `disableColumnReorder` on the g
 // Keep a column fixed by pinning it
 <DataGrid pinnedColumns={{ left: ['id'] }} />
 ```
+
+Under `columnGroupingModel`, a column can only be dropped on a column of the same group.

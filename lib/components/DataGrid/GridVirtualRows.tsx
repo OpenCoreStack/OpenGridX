@@ -139,9 +139,6 @@ export function GridVirtualRows<R extends GridRowModel>({
     const showInfiniteSkeletons = paginationMode === 'infinite' && dataSourceLoading && sortedUnpinnedRowCount > 0
         && lastRenderedRowIndex >= unpinnedRowsLength - 1;
 
-    // Detail callbacks run only for an expanded data row: never for collapsed rows or synthetic group rows.
-    const showDetail = (id: GridRowId) => expandedRowIds.has(id) && rowMetaMap.get(id)?.isGroupRow !== true;
-
     return (
         <div
             className="ogx__virtual-container"
@@ -186,14 +183,14 @@ export function GridVirtualRows<R extends GridRowModel>({
                             pinnedColumns={pinnedColumns}
                             hasDetailPanel={hasDetailPanel}
                             isDetailPanelExpanded={expandedRowIds.has(id)}
-                            detailPanelContent={showDetail(id) && getDetailPanelContent ? <DetailPanelContent<R> getContent={getDetailPanelContent} params={{ row, id, rowIndex: actualIndex }} /> : null}
-                            detailPanelHeight={resolveDetailPanelHeight(showDetail(id) ? getDetailPanelHeight?.({ row, id, rowIndex: actualIndex }) : undefined)}
+                            detailPanelContent={expandedRowIds.has(id) && getDetailPanelContent ? <DetailPanelContent<R> getContent={getDetailPanelContent} params={{ row, id, rowIndex: actualIndex }} /> : null}
+                            detailPanelHeight={expandedRowIds.has(id) ? resolveDetailPanelHeight(getDetailPanelHeight?.({ row, id: id, rowIndex: actualIndex })) : undefined}
                             onDetailPanelHeightChange={onDetailPanelHeightChange}
                             onDetailPanelToggle={onDetailPanelToggle}
                             pinCheckboxColumn={pinCheckboxColumn}
                             pinExpandColumn={pinExpandColumn}
                             rowReordering={rowReordering}
-                            onDragStart={rowReorderHandlers.onDragStart}
+                            onDragStart={rowReorderHandlers.canReorderRow(id) ? rowReorderHandlers.onDragStart : undefined}
                             onDragOver={rowReorderHandlers.onDragOver}
                             onDragEnd={rowReorderHandlers.onDragEnd}
                             onDrop={rowReorderHandlers.onDrop}

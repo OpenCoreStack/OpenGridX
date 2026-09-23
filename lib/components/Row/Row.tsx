@@ -282,7 +282,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     <div
                         className={`ogx__cell ogx__cell--drag-handle ${focusedCellField === '__reorder_col__' ? 'ogx__cell--focused' : ''} ${(focusedCellField === '__reorder_col__' && isFocusVisible) ? 'ogx__cell--focus-visible' : ''}`}
                         role="gridcell"
-                        aria-label="Drag to reorder row"
+                        aria-label={onDragStart ? 'Drag to reorder row' : undefined}
                         aria-colindex={reorderColIndex}
                         data-field="__reorder_col__"
                         tabIndex={-1}
@@ -291,12 +291,12 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             left: 0,
                             zIndex: SYSTEM_CELL_Z_INDEX
                         }}
-                        draggable={true}
+                        draggable={!!onDragStart}
                         onDragStart={onDragStart ? onDragStart(id) : undefined}
                         onDragEnd={onDragEnd}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <DragHandleIcon />
+                        {onDragStart && <DragHandleIcon />}
                     </div>
                 )}
 
