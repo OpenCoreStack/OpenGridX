@@ -1,7 +1,18 @@
 
 import type { GridColDef, GridRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
-import { formatAggregationValue } from '../../hooks/features/useAggregation';
 import { groupHeaderLabel } from './groupLabel';
+import {
+    aggregationForExport,
+    formatExportAggregate,
+    formatExportValue,
+    getExportColumns,
+    getRawExportValue,
+    hasSelection,
+    isCountAggregation,
+    normalizeAggregateValue,
+    pickSelectedRows,
+    sanitizeSheetName,
+} from './exportShared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -13,10 +24,10 @@ export interface ExcelColumnStyle {
     /** Horizontal alignment override */
     alignment?: 'left' | 'center' | 'right';
     /**
-     * If true, the cell value (expected to be an image URL string) will be
-     * fetched and embedded as an inline image in the cell.
-     * Requires the image server to serve CORS headers. Falls back to the
-     * raw URL string if the fetch fails (a warning is logged to the console).
+     * If true, the cell value (an image URL string, after `valueGetter`) is fetched and embedded
+     * as an inline image in the cell. PNG, JPEG and GIF are supported (detected from the bytes).
+     * Requires the image server to serve CORS headers. Falls back to the raw URL string if the
+     * fetch fails or the image is in another format (a warning is logged to the console).
      */
     embedImage?: boolean;
     /** Width of the embedded image in pixels (default: 40) */
@@ -26,9 +37,12 @@ export interface ExcelColumnStyle {
 }
 
 export interface ExcelSheetDefinition {
-    /** Sheet tab name (max 31 chars) */
+    /**
+     * Sheet tab name. Characters Excel rejects (`\ / ? * : [ ]`) become `-`, the name is cut to
+     * 31 characters, and a duplicate name gets a " (2)" suffix.
+     */
     name: string;
-    /** Which rows to include. Default: 'all' */
+    /** Which rows to include. `'selected'` writes only `selectedRows` (none when nothing is selected). Default: 'all' */
     rows?: 'all' | 'selected';
     /** Include header row. Default: true */
     includeHeaders?: boolean;
@@ -52,7 +66,7 @@ export interface ExcelAdvancedExportOptions {
      * Built-in special sheet type: `{ type: 'summary' }` renders a
      * standalone aggregation sheet.
      */
-    sheets?: (ExcelSheetDefinition | { type: 'summary'; name?: string })[]; 
+    sheets?: (ExcelSheetDefinition | { type: 'summary'; name?: string })[];
     /** Per-column style overrides, keyed by field name */
     columnStyles?: Record<string, ExcelColumnStyle>;
     /** Header row fill color (default: '#f1f5f9') */
@@ -67,7 +81,7 @@ export interface ExcelAdvancedExportOptions {
     aggregationResult?: Record<string, unknown> | null;
     /** Current aggregation model */
     aggregationModel?: GridAggregationModel | null;
-    /** Currently selected row IDs */
+    /** Currently selected row IDs, written by `rows: 'selected'` sheets */
     selectedRows?: (string | number)[];
     /**
      * Grouped row structure, typically from `apiRef.current.getGroupedExportRows()`.
@@ -84,9 +98,21 @@ export interface ExcelAdvancedExportOptions {
     groupSubtotalFillColor?: string;
 }
 
-// ─── Cell type inference ──────────────────────────────────────────────────────
+// ─── Cell values ──────────────────────────────────────────────────────────────
 
-function inferCellType(colDef: GridColDef<GridRowModel>, value: unknown): 'number' | 'boolean' | 'date' | 'string' {
+/** The only values handed to ExcelJS. Objects are never passed through, because ExcelJS reads
+ * `{ formula }`, `{ hyperlink }`, `{ richText }` and `{ error }` objects as live cell content. */
+type ExcelCellValue = string | number | boolean | Date | null;
+
+/** A subtotal / total cell value, with the number format it needs when it differs from the column's. */
+interface AggregateCell {
+    value: ExcelCellValue;
+    numFmt?: string;
+}
+
+type CellKind = 'number' | 'boolean' | 'date' | 'string';
+
+function cellKind(colDef: GridColDef<GridRowModel>, value: unknown): CellKind {
     if (colDef.type === 'number') return 'number';
     if (colDef.type === 'boolean') return 'boolean';
     if (colDef.type === 'date') return 'date';
@@ -96,12 +122,129 @@ function inferCellType(colDef: GridColDef<GridRowModel>, value: unknown): 'numbe
     return 'string';
 }
 
-// ─── Default numFmt per column type ──────────────────────────────────────────
+/**
+ * Excel date serials carry no timezone and are read as wall-clock time, while ExcelJS converts a
+ * Date from its UTC instant. Re-anchor the local wall-clock fields at UTC so the cell shows the
+ * date and time the grid shows. Invalid dates become null.
+ */
+function toExcelDate(date: Date): Date | null {
+    if (Number.isNaN(date.getTime())) return null;
+    return new Date(Date.UTC(
+        date.getFullYear(), date.getMonth(), date.getDate(),
+        date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds(),
+    ));
+}
 
-function defaultNumFmt(colDef: GridColDef<GridRowModel>): string | undefined {
-    if (colDef.type === 'number') return '#,##0.##';
+const ISO_DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/i;
+const NUMERIC_STRING = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?$/i;
+
+/** A date-column value as a Date: null when missing or invalid, undefined when not a date at all. */
+function dateCellValue(value: unknown): Date | null | undefined {
+    if (value instanceof Date) return toExcelDate(value);
+    if (typeof value === 'number') return Number.isFinite(value) ? toExcelDate(new Date(value)) : null;
+    if (typeof value !== 'string') return undefined;
+    const text = value.trim();
+    const dateOnly = ISO_DATE_ONLY.exec(text);
+    if (dateOnly) {
+        // A calendar date: already wall-clock, so build it at UTC directly.
+        const [year, month, day] = [Number(dateOnly[1]), Number(dateOnly[2]), Number(dateOnly[3])];
+        const date = new Date(Date.UTC(year, month - 1, day));
+        return date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? date : undefined;
+    }
+    if (ISO_DATE_TIME.test(text)) {
+        const date = new Date(text.replace(' ', 'T'));
+        return Number.isNaN(date.getTime()) ? undefined : toExcelDate(date);
+    }
+    return undefined;
+}
+
+/**
+ * A native value for a number / boolean / date cell: null for an empty cell (missing, NaN,
+ * Infinity, Invalid Date), undefined when the value is not of that kind (e.g. 'n/a' in a
+ * number column).
+ */
+function typedCellValue(kind: Exclude<CellKind, 'string'>, value: unknown): number | boolean | Date | null | undefined {
+    if (value == null || value === '') return null;
+    if (kind === 'number') {
+        if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+        if (typeof value === 'bigint') {
+            const n = Number(value);
+            return Number.isSafeInteger(n) ? n : undefined;
+        }
+        if (typeof value === 'string' && NUMERIC_STRING.test(value.trim())) {
+            const n = Number(value.trim());
+            return Number.isFinite(n) ? n : undefined;
+        }
+        return undefined;
+    }
+    if (kind === 'boolean') {
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'string') {
+            const text = value.trim().toLowerCase();
+            if (text === 'true') return true;
+            if (text === 'false') return false;
+        }
+        return undefined;
+    }
+    return dateCellValue(value);
+}
+
+/** Any value as inert cell content: primitives and Dates as themselves, objects as JSON text. */
+function inertCellValue(value: unknown): ExcelCellValue {
+    if (value == null) return null;
+    if (typeof value === 'string' || typeof value === 'boolean') return value;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (value instanceof Date) return toExcelDate(value);
+    if (typeof value === 'object') {
+        try {
+            return JSON.stringify(value) ?? String(value);
+        } catch {
+            return String(value);
+        }
+    }
+    return String(value);
+}
+
+/**
+ * The value of a data cell. Number, boolean and date cells are native (their `valueFormatter` is
+ * not used, so Excel's number format applies); a value that is missing or not of the column's
+ * kind falls back to the text the grid shows. Other cells get the `valueFormatter` text.
+ */
+function dataCellValue(row: GridRowModel, col: GridColDef<GridRowModel>): ExcelCellValue {
+    const raw = getRawExportValue(row, col);
+    const kind = cellKind(col, raw);
+    if (kind !== 'string') {
+        const typed = typedCellValue(kind, raw);
+        if (typed != null) return typed;
+        if (!col.valueFormatter) return typed === null ? null : inertCellValue(raw);
+    }
+    return col.valueFormatter ? formatExportValue(row, col, raw) : inertCellValue(raw);
+}
+
+// ─── Number formats ──────────────────────────────────────────────────────────
+
+const INTEGER_FORMAT = '#,##0';
+const DECIMAL_FORMAT = '#,##0.##';
+
+/**
+ * Default format for a number-column value. '#,##0.##' alone shows whole numbers with a trailing
+ * decimal point in Excel ("5."), so whole numbers get '#,##0'.
+ */
+function defaultNumberFormat(value: number): string {
+    return Number.isInteger(value) ? INTEGER_FORMAT : DECIMAL_FORMAT;
+}
+
+function columnNumFmt(colDef: GridColDef<GridRowModel>, style: ExcelColumnStyle | undefined): string | undefined {
+    if (style?.numFmt) return style.numFmt;
     if (colDef.type === 'date') return 'yyyy-mm-dd';
     return undefined;
+}
+
+/** The number format for a native cell value, or undefined to keep the column's format. */
+function cellNumFmt(colDef: GridColDef<GridRowModel>, style: ExcelColumnStyle | undefined, value: ExcelCellValue): string | undefined {
+    if (style?.numFmt || typeof value !== 'number' || colDef.type !== 'number') return undefined;
+    return defaultNumberFormat(value);
 }
 
 // ─── Column display width (chars) ────────────────────────────────────────────
@@ -116,48 +259,49 @@ function colWidth(colDef: GridColDef<GridRowModel>, override?: number): number {
 
 type SupportedImageExt = 'png' | 'jpeg' | 'gif';
 
-function imageExtension(url: string, contentType?: string | null): SupportedImageExt {
-    const ct = contentType ?? '';
-    if (ct.includes('jpeg') || ct.includes('jpg')) return 'jpeg';
-    if (ct.includes('gif')) return 'gif';
-    const path = url.split('?')[0].toLowerCase();
-    if (path.endsWith('.jpg') || path.endsWith('.jpeg')) return 'jpeg';
-    if (path.endsWith('.gif')) return 'gif';
-    return 'png';
+/**
+ * The image format from the file's magic bytes. Excel can only show PNG, JPEG and GIF here; SVG,
+ * WebP, AVIF and anything else return null so the URL text is written instead.
+ */
+function detectImageExtension(bytes: Uint8Array): SupportedImageExt | null {
+    if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'png';
+    if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'jpeg';
+    if (bytes.length >= 6 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) return 'gif';
+    return null;
+}
+
+/** The image URL of an embedImage cell: the cell value after `valueGetter`. */
+function imageUrlOf(row: GridRowModel, col: GridColDef<GridRowModel>): string | null {
+    const value = getRawExportValue(row, col);
+    return typeof value === 'string' && value ? value : null;
 }
 
 /**
  * Fetch a list of image URLs in parallel.
- * CORS failures are logged and skipped — raw URL text is written to the cell
- * instead so data is never silently lost.
+ * CORS failures and unsupported formats are logged and skipped — raw URL text is written to the
+ * cell instead so data is never silently lost.
  */
 async function fetchImages(
     urls: string[]
 ): Promise<Map<string, { buffer: ArrayBuffer; extension: SupportedImageExt }>> {
     const settled = await Promise.allSettled(
         urls.map(async (url) => {
-            // ── data: URI — decode base64 directly, no network needed ──────────
+            let bytes: Uint8Array;
             if (url.startsWith('data:')) {
-                const commaIdx = url.indexOf(',');
-                const header   = url.slice(0, commaIdx);
-                const b64      = url.slice(commaIdx + 1);
-                const binary   = atob(b64);
-                const uint8    = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) uint8[i] = binary.charCodeAt(i);
-                const mimeMatch = header.match(/data:([^;,]+)/);
-                const mime = mimeMatch?.[1] ?? 'image/png';
-                let ext: SupportedImageExt = 'png';
-                if (mime.includes('jpeg') || mime.includes('jpg')) ext = 'jpeg';
-                else if (mime.includes('gif')) ext = 'gif';
-                return { url, buffer: uint8.buffer as ArrayBuffer, ext };
+                // ── data: URI — decode base64 directly, no network needed ──────────
+                const b64 = url.slice(url.indexOf(',') + 1);
+                const binary = atob(b64);
+                bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            } else {
+                // ── Remote URL — fetch with CORS ──────────────────────────────────
+                const res = await fetch(url, { mode: 'cors' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                bytes = new Uint8Array(await res.arrayBuffer());
             }
-
-            // ── Remote URL — fetch with CORS ──────────────────────────────────
-            const res = await fetch(url, { mode: 'cors' });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const buffer = await res.arrayBuffer();
-            const ext = imageExtension(url, res.headers.get('content-type'));
-            return { url, buffer, ext };
+            const ext = detectImageExtension(bytes);
+            if (!ext) throw new Error('unsupported image format (only PNG, JPEG and GIF can be embedded)');
+            return { url, buffer: bytes.slice().buffer, ext };
         })
     );
     const map = new Map<string, { buffer: ArrayBuffer; extension: SupportedImageExt }>();
@@ -167,7 +311,7 @@ async function fetchImages(
         } else {
             console.warn(
                 `[exportToExcelAdvanced] Cannot embed image "${urls[i]}" ` +
-                `(CORS/network error — raw URL written as fallback):`,
+                `(CORS/network error or unsupported format — raw URL written as fallback):`,
                 result.reason
             );
         }
@@ -212,25 +356,39 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
     workbook.creator = 'OpenGridX';
     workbook.created = new Date();
 
-    // Filter system columns
-    const exportColumns: GridColDef<GridRowModel>[] = (columns as unknown as GridColDef<GridRowModel>[]).filter(col =>
-        col.exportable !== false &&
-        col.field !== '__check__' &&
-        col.field !== '__actions__' &&
-        !col.isSpacer
-    );
+    const allColumns = columns as unknown as GridColDef<GridRowModel>[];
+    const exportColumns: GridColDef<GridRowModel>[] = getExportColumns(allColumns);
 
     const allRows: GridRowModel[] = rows as GridRowModel[];
-    const sRows: GridRowModel[] = (selectedRows && selectedRows.length > 0
-        ? rows.filter(r => selectedRows.includes(r.id))
-        : rows) as GridRowModel[];
+    // A 'selected' sheet writes the selection only: an empty selection is an empty sheet.
+    const sRows: GridRowModel[] = hasSelection(selectedRows) ? pickSelectedRows(allRows, selectedRows) : [];
 
     // Normalise sheet definitions
     const resolvedSheets: (ExcelSheetDefinition | { type: 'summary'; name?: string })[] =
         sheetDefs ?? [{ name: 'Data', rows: 'all', includeHeaders: true, includeSummary: false }];
+    const usedSheetNames = new Set<string>();
 
     // Workbook-level image cache — one fetch per URL, reused across multiple sheets
     const imageCache = new Map<string, number>();
+
+    /**
+     * A subtotal / total cell. Numbers stay numeric: `count` / `unique` in a plain integer format
+     * (not the column's date or currency format), `min` / `max` of a date column as a date, and
+     * other numbers in the column's format. Anything else is the formatted text.
+     */
+    const aggregateCell = (col: GridColDef<GridRowModel>, values: Record<string, unknown>): AggregateCell => {
+        const raw = values[col.field];
+        const fnName = aggregationModel?.[col.field];
+        if (raw == null) return { value: null };
+        const normalized = normalizeAggregateValue(col, fnName, raw);
+        if (typeof normalized === 'number') {
+            if (!Number.isFinite(normalized)) return { value: null };
+            if (isCountAggregation(fnName)) return { value: normalized, numFmt: INTEGER_FORMAT };
+            return { value: normalized, numFmt: cellNumFmt(col, columnStyles[col.field], normalized) };
+        }
+        if (normalized instanceof Date) return { value: toExcelDate(normalized) };
+        return { value: formatExportAggregate(col, fnName, raw, values) };
+    };
 
     // ─── Build each sheet ────────────────────────────────────────────────────
 
@@ -239,7 +397,7 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
         // ── Summary-only sheet ───────────────────────────────────────────────
         if ('type' in sheetDef && sheetDef.type === 'summary') {
             if (!aggregationResult || !aggregationModel) continue;
-            const ws = workbook.addWorksheet(sheetDef.name ?? 'Summary');
+            const ws = workbook.addWorksheet(sanitizeSheetName(sheetDef.name ?? 'Summary', usedSheetNames));
 
             // Title row
             ws.addRow(['Summary / Aggregation Totals']);
@@ -255,18 +413,15 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
             });
 
             exportColumns.forEach(col => {
-                const fn = aggregationModel![col.field];
-                const val = aggregationResult![col.field];
-                if (fn == null || val == null) return;
-                let formatted = val;
-                if (col.valueFormatter) {
-                    formatted = col.valueFormatter({ value: val, row: {} as R, field: col.field });
-                } else {
-                    formatted = formatAggregationValue(val, fn);
-                }
-                const row = ws.addRow([col.headerName ?? col.field, fn.toUpperCase(), formatted]);
-                row.getCell(3).alignment = { horizontal: 'right' };
-                row.getCell(3).font = { bold: true, size: bodyFontSize };
+                const fn = aggregationModel[col.field];
+                if (fn == null || aggregationResult[col.field] == null) return;
+                const { value, numFmt } = aggregateCell(col, aggregationResult);
+                const row = ws.addRow([col.headerName ?? col.field, fn.toUpperCase(), value]);
+                const valueCell = row.getCell(3);
+                const format = numFmt ?? columnNumFmt(col, columnStyles[col.field]);
+                if (format) valueCell.numFmt = format;
+                valueCell.alignment = { horizontal: 'right' };
+                valueCell.font = { bold: true, size: bodyFontSize };
             });
 
             ws.getColumn(1).width = 20;
@@ -301,10 +456,10 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
             const seen = new Set<string>();
             rowsToExport.forEach(row => {
                 imageColumns.forEach(col => {
-                    const val = row[col.field];
-                    if (typeof val === 'string' && val && !imageCache.has(val) && !seen.has(val)) {
-                        urlsNeeded.push(val);
-                        seen.add(val);
+                    const url = imageUrlOf(row, col);
+                    if (url && !imageCache.has(url) && !seen.has(url)) {
+                        urlsNeeded.push(url);
+                        seen.add(url);
                     }
                 });
             });
@@ -317,16 +472,21 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
             }
         }
 
-        const ws = workbook.addWorksheet(name);
+        const ws = workbook.addWorksheet(sanitizeSheetName(name, usedSheetNames));
 
         // ── Set column definitions ───────────────────────────────────────────
         ws.columns = exportColumns.map(col => ({
             key: col.field,
             width: colWidth(col, columnStyles[col.field]?.width),
             style: {
-                numFmt: columnStyles[col.field]?.numFmt ?? defaultNumFmt(col),
+                numFmt: columnNumFmt(col, columnStyles[col.field]),
             }
         }));
+
+        /** Every cell of a row, including empty ones (ExcelJS eachCell skips them). */
+        const forEachColumnCell = (row: import('exceljs').Row, fn: (cell: import('exceljs').Cell, colDef: GridColDef<GridRowModel>, colIndex: number) => void) => {
+            exportColumns.forEach((colDef, i) => fn(row.getCell(i + 1), colDef, i + 1));
+        };
 
         // ── Header row ───────────────────────────────────────────────────────
         if (includeHeaders) {
@@ -334,13 +494,12 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
             const headerRow = ws.addRow(headerValues);
             headerRow.height = 20;
 
-            headerRow.eachCell((cell, colIndex) => {
-                const colDef = exportColumns[colIndex - 1];
+            forEachColumnCell(headerRow, (cell, colDef) => {
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(headerFillColor) } };
                 cell.font = { bold: true, size: headerFontSize, color: { argb: argb(headerTextColor) } };
                 cell.alignment = {
-                    horizontal: columnStyles[colDef?.field]?.alignment ??
-                        (colDef?.type === 'number' ? 'right' : 'left'),
+                    horizontal: columnStyles[colDef.field]?.alignment ??
+                        (colDef.type === 'number' ? 'right' : 'left'),
                     vertical: 'middle'
                 };
                 cell.border = bottomBorder();
@@ -369,33 +528,22 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
             const cellValues = exportColumns.map(col => {
                 // Image columns: write empty string; image placed below
                 if (columnStyles[col.field]?.embedImage) return '';
-
-                let value: unknown = row[col.field];
-                if (col.valueGetter) {
-                    value = col.valueGetter({ row, field: col.field, value });
-                }
-                const cellType = inferCellType(col, value);
-                if (cellType === 'string' && col.valueFormatter && value != null) {
-                    value = col.valueFormatter({ value, row, field: col.field });
-                }
-                return value;
+                return dataCellValue(row, col);
             });
 
             const dataRow = ws.addRow(cellValues);
             dataRow.font = { size: bodyFontSize };
             if (outlineLevel > 0) dataRow.outlineLevel = outlineLevel;
 
-            // Alternate row background
-            if (alternateRowColor && rowIdx % 2 === 1) {
-                dataRow.eachCell(cell => {
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(alternateRowColor) } };
-                });
-            }
+            const striped = Boolean(alternateRowColor) && rowIdx % 2 === 1;
 
-            // Per-cell alignment and explicit web-like borders
-            dataRow.eachCell((cell, colIndex) => {
-                const colDef = exportColumns[colIndex - 1];
-                if (!colDef) return;
+            // Per-cell number format, stripe, alignment and web-like borders (empty cells included)
+            forEachColumnCell(dataRow, (cell, colDef, colIndex) => {
+                const numFmt = cellNumFmt(colDef, columnStyles[colDef.field], cellValues[colIndex - 1]);
+                if (numFmt) cell.numFmt = numFmt;
+                if (striped && alternateRowColor) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(alternateRowColor) } };
+                }
                 cell.alignment = {
                     horizontal: columnStyles[colDef.field]?.alignment ?? (colDef.type === 'number' ? 'right' : 'left'),
                     vertical: 'middle',
@@ -422,12 +570,12 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
 
                 imageColumns.forEach(col => {
                     const colIdx = exportColumns.indexOf(col);
-                    const url    = row[col.field];
-                    const imgId  = typeof url === 'string' ? imageCache.get(url) : undefined;
+                    const url    = imageUrlOf(row, col);
+                    const imgId  = url ? imageCache.get(url) : undefined;
 
                     if (imgId === undefined) {
-                        // Fetch failed — write URL text so data isn't lost
-                        dataRow.getCell(colIdx + 1).value = typeof url === 'string' ? url : '';
+                        // Fetch failed or unsupported format — write URL text so data isn't lost
+                        dataRow.getCell(colIdx + 1).value = url ?? '';
                         return;
                     }
 
@@ -465,27 +613,19 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
             excelRowIdx++;
         };
 
-        const groupLabel = (entry: GridGroupedExportRow): string => groupHeaderLabel(entry, columns);
-
-        // Numbers are written raw so the column numFmt applies; other values use the formatter.
-        const aggregateCell = (col: GridColDef<GridRowModel>, values: Record<string, unknown>): unknown => {
-            const val = values[col.field];
-            if (val == null) return '';
-            if (typeof val === 'number') return val;
-            if (col.valueFormatter) return col.valueFormatter({ value: val, row: {} as GridRowModel, field: col.field });
-            return formatAggregationValue(val, aggregationModel?.[col.field] ?? '');
-        };
+        const groupLabel = (entry: GridGroupedExportRow): string => groupHeaderLabel(entry, allColumns);
 
         const writeSummaryRow = (label: string, values: Record<string, unknown>, fill: string, outlineLevel: number, bold: boolean) => {
-            const cells = exportColumns.map((col, i) => (i === 0 && values[col.field] == null ? label : aggregateCell(col, values)));
-            const summaryRow = ws.addRow(cells);
+            const cells = exportColumns.map((col, i): AggregateCell => (i === 0 && values[col.field] == null ? { value: label } : aggregateCell(col, values)));
+            const summaryRow = ws.addRow(cells.map(c => c.value));
             summaryRow.height = 18;
             if (outlineLevel > 0) summaryRow.outlineLevel = outlineLevel;
             summaryRow.font = { bold, italic: !bold, size: bodyFontSize, color: { argb: argb(headerTextColor) } };
-            summaryRow.eachCell((cell, colIndex) => {
+            forEachColumnCell(summaryRow, (cell, colDef, colIndex) => {
+                const numFmt = cells[colIndex - 1].numFmt;
+                if (numFmt) cell.numFmt = numFmt;
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(fill) } };
-                const colDef = exportColumns[colIndex - 1];
-                cell.alignment = { horizontal: colIndex === 1 ? 'left' : (colDef?.type === 'number' ? 'right' : 'left'), vertical: 'middle' };
+                cell.alignment = { horizontal: colIndex === 1 ? 'left' : (colDef.type === 'number' ? 'right' : 'left'), vertical: 'middle' };
                 cell.border = topBorder();
             });
             excelRowIdx++;
@@ -522,34 +662,30 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
         }
 
         // ── Aggregation totals row ────────────────────────────────────────────
-        if (includeSummary && !wroteGrandTotal && aggregationResult && aggregationModel) {
+        // A 'selected' sheet's totals are recomputed over the rows it contains.
+        const sheetTotals = aggregationForExport(rowsToExport, rowScope === 'selected', allColumns, aggregationResult, aggregationModel);
+        if (includeSummary && !wroteGrandTotal && sheetTotals && aggregationModel) {
             // Label row
             const labelValues = exportColumns.map(col => {
-                const fn = aggregationModel![col.field];
+                const fn = aggregationModel[col.field];
                 return fn ? fn.toUpperCase() : '';
             });
             const labelRow = ws.addRow(labelValues);
             labelRow.height = 16;
             labelRow.font = { size: bodyFontSize - 1, italic: true, color: { argb: 'FF94a3b8' } };
-            labelRow.eachCell(cell => {
+            forEachColumnCell(labelRow, cell => {
                 cell.alignment = { horizontal: 'right', vertical: 'middle' };
                 cell.border = { top: { style: 'thin', color: { argb: 'FFcbd5e1' } } };
             });
 
             // Value row
-            const totalValues = exportColumns.map(col => {
-                const fn = aggregationModel![col.field];
-                const val = aggregationResult![col.field];
-                if (fn == null || val == null) return '';
-                if (col.valueFormatter) {
-                    return col.valueFormatter({ value: val, row: {} as R, field: col.field });
-                }
-                return formatAggregationValue(val, fn);
-            });
-            const totalRow = ws.addRow(totalValues);
+            const totals = exportColumns.map((col): AggregateCell => (aggregationModel[col.field] == null ? { value: null } : aggregateCell(col, sheetTotals)));
+            const totalRow = ws.addRow(totals.map(t => t.value));
             totalRow.height = 18;
             totalRow.font = { bold: true, size: bodyFontSize, color: { argb: argb(headerTextColor) } };
-            totalRow.eachCell(cell => {
+            forEachColumnCell(totalRow, (cell, _colDef, colIndex) => {
+                const numFmt = totals[colIndex - 1].numFmt;
+                if (numFmt) cell.numFmt = numFmt;
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(headerFillColor) } };
                 cell.alignment = { horizontal: 'right', vertical: 'middle' };
                 cell.border = topBorder();

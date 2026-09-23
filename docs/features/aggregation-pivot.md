@@ -80,4 +80,4 @@ Built-in functions available:
 ---
 
 ## 🎨 Formatting Totals
-Aggregation results automatically inherit the `valueFormatter` from their respective column definitions. If you need a specific format for aggregates only, use the `formatAggregationValue` utility.
+The grid footer formats aggregation results with the `formatAggregationValue` utility. Exports (CSV, basic Excel, print, PDF) also run `sum` / `avg` / `min` / `max` results through the column's `valueFormatter`, but not `count` / `unique`, which stay plain counts; see [Aggregate values](export-guide.md#aggregate-values). Use `formatAggregationValue` when you need the footer's formatting elsewhere.
