@@ -43,6 +43,7 @@ In-depth guides on the grid's functional capabilities.
 - **[Tree Data & Grouping](features/tree-data-grouping.md)** - Hierarchical layout and Column grouping
 - **[Cell Spanning](features/cell-spanning.md)** - Row and Col span spanning
 - **[Master-Detail](features/master-detail.md)** - Expandable Detail Panels
+- **[Keyboard & Accessibility](features/keyboard-navigation.md)** - Keys, focus behaviour and ARIA structure
 - **[List View](features/list-view.md)** - Card-based responsive layout
 - **[Infinite Scroll](features/infinite-scroll.md)** - Advanced performance loading
 - **[Data Source](features/data-source.md)** - Server-side fetching and SSR

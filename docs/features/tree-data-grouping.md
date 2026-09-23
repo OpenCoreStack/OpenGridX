@@ -27,6 +27,7 @@ Row grouping allows you to categorize rows based on common column values.
 - **Expansion state survives data updates** (row grouping and tree data). Groups and nodes the user expanded or collapsed stay that way when `rows` changes: inline edits, live refreshes, new array identities, and lazily loaded server-side children. The state resets to `defaultGroupingExpansionDepth` only when `rowGroupingModel` or `defaultGroupingExpansionDepth` changes value.
 - **Group aggregation uses the same functions as the footer.** `sum`, `avg`, `count`, `min`, `max` and `unique` ignore `null`/`undefined`, so a group of `[10, null, 20]` gives `min` 10, `avg` 15 and `count` 2. `availableAggregationFunctions` on a column is honoured for group rows too.
 - **The expand toggle, indentation and group label sit in the leftmost column on screen**, after column order, visibility and pinning are applied — not in whichever column is first in `columns`. Hiding or moving that column no longer leaves group rows without a label or toggle (fixed in v3.0).
+- **Keyboard and screen readers** (v3.0): **Enter** on a group row (or on a non-editable cell of a tree-data parent) expands or collapses it, the same as clicking the row. Rows expose `aria-level` (depth + 1), and rows with children expose `aria-expanded`. The expand buttons inside cells are not separate Tab stops. See [Keyboard & Accessibility](keyboard-navigation.md).
 - **`valueFormatter` applies to grouped rows** the same as flat rows (fixed in v2.1; earlier versions rendered raw values for every column once grouping was on).
 
 ---

@@ -7,6 +7,11 @@ interface UseGridClipboardProps {
   columns: GridColDef[];
   getVisibleRows: () => GridRowModel[];
   getRowId: (row: GridRowModel) => GridRowId;
+  /**
+   * Returns the grid's root element. When given, Ctrl/Cmd+C only copies while focus is inside it,
+   * so a page with several grids (or other content) is not affected by a grid that is not in use.
+   */
+  getRootElement?: () => HTMLElement | null;
 }
 
 function copyTextSynchronous(text: string): boolean {
@@ -57,7 +62,7 @@ async function writeToClipboard(text: string): Promise<void> {
  * Also exposes `copySelectedRows` for programmatic use via apiRef.
  */
 export function useGridClipboard(props: UseGridClipboardProps) {
-  const { selectedRowIds, columns, getVisibleRows, getRowId } = props;
+  const { selectedRowIds, columns, getVisibleRows, getRowId, getRootElement } = props;
 
   const copySelectedRows = useCallback(async () => {
 
@@ -122,12 +127,21 @@ export function useGridClipboard(props: UseGridClipboardProps) {
 
       if (activeEl?.isContentEditable) return;
 
+      // Only the grid that has focus copies.
+      if (getRootElement) {
+        const root = getRootElement();
+        if (!root || !activeEl || !root.contains(activeEl)) return;
+      }
+      // A text selection on the page is the user's copy target: leave it to the browser.
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed && selection.toString() !== '') return;
+
       copySelectedRows();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [copySelectedRows]);
+  }, [copySelectedRows, getRootElement]);
 
   return { copySelectedRows };
 }

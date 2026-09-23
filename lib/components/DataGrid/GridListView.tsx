@@ -34,6 +34,8 @@ export interface GridListViewProps<R extends GridRowModel> {
     onPaginationModelChange: (model: GridPaginationModel) => void;
     /** Resolves a row's id; defaults to `row.id`. */
     getRowId?: (row: R) => GridRowId;
+    /** Whether several rows can be selected (aria-multiselectable). */
+    multiselectable?: boolean;
 }
 
 const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
@@ -60,6 +62,7 @@ export function GridListView<R extends GridRowModel>({
     onSelectionChange,
     onPaginationModelChange,
     getRowId = defaultGetRowId,
+    multiselectable = false,
 }: GridListViewProps<R>) {
     const PaginationComponent = paginationSlot || Pagination;
 
@@ -75,6 +78,7 @@ export function GridListView<R extends GridRowModel>({
             role="grid"
             aria-label={ariaLabel || 'Data grid list view'}
             aria-rowcount={allRenderableRows.length + 1}
+            aria-multiselectable={multiselectable}
         >
             <div className="ogx-list-view__toolbar">
                 <span>

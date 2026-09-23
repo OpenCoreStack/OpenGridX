@@ -32,6 +32,8 @@ A cell is editable when its column has `editable: true` **and**, if you pass it,
 
 - `isCellEditable` can only restrict. It cannot make a column without `editable: true` editable. If it throws, the cell is treated as read-only.
 - Row-grouping group rows and the ancestors tree data generates for missing path segments are never editable. Tree-data **parent rows are your own rows** and are editable like any other row.
+- Pinned rows (`pinnedRows`) are edited like any other row, with double-click or Enter (v3.0; they used to show no editor).
+- **Enter** on a cell that is not editable does what clicking its row does (`onRowClick`, click-to-select, expanding a group). See [Keyboard & Accessibility](keyboard-navigation.md).
 
 ### Persistence
 When a cell edit is committed, the `processRowUpdate` callback is triggered.
@@ -57,7 +59,7 @@ When a cell edit is committed, the `processRowUpdate` callback is triggered.
 | Action | Result |
 | :--- | :--- |
 | **Enter** | Commits and closes the editor. |
-| **Tab** / **Shift+Tab** | Commits and moves to the next / previous editable cell. |
+| **Tab** / **Shift+Tab** | Commits and moves to the next / previous editable cell. With no editable cell left, focus moves on out of the grid and the edit commits. Outside edit mode Tab is not captured: it leaves the grid. |
 | Moving focus away (clicking another cell or any control outside the grid) | Commits. Focus stays where you put it. |
 | The edited cell leaving the grid (scrolled out of the render window, filtered out, another page) | Commits, as if the editor had lost focus. |
 | Starting an edit on another cell | Commits the current edit first. |

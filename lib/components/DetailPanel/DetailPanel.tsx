@@ -10,6 +10,10 @@ export interface DetailPanelProps<R extends GridRowModel = GridRowModel> {
     content: React.ReactNode;
     height: GridDetailPanelHeight;
     isExpanded: boolean;
+    /** Referenced by the expand cell's `aria-controls`. */
+    id?: string;
+    /** Number of grid columns the panel spans (`aria-colspan` of its cell). */
+    colSpan?: number;
     /**
      * Called with the panel's rendered height when `height` is `'auto'`: once when it mounts and
      * again whenever its size changes, so the grid can lay the rows below it out correctly.
@@ -18,7 +22,7 @@ export interface DetailPanelProps<R extends GridRowModel = GridRowModel> {
 }
 
 export function DetailPanel<R extends GridRowModel = GridRowModel>(props: DetailPanelProps<R>) {
-    const { rowId, content, height, isExpanded, onHeightChange } = props;
+    const { rowId, content, height, isExpanded, onHeightChange, id, colSpan } = props;
     const panelRef = React.useRef<HTMLDivElement>(null);
     const isAuto = height === 'auto';
 
@@ -47,9 +51,11 @@ export function DetailPanel<R extends GridRowModel = GridRowModel>(props: Detail
         overflow: isAuto ? 'visible' : 'auto'
     };
 
+    // A detail panel sits between rows of the grid, so it is exposed as a row with one cell
+    // spanning every column (a bare div is not allowed inside role="rowgroup").
     return (
-        <div ref={panelRef} className="ogx__detail-panel" style={style}>
-            <div className="ogx__detail-panel-content">
+        <div ref={panelRef} className="ogx__detail-panel" style={style} role="row" id={id}>
+            <div className="ogx__detail-panel-content" role="gridcell" aria-colspan={colSpan}>
                 {content}
             </div>
         </div>

@@ -55,7 +55,7 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     rowReorderHandlers: UseRowReorderReturn;
     editingHandlers: RowEditingHandlers;
     isCellEditable?: (params: GridCellParams<R>) => boolean;
-    focusedCell: { id: GridRowId; field: string } | null;
+    focusedCell: { id: GridRowId | null; field: string } | null;
     colspanMap?: Map<GridRowId, Record<string, CellColSpanInfo>>;
     rowSpanningCaches?: RowSpanningCaches;
     paginationMode: 'client' | 'server' | 'infinite';
@@ -67,6 +67,9 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     lastRenderedRowIndex: number;
     rowMetaMap: Map<GridRowId, GridRowMeta>;
     loadingOverlay?: React.ReactNode;
+    /** Added to a row's rowIndex to get its `aria-rowindex` (header rows and earlier pages included). */
+    ariaRowIndexOffset?: number;
+    columnIndexMap?: Map<string, number>;
 }
 
 export function GridVirtualRows<R extends GridRowModel>({
@@ -109,6 +112,8 @@ export function GridVirtualRows<R extends GridRowModel>({
     lastRenderedRowIndex,
     rowMetaMap,
     loadingOverlay,
+    ariaRowIndexOffset,
+    columnIndexMap,
 }: GridVirtualRowsProps<R>) {
     const skeletonColumns: GridColDef<R>[] = baseColumns.length > 0
         ? baseColumns
@@ -165,6 +170,8 @@ export function GridVirtualRows<R extends GridRowModel>({
                             rowId={id}
                             columns={virtualColumns}
                             rowIndex={actualIndex}
+                            ariaRowIndex={ariaRowIndexOffset !== undefined ? actualIndex + ariaRowIndexOffset : undefined}
+                            columnIndexMap={columnIndexMap}
                             isSelected={selectedRowIds.has(id)}
                             checkboxSelection={checkboxSelection}
                             onRowClick={onRowClick}
