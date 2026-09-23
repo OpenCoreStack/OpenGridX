@@ -34,18 +34,21 @@ import { useGridSpanRowWindow, useGridSpanColumnWindow } from '../../hooks/featu
 import { useColumnGroupReorderGuard } from '../../hooks/features/useColumnGroupReorderGuard';
 import { canReorderWithinColumnGroups, getColumnGroupDepth } from '../../utils/columnGroups';
 import { useGridDataSource } from '../../hooks/features/useGridDataSource';
+import { useServerTreeChildren } from '../../hooks/features/useServerTreeChildren';
 import { useAggregation, useServerAggregationResults } from '../../hooks/features/useAggregation';
 import { useGridPivot } from '../../hooks/features/useGridPivot';
 import { PIVOT_GRAND_TOTAL_ID } from '../../utils/pivot';
-import { isServerDrivenDataSource } from '../../utils/dataSource';
+import { isServerDrivenDataSource, getDataSourceErrorMessage } from '../../utils/dataSource';
 import { useGridClipboard } from '../../hooks/features/useGridClipboard';
 import { GridListView } from './GridListView';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
-import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridTreeNode, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
+import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridFilterModel, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
 
 const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
+const EMPTY_FILTER_MODEL: GridFilterModel = { items: [] };
+const EMPTY_SORT_MODEL: GridSortItem[] = [];
 
 export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridProps<R>) {
     const {
@@ -288,23 +291,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         containerRef.current?.classList.toggle('ogx--kb', on);
     }, []);
 
-    const dataSourceRef = useRef<GridDataSource<R> | undefined>(dataSource);
-    dataSourceRef.current = dataSource;
-
-    const fetchChildrenRef = useRef<((parentId: GridRowId, groupKeys: string[]) => Promise<void>) | null>(null);
-    const treeDataRef = useRef<ReturnType<typeof useTreeData> | null>(null);
-
-    const handleNodeExpansion = useCallback((node: GridTreeNode) => {
-        if (dataSourceRef.current && treeData) {
-
-            if ((node.serverChildrenCount ?? 0) > 0 && (node.children ?? []).length === 0) {
-
-                const groupKeys = treeDataRef.current?.getNodePath(node.id) || [node.groupingKey];
-                fetchChildrenRef.current?.(node.id, groupKeys);
-            }
-        }
-    }, [treeData]);
-
     const gridData = useDataGrid({
         rows: activeRows,
         getRowId: effectiveGetRowId,
@@ -369,22 +355,22 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         return state.rows.allRows.map(id => state.rows.idRowsLookup.get(id)!) as R[];
     }, [state.rows]);
 
+    // Server filtering and sorting mean the rows arrive filtered and in order: the hierarchy must
+    // not filter them again (which hides lazily loaded children) or re-sort them.
+    const hierarchyFilterModel = filterMode === 'server' ? EMPTY_FILTER_MODEL : filterModel;
+    const hierarchySortModel = sortingMode === 'server' ? EMPTY_SORT_MODEL : sortModel;
+
     const treeDataHandlers = useTreeData({
         rows: effectiveRows,
         getRowId: getRowIdOf,
         getTreeDataPath,
         treeData: isTreeData,
         defaultGroupingExpansionDepth,
-        filterModel,
+        filterModel: hierarchyFilterModel,
 
-        sortModel,
-        onRowExpansionChange: handleNodeExpansion,
+        sortModel: hierarchySortModel,
         columnLookup,
     });
-
-    useEffect(() => {
-        treeDataRef.current = treeDataHandlers;
-    }, [treeDataHandlers]);
 
     const rowGroupingHandlers = useRowGrouping({
         rows: effectiveRows,
@@ -393,8 +379,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowGroupingModel: hierarchyRowGroupingModel,
         aggregationModel,
         defaultGroupingExpansionDepth,
-        filterModel,
-        sortModel,
+        filterModel: hierarchyFilterModel,
+        sortModel: hierarchySortModel,
         getAggregationPosition,
         columnLookup,
     });
@@ -424,7 +410,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         return EMPTY_ROW_META_MAP;
     }, [isTreeData, treeDataHandlers.rowMetaMap, isRowGrouping, rowGroupingHandlers.rowMetaMap]);
 
-    const pagination = propPagination && !isRowGrouping;
+    // Infinite scroll loads rows as the user scrolls; it has no pages to show or slice.
+    const pagination = propPagination && !isRowGrouping && paginationMode !== 'infinite';
 
     const dataSourceHandlers = useGridDataSource({
         dataSource,
@@ -435,18 +422,23 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         sortingMode,
         filterMode,
         aggregationModel,
+        getRowId: effectiveGetRowId as unknown as (row: GridRowModel) => GridRowId,
         setRows,
         setRowCount,
         setDataSourceLoading,
         setDataSourceError,
         onAggregationResults: setServerAggregationResults,
+        onPaginationModelChange: handlePaginationModelChange,
     });
 
-    useEffect(() => {
-        if (dataSourceHandlers.fetchChildren) {
-            fetchChildrenRef.current = dataSourceHandlers.fetchChildren;
-        }
-    }, [dataSourceHandlers.fetchChildren]);
+    useServerTreeChildren({
+        enabled: isTreeData && Boolean(dataSource),
+        treeNodes: treeDataHandlers.treeNodes,
+        isGroupExpanded: treeDataHandlers.isGroupExpanded,
+        getNodePath: treeDataHandlers.getNodePath,
+        toggleExpansion: treeDataHandlers.toggleExpansion,
+        fetchChildren: dataSourceHandlers.fetchChildren,
+    });
 
     useEffect(() => {
         if (!dataSource) {
@@ -614,8 +606,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rows: dataRows,
         columns: activeColumns as unknown as GridColDef[],
         aggregationModel,
-        // Same rule useGridDataSource fetches by: when the server drives the rows, the grid only holds
-        // some of them, so client totals would be partial.
+        // When the server drives the rows (paginates, sorts or filters them), the grid only holds
+        // the rows it returned, so client totals would be partial.
         isServerSide: isServerDrivenDataSource({ dataSource, paginationMode, sortingMode, filterMode }),
         dataSource,
         filterModel,
@@ -1269,8 +1261,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             {/* Accessibility Live Region */}
             <div className="ogx-aria-live-status" role="status" aria-live="polite">
                 {effectiveLoading ? 'Loading data...' : ''}
-                {state.dataSource.error ? `Error: ${state.dataSource.error instanceof Error ? state.dataSource.error.message : 'Unknown error'}` : ''}
-                {!loading && !state.dataSource.error && (
+                {state.dataSource.error ? `Error: ${getDataSourceErrorMessage(state.dataSource.error)}` : ''}
+                {!effectiveLoading && !state.dataSource.error && (
                     filteredRows.length === 0
                         ? effectiveNoRowsLabel
                         : (filterModel && ((filterModel.quickFilterValues?.length || 0) > 0 || (filterModel.items?.length || 0) > 0))
@@ -1279,7 +1271,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 )}
             </div>
 
-            <GridErrorOverlay error={state.dataSource.error} />
+            <GridErrorOverlay error={state.dataSource.error} onRetry={dataSource ? dataSourceHandlers.fetchRows : undefined} />
         </div>
     );
 }

@@ -1,16 +1,17 @@
 # `<GridErrorOverlay />`
 
-Internal component rendered when a `GridDataSource` fetch fails. Displays an error icon, a human-readable message, and a **Retry** button that calls `window.location.reload()`.
+Internal component rendered when a `GridDataSource` fetch fails. Displays an error icon, a human-readable message, and a **Retry** button that runs the failed `getRows` request again (v3.0+; it used to reload the whole page).
 
 ## ⚙️ Props
 
 | Prop | Type | Description |
 | :--- | :--- | :--- |
-| `error` | `{ message?: string } \| null` | The error object from `state.dataSource.error`. When `null` the component renders nothing (`null` return). |
+| `error` | `unknown` | The value the fetch rejected with (`state.dataSource.error`). When falsy the component renders nothing. |
+| `onRetry` | `() => void` | Re-runs the request. DataGrid passes it whenever a `dataSource` is set; without it the Retry button is not shown. |
 
 ## 🔄 When it renders
 
-`GridErrorOverlay` only appears when using a server-side `dataSource` prop. When a fetch throws, DataGrid catches the error and stores it in internal state. The overlay replaces the row viewport until the user retries.
+`GridErrorOverlay` only appears when using a server-side `dataSource` prop. When a fetch throws, DataGrid catches the error and stores it in internal state. The overlay replaces the row viewport until a request succeeds: **Retry**, or any change that refetches (page, sort, filter). A failed children request of a server-side tree node does not show it.
 
 ```tsx
 <DataGrid
@@ -24,7 +25,7 @@ Internal component rendered when a `GridDataSource` fetch fails. Displays an err
 />
 ```
 
-If `getRows` throws, the overlay renders with the thrown error's `message`.
+If `getRows` throws, the overlay renders the rejection's `message`: an `Error`, a string, or any object with a string `message` (such as an HTTP-client error). Otherwise it shows a generic message.
 
 ## ♿ Accessibility
 
