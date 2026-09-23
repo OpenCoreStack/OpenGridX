@@ -29,7 +29,7 @@ import { DataGrid, GridToolbar } from '@opencorestack/opengridx';
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `columns` | `GridColDef[]` | `[]` | Column definitions (injected automatically when used via `slots`). |
-| `baseColumns` | `GridColDef[]` | — | Pre-pivot column definitions, used by the Pivot panel to avoid showing synthetic columns. |
+| `baseColumns` | `GridColDef[]` | — | Pre-pivot column definitions. The Pivot panel lists these instead of the generated pivot columns, and the Summaries panel only offers columns that are among them (a summary on a generated pivot column would do nothing). |
 | `aggregationModel` | `GridAggregationModel` | `{}` | Current aggregation configuration. |
 | `onAggregationModelChange` | `(model) => void` | — | Called when the user changes aggregation settings. |
 | `pivotModel` | `GridPivotModel` | — | Current pivot configuration. |

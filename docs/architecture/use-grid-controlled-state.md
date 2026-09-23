@@ -112,6 +112,8 @@ interface UseGridControlledStateReturn {
 
 **`onRowSelectionModelChange` exception:** This callback is consumed by DataGrid directly (e.g. inside `handleSelectAll`) rather than through the hook. The hook silences it with `void onRowSelectionModelChange` to avoid an unused-variable lint error, and exposes `setInternalRowSelectionModel` for DataGrid to update internal state after calling the callback itself.
 
+**`aggregationModel` identity follows content:** an inline `aggregationModel={{ salary: 'sum' }}` is a new object on every parent render. The returned `aggregationModel` keeps its identity while its content is unchanged (it is keyed on its JSON), so the server fetches and memos that depend on it do not rerun for an unchanged model.
+
 **`selectedRowIds` (Set):** The array `rowSelectionModel` is converted to a `Set` via `useMemo` for O(1) membership checks during row rendering. Both are returned so callers can choose the right structure.
 
 ---

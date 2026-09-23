@@ -27,12 +27,15 @@ interface UseGridColumnsParams<R extends GridRowModel> {
     columnOrder?: string[];                   // controlled; undefined = uncontrolled
     onColumnOrderChange?: (params: GridColumnOrderChangeParams) => void;
     disableColumnReorder: boolean;
-    pivotMode: boolean;
+    pivotMode: boolean;                       // pivot is active (DataGrid passes useGridPivot's isActive)
     checkboxSelection: boolean;
     hasDetailPanel: boolean;
     rowReordering: boolean;
     initialState?: GridInitialState;
     setColumns: (cols: GridColDef[]) => void; // state store updater from useDataGrid
+    pinnedColumns?: GridColumnPinning;
+    aggregationModel?: GridAggregationModel;  // formats aggregates on row-grouping group rows
+    groupingRows?: ReadonlyMap<GridRowId, unknown>; // row grouping's synthetic group rows, by id
 }
 ```
 
@@ -69,6 +72,20 @@ When `true`, the first column gets a `renderCell` override that:
 4. Overrides the cell content for row-grouping header rows (shows group label + count)
 
 All other columns get a `renderCell` wrapper that returns `null` for row-grouping header rows when the column is the grouping field, hiding duplicated values.
+
+Under row grouping, a column with an `aggregationModel` entry also gets `valueGetter` / `valueFormatter` wrappers for group rows (identified through `groupingRows`): the cell shows the aggregate stored on the group row (a `valueGetter` would recompute it from fields a group row does not have), formatted with `formatAggregateForColumn`, the formatter the footer, pivot cells and exports use (so `count` / `unique` are never put in the column's currency or unit format). Leaf rows keep the column's own getter and formatter.
+
+---
+
+## Column order
+
+- **Uncontrolled:** the order is the columns' own order until the user reorders (`setInternalColumnOrder`); it is derived, not snapshotted at mount, so it stays right when the columns change or the grid mounts in pivot mode.
+- **Controlled:** `columnOrder` wins, except in pivot mode.
+- **Pivot mode:** the generated pivot columns keep an order of their own, reset whenever the generated column set changes. Pivoting never rewrites the normal order, a controlled `columnOrder` (which names source columns) does not apply, and reordering updates the pivot order. `setInternalColumnOrder` writes to the order that is active.
+
+## Visibility
+
+`visibleOrderedColumns` drops columns hidden by `columnVisibilityModel`, except, in pivot mode, the pivot row-label columns (marked `hideable: false`): they share their field with the source column, which the visibility model may hide in normal mode, and the pivot rows are labelled by them.
 
 ---
 
