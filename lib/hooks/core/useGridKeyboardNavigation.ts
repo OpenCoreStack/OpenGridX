@@ -51,6 +51,12 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
     setKeyboardMode: (mode: boolean) => void;
     sortModel: GridSortItem[];
     handleSort: (field: string, direction: GridSortDirection) => void;
+    /**
+     * Adds, updates or removes one sort key and keeps the others. Enter/Space on a header use it
+     * when `multiSort` is on or Shift is held, as a header click does.
+     */
+    handleSortAdd?: (field: string, direction: GridSortDirection) => void;
+    multiSort?: boolean;
     isCellEditable?: (params: GridCellParams<R>) => boolean;
     pagination: boolean;
     pageSize: number;
@@ -137,6 +143,8 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         setKeyboardMode,
         sortModel,
         handleSort,
+        handleSortAdd,
+        multiSort = false,
         isCellEditable,
         pagination,
         pageSize,
@@ -425,7 +433,8 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
                 if (!col || isSystemField(field) || col.sortable === false) return;
                 const currentSort = sortModel.find(item => item.field === field);
                 const direction: GridSortDirection = currentSort ? (currentSort.sort === 'asc' ? 'desc' : null) : 'asc';
-                handleSort(field, direction);
+                if ((multiSort || event.shiftKey) && handleSortAdd) handleSortAdd(field, direction);
+                else handleSort(field, direction);
                 return;
             }
         } else if (key === 'Enter' || isSpace) {
@@ -512,6 +521,8 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         setKeyboardMode,
         sortModel,
         handleSort,
+        handleSortAdd,
+        multiSort,
         isCellEditable,
         pagination,
         pageSize,

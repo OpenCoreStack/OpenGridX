@@ -787,6 +787,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         setKeyboardMode,
         sortModel,
         handleSort,
+        handleSortAdd,
+        multiSort,
         isCellEditable,
         pagination,
         pageSize: effectivePaginationModel.pageSize,
