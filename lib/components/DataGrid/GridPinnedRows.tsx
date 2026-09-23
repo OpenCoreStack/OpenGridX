@@ -13,6 +13,14 @@ import type {
     GridRowMeta,
 } from '../../types';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
+import type { GridEditingState } from '../../hooks/features/useGridEditing';
+
+interface PinnedRowEditingHandlers {
+    editingCell: GridEditingState['editingCell'];
+    startCellEdit: (params: { id: GridRowId; field: string; value: unknown }) => void;
+    stopCellEdit: (params?: { cancel?: boolean; id?: GridRowId; field?: string }) => void;
+    setEditCellValue: (params: { id: GridRowId; field: string; value: unknown }) => void;
+}
 
 export interface GridPinnedRowsProps<R extends GridRowModel> {
     rows: R[];
@@ -34,13 +42,21 @@ export interface GridPinnedRowsProps<R extends GridRowModel> {
     onDetailPanelToggle: (rowId: GridRowId) => void;
     pinCheckboxColumn?: boolean;
     pinExpandColumn?: boolean;
-    focusedCell: { id: GridRowId; field: string } | null;
+    focusedCell: { id: GridRowId | null; field: string } | null;
     colspanMap?: Map<GridRowId, Record<string, CellColSpanInfo>>;
     rowSpanningCaches?: RowSpanningCaches;
     rowHeight: number;
     rowMetaMap: Map<GridRowId, GridRowMeta>;
     /** Resolves a row's id; defaults to `row.id`. */
     getRowId?: (row: R) => GridRowId;
+    /** Index of the first of these rows in the grid's renderable rows (top-pinned + centre + bottom-pinned). */
+    rowIndexOffset?: number;
+    /** `aria-rowindex` of the first of these rows. */
+    ariaRowIndexBase?: number;
+    columnIndexMap?: Map<string, number>;
+    /** Pinned rows are edited like any other row. */
+    editingHandlers?: PinnedRowEditingHandlers;
+    isCellEditable?: (params: GridCellParams<R>) => boolean;
 }
 
 const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
@@ -71,6 +87,11 @@ export function GridPinnedRows<R extends GridRowModel>({
     rowHeight,
     rowMetaMap,
     getRowId = defaultGetRowId,
+    rowIndexOffset = 0,
+    ariaRowIndexBase,
+    columnIndexMap,
+    editingHandlers,
+    isCellEditable,
 }: GridPinnedRowsProps<R>) {
     if (rows.length === 0) return null;
 
@@ -78,13 +99,16 @@ export function GridPinnedRows<R extends GridRowModel>({
         <div className={`ogx__pinned-rows ogx__pinned-rows--${position}`} role="rowgroup">
             {rows.map((row, index) => {
                 const id = getRowId(row);
+                const rowIndex = rowIndexOffset + index;
                 return (
                 <Row<R>
                     key={id}
                     row={row}
                     rowId={id}
                     columns={columns}
-                    rowIndex={index}
+                    rowIndex={rowIndex}
+                    ariaRowIndex={ariaRowIndexBase !== undefined ? ariaRowIndexBase + index : undefined}
+                    columnIndexMap={columnIndexMap}
                     isSelected={selectedRowIds.has(id)}
                     checkboxSelection={checkboxSelection}
                     onRowClick={onRowClick}
@@ -96,8 +120,8 @@ export function GridPinnedRows<R extends GridRowModel>({
                     pinnedRows={pinnedRows}
                     hasDetailPanel={hasDetailPanel}
                     isDetailPanelExpanded={expandedRowIds.has(id)}
-                    detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id, rowIndex: index }) : null}
-                    detailPanelHeight={getDetailPanelHeight?.({ row, id, rowIndex: index }) || 200}
+                    detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id, rowIndex }) : null}
+                    detailPanelHeight={getDetailPanelHeight?.({ row, id, rowIndex }) || 200}
                     onDetailPanelToggle={onDetailPanelToggle}
                     pinCheckboxColumn={pinCheckboxColumn}
                     pinExpandColumn={pinExpandColumn}
@@ -106,6 +130,11 @@ export function GridPinnedRows<R extends GridRowModel>({
                     rowSpanningCaches={rowSpanningCaches}
                     rowHeight={rowHeight}
                     rowMeta={rowMetaMap.get(id)}
+                    editingCell={editingHandlers?.editingCell}
+                    onEditStart={editingHandlers?.startCellEdit}
+                    onEditStop={editingHandlers?.stopCellEdit}
+                    onEditCellValueChange={editingHandlers?.setEditCellValue}
+                    isCellEditable={isCellEditable}
                 />
                 );
             })}

@@ -55,13 +55,16 @@ export interface HeaderProps<R extends GridRowModel = GridRowModel> {
     onDragOver?: (field: string) => (event: React.DragEvent) => void;
     onDragEnd?: () => void;
     onDrop?: (targetField: string) => (event: React.DragEvent) => void;
-    focusedCell?: { id: string | number; field: string } | null;
+    /** The grid's focus position; `id: null` means a header cell is focused. */
+    focusedCell?: { id: string | number | null; field: string } | null;
     onHeaderClick?: (field: string) => void;
     onSortAdd?: (field: string, direction: GridSortDirection) => void;
     multiSort?: boolean;
     onHideColumn?: (field: string) => void;
     onPinColumn?: (field: string, side: 'left' | 'right' | null) => void;
     onManageColumns?: () => void;
+    /** Position of each visible data column in render order, for `colIndex` and `aria-colindex`. */
+    columnIndexMap?: Map<string, number>;
 }
 
 export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps<R>) {
@@ -96,10 +99,10 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         onHideColumn,
         onPinColumn,
         onManageColumns,
+        columnIndexMap,
     } = props;
 
     const selectAllId = useId();
-    const cellRefs = React.useRef<Record<string, HTMLElement | null>>({});
     const [menuOpenParams, setMenuOpenParams] = React.useState<{ colDef: GridColDef<R>; anchorEl: HTMLElement } | null>(null);
 
     const handleMenuOpen = (colDef: GridColDef<R>) => (event: React.MouseEvent) => {
@@ -107,18 +110,27 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         setMenuOpenParams({ colDef, anchorEl: event.currentTarget as HTMLElement });
     };
 
-    const handleMenuClose = () => {
+    const handleMenuClose = React.useCallback(() => {
         setMenuOpenParams(null);
+    }, []);
+
+    // Alt+ArrowDown or Ctrl/Cmd+Enter on a focused header cell opens its column menu.
+    // DOM focus is moved onto the focused header cell by useGridKeyboardNavigation.
+    const handleHeaderKeyDown = (colDef: GridColDef<R>) => (event: React.KeyboardEvent<HTMLDivElement>) => {
+        const opensMenu = (event.altKey && event.key === 'ArrowDown') || ((event.ctrlKey || event.metaKey) && event.key === 'Enter');
+        if (!opensMenu || colDef.disableColumnMenu || event.target !== event.currentTarget) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const anchor = event.currentTarget.querySelector<HTMLElement>('.ogx__menu-icon-btn') ?? event.currentTarget;
+        setMenuOpenParams({ colDef, anchorEl: anchor });
     };
 
-    React.useLayoutEffect(() => {
-        if (focusedCell?.id === 'HEADER') {
-            const element = cellRefs.current[focusedCell.field];
-            if (element) {
-                element.focus();
-            }
-        }
-    }, [focusedCell]);
+    const isHeaderFocused = (field: string) => focusedCell?.id === null && focusedCell.field === field;
+
+    // aria-colindex: system columns first (reorder, expand, checkbox), then the data columns.
+    const reorderColIndex = rowReordering ? 1 : 0;
+    const expandColIndex = hasDetailPanel ? reorderColIndex + 1 : reorderColIndex;
+    const checkboxColIndex = checkboxSelection ? expandColIndex + 1 : expandColIndex;
 
     const handleColumnClick = (colDef: GridColDef<R>) => (e: React.MouseEvent) => {
         if (colDef.sortable === false) return;
@@ -221,7 +233,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
             {groupDepth > 0 && Array.from({ length: groupDepth }, (_, level) => {
                 const cells = buildColumnGroupRow(groupColumns, groupPaths, level);
                 return (
-                    <div key={`ogx-grp-${level}`} className="ogx-col-group-row" role="row">
+                    <div key={`ogx-grp-${level}`} className="ogx-col-group-row" role="row" aria-rowindex={level + 1}>
                         {/* Filler for checkbox / reorder / detailPanel prefix */}
                         {prefixWidth > 0 && (
                             <div
@@ -280,13 +292,16 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
             })}
 
             {/* ── Column header row ── */}
-            <div className="ogx__header" role="row">
+            <div className="ogx__header" role="row" aria-rowindex={groupDepth + 1}>
                 { }
                 {rowReordering && (
                     <div
-                        className="ogx__header-cell ogx__header-cell--pinned ogx__header-cell--pinned-left"
+                        className={`ogx__header-cell ogx__header-cell--pinned ogx__header-cell--pinned-left ${isHeaderFocused('__reorder_col__') ? 'ogx__header-cell--focused' : ''}`}
                         role="columnheader"
                         aria-label="Row reorder handle"
+                        aria-colindex={reorderColIndex}
+                        data-field="__reorder_col__"
+                        tabIndex={-1}
                         title="Drag to reorder rows"
                         style={{
                             minWidth: 48,
@@ -302,9 +317,12 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                 {hasDetailPanel && (
                     <div
                         className={`ogx__header-cell ogx__header-cell--expand ${pinExpandColumn ? 'ogx__header-cell--pinned ogx__header-cell--pinned-left' : ''
-                            }`}
+                            } ${isHeaderFocused('__expand_col__') ? 'ogx__header-cell--focused' : ''}`}
                         role="columnheader"
                         aria-label="Expand row details"
+                        aria-colindex={expandColIndex}
+                        data-field="__expand_col__"
+                        tabIndex={-1}
                         style={{
                             minWidth: 48,
                             maxWidth: 48,
@@ -321,8 +339,10 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                 {checkboxSelection && (
                     <div
                         className={`ogx__header-cell ogx__header-cell--checkbox ${pinCheckboxColumn ? 'ogx__header-cell--pinned ogx__header-cell--pinned-left' : ''
-                            }`}
+                            } ${isHeaderFocused('__checkbox_col__') ? 'ogx__header-cell--focused' : ''}`}
                         role="columnheader"
+                        aria-colindex={checkboxColIndex}
+                        data-field="__checkbox_col__"
                         style={{
                             position: pinCheckboxColumn ? 'sticky' : undefined,
                             left: pinCheckboxColumn ? ((rowReordering ? 48 : 0) + (hasDetailPanel && pinExpandColumn ? 48 : 0)) : undefined,
@@ -338,9 +358,8 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                                 indeterminate={someSelected}
                                 onChange={(e) => onSelectAll(e.target.checked)}
                                 aria-label={allSelected ? 'Deselect all rows' : 'Select all rows'}
-                                tabIndex={focusedCell?.id === 'HEADER' && focusedCell.field === '__checkbox_col__' ? 0 : -1}
+                                tabIndex={-1}
                                 onMouseDown={(e) => e.preventDefault()}
-                                inputRef={(el) => { cellRefs.current['__checkbox_col__'] = el; }}
                             />
                         )}
                     </div>
@@ -357,7 +376,18 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         );
                     }
                     const isSortable = colDef.sortable !== false;
-                    const isSorted = sortModel.some(item => item.field === colDef.field);
+                    const sortPosition = sortModel.findIndex(item => item.field === colDef.field);
+                    const isSorted = sortPosition !== -1;
+                    const sortDirection = isSorted ? sortModel[sortPosition].sort : null;
+                    const colIndex = columnIndexMap?.get(colDef.field) ?? index;
+                    // Only the primary sort column carries aria-sort (WAI-ARIA allows one per grid);
+                    // with multi-sort every sorted column describes its direction and priority.
+                    const ariaSort = !isSortable ? undefined
+                        : sortPosition === 0 ? (sortDirection === 'asc' ? 'ascending' : 'descending')
+                        : 'none';
+                    const sortDescription = isSorted && sortModel.length > 1
+                        ? `Sorted ${sortDirection === 'asc' ? 'ascending' : 'descending'}, sort priority ${sortPosition + 1} of ${sortModel.length}`
+                        : undefined;
                     const isResizable = colDef.resizable !== false;
                     const pinnedPosition = isColumnPinned(colDef.field, pinnedColumns);
                     const isPinned = pinnedPosition !== null;
@@ -373,7 +403,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         isPinned && `ogx__header-cell--pinned-${pinnedPosition}`,
                         isDragging && 'ogx__header-cell--dragging',
                         isDragOver && 'ogx__header-cell--drag-over',
-                        (focusedCell?.id === 'HEADER' && focusedCell.field === colDef.field) && 'ogx__header-cell--focused',
+                        isHeaderFocused(colDef.field) && 'ogx__header-cell--focused',
                         colDef.headerClassName
                     ].filter(Boolean).join(' ');
 
@@ -402,7 +432,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                     }
 
                     const headerContent = colDef.renderHeader
-                        ? colDef.renderHeader({ field: colDef.field, colDef: colDef as unknown as GridColDef, colIndex: index })
+                        ? colDef.renderHeader({ field: colDef.field, colDef: colDef as unknown as GridColDef, colIndex })
                         : colDef.headerName || colDef.field;
 
                     const handleHeaderClick = (e: React.MouseEvent) => {
@@ -433,19 +463,12 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             onDragOver={handleDragOver}
                             onDragEnd={onDragEnd}
                             onDrop={handleDrop}
-                            aria-sort={
-                                isSortable
-                                    ? (isSorted
-                                        ? sortModel.find(item => item.field === colDef.field)?.sort === 'asc'
-                                            ? 'ascending'
-                                            : 'descending'
-                                        : 'none')
-                                    : undefined
-                            }
-                            aria-colindex={index + 1 + (checkboxSelection ? 1 : 0)}
+                            onKeyDown={handleHeaderKeyDown(colDef)}
+                            aria-sort={ariaSort}
+                            aria-description={sortDescription}
+                            aria-colindex={systemColumnCount + colIndex + 1}
                             data-field={colDef.field}
                             tabIndex={-1}
-                            ref={(el) => { cellRefs.current[colDef.field] = el; }}
                         >
                             <div className="ogx__header-cell-content">
                                 {isDragging && (

@@ -49,6 +49,7 @@ const MOCK_EDITING = {
 const MOCK_VIRTUALIZATION = {
     cumulativeHeights: [52, 104, 156],
     pinnedTopHeight: 0,
+    pinnedBottomHeight: 0,
     columnMetrics: null,
 };
 
@@ -75,15 +76,15 @@ describe('useGridKeyboardNavigation — arrow keys', () => {
         const { result } = renderHook(() => useGridKeyboardNavigation(BASE_PARAMS));
         act(() => { result.current.setFocusedCell({ id: 1, field: 'name' }); });
         act(() => { result.current.handleKeyDown(keyEvent('ArrowDown')); });
-        expect(result.current.focusedCell).toEqual({ id: 2, field: 'name' });
+        expect(result.current.focusedCell).toMatchObject({ id: 2, field: 'name' });
     });
 
     it('ArrowUp at header row does not move above it', () => {
         const { result } = renderHook(() => useGridKeyboardNavigation(BASE_PARAMS));
-        // HEADER is the topmost position; ArrowUp from there should not move
-        act(() => { result.current.setFocusedCell({ id: 'HEADER', field: 'name' }); });
+        // The header row (id: null) is the topmost position; ArrowUp from there should not move
+        act(() => { result.current.setFocusedCell({ id: null, field: 'name' }); });
         act(() => { result.current.handleKeyDown(keyEvent('ArrowUp')); });
-        expect(result.current.focusedCell?.id).toBe('HEADER');
+        expect(result.current.focusedCell?.id).toBeNull();
     });
 
     it('ArrowDown at last row — no change', () => {
@@ -105,7 +106,7 @@ describe('useGridKeyboardNavigation — arrow keys', () => {
     it('ArrowLeft at header first column does not move left', () => {
         const { result } = renderHook(() => useGridKeyboardNavigation(BASE_PARAMS));
         // HEADER + first col is the leftmost position; wrap-left would require r=-2 which is out of bounds
-        act(() => { result.current.setFocusedCell({ id: 'HEADER', field: 'name' }); });
+        act(() => { result.current.setFocusedCell({ id: null, field: 'name' }); });
         act(() => { result.current.handleKeyDown(keyEvent('ArrowLeft')); });
         expect(result.current.focusedCell?.field).toBe('name');
     });
@@ -148,7 +149,7 @@ describe('useGridKeyboardNavigation — editing', () => {
         const params = {
             ...BASE_PARAMS,
             editingHandlers: {
-                editingCell: { id: 1, field: 'name', value: 'Alice' },
+                editingCell: { id: 1, field: 'name', value: 'Alice', originalValue: 'Alice' },
                 startCellEdit: vi.fn(),
                 stopCellEdit,
             },
@@ -165,6 +166,7 @@ describe('useGridKeyboardNavigation — selection', () => {
         const handleSelectionChange = vi.fn();
         const { result } = renderHook(() => useGridKeyboardNavigation({
             ...BASE_PARAMS,
+            navigationColumns: [{ field: '__checkbox_col__' }, ...NAV_COLS],
             checkboxSelection: true,
             handleSelectionChange,
         }));
