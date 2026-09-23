@@ -22,8 +22,6 @@ const BASE_PARAMS = {
     pagination: false,
     paginationMode: 'client',
     effectivePaginationModel: DEFAULT_PAGINATION,
-    isLoading: false,
-    pageSize: 3,
 };
 
 describe('useGridRowPipeline — filtering', () => {
@@ -113,5 +111,73 @@ describe('useGridRowPipeline — pagination', () => {
             effectivePaginationModel: { page: 0, pageSize: 2 },
         }));
         expect(result.current.paginatedUnpinnedRows).toHaveLength(5);
+    });
+});
+
+describe('useGridRowPipeline — page clamping', () => {
+    it('shows the last page when the requested page is past the end', () => {
+        const { result } = renderHook(() => useGridRowPipeline({
+            ...BASE_PARAMS,
+            pagination: true,
+            effectivePaginationModel: { page: 4, pageSize: 3 },
+        }));
+        expect(result.current.currentPage).toBe(1);
+        expect(result.current.paginatedUnpinnedRows.map(r => r.id)).toEqual([4, 5]);
+    });
+
+    it('re-clamps when the rows shrink', () => {
+        const { result, rerender } = renderHook(
+            ({ rows }) => useGridRowPipeline({
+                ...BASE_PARAMS,
+                effectiveRows: rows,
+                pagination: true,
+                effectivePaginationModel: { page: 1, pageSize: 3 },
+            }),
+            { initialProps: { rows: ROWS } },
+        );
+        expect(result.current.paginatedUnpinnedRows.map(r => r.id)).toEqual([4, 5]);
+        rerender({ rows: ROWS.slice(0, 2) });
+        expect(result.current.currentPage).toBe(0);
+        expect(result.current.paginatedUnpinnedRows.map(r => r.id)).toEqual([1, 2]);
+    });
+
+    it('treats a page size of 0 as 1', () => {
+        const { result } = renderHook(() => useGridRowPipeline({
+            ...BASE_PARAMS,
+            pagination: true,
+            effectivePaginationModel: { page: 1, pageSize: 0 },
+        }));
+        expect(result.current.paginatedUnpinnedRows.map(r => r.id)).toEqual([2]);
+    });
+
+    it('leaves the page alone in server mode, where the server owns the page count', () => {
+        const { result } = renderHook(() => useGridRowPipeline({
+            ...BASE_PARAMS,
+            pagination: true,
+            paginationMode: 'server',
+            dataSource: {} as never,
+            effectivePaginationModel: { page: 7, pageSize: 2 },
+        }));
+        expect(result.current.currentPage).toBe(7);
+    });
+});
+
+describe('useGridRowPipeline — allRenderableRows', () => {
+    it('holds only real rows in infinite mode (loading placeholders are drawn by GridVirtualRows)', () => {
+        const { result } = renderHook(() => useGridRowPipeline({
+            ...BASE_PARAMS,
+            paginationMode: 'infinite',
+        }));
+        expect(result.current.allRenderableRows.map(r => r.id)).toEqual([1, 2, 3, 4, 5]);
+    });
+
+    it('is the current page under tree data or row grouping, as the grid renders it', () => {
+        const { result } = renderHook(() => useGridRowPipeline({
+            ...BASE_PARAMS,
+            activeHierarchyHandlers: { getVisibleRows: () => ROWS },
+            pagination: true,
+            effectivePaginationModel: { page: 1, pageSize: 3 },
+        }));
+        expect(result.current.allRenderableRows.map(r => r.id)).toEqual([4, 5]);
     });
 });

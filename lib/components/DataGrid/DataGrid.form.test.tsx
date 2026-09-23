@@ -3,13 +3,13 @@ import { render, fireEvent, screen } from '@testing-library/react';
 import React from 'react';
 import { DataGrid } from './DataGrid';
 import { GridToolbar } from '../Toolbar/GridToolbar';
-import type { GridColDef, GridFilterModel } from '../../types';
+import type { GridColDef, GridFilterModel, GridRowModel } from '../../types';
 
 const COLS: GridColDef[] = [
     { field: 'name', headerName: 'Name' },
     { field: 'price', headerName: 'Price', type: 'number' },
 ];
-const ROWS = Array.from({ length: 30 }, (_, i) => ({ id: i + 1, name: `r${i + 1}`, price: i }));
+const ROWS: GridRowModel[] = Array.from({ length: 30 }, (_, i) => ({ id: i + 1, name: `r${i + 1}`, price: i }));
 
 /** Every <button> the grid has put in the document (the panels and the menu are portalled). */
 function submitButtons(): string[] {

@@ -10,6 +10,7 @@ import { useGridScrollSync } from '../../hooks/core/useGridScrollSync';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings } from '../../hooks/core/useGridDevWarnings';
 import { useGridColumnLookup } from '../../hooks/core/useGridColumnLookup';
+import { useGridPageCorrection } from '../../hooks/core/useGridPageCorrection';
 import { scrollRowIntoView } from '../../utils/scroll';
 import { upsertSortItem } from '../../utils/sorting';
 import { GridAggregationFooter } from './GridAggregationFooter';
@@ -527,8 +528,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         paginationMode,
         effectivePaginationModel,
         pinnedRows,
-        isLoading: state.dataSource.loading,
-        pageSize: effectivePaginationModel.pageSize,
         columnLookup,
     });
     const filteredRows        = rowPipeline.filteredRows        as R[];
@@ -538,6 +537,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const sortedUnpinnedRows  = rowPipeline.sortedUnpinnedRows  as R[];
     const paginatedUnpinnedRows = rowPipeline.paginatedUnpinnedRows as R[];
     const allRenderableRows   = rowPipeline.allRenderableRows   as R[];
+
+    useGridPageCorrection({
+        paginationModel: effectivePaginationModel,
+        currentPage: rowPipeline.currentPage,
+        enabled: pagination && !effectiveLoading && sortedUnpinnedRows.length > 0,
+        onPaginationModelChange: handlePaginationModelChange,
+    });
 
     useEffect(() => {
         gridData.apiRef.current.getVisibleRows = () => pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
@@ -1192,7 +1198,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 const PaginationComponent = slots?.pagination || Pagination;
                 return (
                     <PaginationComponent
-                        page={effectivePaginationModel.page}
+                        page={rowPipeline.currentPage}
                         pageSize={effectivePaginationModel.pageSize}
                         rowCount={state.pagination.rowCount}
                         pageSizeOptions={pageSizeOptions}

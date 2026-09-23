@@ -1,6 +1,7 @@
 
 import React, { useId } from 'react';
 import { Button } from '../ui/Button';
+import { normalizePageSize, getPageCount, clampPage } from '../../utils/pagination';
 import type { GridLocaleText } from '../../types';
 
 export interface PaginationProps {
@@ -29,11 +30,19 @@ export function Pagination(props: PaginationProps) {
         localeText,
     } = props;
 
-    const pageCount = Math.max(1, Math.ceil(rowCount / pageSize));
-    const currentPage = Math.min(page, pageCount - 1);
+    const safePageSize = normalizePageSize(pageSize);
+    const pageCount = getPageCount(rowCount, safePageSize);
+    const currentPage = clampPage(page, pageCount);
 
-    const firstRowIndex = currentPage * pageSize;
-    const lastRowIndex = Math.min(firstRowIndex + pageSize, rowCount);
+    // The select must be able to show the size in use, even when it is not one of the options
+    // (e.g. the default 100 with pageSizeOptions={[10, 25, 50]}); otherwise it displays the first
+    // option and choosing that option fires no change event.
+    const selectOptions = pageSizeOptions.includes(safePageSize)
+        ? pageSizeOptions
+        : [...pageSizeOptions, safePageSize].sort((a, b) => a - b);
+
+    const firstRowIndex = currentPage * safePageSize;
+    const lastRowIndex = Math.min(firstRowIndex + safePageSize, rowCount);
     const displayedRows = rowCount === 0 ? 0 : `${firstRowIndex + 1}–${lastRowIndex}`;
 
     const rowsPerPageLabel = localeText?.paginationRowsPerPage ?? 'Rows per page:';
@@ -79,11 +88,10 @@ export function Pagination(props: PaginationProps) {
                 <select
                     id={pageSizeId}
                     className="ogx-pagination__select"
-                    value={pageSize}
+                    value={safePageSize}
                     onChange={handlePageSizeChange}
-                    aria-label="Rows per page"
                 >
-                    {pageSizeOptions.map(option => (
+                    {selectOptions.map(option => (
                         <option key={option} value={option}>
                             {option}
                         </option>
