@@ -9,6 +9,7 @@ import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
 import { useGridScrollSync } from '../../hooks/core/useGridScrollSync';
 import { useGridViewportSize } from '../../hooks/core/useGridViewportSize';
 import { useDetailPanelHeights } from '../../hooks/features/useDetailPanelHeights';
+import { getDetailPanelRowIds } from '../../utils/detailPanel';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings } from '../../hooks/core/useGridDevWarnings';
 import { useGridRowSelection } from '../../hooks/core/useGridRowSelection';
@@ -445,10 +446,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // ── Detail panel (hoisted — hasDetailPanel feeds into useGridColumns) ──────
     const hasDetailPanel = Boolean(getDetailPanelContent);
     const [internalExpandedRowIds, setInternalExpandedRowIds] = useState<Set<GridRowId>>(new Set());
-    const expandedRowIds = controlledExpandedRowIds ?? internalExpandedRowIds;
+    const requestedExpandedRowIds = controlledExpandedRowIds ?? internalExpandedRowIds;
+    // What renders and is laid out: synthetic group rows never show a detail panel.
+    const expandedRowIds = useMemo(() => getDetailPanelRowIds(requestedExpandedRowIds, rowMetaMap), [requestedExpandedRowIds, rowMetaMap]);
 
     const handleDetailPanelToggle = useCallback((rowId: GridRowId) => {
-        const newExpandedRowIds = new Set(expandedRowIds);
+        if (rowMetaMap.get(rowId)?.isGroupRow) return;
+        const newExpandedRowIds = new Set(requestedExpandedRowIds);
         if (newExpandedRowIds.has(rowId)) {
             newExpandedRowIds.delete(rowId);
         } else {
@@ -458,7 +462,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             setInternalExpandedRowIds(newExpandedRowIds);
         }
         onDetailPanelExpandedRowIdsChange?.(newExpandedRowIds);
-    }, [expandedRowIds, controlledExpandedRowIds, onDetailPanelExpandedRowIdsChange]);
+    }, [requestedExpandedRowIds, rowMetaMap, controlledExpandedRowIds, onDetailPanelExpandedRowIdsChange]);
 
     // ── Column management ─────────────────────────────────────────────────────
     const {

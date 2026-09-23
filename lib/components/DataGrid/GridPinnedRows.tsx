@@ -124,8 +124,8 @@ export function GridPinnedRows<R extends GridRowModel>({
                     pinnedRows={pinnedRows}
                     hasDetailPanel={hasDetailPanel}
                     isDetailPanelExpanded={expandedRowIds.has(id)}
-                    detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id, rowIndex }) : null}
-                    detailPanelHeight={resolveDetailPanelHeight(getDetailPanelHeight?.({ row, id, rowIndex }))}
+                    detailPanelContent={expandedRowIds.has(id) && getDetailPanelContent ? getDetailPanelContent({ row, id, rowIndex }) : null}
+                    detailPanelHeight={expandedRowIds.has(id) ? resolveDetailPanelHeight(getDetailPanelHeight?.({ row, id, rowIndex })) : undefined}
                     onDetailPanelHeightChange={onDetailPanelHeightChange}
                     onDetailPanelToggle={onDetailPanelToggle}
                     pinCheckboxColumn={pinCheckboxColumn}

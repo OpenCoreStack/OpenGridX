@@ -1,4 +1,4 @@
-import type { GridDetailPanelHeight } from '../types';
+import type { GridDetailPanelHeight, GridRowId, GridRowMeta } from '../types';
 
 /** Panel height used when `getDetailPanelHeight` is omitted or returns something unusable. */
 export const DEFAULT_DETAIL_PANEL_HEIGHT = 200;
@@ -26,4 +26,23 @@ export function getDetailPanelLayoutHeight(
     const resolved = resolveDetailPanelHeight(height);
     if (resolved === 'auto') return measuredHeight ?? DEFAULT_DETAIL_PANEL_HEIGHT;
     return resolved;
+}
+
+/**
+ * The expanded detail-panel ids that can actually show a panel: synthetic hierarchy rows
+ * (row-grouping groups, generated tree parents) have no detail panel, so an id of one in a
+ * controlled `detailPanelExpandedRowIds` is ignored. Returns the same set when nothing is dropped.
+ */
+export function getDetailPanelRowIds(
+    expandedRowIds: Set<GridRowId>,
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>,
+): Set<GridRowId> {
+    if (rowMetaMap.size === 0 || expandedRowIds.size === 0) return expandedRowIds;
+    let dropped = false;
+    const ids = new Set<GridRowId>();
+    for (const id of expandedRowIds) {
+        if (rowMetaMap.get(id)?.isGroupRow) dropped = true;
+        else ids.add(id);
+    }
+    return dropped ? ids : expandedRowIds;
 }

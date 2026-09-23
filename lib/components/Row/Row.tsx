@@ -235,6 +235,10 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     const dataColumnCount = columnIndexMap?.size ?? columns.filter(c => !c.isSpacer).length;
     const isHierarchyRow = rowMeta !== undefined;
     const hasChildren = rowMeta?.hasChildren === true;
+    // Synthetic group rows are not data rows: they keep the expand column (for alignment)
+    // but have no detail panel to toggle.
+    const canShowDetailPanel = hasDetailPanel && rowMeta?.isGroupRow !== true;
+    const detailPanelExpanded = canShowDetailPanel && isDetailPanelExpanded;
 
     const rowPinnedPosition = isRowPinned(id, pinnedRows);
     const isRowPinnedTop = rowPinnedPosition === 'top';
@@ -303,9 +307,9 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             } ${focusedCellField === '__expand_col__' ? 'ogx__cell--focused' : ''} ${(focusedCellField === '__expand_col__' && isFocusVisible) ? 'ogx__cell--focus-visible' : ''
                             }`}
                         role="gridcell"
-                        aria-label={isDetailPanelExpanded ? 'Collapse row details' : 'Expand row details'}
-                        aria-expanded={isDetailPanelExpanded}
-                        aria-controls={isDetailPanelExpanded ? detailPanelId : undefined}
+                        aria-label={canShowDetailPanel ? (detailPanelExpanded ? 'Collapse row details' : 'Expand row details') : undefined}
+                        aria-expanded={canShowDetailPanel ? detailPanelExpanded : undefined}
+                        aria-controls={detailPanelExpanded ? detailPanelId : undefined}
                         aria-colindex={expandColIndex}
                         data-field="__expand_col__"
                         style={{
@@ -316,22 +320,25 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         tabIndex={-1}
                         onClick={(e) => {
                             e.stopPropagation();
+                            if (!canShowDetailPanel) return;
                             onCellClick?.({
                                 row,
                                 field: '__expand_col__',
-                                value: isDetailPanelExpanded,
+                                value: detailPanelExpanded,
                                 colDef: { field: '__expand_col__', width: 48 } as unknown as GridColDef<R>,
                                 rowIndex,
                                 colIndex: -1
                             });
                         }}
                     >
-                        <ExpandIcon
-                            isExpanded={isDetailPanelExpanded}
-                            onClick={handleDetailPanelToggle}
-                            variant="plus-minus"
-                            tabIndex={-1}
-                        />
+                        {canShowDetailPanel && (
+                            <ExpandIcon
+                                isExpanded={detailPanelExpanded}
+                                onClick={handleDetailPanelToggle}
+                                variant="plus-minus"
+                                tabIndex={-1}
+                            />
+                        )}
                     </div>
                 )}
 
@@ -452,7 +459,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
             </div>
 
             { }
-            {hasDetailPanel && (
+            {canShowDetailPanel && (
                 <DetailPanel
                     id={detailPanelId}
                     colSpan={systemColumnCount + dataColumnCount}
@@ -461,7 +468,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     rowIndex={rowIndex}
                     content={detailPanelContent}
                     height={detailPanelHeight}
-                    isExpanded={isDetailPanelExpanded}
+                    isExpanded={detailPanelExpanded}
                     onHeightChange={onDetailPanelHeightChange}
                 />
             )}

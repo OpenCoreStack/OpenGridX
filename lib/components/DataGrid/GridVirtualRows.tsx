@@ -182,8 +182,8 @@ export function GridVirtualRows<R extends GridRowModel>({
                             pinnedColumns={pinnedColumns}
                             hasDetailPanel={hasDetailPanel}
                             isDetailPanelExpanded={expandedRowIds.has(id)}
-                            detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id: id, rowIndex: actualIndex }) : null}
-                            detailPanelHeight={resolveDetailPanelHeight(getDetailPanelHeight?.({ row, id: id, rowIndex: actualIndex }))}
+                            detailPanelContent={expandedRowIds.has(id) && getDetailPanelContent ? getDetailPanelContent({ row, id: id, rowIndex: actualIndex }) : null}
+                            detailPanelHeight={expandedRowIds.has(id) ? resolveDetailPanelHeight(getDetailPanelHeight?.({ row, id: id, rowIndex: actualIndex })) : undefined}
                             onDetailPanelHeightChange={onDetailPanelHeightChange}
                             onDetailPanelToggle={onDetailPanelToggle}
                             pinCheckboxColumn={pinCheckboxColumn}
