@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useGridEditing } from './useGridEditing';
 import type { UseGridEditingParams } from './useGridEditing';
-import type { GridRowId } from '../../types';
+import type { GridColDef, GridRowId } from '../../types';
 
 type Row = { id: GridRowId; name: string; qty: number | null };
 
@@ -150,7 +150,7 @@ describe('useGridEditing — stop / cancel', () => {
         act(() => { result.current.setEditCellValue({ id: 2, field: 'qty', value: 25 }); });
         await act(async () => { await result.current.stopCellEdit(); });
         expect(onRowChange).toHaveBeenCalledTimes(1);
-        expect(onRowChange).toHaveBeenCalledWith({ id: 2, name: 'Beta', qty: 25 });
+        expect(onRowChange).toHaveBeenCalledWith({ id: 2, name: 'Beta', qty: 25 }, 2);
         expect(result.current.editingCell).toBeNull();
     });
 
@@ -169,7 +169,7 @@ describe('useGridEditing — stop / cancel', () => {
         act(() => { result.current.startCellEdit({ id: 1, field: 'qty', value: 10 }); });
         act(() => { result.current.setEditCellValue({ id: 1, field: 'qty', value: null }); });
         await act(async () => { await result.current.stopCellEdit(); });
-        expect(onRowChange).toHaveBeenCalledWith({ id: 1, name: 'Alpha', qty: null });
+        expect(onRowChange).toHaveBeenCalledWith({ id: 1, name: 'Alpha', qty: null }, 1);
     });
 
     it('commits the value 0 over a non-zero value', async () => {
@@ -178,7 +178,7 @@ describe('useGridEditing — stop / cancel', () => {
         act(() => { result.current.startCellEdit({ id: 1, field: 'qty', value: 10 }); });
         act(() => { result.current.setEditCellValue({ id: 1, field: 'qty', value: 0 }); });
         await act(async () => { await result.current.stopCellEdit(); });
-        expect(onRowChange).toHaveBeenCalledWith({ id: 1, name: 'Alpha', qty: 0 });
+        expect(onRowChange).toHaveBeenCalledWith({ id: 1, name: 'Alpha', qty: 0 }, 1);
     });
 
     it('closes silently when the edited row no longer exists', async () => {
@@ -201,7 +201,7 @@ describe('useGridEditing — stop / cancel', () => {
         act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
         rerender({ rows: [{ id: 1, name: 'Alpha', qty: 99 }, ROWS[1]], getRowId, onRowChange });
         await act(async () => { await result.current.stopCellEdit(); });
-        expect(onRowChange).toHaveBeenCalledWith({ id: 1, name: 'Gamma', qty: 99 });
+        expect(onRowChange).toHaveBeenCalledWith({ id: 1, name: 'Gamma', qty: 99 }, 1);
     });
 
     it('looks rows up through a custom getRowId', async () => {
@@ -212,7 +212,7 @@ describe('useGridEditing — stop / cancel', () => {
         act(() => { result.current.startCellEdit({ id: 'b', field: 'name', value: 'Beta' }); });
         act(() => { result.current.setEditCellValue({ id: 'b', field: 'name', value: 'Bravo' }); });
         await act(async () => { await result.current.stopCellEdit(); });
-        expect(onRowChange).toHaveBeenCalledWith({ id: 'y', uid: 'b', name: 'Bravo' });
+        expect(onRowChange).toHaveBeenCalledWith({ id: 'y', uid: 'b', name: 'Bravo' }, 'b');
     });
 });
 
@@ -255,7 +255,7 @@ describe('useGridEditing — processRowUpdate', () => {
 
         const saved: Row = { id: 1, name: 'Gamma (saved)', qty: 10 };
         await act(async () => { d.resolve(saved); await pending; });
-        expect(onRowChange).toHaveBeenCalledWith(saved);
+        expect(onRowChange).toHaveBeenCalledWith(saved, 1);
         expect(result.current.editingCell).toBeNull();
     });
 
@@ -306,7 +306,7 @@ describe('useGridEditing — processRowUpdate', () => {
         expect(result.current.editingCell).not.toBeNull();
         await act(async () => { await result.current.stopCellEdit(); });
         expect(processRowUpdate).toHaveBeenCalledTimes(2);
-        expect(onRowChange).toHaveBeenCalledWith({ id: 1, name: 'Gamma', qty: 10 });
+        expect(onRowChange).toHaveBeenCalledWith({ id: 1, name: 'Gamma', qty: 10 }, 1);
         expect(result.current.editingCell).toBeNull();
     });
 
@@ -332,5 +332,267 @@ describe('useGridEditing — processRowUpdate', () => {
         await act(async () => { await result.current.stopCellEdit(); });
         expect(first).not.toHaveBeenCalled();
         expect(second).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('useGridEditing — commit concurrency', () => {
+    it('a second stop while an async commit is pending does not call processRowUpdate again', async () => {
+        const d = deferred<Row>();
+        const processRowUpdate = vi.fn(() => d.promise);
+        const onRowChange = vi.fn();
+        const { result } = setup({ processRowUpdate, onRowChange });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        let first: Promise<void> | undefined;
+        let second: Promise<void> | undefined;
+        act(() => { first = result.current.stopCellEdit(); });
+        act(() => { second = result.current.stopCellEdit(); });
+        await act(async () => { d.resolve({ id: 1, name: 'Gamma', qty: 10 }); await first; await second; });
+        expect(processRowUpdate).toHaveBeenCalledTimes(1);
+        expect(onRowChange).toHaveBeenCalledTimes(1);
+        expect(result.current.editingCell).toBeNull();
+    });
+
+    it('a second stop after a rejected commit does not retry with the same value', async () => {
+        const d = deferred<Row>();
+        const processRowUpdate = vi.fn(() => d.promise);
+        const onProcessRowUpdateError = vi.fn();
+        const { result } = setup({ processRowUpdate, onProcessRowUpdateError });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        let first: Promise<void> | undefined;
+        let second: Promise<void> | undefined;
+        act(() => { first = result.current.stopCellEdit(); });
+        act(() => { second = result.current.stopCellEdit(); });
+        await act(async () => { d.reject(new Error('nope')); await first; await second; });
+        expect(processRowUpdate).toHaveBeenCalledTimes(1);
+        expect(onProcessRowUpdateError).toHaveBeenCalledTimes(1);
+        expect(result.current.editingCell?.value).toBe('Gamma');
+    });
+
+    it('a commit that resolves late does not close a different cell edit started meanwhile', async () => {
+        const d = deferred<Row>();
+        const processRowUpdate = vi.fn(() => d.promise);
+        const onRowChange = vi.fn();
+        const { result } = setup({ processRowUpdate, onRowChange });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        let pending: Promise<void> | undefined;
+        act(() => { pending = result.current.stopCellEdit(); });
+        act(() => { result.current.startCellEdit({ id: 2, field: 'name', value: 'Beta' }); });
+        await act(async () => { d.resolve({ id: 1, name: 'Gamma', qty: 10 }); await pending; });
+        expect(result.current.editingCell).toEqual({ id: 2, field: 'name', value: 'Beta', originalValue: 'Beta' });
+        // The finished commit is still applied to its own row.
+        expect(onRowChange).toHaveBeenCalledWith({ id: 1, name: 'Gamma', qty: 10 }, 1);
+        expect(processRowUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it('cancel while a commit is pending closes the editor at once; the saved row is still applied', async () => {
+        const d = deferred<Row>();
+        const processRowUpdate = vi.fn(() => d.promise);
+        const onRowChange = vi.fn();
+        const { result } = setup({ processRowUpdate, onRowChange });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        let pending: Promise<void> | undefined;
+        act(() => { pending = result.current.stopCellEdit(); });
+        await act(async () => { await result.current.stopCellEdit({ cancel: true }); });
+        expect(result.current.editingCell).toBeNull();
+        await act(async () => { d.resolve({ id: 1, name: 'Gamma', qty: 10 }); await pending; });
+        // processRowUpdate already ran (and may have persisted the row), so the grid reflects it.
+        expect(onRowChange).toHaveBeenCalledTimes(1);
+        expect(result.current.editingCell).toBeNull();
+    });
+
+    it('text typed while a commit is pending stays in the editor instead of being discarded', async () => {
+        const d = deferred<Row>();
+        const processRowUpdate = vi.fn((newRow: Row) => (newRow.name === 'Gamma' ? d.promise : newRow));
+        const onRowChange = vi.fn();
+        const { result } = setup({ processRowUpdate, onRowChange });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        let pending: Promise<void> | undefined;
+        act(() => { pending = result.current.stopCellEdit(); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma2' }); });
+        await act(async () => { d.resolve({ id: 1, name: 'Gamma', qty: 10 }); await pending; });
+        expect(result.current.editingCell).toEqual({ id: 1, field: 'name', value: 'Gamma2', originalValue: 'Gamma' });
+        await act(async () => { await result.current.stopCellEdit(); });
+        expect(processRowUpdate).toHaveBeenCalledTimes(2);
+        expect(processRowUpdate.mock.calls[1][0]).toEqual({ id: 1, name: 'Gamma2', qty: 10 });
+        expect(result.current.editingCell).toBeNull();
+    });
+
+    it('a stop requested while a commit is pending commits the newer value after the first one settles', async () => {
+        const d = deferred<Row>();
+        const processRowUpdate = vi.fn((newRow: Row) => (newRow.name === 'Gamma' ? d.promise : newRow));
+        const onRowChange = vi.fn();
+        const { result } = setup({ processRowUpdate, onRowChange });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        let first: Promise<void> | undefined;
+        let second: Promise<void> | undefined;
+        act(() => { first = result.current.stopCellEdit(); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma2' }); });
+        act(() => { second = result.current.stopCellEdit(); });
+        expect(processRowUpdate).toHaveBeenCalledTimes(1);
+        await act(async () => { d.resolve({ id: 1, name: 'Gamma', qty: 10 }); await first; await second; });
+        expect(processRowUpdate).toHaveBeenCalledTimes(2);
+        expect(onRowChange).toHaveBeenLastCalledWith({ id: 1, name: 'Gamma2', qty: 10 }, 1);
+        expect(result.current.editingCell).toBeNull();
+    });
+
+    it('startCellEdit on another cell commits the pending edit first', async () => {
+        const processRowUpdate = vi.fn((row: Row) => row);
+        const onRowChange = vi.fn();
+        const { result } = setup({ processRowUpdate, onRowChange });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        await act(async () => { result.current.startCellEdit({ id: 2, field: 'qty', value: 20 }); });
+        expect(processRowUpdate).toHaveBeenCalledTimes(1);
+        expect(onRowChange).toHaveBeenCalledWith({ id: 1, name: 'Gamma', qty: 10 }, 1);
+        expect(result.current.editingCell).toEqual({ id: 2, field: 'qty', value: 20, originalValue: 20 });
+    });
+
+    it('startCellEdit on the cell already being edited keeps the pending value', () => {
+        const { result } = setup();
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Gamma' }); });
+        expect(result.current.editingCell).toEqual({ id: 1, field: 'name', value: 'Gamma', originalValue: 'Alpha' });
+    });
+
+    it('a stop aimed at a cell that is no longer being edited is ignored', async () => {
+        const processRowUpdate = vi.fn((row: Row) => row);
+        const { result } = setup({ processRowUpdate });
+        act(() => { result.current.startCellEdit({ id: 2, field: 'qty', value: 20 }); });
+        await act(async () => { await result.current.stopCellEdit({ id: 1, field: 'name' }); });
+        await act(async () => { await result.current.stopCellEdit({ id: 2, field: 'name' }); });
+        expect(result.current.editingCell).toEqual({ id: 2, field: 'qty', value: 20, originalValue: 20 });
+        await act(async () => { await result.current.stopCellEdit({ id: 2, field: 'qty' }); });
+        expect(result.current.editingCell).toBeNull();
+    });
+
+    it('setEditCellValue issued in the same tick as startCellEdit is applied', () => {
+        const { result } = setup();
+        act(() => {
+            result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' });
+            result.current.setEditCellValue({ id: 1, field: 'name', value: 'Q' });
+        });
+        expect(result.current.editingCell?.value).toBe('Q');
+    });
+
+    it('applies a synchronous processRowUpdate result without waiting for a microtask', () => {
+        const processRowUpdate = vi.fn((row: Row) => row);
+        const onRowChange = vi.fn();
+        const { result } = setup({ processRowUpdate, onRowChange });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        act(() => { void result.current.stopCellEdit(); });
+        expect(onRowChange).toHaveBeenCalledTimes(1);
+        expect(result.current.editingCell).toBeNull();
+    });
+});
+
+describe('useGridEditing — callback identity', () => {
+    it('keeps stopCellEdit, startCellEdit and setEditCellValue stable when callbacks and rows change', () => {
+        const { result, rerender } = setup({ processRowUpdate: (r: Row) => r, onRowChange: () => {} });
+        const first = result.current;
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        rerender({ rows: [...ROWS], getRowId: (r: Row) => r.id, processRowUpdate: (r: Row) => r, onRowChange: () => {} });
+        expect(result.current.stopCellEdit).toBe(first.stopCellEdit);
+        expect(result.current.startCellEdit).toBe(first.startCellEdit);
+        expect(result.current.setEditCellValue).toBe(first.setEditCellValue);
+    });
+
+    it('uses the onRowChange passed on the latest render', async () => {
+        const first = vi.fn();
+        const second = vi.fn();
+        const { result, rerender } = setup({ onRowChange: first });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        rerender({ rows: ROWS, getRowId, onRowChange: second });
+        await act(async () => { await result.current.stopCellEdit(); });
+        expect(first).not.toHaveBeenCalled();
+        expect(second).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('useGridEditing — processRowUpdate contract', () => {
+    it('reports a processRowUpdate that returns nothing and keeps the editor open', async () => {
+        const processRowUpdate = vi.fn(() => undefined as unknown as Row);
+        const onProcessRowUpdateError = vi.fn();
+        const onRowChange = vi.fn();
+        const { result } = setup({ processRowUpdate, onProcessRowUpdateError, onRowChange });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        await act(async () => { await result.current.stopCellEdit(); });
+        expect(onRowChange).not.toHaveBeenCalled();
+        expect(onProcessRowUpdateError).toHaveBeenCalledTimes(1);
+        const reported = onProcessRowUpdateError.mock.calls[0][0] as Error;
+        expect(reported).toBeInstanceOf(Error);
+        expect(reported.message).toMatch(/processRowUpdate must return the updated row/);
+        expect(result.current.editingCell?.value).toBe('Gamma');
+    });
+
+    it('does not report an error thrown while the grid stores the row as a processRowUpdate failure', async () => {
+        const boom = new Error('store failed');
+        const onRowChange = vi.fn(() => { throw boom; });
+        const onProcessRowUpdateError = vi.fn();
+        const { result } = setup({ processRowUpdate: (r: Row) => Promise.resolve(r), onRowChange, onProcessRowUpdateError });
+        act(() => { result.current.startCellEdit({ id: 1, field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'name', value: 'Gamma' }); });
+        let caught: unknown;
+        await act(async () => { await result.current.stopCellEdit().catch((e: unknown) => { caught = e; }); });
+        expect(caught).toBe(boom);
+        expect(onProcessRowUpdateError).not.toHaveBeenCalled();
+    });
+
+    it('passes the edited row id to onRowChange even when processRowUpdate returns a row without it', async () => {
+        type URow = { id: GridRowId; uid: string; name: string };
+        const rows: URow[] = [{ id: 'a', uid: 'a', name: 'Alpha' }];
+        const onRowChange = vi.fn();
+        const processRowUpdate = (n: URow) => ({ uid: n.uid, name: n.name }) as URow;
+        const { result } = renderHook(() => useGridEditing<URow>({ rows, getRowId: r => r.uid, processRowUpdate, onRowChange }));
+        act(() => { result.current.startCellEdit({ id: 'a', field: 'name', value: 'Alpha' }); });
+        act(() => { result.current.setEditCellValue({ id: 'a', field: 'name', value: 'Gamma' }); });
+        await act(async () => { await result.current.stopCellEdit(); });
+        expect(onRowChange).toHaveBeenCalledWith({ uid: 'a', name: 'Gamma' }, 'a');
+    });
+});
+
+describe('useGridEditing — valueSetter', () => {
+    type PRow = { id: GridRowId; first: string; last: string };
+    const people: PRow[] = [{ id: 1, first: 'Ada', last: 'Lovelace' }];
+
+    it('builds the committed row with colDef.valueSetter', async () => {
+        const processRowUpdate = vi.fn((r: PRow) => r);
+        const columns: GridColDef<PRow>[] = [{
+            field: 'full',
+            valueGetter: ({ row }) => `${row.first} ${row.last}`,
+            valueSetter: ({ value, row }) => {
+                const [first, ...rest] = String(value).split(' ');
+                return { ...row, first, last: rest.join(' ') };
+            },
+        }];
+        const { result } = renderHook(() => useGridEditing<PRow>({ rows: people, getRowId: r => r.id, columns, processRowUpdate }));
+        act(() => { result.current.startCellEdit({ id: 1, field: 'full', value: 'Ada Lovelace' }); });
+        act(() => { result.current.setEditCellValue({ id: 1, field: 'full', value: 'Ada King' }); });
+        await act(async () => { await result.current.stopCellEdit(); });
+        expect(processRowUpdate).toHaveBeenCalledWith({ id: 1, first: 'Ada', last: 'King' }, people[0]);
+    });
+
+    it('warns once in development when a valueGetter column without valueSetter is committed', async () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const columns: GridColDef<PRow>[] = [{ field: 'full', valueGetter: ({ row }) => `${row.first} ${row.last}` }];
+        const { result } = renderHook(() => useGridEditing<PRow>({ rows: people, getRowId: r => r.id, columns, onRowChange: () => {} }));
+        for (const next of ['Ada King', 'Ada Byron']) {
+            act(() => { result.current.startCellEdit({ id: 1, field: 'full', value: 'Ada Lovelace' }); });
+            act(() => { result.current.setEditCellValue({ id: 1, field: 'full', value: next }); });
+            await act(async () => { await result.current.stopCellEdit(); });
+        }
+        const messages = warn.mock.calls.map(c => String(c[0])).filter(m => m.includes('valueSetter'));
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toContain('"full"');
+        warn.mockRestore();
     });
 });

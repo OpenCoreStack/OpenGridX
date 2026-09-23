@@ -129,6 +129,13 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
 
   /** Function to compute a cell value from raw row data. */
   valueGetter?: (params: GridValueGetterParams<R>) => unknown;
+  /**
+   * Maps an edited value back onto the row when an edit is committed; return the updated row.
+   * Needed for editable columns with a `valueGetter`, whose value is not stored in `row[field]`.
+   * Without it the commit writes `row[field] = value`.
+   * @since v3.0
+   */
+  valueSetter?: (params: GridValueSetterParams<R>) => R;
   /** Function to format a value into a human-readable string. */
   valueFormatter?: (params: GridValueFormatterParams<R>) => string;
   /** Custom component or element to render in the cell. */
@@ -220,6 +227,19 @@ export interface GridValueGetterParams<R extends GridRowModel = GridRowModel> {
   value: unknown;
 }
 
+/**
+ * Parameters passed to the `valueSetter` function.
+ * @since v3.0
+ */
+export interface GridValueSetterParams<R extends GridRowModel = GridRowModel> {
+  /** The committed value from the editor. */
+  value: unknown;
+  /** The row as it was before the edit. */
+  row: R;
+  /** The field name. */
+  field: string;
+}
+
 /** Parameters passed to the `valueFormatter` function. */
 export interface GridValueFormatterParams<R extends GridRowModel = GridRowModel> {
   /** The raw value to format. */
@@ -254,6 +274,19 @@ export interface GridRenderCellParams<R extends GridRowModel = GridRowModel> {
    * @since v1.1
    */
   rowMeta?: GridRowMeta;
+}
+
+/**
+ * Parameters passed to `renderEditCell`. `value` is the pending (uncommitted) value.
+ * @since v3.0
+ */
+export interface GridRenderEditCellParams<R extends GridRowModel = GridRowModel> extends GridRenderCellParams<R> {
+  /** Updates the pending value. Call it on every change; nothing is saved until `onCommit`. */
+  onValueChange: (value: unknown) => void;
+  /** Commits the pending value (runs `processRowUpdate`) and leaves edit mode. */
+  onCommit: () => void;
+  /** Discards the pending value and leaves edit mode. */
+  onCancel: () => void;
 }
 
 export interface GridRenderHeaderParams {
