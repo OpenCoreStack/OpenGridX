@@ -1051,11 +1051,12 @@ describe('useGridDataSource — infinite scroll ranges', () => {
         expect(result.current.rows.map(r => r.name)).toEqual(['r0', 'r1', 'r2']);
     });
 
-    it.each([
-        ['sort', { sortModel: [{ field: 'name', sort: 'desc' as const }] }],
+    const changes: [string, Partial<HarnessProps>][] = [
+        ['sort', { sortModel: [{ field: 'name', sort: 'desc' }] }],
         ['filter', { filterModel: { items: [{ field: 'name', operator: 'contains', value: '1' }] } }],
         ['page size', { paginationModel: { page: 3, pageSize: 20 } }],
-    ])('restarts from the first row and reports page 0 when the %s changes', async (_label, change) => {
+    ];
+    it.each(changes)('restarts from the first row and reports page 0 when the %s changes', async (_label, change) => {
         const { dataSource, requests } = createManualDataSource();
         const onPaginationModelChange = vi.fn();
         const props = (page: number): HarnessProps => ({ ...base(dataSource), ...pageModel(page), onPaginationModelChange });
@@ -1141,7 +1142,7 @@ describe('useGridDataSource — children requests (server tree data)', () => {
             await pending;
         });
         expect(result.current.rowCount).toBe(50);
-        expect(result.current.setRowsCalls.at(-1)).toEqual({ kind: 'updater', preserveRowCount: true });
+        expect(result.current.setRowsCalls[result.current.setRowsCalls.length - 1]).toEqual({ kind: 'updater', preserveRowCount: true });
     });
 
     it('does not request the same children twice while they are loading or loaded', async () => {

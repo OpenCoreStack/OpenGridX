@@ -85,7 +85,7 @@ export default function LoadingStatesDemo() {
                 <section className="loading-demo-section">
                     <h3>4. Error State Overlay</h3>
                     <p>
-                        The <code>dataSource.error</code> object can be used to trigger a global error overlay with a retry option.
+                        A failed <code>dataSource.getRows</code> call shows this overlay with a Retry button that requests the rows again. Here the error is seeded through <code>initialState</code> without a data source, so there is nothing to retry and no button is shown.
                     </p>
                     <div className="loading-grid-wrapper-full" style={{ position: 'relative' }}>
                         <DataGrid

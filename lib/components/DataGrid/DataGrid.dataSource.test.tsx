@@ -157,7 +157,7 @@ describe('DataGrid dataSource — infinite scroll', () => {
         fireEvent.click(container.querySelector('[role="columnheader"][data-field="name"]') as HTMLElement);
         await flush();
         expect(pages).toEqual([0]);
-        const last = getRows.mock.calls.at(-1)![0];
+        const last = getRows.mock.calls[getRows.mock.calls.length - 1][0];
         expect([last.startRow, last.endRow]).toEqual([0, 5]);
         expect(names(container)).toEqual(['r0', 'r1', 'r10', 'r11', 'r12']);
     });
@@ -273,7 +273,8 @@ describe('DataGrid dataSource — server-side tree data', () => {
             getRows: async (p: GridGetRowsParams) => {
                 calls.push(p.groupKeys);
                 if (p.groupKeys.length > 0) return { rows: CHILDREN[p.groupKeys[0]] ?? [] };
-                const value = p.filterModel.items[0]?.value;
+                const first = p.filterModel.items?.[0];
+                const value = first && 'value' in first ? first.value : undefined;
                 const roots = value ? ROOTS.filter(r => r.name.includes(String(value))) : ROOTS;
                 const ordered = p.sortModel[0]?.sort === 'desc' ? [...roots].reverse() : roots;
                 return { rows: ordered, rowCount: 50 };
@@ -384,5 +385,43 @@ describe('DataGrid dataSource — server-side tree data', () => {
         expect(texts(container)).toEqual(['HR']);
         await act(async () => { releaseChildren?.(); });
         expect(texts(container)).toEqual(['HR']);
+    });
+});
+
+describe('DataGrid dataSource — server row count', () => {
+    const pageSource = (withCount: boolean): GridDataSource => ({
+        getRows: async (p) => ({ rows: ALL.slice(p.startRow, p.endRow), ...(withCount ? { rowCount: 100 } : {}) }),
+    });
+
+    it('follows a rowCount prop that changes after mount when getRows reports none', async () => {
+        const ds = pageSource(false);
+        const Grid = ({ rowCount }: { rowCount: number }) => (
+            <DataGrid rows={EMPTY} columns={COLS} dataSource={ds} paginationMode="server" pagination pageSizeOptions={[10]}
+                paginationModel={{ page: 0, pageSize: 10 }} rowCount={rowCount} />
+        );
+        const { container, rerender } = render(<Grid rowCount={0} />);
+        await flush();
+        rerender(<Grid rowCount={100} />);
+        await flush();
+        expect(pager(container)).toContain('of 100');
+    });
+
+    it('gives slots.footer the server total', async () => {
+        const Footer = (props: Record<string, unknown>) => <div className="footer-count">{String(props.rowCount)}</div>;
+        const { container } = render(
+            <DataGrid rows={EMPTY} columns={COLS} dataSource={pageSource(true)} paginationMode="server" pagination pageSizeOptions={[10]}
+                paginationModel={{ page: 0, pageSize: 10 }} slots={{ footer: Footer }} />
+        );
+        await flush();
+        expect(container.querySelector('.footer-count')?.textContent).toBe('100');
+    });
+
+    it('counts the server total in the list-view summary', async () => {
+        const { container } = render(
+            <DataGrid rows={EMPTY} columns={COLS} dataSource={pageSource(true)} paginationMode="server" pagination pageSizeOptions={[10]}
+                paginationModel={{ page: 0, pageSize: 10 }} listView listViewColumn={{ field: 'name', renderCell: ({ row }) => <span>{String(row.name)}</span> }} />
+        );
+        await flush();
+        expect(container.querySelector('.ogx-list-view__toolbar')?.textContent).toBe('100 items · page 1 of 10');
     });
 });

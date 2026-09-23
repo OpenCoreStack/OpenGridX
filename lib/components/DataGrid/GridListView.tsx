@@ -78,8 +78,8 @@ export function GridListView<R extends GridRowModel>({
         >
             <div className="ogx-list-view__toolbar">
                 <span>
-                    {filteredRows.length} {filteredRows.length === 1 ? 'item' : 'items'}
-                    {pagination ? ` · page ${effectivePaginationModel.page + 1} of ${Math.ceil(filteredRows.length / effectivePaginationModel.pageSize) || 1}` : ''}
+                    {totalRowCount} {totalRowCount === 1 ? 'item' : 'items'}
+                    {pagination ? ` · page ${effectivePaginationModel.page + 1} of ${Math.ceil(totalRowCount / effectivePaginationModel.pageSize) || 1}` : ''}
                     {selectedRowIds.size > 0 ? ` · ${selectedRowIds.size} selected` : ''}
                 </span>
             </div>
