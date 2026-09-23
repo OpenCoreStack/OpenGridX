@@ -83,7 +83,7 @@ Prepends system column stubs to `orderedColumns`:
 ...orderedColumns
 ```
 
-This array is consumed by `useGridKeyboardNavigation` (to map arrow-key movements across all focusable columns) and `useGridSpanning` (to compute merged cell boundaries including system columns).
+This array is consumed by `useGridKeyboardNavigation` (to map arrow-key movements across all focusable columns). `useGridSpanning` does not use it: spans are computed over the rendered data columns only (the layout's left-pinned, unpinned and right-pinned columns), so system columns and hidden columns are never part of a span.
 
 ---
 

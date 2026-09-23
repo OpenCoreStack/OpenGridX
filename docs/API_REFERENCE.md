@@ -317,8 +317,10 @@ Defines the behavior and appearance of a single column.
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `colSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of columns this cell merges horizontally. |
-| `rowSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of rows this cell merges vertically. |
+| `colSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of columns this cell merges horizontally: the origin plus the next visible columns in render order, clamped to the end of its pinned section. `params.value` is the `valueGetter` result. |
+| `rowSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of rows this cell merges vertically, clamped to the end of its row section (top-pinned, scrolling or bottom-pinned rows) and to the first row with an expanded detail panel. |
+
+Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative values mean no span. A span function that throws is treated as `1` (with a development warning). With both set, the origin covers the whole `colSpan × rowSpan` rectangle. See [Cell Spanning](features/cell-spanning.md).
 
 #### Styling
 
@@ -1179,7 +1181,15 @@ export default function GroupedHeadersGrid() {
 }
 ```
 
-The grid renders two header rows: the spanning group row on top, and the regular per-column header row below. Groups that are not referenced in `columnGroupingModel` are rendered without a spanning header.
+The grid renders one group header row per nesting level above the regular per-column header row. Columns that are not referenced in `columnGroupingModel` get an empty filler cell in the group rows.
+
+Group rows follow the columns as they are rendered:
+
+- **Order, visibility and pinning** — a group covers its visible member columns in their current order. A group whose members are not adjacent (or that spans a pinned-section boundary) renders one group cell per run of adjacent members. Group cells over pinned columns are sticky, so they stay above their columns on horizontal scroll.
+- **Widths** — a group cell is exactly as wide as its member columns, including flex, `auto` and percentage widths and manual resizes.
+- **`headerClassName`** — added to the group cell's class list (next to `ogx-col-group-cell` and `ogx-col-group-cell--group`).
+- **Column reordering** — header drag and the toolbar / columns-panel reorder keep groups intact: a column can only be moved onto a column of the same innermost group, and an ungrouped column only onto another ungrouped column.
+- **Accessibility** — group cells are `role="columnheader"` with `aria-colspan` (visible member columns) and `aria-colindex`; filler cells are `aria-hidden`. The grid's `aria-rowcount` includes the group header rows.
 
 ---
 
