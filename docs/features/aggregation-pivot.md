@@ -42,17 +42,21 @@ When a `dataSource` drives the rows (server or infinite pagination, server sorti
 If the server provides neither `aggregationResults` nor `getAggregations`, the footer shows `—`.
 
 ### Configuration
-You can control where the aggregation results appear:
-- **`footer`**: A sticky row at the bottom of the grid.
-- **`inline`**: Values displayed within group headers (when Row Grouping is active).
-- **`null`**: Skip aggregation for this group.
+`getAggregationPosition(groupNode)` controls where aggregation results appear. It is called for every group node (with its current `isExpanded`) and once with `null` for the grand total:
+- **`inline`** (default for groups): values on the group row.
+- **`footer`**: values on a subtotal row after the group's children while the group is expanded; the group row shows none. While the group is collapsed there is no subtotal row, so the values stay on the group row. For the grand total (`null`), `'footer'` (the default) shows the footer row.
+- **`null`**: no aggregation for that group (on screen and in `getGroupedExportRows()`); for the grand total, the footer row is hidden.
 
 ```tsx
 <DataGrid
   aggregationModel={model}
-  getAggregationPosition={(groupNode) => groupNode ? 'inline' : 'footer'}
+  rowGroupingModel={['department']}
+  // Subtotal rows below expanded groups, inline values on collapsed ones, and the grand total.
+  getAggregationPosition={() => 'footer'}
 />
 ```
+
+Group subtotals and the `(n)` count next to a group label cover only the rows that pass the filter, like the grand total; a group with no matching row is not shown.
 
 ---
 

@@ -1,6 +1,7 @@
 import React, { useId } from 'react';
 import { Checkbox } from '../ui/Checkbox';
 import { ColumnResizeHandle } from '../ColumnResizeHandle/ColumnResizeHandle';
+import { clampResizeWidth } from '../ColumnResizeHandle/clampResizeWidth';
 import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning, GridAggregationModel, GridColumnGroupingModel } from '../../types';
 import { isColumnPinned, calculatePinnedPositions, getPinnedEdgeFields } from '../../utils/pinning';
 import { getRenderedColumnWidth } from '../../utils/columnWidth';
@@ -118,6 +119,17 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
     // Alt+ArrowDown or Ctrl/Cmd+Enter on a focused header cell opens its column menu.
     // DOM focus is moved onto the focused header cell by useGridKeyboardNavigation.
     const handleHeaderKeyDown = (colDef: GridColDef<R>) => (event: React.KeyboardEvent<HTMLDivElement>) => {
+        // Alt+ArrowLeft / Alt+ArrowRight resize the column (Shift for bigger steps).
+        const resizes = event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight');
+        if (resizes && event.target === event.currentTarget) {
+            if (colDef.resizable === false || !onColumnResize) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const width = getRenderedColumnWidth(colDef, columnWidths);
+            const step = (event.shiftKey ? 50 : 10) * (event.key === 'ArrowRight' ? 1 : -1);
+            onColumnResize(colDef.field, clampResizeWidth(width + step, width, colDef.minWidth, colDef.maxWidth));
+            return;
+        }
         const opensMenu = (event.altKey && event.key === 'ArrowDown') || ((event.ctrlKey || event.metaKey) && event.key === 'Enter');
         if (!opensMenu || colDef.disableColumnMenu || event.target !== event.currentTarget) return;
         event.preventDefault();
@@ -449,9 +461,10 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         }
                     };
 
-                    const handleDragStart = onDragStart ? onDragStart(colDef.field) : undefined;
-                    const handleDragOver = onDragOver ? onDragOver(colDef.field) : undefined;
-                    const handleDrop = onDrop ? onDrop(colDef.field) : undefined;
+                    // Pinned columns keep their place: they are neither dragged nor drop targets.
+                    const handleDragStart = onDragStart && !isPinned ? onDragStart(colDef.field) : undefined;
+                    const handleDragOver = onDragOver && !isPinned ? onDragOver(colDef.field) : undefined;
+                    const handleDrop = onDrop && !isPinned ? onDrop(colDef.field) : undefined;
 
                     return (
                         <div
@@ -461,7 +474,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             title={colDef.description}
                             onClick={handleHeaderClick}
                             role="columnheader"
-                            draggable={!!onDragStart}
+                            draggable={!!handleDragStart}
                             onDragStart={handleDragStart}
                             onDragOver={handleDragOver}
                             onDragEnd={onDragEnd}
@@ -508,10 +521,11 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             {isResizable && onColumnResize && (
                                 <ColumnResizeHandle
                                     field={colDef.field}
-                                    currentWidth={effectiveWidth}
+                                    currentWidth={getRenderedColumnWidth(colDef, columnWidths)}
                                     onResize={onColumnResize}
                                     minWidth={colDef.minWidth}
                                     maxWidth={colDef.maxWidth}
+                                    edge={pinnedPosition === 'right' ? 'start' : 'end'}
                                 />
                             )}
                         </div>

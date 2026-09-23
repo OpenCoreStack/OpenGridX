@@ -9,6 +9,7 @@ export interface UseLayoutParams<R extends GridRowModel> {
     pagination: boolean;
     paginatedUnpinnedRows: R[];
     sortedUnpinnedRows: R[];
+    /** Rows whose detail panel is open; the caller leaves out synthetic group rows (getDetailPanelRowIds). */
     expandedRowIds: Set<GridRowId>;
     getDetailPanelHeight?: (params: { row: R; id: GridRowId; rowIndex: number }) => GridDetailPanelHeight;
     /** Rendered heights of `'auto'` detail panels, by row id (measured by the panels themselves). */

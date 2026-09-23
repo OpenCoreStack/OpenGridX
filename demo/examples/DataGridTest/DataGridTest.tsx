@@ -1865,14 +1865,8 @@ export function DataGridTest() {
                     pinCheckboxColumn={pinCheckboxColumn}
                     pinExpandColumn={pinExpandColumn}
                     columnOrder={columnOrder}
+                    onColumnOrderModelChange={setColumnOrder}
                     onColumnOrderChange={(params) => {
-                        const { oldIndex, targetIndex } = params;
-                        setColumnOrder(prev => {
-                            const newOrder = [...prev];
-                            const [moved] = newOrder.splice(oldIndex, 1);
-                            newOrder.splice(targetIndex, 0, moved);
-                            return newOrder;
-                        });
                         console.log('Column reordered:', params);
                     }}
 
@@ -1883,22 +1877,13 @@ export function DataGridTest() {
 
                     rowReordering={rowReordering}
                     onRowOrderChange={(params) => {
+                        // oldIndex / targetIndex are positions in `rows`, whatever the page, sort or filter.
                         const { oldIndex, targetIndex } = params;
                         console.log('Row reordered:', params);
-
-                        if (sortModel.length > 0 || quickFilterValue) {
-                            alert('Please clear sorting and filtering to test row reordering.');
-                            return;
-                        }
-
-                        const pageOffset = paginationModel.page * paginationModel.pageSize;
-                        const realOldIndex = pageOffset + oldIndex;
-                        const realTargetIndex = pageOffset + targetIndex;
-
                         setRows(prev => {
                             const newRows = [...prev];
-                            const [moved] = newRows.splice(realOldIndex, 1);
-                            newRows.splice(realTargetIndex, 0, moved);
+                            const [moved] = newRows.splice(oldIndex, 1);
+                            newRows.splice(targetIndex, 0, moved);
                             return newRows;
                         });
                     }}

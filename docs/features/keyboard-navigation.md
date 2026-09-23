@@ -21,7 +21,8 @@ The grid follows the [WAI-ARIA data grid pattern](https://www.w3.org/WAI/ARIA/ap
 | **Home** / **End** | First / last column of the row. |
 | **Ctrl+Home** / **Ctrl+End** (Cmd on macOS) | First column of the header row / last column of the last row. |
 | **PageUp** / **PageDown** | Up / down one page (`pageSize` with pagination, otherwise 10 rows). |
-| **Enter** | Editable cell: open the editor. Other cells: same as clicking the row — fires `onRowClick`, toggles selection unless `disableRowSelectionOnClick`, and expands or collapses a group / tree-parent row. |
+| **Enter** | Editable cell: open the editor. Other cells of a row with children (group row or tree-data parent): expand or collapse it. Other cells: same as clicking the row — fires `onRowClick` and toggles selection unless `disableRowSelectionOnClick`. |
+| **Alt+ArrowRight** / **Alt+ArrowLeft** | Tree data / row grouping: expand / collapse the focused row. |
 | **Shift+Space** | Select or deselect the focused row (when rows can be selected: `checkboxSelection`, or click selection not disabled). Synthetic group rows are not selectable. |
 | **Space** | On the row checkbox: toggle the row. On the detail-panel toggle: expand or collapse the panel. Elsewhere it does nothing (it never scrolls the grid). |
 | **Ctrl+A** (Cmd+A) | Select every row, when several rows can be selected. |
@@ -45,6 +46,7 @@ When an edit ends, focus returns to the edited cell unless you moved it elsewher
 | :--- | :--- |
 | **Enter** / **Space** | Sort the column (asc → desc → none), replacing the sort model; with `multiSort`, or with **Shift** held, the column is added to (or updated or removed from) the sort model instead, as a header click or shift-click does. On the select-all header: select or clear all rows. |
 | **Alt+ArrowDown** or **Ctrl+Enter** (Cmd+Enter) | Open the column menu. |
+| **Alt+ArrowRight** / **Alt+ArrowLeft** | Widen / narrow the column by 10px (with **Shift**: 50px). Not for `resizable: false` columns. |
 | **ArrowDown** | Move to the first row. |
 
 In the column menu, **ArrowUp** / **ArrowDown** / **Home** / **End** move between items, **Enter** / **Space** choose one, and **Escape** or **Tab** closes the menu. Focus returns to the column header.

@@ -181,7 +181,8 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `columnVisibilityModel` | `GridColumnVisibilityModel` | Controlled column visibility. |
 | `onColumnVisibilityModelChange` | `(model) => void` | Fires when column visibility changes. |
 | `columnOrder` | `string[]` | Controlled column field order. |
-| `onColumnOrderChange` | `(params) => void` | Fires when columns are reordered. |
+| `onColumnOrderChange` | `(params) => void` | Fires when the user moves a column. |
+| `onColumnOrderModelChange` | `(columnOrder) => void` | Fires with the whole new column order (also for the Columns panel's Reset). |
 | `disableColumnReorder` | `boolean` | Disables drag-and-drop column reordering. |
 
 ### Events

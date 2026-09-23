@@ -189,7 +189,7 @@ export function GridVirtualRows<R extends GridRowModel>({
                             pinCheckboxColumn={pinCheckboxColumn}
                             pinExpandColumn={pinExpandColumn}
                             rowReordering={rowReordering}
-                            onDragStart={rowReorderHandlers.onDragStart}
+                            onDragStart={rowReorderHandlers.canReorderRow(id) ? rowReorderHandlers.onDragStart : undefined}
                             onDragOver={rowReorderHandlers.onDragOver}
                             onDragEnd={rowReorderHandlers.onDragEnd}
                             onDrop={rowReorderHandlers.onDrop}

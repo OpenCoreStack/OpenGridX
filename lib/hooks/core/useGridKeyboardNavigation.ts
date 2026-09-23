@@ -70,6 +70,12 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
     rowMetaMap?: Map<GridRowId, GridRowMeta>;
     /** Enter on a non-editable cell: the same handler a row click runs. */
     onRowActivate?: (params: GridRowParams<R>) => void;
+    /**
+     * Tree data / row grouping: expands or collapses a row. Enter on a non-editable cell of any row
+     * with children toggles it (a tree-data parent that is a real row included, whose click selects it
+     * instead), and Alt+ArrowRight / Alt+ArrowLeft expand / collapse it.
+     */
+    toggleRowExpansion?: (id: GridRowId) => void;
     /** Ctrl/Cmd+A. */
     handleSelectAll?: (selected: boolean) => void;
     /** Whether rows can be selected from the keyboard (Shift+Space). */
@@ -154,6 +160,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         getRowId = defaultGetRowId,
         rowMetaMap,
         onRowActivate,
+        toggleRowExpansion,
         handleSelectAll,
         rowSelectionEnabled = true,
         multipleRowSelectionEnabled = true,
@@ -460,8 +467,21 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
                 editingHandlers.startCellEdit({ id, field, value: getCellValue(row, navigationColumns[colIndex] as GridColDef<R>) });
                 return;
             }
-            // Keyboard equivalent of clicking the row: onRowClick, click-to-select, group expansion.
+            // A row with children toggles, so keyboard users can expand a tree-data parent even
+            // though clicking it selects it. Others: the keyboard equivalent of clicking the row.
+            if (toggleRowExpansion && rowMetaMap?.get(id)?.hasChildren) {
+                toggleRowExpansion(id);
+                return;
+            }
             onRowActivate?.({ row, id, rowIndex });
+            return;
+        }
+
+        // Treegrid shortcuts: Alt+ArrowRight expands, Alt+ArrowLeft collapses the focused row.
+        if (event.altKey && (key === 'ArrowRight' || key === 'ArrowLeft') && toggleRowExpansion && id !== null) {
+            event.preventDefault();
+            const meta = rowMetaMap?.get(id);
+            if (meta?.hasChildren && Boolean(meta.isExpanded) !== (key === 'ArrowRight')) toggleRowExpansion(id);
             return;
         }
 
@@ -528,6 +548,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         pageSize,
         rowMetaMap,
         onRowActivate,
+        toggleRowExpansion,
         handleSelectAll,
         rowSelectionEnabled,
         multipleRowSelectionEnabled,

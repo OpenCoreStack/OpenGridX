@@ -3,6 +3,7 @@ import { useColumnReorder } from '../useColumnReorder';
 import { ExpandIcon } from '../../components/ui/ExpandIcon';
 import { isColumnPinned } from '../../utils/pinning';
 import { formatAggregateForColumn } from '../../utils/aggregation';
+import { CellErrorBoundary } from '../../components/Cell/CellErrorBoundary';
 import { CHECKBOX_FIELD, EXPAND_FIELD, REORDER_FIELD } from '../../utils/focus';
 import type {
     GridColDef,
@@ -65,6 +66,73 @@ function inPinnedRenderOrder<C extends { field: string }>(columns: C[], pinnedCo
 const displayValue = <R extends GridRowModel>(cellParams: GridRenderCellParams<R>): React.ReactNode =>
     cellParams.formattedValue ?? (cellParams.value as React.ReactNode);
 
+interface ConsumerCellResult {
+    useDefault: boolean;
+    content?: React.ReactNode;
+}
+
+/**
+ * Calls the consumer's renderCell for a hierarchy column cell. For a synthetic row (group, subtotal or
+ * auto-created tree parent) a result of `undefined` means "use the grid's default content". In the
+ * hierarchy column the output is wrapped in its own error boundary, so a renderCell that fails on a
+ * group row shows the error icon next to the expand toggle instead of replacing the toggle.
+ */
+function renderConsumerCell<R extends GridRowModel>(
+    col: GridColDef<R>,
+    cellParams: GridRenderCellParams<R>,
+    isolate: boolean,
+): ConsumerCellResult {
+    const renderCell = col.renderCell;
+    if (!renderCell) return { useDefault: true };
+    const isSynthetic = Boolean(cellParams.rowMeta?.isGroupRow);
+    if (!isolate) {
+        const output = renderCell(cellParams);
+        return isSynthetic && output === undefined ? { useDefault: true } : { useDefault: false, content: output };
+    }
+    let output: React.ReactNode;
+    try {
+        output = renderCell(cellParams);
+    } catch (error) {
+        return {
+            useDefault: false,
+            content: <CellErrorBoundary field={col.field} resetKey={cellParams.row} renderFn={() => { throw error; }} />,
+        };
+    }
+    if (isSynthetic && output === undefined) return { useDefault: true };
+    return { useDefault: false, content: <CellErrorBoundary field={col.field} resetKey={cellParams.row} renderFn={() => output} /> };
+}
+
+/** What the hierarchy column shows without a consumer renderCell (or when it returns undefined for a synthetic row). */
+function defaultHierarchyContent<R extends GridRowModel>(
+    cellParams: GridRenderCellParams<R>,
+    isRowGrouping: boolean,
+    isTreeData: boolean,
+): React.ReactNode {
+    const meta = cellParams.rowMeta;
+    if (!meta?.isGroupRow) return displayValue(cellParams);
+    // A subtotal row carries only aggregates; its label column stays empty.
+    if (meta.isGroupFooter) return null;
+    const descendantCount = meta.descendantCount;
+    if (isRowGrouping && meta.hasChildren) {
+        const groupLabel = meta.groupLabel ?? `${meta.groupingField}: ${String(meta.groupingValue)}`;
+        return (
+            <div className="ogx__group-cell-content">
+                {groupLabel}
+                {descendantCount !== undefined ? ` (${descendantCount})` : ''}
+            </div>
+        );
+    }
+    if (isTreeData) {
+        return (
+            <div className="ogx__group-cell-content">
+                {meta.groupLabel}
+                {descendantCount !== undefined && descendantCount > 0 ? ` (${descendantCount})` : ''}
+            </div>
+        );
+    }
+    return displayValue(cellParams);
+}
+
 export interface UseGridColumnsParams<R extends GridRowModel> {
     activeColumns: GridColDef<R>[];
     isHierarchyEnabled: boolean;
@@ -74,6 +142,8 @@ export interface UseGridColumnsParams<R extends GridRowModel> {
     columnVisibilityModel: Record<string, boolean>;
     columnOrder?: string[];
     onColumnOrderChange?: (params: GridColumnOrderChangeParams) => void;
+    /** Receives the whole new column order after every reorder and reset (not in pivot mode). */
+    onColumnOrderModelChange?: (columnOrder: string[]) => void;
     disableColumnReorder: boolean;
     pivotMode: boolean;
     checkboxSelection: boolean;
@@ -94,6 +164,8 @@ const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 
 export interface UseGridColumnsResult<R extends GridRowModel> {
     effectiveColumns: GridColDef<R>[];
+    /** Tree data / row grouping: the column that shows the expand toggle, indent and group labels. */
+    hierarchyField: string | undefined;
     orderedColumns: GridColDef<R>[];
     visibleOrderedColumns: GridColDef<R>[];
     /** Focusable columns in render order: system columns, then the visible data columns (left-pinned, unpinned, right-pinned). */
@@ -104,6 +176,10 @@ export interface UseGridColumnsResult<R extends GridRowModel> {
     effectiveColumnOrder: string[];
     setInternalColumnOrder: React.Dispatch<React.SetStateAction<string[]>>;
     columnReorderHandlers: ReturnType<typeof useColumnReorder>;
+    /** Moves `fromField` to the position of `toField` in the column order (Columns panel drag). */
+    moveColumn: (fromField: string, toField: string) => void;
+    /** Restores the columns' definition order. */
+    resetColumnOrder: () => void;
     handleColumnResize: (field: string, newWidth: number) => void;
 }
 
@@ -119,6 +195,7 @@ export function useGridColumns<R extends GridRowModel>(
         columnVisibilityModel,
         columnOrder,
         onColumnOrderChange,
+        onColumnOrderModelChange,
         disableColumnReorder,
         pivotMode,
         checkboxSelection,
@@ -198,31 +275,9 @@ export function useGridColumns<R extends GridRowModel>(
                         const depth = meta?.treeDepth ?? 0;
                         const hasChildren = Boolean(meta?.hasChildren);
                         const isExpanded = Boolean(meta?.isExpanded);
-                        const groupingField = meta?.groupingField;
-                        const groupingValue = meta?.groupingValue;
-                        const descendantCount = meta?.descendantCount;
-                        const isGroupRow = Boolean(meta?.isGroupRow);
 
-                        let content: React.ReactNode = col.renderCell ? col.renderCell(cellParams) : displayValue(cellParams);
-
-                        if (isTreeData && hasChildren && isGroupRow) {
-                            content = (
-                                <div className="ogx__group-cell-content">
-                                    {cellParams.value as React.ReactNode}
-                                    {descendantCount !== undefined && descendantCount > 0 ? ` (${descendantCount})` : ''}
-                                </div>
-                            );
-                        }
-
-                        if (isRowGrouping && hasChildren && groupingField) {
-                            const groupLabel = meta?.groupLabel ?? `${groupingField}: ${String(groupingValue)}`;
-                            content = (
-                                <div className="ogx__group-cell-content">
-                                    {groupLabel}
-                                    {descendantCount !== undefined ? ` (${descendantCount})` : ''}
-                                </div>
-                            );
-                        }
+                        const custom = renderConsumerCell(col, cellParams, true);
+                        const content = custom.useDefault ? defaultHierarchyContent(cellParams, isRowGrouping, isTreeData) : custom.content;
 
                         return (
                             <div style={{ display: 'flex', alignItems: 'center', paddingLeft: depth * 24, width: '100%', height: '100%' }}>
@@ -253,18 +308,15 @@ export function useGridColumns<R extends GridRowModel>(
                 ...groupRowAggregates,
                 renderCell: (cellParams: GridRenderCellParams<R>) => {
                     const meta = cellParams.rowMeta;
-                    const hasChildren = Boolean(meta?.hasChildren);
-                    const groupingField = meta?.groupingField;
-
-                    if (isRowGrouping && hasChildren) {
-                        if (col.field === groupingField) return null;
-                        if (cellParams.value !== undefined && cellParams.value !== null) {
-                            return col.renderCell ? col.renderCell(cellParams) : displayValue(cellParams);
-                        }
-                        return null;
+                    if (!meta?.isGroupRow) {
+                        return col.renderCell ? col.renderCell(cellParams) : displayValue(cellParams);
                     }
-
-                    return col.renderCell ? col.renderCell(cellParams) : displayValue(cellParams);
+                    // Synthetic rows: the consumer's renderCell decides; `undefined` keeps the default,
+                    // which is the aggregate (or nothing) and never the grouping value the label already shows.
+                    const custom = renderConsumerCell(col, cellParams, false);
+                    if (!custom.useDefault) return custom.content;
+                    if (col.field === meta.groupingField && !meta.isGroupFooter) return null;
+                    return cellParams.value == null ? null : displayValue(cellParams);
                 }
             };
         }) as GridColDef<R>[];
@@ -300,19 +352,47 @@ export function useGridColumns<R extends GridRowModel>(
         [orderedColumns, isColumnShown]
     );
 
-    // ── Column reorder handlers ───────────────────────────────────────────────
+    // ── Column reorder ────────────────────────────────────────────────────────
+    // Every move works on the full current order (orderedColumns: all columns, including ones added
+    // after mount or missing from a stored/controlled order, and the synthetic __group__ column),
+    // so the reported indices and the stored order always describe the same list.
+    const commitColumnOrder = useCallback((newOrder: string[], change?: GridColumnOrderChangeParams) => {
+        // A controlled columnOrder names source columns; generated pivot columns keep their own order.
+        if (pivotMode || !columnOrder) setInternalColumnOrder(newOrder);
+        if (change) onColumnOrderChange?.(change);
+        if (!pivotMode) onColumnOrderModelChange?.(newOrder);
+    }, [pivotMode, columnOrder, setInternalColumnOrder, onColumnOrderChange, onColumnOrderModelChange]);
+
+    const applyColumnMove = useCallback((oldIndex: number, targetIndex: number) => {
+        const newOrder = orderedColumns.map(col => col.field);
+        const [movedField] = newOrder.splice(oldIndex, 1);
+        newOrder.splice(targetIndex, 0, movedField);
+        commitColumnOrder(newOrder, {
+            column: orderedColumns[oldIndex] as unknown as GridColDef,
+            oldIndex,
+            targetIndex,
+        });
+    }, [orderedColumns, commitColumnOrder]);
+
     const columnReorderHandlers = useColumnReorder({
         columns: orderedColumns,
-        onColumnOrderChange: useCallback((reorderParams: GridColumnOrderChangeParams) => {
-            const { oldIndex, targetIndex } = reorderParams;
-            const newOrder = [...effectiveColumnOrder];
-            const [movedField] = newOrder.splice(oldIndex, 1);
-            newOrder.splice(targetIndex, 0, movedField);
-            if (pivotMode || !columnOrder) setInternalColumnOrder(newOrder);
-            onColumnOrderChange?.(reorderParams);
-        }, [effectiveColumnOrder, pivotMode, columnOrder, setInternalColumnOrder, onColumnOrderChange]),
+        onColumnOrderChange: useCallback(
+            ({ oldIndex, targetIndex }: GridColumnOrderChangeParams) => applyColumnMove(oldIndex, targetIndex),
+            [applyColumnMove]
+        ),
         disableColumnReorder,
     });
+
+    const moveColumn = useCallback((fromField: string, toField: string) => {
+        const oldIndex = orderedColumns.findIndex(col => col.field === fromField);
+        const targetIndex = orderedColumns.findIndex(col => col.field === toField);
+        if (oldIndex === -1 || targetIndex === -1 || oldIndex === targetIndex) return;
+        applyColumnMove(oldIndex, targetIndex);
+    }, [orderedColumns, applyColumnMove]);
+
+    const resetColumnOrder = useCallback(() => {
+        commitColumnOrder(naturalOrder);
+    }, [commitColumnOrder, naturalOrder]);
 
     // ── Navigation columns (system cols + rendered data cols, in render order) ─
     // Mirrors what Row and Header render, so arrow keys follow the screen and never
@@ -337,6 +417,7 @@ export function useGridColumns<R extends GridRowModel>(
 
     return {
         effectiveColumns,
+        hierarchyField,
         orderedColumns,
         visibleOrderedColumns,
         navigationColumns,
@@ -345,6 +426,8 @@ export function useGridColumns<R extends GridRowModel>(
         effectiveColumnOrder,
         setInternalColumnOrder,
         columnReorderHandlers,
+        moveColumn,
+        resetColumnOrder,
         handleColumnResize,
     };
 }
