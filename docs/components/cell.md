@@ -48,7 +48,7 @@ const columns: GridColDef[] = [
 
 Custom `renderCell` and `renderEditCell` callbacks are wrapped in a `CellErrorBoundary`. If a renderCell throws during render, that single cell shows a `⚠` indicator (CSS class `ogx__cell-error`) with the error message as a tooltip. The rest of the grid continues rendering normally.
 
-Default cell display (no `renderCell`) does not go through the boundary — it cannot throw.
+A column's `valueGetter` or `valueFormatter` that throws for a row is contained the same way: that cell shows the `⚠` indicator and the rest of the grid renders. On synthetic rows (row-grouping group and subtotal rows, auto-created tree parents) `valueGetter` is not called (the row already holds its grouping value and aggregates under the column's field), and `valueFormatter` is only called for the values the row holds, not for its empty cells.
 
 To style the error indicator:
 
