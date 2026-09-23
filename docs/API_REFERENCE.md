@@ -334,8 +334,8 @@ Defines the behavior and appearance of a single column.
 | `sortable` | `boolean` | `true` | Enable/disable sorting for this column. |
 | `filterable` | `boolean` | `true` | Enable/disable filtering for this column. `false` also removes it from the quick-filter search. |
 | `resizable` | `boolean` | `true` | Allow the user to drag-resize this column. |
-| `hideable` | `boolean` | `true` | Allow the user to hide this column via the panel. |
-| `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. |
+| `hideable` | `boolean` | `true` | Allow the user to hide this column from the UI. `false` removes it from the Columns panel (unless `showNonHideableColumns`) and removes **Hide Column** from its column menu. |
+| `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. `false` removes the pin actions from its column menu. |
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header kebab/context menu. |
 | `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, PDF and Print exports (including their subtotals and totals). |
 | `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`. |

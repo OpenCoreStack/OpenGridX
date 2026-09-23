@@ -36,6 +36,6 @@ Unless `disableColumnMenu` is set to `true` in a column's `GridColDef`, each hea
 
 Clicking the menu icon opens a popover with actions to:
 - Sort Asc/Desc/Unsort (acts on that column only; other sort keys are kept)
-- Pin Left/Right/None
-- Hide Column
-- Manage Columns (Open [Visibility Panel](column-visibility.md))
+- Pin Left/Right/None (left out for columns with `pinnable: false`)
+- Hide Column (left out for columns with `hideable: false`)
+- Manage Columns (opens the toolbar's Columns panel when `slots.toolbar` renders `GridToolbar`, otherwise the standalone [Visibility Panel](column-visibility.md))

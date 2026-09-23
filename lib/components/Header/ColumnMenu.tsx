@@ -168,8 +168,13 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
     }, [anchorEl, onClose]);
 
     const handleSort = (direction: GridSortDirection) => { onSort?.(colDef.field, direction); onClose(); };
-    const handleHide = () => { onHide?.(colDef.field); onClose(); };
-    const handlePin = (side: 'left' | 'right' | null) => { onPin?.(colDef.field, side); onClose(); };
+    // `hideable: false` / `pinnable: false` mean the column cannot be hidden / pinned from the UI,
+    // so the menu leaves those actions out (this also covers the synthetic __group__ column).
+    const canHide = Boolean(onHide) && colDef.hideable !== false;
+    const canPin = Boolean(onPin) && colDef.pinnable !== false;
+
+    const handleHide = () => { if (canHide) onHide?.(colDef.field); onClose(); };
+    const handlePin = (side: 'left' | 'right' | null) => { if (canPin) onPin?.(colDef.field, side); onClose(); };
 
     const currentSort = sortModel?.find(item => item.field === colDef.field)?.sort;
     const isUnsorted = currentSort === undefined || currentSort === null;
@@ -209,35 +214,42 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
             )}
 
             { }
-            <div className="ogx-menu-section-label" aria-hidden="true">Pin column</div>
-            <button type="button" className={`ogx-menu-item${isPinnedLeft ? ' ogx-menu-item--active' : ''}`}
-                onClick={() => handlePin('left')} role="menuitemradio" aria-checked={isPinnedLeft} aria-label="Pin to left">
-                <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedLeft ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
-                <span className="ogx-menu-item__icon" aria-hidden="true"><PinLeftIcon /></span>
-                Pin to Left
-            </button>
-            <button type="button" className={`ogx-menu-item${isPinnedRight ? ' ogx-menu-item--active' : ''}`}
-                onClick={() => handlePin('right')} role="menuitemradio" aria-checked={isPinnedRight} aria-label="Pin to right">
-                <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedRight ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
-                <span className="ogx-menu-item__icon" aria-hidden="true"><PinRightIcon /></span>
-                Pin to Right
-            </button>
-            <button type="button" className={`ogx-menu-item${isUnpinned ? ' ogx-menu-item--active' : ''}`}
-                onClick={() => handlePin(null)} role="menuitemradio" aria-checked={isUnpinned} aria-label="Unpin column">
-                <span className="ogx-menu-item__indicator" aria-hidden="true">{isUnpinned ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
-                <span className="ogx-menu-item__icon" aria-hidden="true"><UnpinIcon /></span>
-                Unpin
-            </button>
-            <div className="ogx-menu-divider" />
+            {canPin && (
+                <>
+                    <div className="ogx-menu-section-label" aria-hidden="true">Pin column</div>
+                    <button type="button" className={`ogx-menu-item${isPinnedLeft ? ' ogx-menu-item--active' : ''}`}
+                        onClick={() => handlePin('left')} role="menuitemradio" aria-checked={isPinnedLeft} aria-label="Pin to left">
+                        <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedLeft ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
+                        <span className="ogx-menu-item__icon" aria-hidden="true"><PinLeftIcon /></span>
+                        Pin to Left
+                    </button>
+                    <button type="button" className={`ogx-menu-item${isPinnedRight ? ' ogx-menu-item--active' : ''}`}
+                        onClick={() => handlePin('right')} role="menuitemradio" aria-checked={isPinnedRight} aria-label="Pin to right">
+                        <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedRight ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
+                        <span className="ogx-menu-item__icon" aria-hidden="true"><PinRightIcon /></span>
+                        Pin to Right
+                    </button>
+                    <button type="button" className={`ogx-menu-item${isUnpinned ? ' ogx-menu-item--active' : ''}`}
+                        onClick={() => handlePin(null)} role="menuitemradio" aria-checked={isUnpinned} aria-label="Unpin column">
+                        <span className="ogx-menu-item__indicator" aria-hidden="true">{isUnpinned ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
+                        <span className="ogx-menu-item__icon" aria-hidden="true"><UnpinIcon /></span>
+                        Unpin
+                    </button>
+                    <div className="ogx-menu-divider" />
+                </>
+            )}
 
-            { }
-            <button type="button" className="ogx-menu-item" onClick={handleHide} role="menuitem" aria-label={`Hide ${colLabel} column`}>
-                <span className="ogx-menu-item__indicator" aria-hidden="true" />
-                <span className="ogx-menu-item__icon" aria-hidden="true"><HideIcon /></span>
-                Hide Column
-            </button>
+            {canHide && (
+                <>
+                    <button type="button" className="ogx-menu-item" onClick={handleHide} role="menuitem" aria-label={`Hide ${colLabel} column`}>
+                        <span className="ogx-menu-item__indicator" aria-hidden="true" />
+                        <span className="ogx-menu-item__icon" aria-hidden="true"><HideIcon /></span>
+                        Hide Column
+                    </button>
+                    <div className="ogx-menu-divider" />
+                </>
+            )}
 
-            <div className="ogx-menu-divider" />
             <button type="button" className="ogx-menu-item" onClick={() => { onManageColumns?.(); onClose(); }} role="menuitem" aria-label="Manage all columns">
                 <span className="ogx-menu-item__indicator" aria-hidden="true" />
                 <span className="ogx-menu-item__icon" aria-hidden="true"><ManageColumnsIcon /></span>
