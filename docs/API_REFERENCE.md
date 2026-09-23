@@ -337,7 +337,7 @@ Defines the behavior and appearance of a single column.
 | `hideable` | `boolean` | `true` | Allow the user to hide this column via the panel. |
 | `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. |
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header kebab/context menu. |
-| `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, and Print exports. |
+| `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, PDF and Print exports (including their subtotals and totals). |
 | `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`. |
 | `groupingValueFormatter` | `(params: { field: string; value: unknown }) => string` | — | Custom formatter for group-header labels when this column is the active grouping field. Falls back to `"field: value"` when omitted. |
 | `aggregable` | `boolean` | `true` | Allow this column to be aggregated. |
@@ -349,11 +349,14 @@ Defines the behavior and appearance of a single column.
 
 | Function | Return | Description |
 | :--- | :--- | :--- |
-| `exportToCsv(rows, cols, options?)` | `void` | Triggers download of CSV file. |
-| `exportToJson(rows, cols, options?)` | `void` | Triggers download of JSON file. |
-| `exportToExcel(rows, cols, options?)` | `void` | Basic `.xls` export (zero-dep). |
+| `exportToCsv(rows, cols, options?)` | `void` | Triggers download of a UTF-8 CSV file (with a byte-order mark and formula escaping by default, v3.0+). |
+| `exportToJson(rows, cols, options?)` | `void` | Triggers download of JSON file. Values, including aggregation values, are raw. |
+| `exportToExcel(rows, cols, options?)` | `void` | Basic `.xls` export (zero-dep HTML table). A `.xlsx` file name is renamed to `.xls` (v3.0+). |
 | `exportToExcelAdvanced(rows, cols, options?)` | `Promise<void>` | Real `.xlsx` export (styled, multi-sheet, lazy-loaded). Accepts `groupedRows` for outlined grouped reports (v2.1+). |
-| `printGrid(rows, cols, title \| options)` | `void` | Opens browser print dialog. |
+| `exportToPdf(rows, cols, options?)` | `Promise<void>` | PDF report via the optional `jspdf` + `jspdf-autotable` peers. `font` registers a Unicode font (v3.0+). See [PDF Export](features/pdf-export.md). |
+| `printGrid(rows, cols, title \| options)` | `Promise<void>` | Opens browser print dialog. |
+
+In every exporter, a non-empty `selectedRows` takes precedence over `groupedRows` (the selected rows are exported flat) and the totals are recomputed over the selected rows (v3.0+). See the [Export Guide](features/export-guide.md#selection-grouping-and-totals).
 
 ---
 
@@ -1263,6 +1266,7 @@ interface PdfExportOptions {
     headerBackgroundColor?: string;
     headerTextColor?: string;
     fontSize?: number;
+    font?: { name: string; data: string; boldData?: string }; // v3.0+
 }
 ```
 
@@ -1272,12 +1276,13 @@ interface PdfExportOptions {
 | `title` | `string` | — | Adds a branded header block above the table |
 | `logoUrl` | `string` | — | Data URI or URL for a logo image (requires `title`) |
 | `orientation` | `'portrait' \| 'landscape'` | `'landscape'` | Page orientation |
-| `selectedRows` | `(string \| number)[]` | — | Export only rows with these IDs |
+| `selectedRows` | `(string \| number)[]` | — | Export only rows with these IDs. Takes precedence over `groupedRows`; footer totals are recomputed over the selection (v3.0+) |
 | `aggregationResult` | `Record<string, unknown>` | — | From `apiRef.current.getAggregationResult()` |
 | `aggregationModel` | `GridAggregationModel` | — | From `apiRef.current.getAggregationModel()` |
-| `filterModel` | `GridFilterModel` | — | From `apiRef.current.getFilterModel()` |
-| `groupedRows` | `GridGroupedExportRow[]` | — | Pre-built grouped export rows from `apiRef.current.getGroupedExportRows()`. When provided, the PDF table reflects the grouping structure (group-header, indented leaves, subtotals, grand total). |
+| `filterModel` | `GridFilterModel` | — | From `apiRef.current.getFilterModel()`. Nested groups, the logic operator and quick-search terms are summarised; rules without a value are skipped |
+| `groupedRows` | `GridGroupedExportRow[]` | — | Pre-built grouped export rows from `apiRef.current.getGroupedExportRows()`. When provided (and `selectedRows` is empty), the PDF table reflects the grouping structure (group-header, indented leaves, subtotals, grand total). |
 | `alternateRowColor` | `boolean` | `true` | Alternating row background shading |
-| `headerBackgroundColor` | `string` | `'#4f46e5'` | Column header cell background (hex) |
-| `headerTextColor` | `string` | `'#ffffff'` | Column header cell text color (hex) |
+| `headerBackgroundColor` | `string` | `'#4f46e5'` | Column header cell background (`#rrggbb` / `#rgb`) |
+| `headerTextColor` | `string` | `'#ffffff'` | Column header cell text color (`#rrggbb` / `#rgb`) |
 | `fontSize` | `number` | `9` | Body cell font size in points |
+| `font` | `{ name, data, boldData? }` | — | Base64 TrueType font for text outside Latin-1 (₹, CJK, Cyrillic…). Without it, such characters are replaced with `?` (v3.0+) |
