@@ -170,6 +170,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `disableRowSelectionOnClick` | `boolean` | Prevent row click from toggling selection. |
 | `disableMultipleRowSelection` | `boolean` | Restrict to single-row selection. |
 | `pinCheckboxColumn` | `boolean` | Keeps the checkbox column visible during horizontal scroll. Default `true`. |
+| `disableClipboardCopy` | `boolean` | Turns off the grid's Ctrl/Cmd+C copy (`apiRef.current.copySelectedRows()` still works). |
 
 ### Sorting & Filtering
 

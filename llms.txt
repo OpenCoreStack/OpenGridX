@@ -91,6 +91,7 @@ export default function App() {
 | rowSelectionModel          | GridRowId[]                   | Controlled selection                |
 | onRowSelectionModelChange  | (model: GridRowId[]) => void  | Selection change callback. Also fires once with ids of removed rows pruned (client-owned rows) |
 | disableRowSelectionOnClick | boolean                       | Prevent click toggling selection    |
+| disableClipboardCopy       | boolean                       | Turn off the grid's Ctrl/Cmd+C copy (copySelectedRows still works) |
 
 ### Sorting
 | Prop              | Type                        | Description                     |
@@ -298,7 +299,8 @@ apiRef.current.setPageSize(size)
 apiRef.current.scrollToIndexes({ rowIndex, colIndex })
 
 // Clipboard
-apiRef.current.copySelectedRows()      // → Promise<void>; rejects if the write fails
+apiRef.current.copySelectedRows()      // → Promise<void>; rejects if the write fails. Copies every selected row that passes
+                                       //   the filter (all pages, collapsed groups, pinned rows), visible columns in screen order
 
 // Aggregation
 apiRef.current.getAggregationResult()  // → Record<string, unknown> | null (null in pivot mode)

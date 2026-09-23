@@ -199,6 +199,8 @@ Read `node_modules/@opencorestack/opengridx/docs/migration/v2-to-v3.md`. In shor
   searches only visible, filterable columns; CSV starts with a BOM and CSV/HTML-Excel neutralise formulas (`escapeFormulas: false`);
   `exportToExcel` saves `.xlsx` names as `.xls`; all grid buttons are `type="button"`; pinned columns render in `pinnedColumns` order;
   `DataGridThemeProvider` pins a light or dark palette by `theme.mode` instead of following the OS.
+  Copy (Ctrl/Cmd+C, `copySelectedRows()`) takes the visible columns in screen order and every selected row that passes the filter,
+  `copySelectedRows()` rejects when the write fails, and `disableClipboardCopy` turns the shortcut off.
 - After upgrading, restart the dev server and clear `node_modules/.vite`, or Vite may keep serving the old version.
 
 ## v1 → v2 migration (if this project was on v1)
