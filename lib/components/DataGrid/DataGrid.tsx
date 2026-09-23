@@ -62,6 +62,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         checkboxSelection = false,
         disableRowSelectionOnClick = false,
         disableMultipleRowSelection = false,
+        disableClipboardCopy = false,
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange: propOnRowSelectionModelChange,
         onRowClick,
@@ -332,21 +333,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             propApiRef.current = apiRef.current;
         }
     }, [propApiRef, apiRef]);
-
-    // Ctrl/Cmd+C only copies while focus is inside this grid (containerRef is assigned on render).
-    const getGridRootElement = useCallback(() => containerRef.current, []);
-    const { copySelectedRows } = useGridClipboard({
-        selectedRowIds,
-        columns: activeColumns as unknown as GridColDef[],
-        getVisibleRows: () => apiRef.current.getVisibleRows(),
-        getRowId: getRowIdOf,
-        getRootElement: getGridRootElement,
-    });
-
-    // Expose on apiRef for programmatic use
-    useEffect(() => {
-        apiRef.current.copySelectedRows = copySelectedRows;
-    }, [copySelectedRows, apiRef]);
 
     const isInternalLoading = state.dataSource.loading;
     const effectiveLoading = loading || isInternalLoading;
@@ -680,6 +666,23 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         () => [...layout.leftPinnedCols, ...layout.unpinnedColsWithWidth, ...layout.rightPinnedCols],
         [layout.leftPinnedCols, layout.unpinnedColsWithWidth, layout.rightPinnedCols]
     );
+
+    // Copies the selected rows (every page, collapsed groups, pinned rows) with the on-screen
+    // columns in screen order. Ctrl/Cmd+C only copies while focus is inside this grid.
+    const getGridRootElement = useCallback(() => containerRef.current, []);
+    const { copySelectedRows } = useGridClipboard({
+        getSelectedRowIds: controlledState.getLatestRowSelectionModel,
+        getColumns: () => renderedDataColumns as unknown as GridColDef[],
+        getRows: () => apiRef.current.getAllFilteredRows(),
+        getRowId: getRowIdOf,
+        getRootElement: getGridRootElement,
+        disableKeyboardShortcut: disableClipboardCopy,
+    });
+
+    // Expose on apiRef for programmatic use (stable identity)
+    useLayoutEffect(() => {
+        apiRef.current.copySelectedRows = copySelectedRows;
+    }, [copySelectedRows, apiRef]);
 
     useEffect(() => {
         gridData.apiRef.current.scrollToIndexes = ({ rowIndex, colIndex }) => {

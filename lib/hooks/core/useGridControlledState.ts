@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useLayoutEffect, useRef } from 'react';
 import type {
     GridRowId,
     GridSortItem,
@@ -85,6 +85,11 @@ export interface UseGridControlledStateReturn {
     setInternalRowSelectionModel: React.Dispatch<React.SetStateAction<GridRowId[]>>;
     /** Sets the internal model when uncontrolled and fires onRowSelectionModelChange. */
     handleRowSelectionModelChange: (model: GridRowId[]) => void;
+    /**
+     * The latest selection, including a change made in this tick that has not rendered yet
+     * (read from onRowSelectionModelChange or right after apiRef.selectRows). Stable identity.
+     */
+    getLatestRowSelectionModel: () => GridRowId[];
 
     // density (prop, else initialState.density, else 'standard')
     density: GridDensity;
@@ -222,7 +227,15 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
     const rowSelectionModel = isSelectionControlled ? propRowSelectionModel! : internalRowSelectionModel;
     const selectedRowIds = useMemo(() => new Set(rowSelectionModel), [rowSelectionModel]);
 
+    // Every commit resets it to the rendered model (a controlled parent may reject a change).
+    const latestRowSelectionRef = useRef(rowSelectionModel);
+    useLayoutEffect(() => {
+        latestRowSelectionRef.current = rowSelectionModel;
+    });
+    const getLatestRowSelectionModel = useCallback(() => latestRowSelectionRef.current, []);
+
     const handleRowSelectionModelChange = useCallback((model: GridRowId[]) => {
+        latestRowSelectionRef.current = model;
         if (!isSelectionControlled) setInternalRowSelectionModel(model);
         onRowSelectionModelChange?.(model);
     }, [isSelectionControlled, onRowSelectionModelChange]);
@@ -263,6 +276,7 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
         isSelectionControlled,
         setInternalRowSelectionModel,
         handleRowSelectionModelChange,
+        getLatestRowSelectionModel,
 
         density,
     };
