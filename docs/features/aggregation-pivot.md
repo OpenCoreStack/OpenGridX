@@ -21,6 +21,10 @@ Aggregation allows you to calculate summary values (Sum, Avg, etc.) for groups o
 />
 ```
 
+### What the footer totals
+
+The footer (and `apiRef.current.getAggregationResult()`, and the `aggregationResult` passed to `slots.footer`) always aggregates **every data row that passes the current filter**. That holds with or without row grouping or tree data, and however many groups are expanded. Group rows show their own subtotals inline; the grand total is computed from the underlying rows, never from those subtotals. (Before v3.0 the footer aggregated the *visible* rows under grouping, so expanding a group double-counted it, and `count` / `avg` were wrong even when collapsed.)
+
 ### Configuration
 You can control where the aggregation results appear:
 - **`footer`**: A sticky row at the bottom of the grid.

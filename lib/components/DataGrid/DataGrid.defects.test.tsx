@@ -213,3 +213,75 @@ describe('v3.0 — row objects are passed through unchanged under hierarchy', ()
         for (const key of UNDERSCORE) expect(child).not.toHaveProperty(key);
     });
 });
+
+describe('D9 — footer aggregation does not depend on grouping or expansion', () => {
+    type Inv = { id: number; status: string; amount: number };
+    // Lopsided groups so an average of group averages differs from the true average.
+    const INV: Inv[] = [
+        { id: 1, status: 'Overdue', amount: 100 },
+        { id: 2, status: 'Overdue', amount: 700 },
+        { id: 3, status: 'Paid', amount: 50 },
+        { id: 4, status: 'Paid', amount: 150 },
+        { id: 5, status: 'Paid', amount: 400 },
+    ];
+    const invCols: GridColDef<Inv>[] = [{ field: 'status' }, { field: 'amount', type: 'number' }];
+
+    function AggHarness({ fn, grouped, onApi, filter }: { fn: string; grouped: boolean; onApi: (a: GridApiRef) => void; filter?: boolean }) {
+        const apiRef = useGridApiRef();
+        useEffect(() => { onApi(apiRef); }, [apiRef, onApi]);
+        return (
+            <DataGrid apiRef={apiRef} rows={INV} columns={invCols} aggregationModel={{ amount: fn }}
+                rowGroupingModel={grouped ? ['status'] : undefined}
+                filterModel={filter ? { items: [{ field: 'amount', operator: '>', value: 100 }] } : undefined} />
+        );
+    }
+
+    const readAgg = (fn: string, grouped: boolean, expandFirst: boolean, filter = false) => {
+        let api: GridApiRef | null = null;
+        const { container, unmount } = render(<AggHarness fn={fn} grouped={grouped} filter={filter} onApi={(a) => { api = a; }} />);
+        if (expandFirst) fireEvent.click(container.querySelector('.ogx__rows [role="row"]')!);
+        const value = api!.current.getAggregationResult()!.amount;
+        unmount();
+        return value;
+    };
+
+    for (const fn of ['sum', 'avg', 'count', 'min', 'max', 'unique']) {
+        it(`${fn}: grouped (collapsed and expanded) equals ungrouped`, () => {
+            const truth = readAgg(fn, false, false);
+            expect(readAgg(fn, true, false)).toBe(truth);
+            expect(readAgg(fn, true, true)).toBe(truth);
+        });
+    }
+
+    it('respects the active filter under grouping', () => {
+        expect(readAgg('sum', true, true, true)).toBe(700 + 150 + 400);
+        expect(readAgg('count', true, false, true)).toBe(3);
+    });
+
+    it('tree data totals do not change when a node is expanded', () => {
+        type Node = { id: number; path: string[]; amount: number };
+        const nodes: Node[] = [
+            { id: 1, path: ['A'], amount: 10 },
+            { id: 2, path: ['A', 'x'], amount: 20 },
+            { id: 3, path: ['A', 'y'], amount: 30 },
+        ];
+        let api: GridApiRef | null = null;
+        function TreeHarness({ onApi }: { onApi: (a: GridApiRef) => void }) {
+            const apiRef = useGridApiRef();
+            useEffect(() => { onApi(apiRef); }, [apiRef, onApi]);
+            return <DataGrid apiRef={apiRef} rows={nodes} columns={[{ field: 'amount' }]} treeData getTreeDataPath={(r) => r.path} aggregationModel={{ amount: 'sum' }} />;
+        }
+        const { container } = render(<TreeHarness onApi={(a) => { api = a; }} />);
+        expect(api!.current.getAggregationResult()!.amount).toBe(60);
+        fireEvent.click(container.querySelector('.ogx__rows [role="row"]')!);
+        expect(api!.current.getAggregationResult()!.amount).toBe(60);
+    });
+
+    it('passes the filtered data-row count to slots.footer under grouping', () => {
+        const Footer = vi.fn((props: Record<string, unknown>) => <div data-testid="agg-footer">{String(props.rowCount)}</div>);
+        const { container } = render(<DataGrid rows={INV} columns={invCols} rowGroupingModel={['status']} slots={{ footer: Footer }} />);
+        expect(screen.getByTestId('agg-footer')).toHaveTextContent('5');
+        fireEvent.click(container.querySelector('.ogx__rows [role="row"]')!);
+        expect(screen.getByTestId('agg-footer')).toHaveTextContent('5');
+    });
+});

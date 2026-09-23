@@ -524,6 +524,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         pageSize: effectivePaginationModel.pageSize,
     });
     const filteredRows        = rowPipeline.filteredRows        as R[];
+    const dataRows            = rowPipeline.dataRows            as R[];
     const pinnedTopRows       = rowPipeline.pinnedTopRows       as R[];
     const pinnedBottomRows    = rowPipeline.pinnedBottomRows    as R[];
     const sortedUnpinnedRows  = rowPipeline.sortedUnpinnedRows  as R[];
@@ -550,7 +551,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     );
 
     const { aggregationResult } = useAggregation({
-        rows: filteredRows,
+        rows: dataRows,
         columns: activeColumns as unknown as GridColDef[],
         aggregationModel,
         isServerSide: !!(dataSource && (paginationMode === 'server' || sortingMode === 'server')),
@@ -1173,7 +1174,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     apiRef={gridData.apiRef}
                     aggregationModel={aggregationModel}
                     aggregationResult={hasAggregation ? aggregationResult : null}
-                    rowCount={isRowGrouping ? effectiveRows.length : sortedUnpinnedRows.length}
+                    rowCount={dataRows.length}
                     pagination={pagination}
                     paginationModel={effectivePaginationModel}
                     pageSizeOptions={pageSizeOptions}
@@ -1210,7 +1211,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     filteredRows.length === 0
                         ? effectiveNoRowsLabel
                         : (filterModel && ((filterModel.quickFilterValues?.length || 0) > 0 || (filterModel.items?.length || 0) > 0))
-                            ? `${filteredRows.length} ${filteredRows.length === 1 ? 'row' : 'rows'} found`
+                            ? `${dataRows.length} ${dataRows.length === 1 ? 'row' : 'rows'} found`
                             : ''
                 )}
             </div>

@@ -26,6 +26,13 @@ export interface UseGridRowPipelineParams<R extends GridRowModel> {
 
 export interface GridRowPipelineResult<R extends GridRowModel> {
     filteredRows: R[];
+    /**
+     * The filtered data rows, independent of hierarchy expansion. Under row grouping and tree
+     * data, filteredRows is the visible hierarchy instead (group rows that already carry their
+     * subtotals plus whichever children are expanded), so anything that totals or counts rows
+     * must use dataRows.
+     */
+    dataRows: R[];
     pinnedTopRows: R[];
     unpinnedRows: R[];
     pinnedBottomRows: R[];
@@ -58,6 +65,12 @@ export function useGridRowPipeline<R extends GridRowModel>(
         if (filterMode === 'server' && dataSource) return effectiveRows;
         return filterRows(effectiveRows, filterModel) as R[];
     }, [effectiveRows, filterModel, activeHierarchyHandlers, filterMode, dataSource]);
+
+    const dataRows = useMemo<R[]>(() => {
+        if (!activeHierarchyHandlers) return filteredRows;
+        if (filterMode === 'server' && dataSource) return effectiveRows;
+        return filterRows(effectiveRows, filterModel) as R[];
+    }, [activeHierarchyHandlers, filteredRows, filterMode, dataSource, effectiveRows, filterModel]);
 
     const { top: pinnedTopRows, center: unpinnedRows, bottom: pinnedBottomRows } = useMemo(() => {
         if (activeHierarchyHandlers) return { top: [] as R[], center: filteredRows, bottom: [] as R[] };
@@ -99,6 +112,7 @@ export function useGridRowPipeline<R extends GridRowModel>(
 
     return {
         filteredRows,
+        dataRows,
         pinnedTopRows,
         unpinnedRows,
         pinnedBottomRows,

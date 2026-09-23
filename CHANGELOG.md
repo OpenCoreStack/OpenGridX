@@ -18,6 +18,7 @@ Upgrading from 2.x: see [docs/migration/v2-to-v3.md](docs/migration/v2-to-v3.md)
 
 ### Fixed
 
+- **The aggregation footer double-counted expanded groups.** Under row grouping it aggregated the *visible* rows: group rows, which already carry their subtotals in the same fields, plus the expanded leaves. Expanding a group therefore inflated `sum` (the leaves were counted twice), and `count` / `avg` / `unique` were wrong even when every group was collapsed (`count` counted groups). Tree data totals likewise depended on which nodes were expanded. The footer, `getAggregationResult()`, the `aggregationResult` / `rowCount` passed to `slots.footer`, and grouped-export grand totals now use the filtered data rows, independent of expansion. *(Consumer report D9.)*
 - **Group rows lost their label and expand toggle when the first column was hidden**, and showed them in the middle of the row when that column was reordered or another column was pinned left. The hierarchy UI was attached to whichever column came first in `columns`; it now goes on the leftmost column actually on screen.
 - **Grouped CSV, basic Excel, JSON, print and PDF exports ignored `groupingValueFormatter`** for group-header labels. All exporters now share one label rule, and `getGroupedExportRows()` entries carry the grid's label as `groupLabel`.
 - **Pivot mode crashed with `RangeError` on datasets over ~110k rows** when a `min` or `max` value field was used, and pivot `count` counted numeric values only. Pivot now uses the shared aggregation functions.
