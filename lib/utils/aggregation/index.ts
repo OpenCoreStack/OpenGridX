@@ -53,6 +53,17 @@ export const AGGREGATION_FUNCTIONS: Record<BuiltInAggFn, (values: unknown[]) => 
 };
 
 /**
+ * Whether `colDef` may be summarised with `fnName`: not when the column sets `aggregable: false`,
+ * and not with a function outside its `availableAggregationFunctions`. The footer, group rows,
+ * pivot values and exports all go through this, so a model entry the column forbids is ignored.
+ */
+export function isAggregationAllowed<R extends GridRowModel>(colDef: GridColDef<R> | undefined, fnName: string): boolean {
+    if (!colDef) return true;
+    if (colDef.aggregable === false) return false;
+    return !colDef.availableAggregationFunctions || colDef.availableAggregationFunctions.includes(fnName);
+}
+
+/**
  * Aggregates each `aggregationModel` field over `rows`. Cells are read through the column's
  * `valueGetter` (getCellValue), so a computed column totals what its cells show.
  */
@@ -65,9 +76,7 @@ export function computeAggregations<R extends GridRowModel>(
     const result: GridAggregationResult = {};
     for (const [field, fnName] of Object.entries(aggregationModel)) {
         const colDef = columnsLookup.get(field);
-        if (colDef?.availableAggregationFunctions && !colDef.availableAggregationFunctions.includes(fnName)) {
-            continue;
-        }
+        if (!isAggregationAllowed(colDef, fnName)) continue;
         const fn = AGGREGATION_FUNCTIONS[fnName as BuiltInAggFn];
         if (!fn) {
             console.warn(`[${warnPrefix}] Unknown aggregation function: "${fnName}"`);

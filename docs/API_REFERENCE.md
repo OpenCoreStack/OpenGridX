@@ -343,7 +343,7 @@ Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative 
 | `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, PDF and Print exports (including their subtotals and totals). |
 | `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`, or used as a pivot row or column field (the pivot panel does not offer it). |
 | `groupingValueFormatter` | `(params: { field: string; value: unknown }) => string` | — | Custom formatter for group-header labels when this column is the active grouping field. Falls back to `"field: value"` when omitted. |
-| `aggregable` | `boolean` | `true` | Allow this column to be aggregated. `false` keeps it out of the toolbar's Summaries panel and out of the pivot panel's value fields. |
+| `aggregable` | `boolean` | `true` | Allow this column to be aggregated. `false` keeps it out of the toolbar's Summaries panel and out of the pivot panel's value fields, and an `aggregationModel` or `pivotModel` entry naming it is ignored (no footer total, group aggregate, pivot value or export total). |
 | `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are computed and available for this column (e.g. `['sum', 'avg']`). Functions outside this list are skipped even if set in `aggregationModel` or a pivot value field, the toolbar's Summaries panel and the pivot panel offer only these. |
 
 ---
