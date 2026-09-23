@@ -236,6 +236,11 @@ export interface GridValueFormatterParams<R extends GridRowModel = GridRowModel>
 export interface GridRenderCellParams<R extends GridRowModel = GridRowModel> {
   /** The current cell value. */
   value: unknown;
+  /**
+   * The value after `colDef.valueFormatter` (or `String(value)` when no formatter is set; `''` for null/undefined).
+   * @since v2.1
+   */
+  formattedValue?: string;
   /** The row object. */
   row: R;
   /** The field name and unique ID. */
@@ -705,6 +710,13 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
 
   /** Callback fired when a row is clicked. */
   onRowClick?: (params: GridRowParams<R>) => void;
+  /**
+   * Callback fired when a row is double-clicked. Also fires for group rows; check
+   * `apiRef` / `rowMeta` if you only want leaf rows. Not fired when the double-click
+   * lands on the checkbox, expand icon, drag handle, or an open cell editor.
+   * @since v2.1
+   */
+  onRowDoubleClick?: (params: GridRowParams<R>) => void;
   /** Callback fired when a cell is clicked. */
   onCellClick?: (params: GridCellParams<R>) => void;
 

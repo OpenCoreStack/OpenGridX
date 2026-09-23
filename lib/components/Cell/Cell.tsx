@@ -244,6 +244,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                         resetKey={row}
                         renderFn={() => colDef.renderCell!({
                             value,
+                            formattedValue,
                             row,
                             field: colDef.field,
                             colDef,

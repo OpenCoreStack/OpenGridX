@@ -11,6 +11,8 @@ export { FilterPanel } from './components/FilterPanel';
 export { GridToolbar } from './components/Toolbar/GridToolbar';
 export type { GridToolbarProps, ToolbarButtonRenderProps, ToolbarQuickFilterRenderProps } from './components/Toolbar/GridToolbar';
 export { GridTooltip } from './components/Tooltip/Tooltip';
+export { ColumnVisibilityPanel } from './components/ColumnVisibilityPanel/ColumnVisibilityPanel';
+export type { ColumnVisibilityPanelProps } from './components/ColumnVisibilityPanel/ColumnVisibilityPanel';
 
 export { useGridApiRef } from './hooks/core/useGridApiRef';
 export { Button, Input, Checkbox } from './components/ui';

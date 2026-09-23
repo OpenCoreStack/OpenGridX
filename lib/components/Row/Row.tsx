@@ -17,6 +17,7 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
     isSelected?: boolean;
     checkboxSelection?: boolean;
     onRowClick?: (params: GridRowParams<R>) => void;
+    onRowDoubleClick?: (params: GridRowParams<R>) => void;
     onCellClick?: (params: GridCellParams<R>) => void;
     onSelectionChange?: (rowId: GridRowId, isSelected: boolean) => void;
     columnWidths?: Record<string, number>;
@@ -62,6 +63,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         isSelected = false,
         checkboxSelection = false,
         onRowClick,
+        onRowDoubleClick,
         onCellClick,
         onSelectionChange,
         columnWidths = {},
@@ -167,6 +169,13 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         onRowClick?.({ row, id: row.id, rowIndex });
     };
 
+    const handleRowDoubleClick = (event: React.MouseEvent) => {
+        if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell')) {
+            return;
+        }
+        onRowDoubleClick?.({ row, id: row.id, rowIndex });
+    };
+
     const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         event.stopPropagation();
         onSelectionChange?.(row.id, event.target.checked);
@@ -198,6 +207,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
             <div
                 className={classNames}
                 onClick={handleRowClick}
+                onDoubleClick={onRowDoubleClick ? handleRowDoubleClick : undefined}
                 role="row"
                 aria-rowindex={rowIndex + 1}
                 aria-selected={isSelected}

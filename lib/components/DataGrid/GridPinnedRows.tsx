@@ -21,6 +21,7 @@ export interface GridPinnedRowsProps<R extends GridRowModel> {
     selectedRowIds: Set<GridRowId>;
     checkboxSelection: boolean;
     onRowClick: (params: GridRowParams<R>) => void;
+    onRowDoubleClick?: (params: GridRowParams<R>) => void;
     onCellClick: (params: GridCellParams<R>) => void;
     onSelectionChange: (rowId: GridRowId, isSelected: boolean) => void;
     columnWidths: Record<string, number>;
@@ -47,6 +48,7 @@ export function GridPinnedRows<R extends GridRowModel>({
     selectedRowIds,
     checkboxSelection,
     onRowClick,
+    onRowDoubleClick,
     onCellClick,
     onSelectionChange,
     columnWidths,
@@ -78,6 +80,7 @@ export function GridPinnedRows<R extends GridRowModel>({
                     isSelected={selectedRowIds.has(row.id)}
                     checkboxSelection={checkboxSelection}
                     onRowClick={onRowClick}
+                    onRowDoubleClick={onRowDoubleClick}
                     onCellClick={onCellClick}
                     onSelectionChange={onSelectionChange}
                     columnWidths={columnWidths}

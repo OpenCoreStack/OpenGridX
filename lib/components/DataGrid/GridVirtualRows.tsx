@@ -41,6 +41,7 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     pinnedRows?: GridRowPinning;
     selectedRowIds: Set<GridRowId>;
     onRowClick: (params: GridRowParams<R>) => void;
+    onRowDoubleClick?: (params: GridRowParams<R>) => void;
     onCellClick: (params: GridCellParams<R>) => void;
     onSelectionChange: (rowId: GridRowId, isSelected: boolean) => void;
     columnWidths: Record<string, number>;
@@ -62,6 +63,7 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     infiniteScrollSkeletonCount: number;
     unpinnedRowsLength: number;
     rowMetaMap: Map<GridRowId, GridRowMeta>;
+    loadingOverlay?: React.ReactNode;
 }
 
 export function GridVirtualRows<R extends GridRowModel>({
@@ -79,6 +81,7 @@ export function GridVirtualRows<R extends GridRowModel>({
     pinnedRows,
     selectedRowIds,
     onRowClick,
+    onRowDoubleClick,
     onCellClick,
     onSelectionChange,
     columnWidths,
@@ -100,6 +103,7 @@ export function GridVirtualRows<R extends GridRowModel>({
     infiniteScrollSkeletonCount,
     unpinnedRowsLength,
     rowMetaMap,
+    loadingOverlay,
 }: GridVirtualRowsProps<R>) {
     const skeletonColumns: GridColDef<R>[] = baseColumns.length > 0
         ? baseColumns
@@ -134,7 +138,9 @@ export function GridVirtualRows<R extends GridRowModel>({
                 style={{ transform: `translateY(${offsetTop}px)` }}
                 role="rowgroup"
             >
-                {effectiveLoading && visibleRows.length === 0 ? (
+                {effectiveLoading && visibleRows.length === 0 && loadingOverlay ? (
+                    <div className="ogx__loading-overlay" style={{ width: viewportWidth || undefined }}>{loadingOverlay}</div>
+                ) : effectiveLoading && visibleRows.length === 0 ? (
                     Array.from({ length: 10 }).map((_, index) => (
                         <SkeletonRow
                             key={`skeleton-${index}`}
@@ -155,6 +161,7 @@ export function GridVirtualRows<R extends GridRowModel>({
                             isSelected={selectedRowIds.has(row.id)}
                             checkboxSelection={checkboxSelection}
                             onRowClick={onRowClick}
+                            onRowDoubleClick={onRowDoubleClick}
                             onCellClick={onCellClick}
                             onSelectionChange={onSelectionChange}
                             columnWidths={columnWidths}

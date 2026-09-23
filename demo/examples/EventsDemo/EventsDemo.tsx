@@ -80,6 +80,7 @@ export default function EventsDemo() {
                             checkboxSelection
                             slots={{ toolbar: GridToolbar }}
                             onRowClick={handleRowClick}
+                            onRowDoubleClick={(params) => addLog('Row Double-Click', `ID: ${params.id}, Name: ${String(params.row.name)}`)}
                             onCellClick={handleCellClick}
                             onSortModelChange={handleSortModelChange}
                             onFilterModelChange={handleFilterModelChange}

@@ -14,6 +14,11 @@ interface HierarchyHandlers {
     toggleExpansion: (id: GridRowId) => void;
 }
 
+// Injected hierarchy renderers replace the plain-cell path in Cell, so they must
+// render the formatted value themselves or valueFormatter is silently lost.
+const displayValue = <R extends GridRowModel>(cellParams: GridRenderCellParams<R>): React.ReactNode =>
+    cellParams.formattedValue ?? (cellParams.value as React.ReactNode);
+
 export interface UseGridColumnsParams<R extends GridRowModel> {
     activeColumns: GridColDef<R>[];
     isHierarchyEnabled: boolean;
@@ -83,7 +88,7 @@ export function useGridColumns<R extends GridRowModel>(
                         const descendantCount = meta?.descendantCount;
                         const isGroupRow = Boolean(meta?.isGroupRow);
 
-                        let content: React.ReactNode = col.renderCell ? col.renderCell(cellParams) : cellParams.value as React.ReactNode;
+                        let content: React.ReactNode = col.renderCell ? col.renderCell(cellParams) : displayValue(cellParams);
 
                         if (isTreeData && hasChildren && isGroupRow) {
                             content = (
@@ -137,12 +142,12 @@ export function useGridColumns<R extends GridRowModel>(
                     if (isRowGrouping && hasChildren) {
                         if (col.field === groupingField) return null;
                         if (cellParams.value !== undefined && cellParams.value !== null) {
-                            return col.renderCell ? col.renderCell(cellParams) : cellParams.value;
+                            return col.renderCell ? col.renderCell(cellParams) : displayValue(cellParams);
                         }
                         return null;
                     }
 
-                    return col.renderCell ? col.renderCell(cellParams) : cellParams.value;
+                    return col.renderCell ? col.renderCell(cellParams) : displayValue(cellParams);
                 }
             };
         }) as GridColDef<R>[];

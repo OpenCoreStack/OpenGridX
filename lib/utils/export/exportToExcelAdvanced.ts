@@ -1,5 +1,5 @@
 
-import type { GridColDef, GridRowModel, GridAggregationModel } from '../../types';
+import type { GridColDef, GridRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
 import { formatAggregationValue } from '../../hooks/features/useAggregation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -68,6 +68,19 @@ export interface ExcelAdvancedExportOptions {
     aggregationModel?: GridAggregationModel | null;
     /** Currently selected row IDs */
     selectedRows?: (string | number)[];
+    /**
+     * Grouped row structure, typically from `apiRef.current.getGroupedExportRows()`.
+     * When provided, sheets with `rows: 'all'` are written in grouped order: group-header,
+     * leaf, group-subtotal and grand-total rows, using Excel row outlining so groups
+     * collapse natively. A `grand-total` entry replaces the sheet's `includeSummary` row.
+     * Ignored for `rows: 'selected'` sheets.
+     * @since v2.1
+     */
+    groupedRows?: GridGroupedExportRow[];
+    /** Fill color for group-header rows in grouped export (default: '#e8eaf6') */
+    groupHeaderFillColor?: string;
+    /** Fill color for group-subtotal rows in grouped export (default: '#f0f4ff') */
+    groupSubtotalFillColor?: string;
 }
 
 // ─── Cell type inference ──────────────────────────────────────────────────────
@@ -187,6 +200,9 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
         aggregationResult = null,
         aggregationModel = null,
         selectedRows,
+        groupedRows,
+        groupHeaderFillColor = '#e8eaf6',
+        groupSubtotalFillColor = '#f0f4ff',
     } = options;
 
     // Lazy-load ExcelJS to keep initial bundle lean
@@ -270,7 +286,12 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
             alternateRowColor = '#f8fafc',
         } = def;
 
-        const rowsToExport = rowScope === 'selected' ? sRows : allRows;
+        const useGrouped = rowScope === 'all' && Boolean(groupedRows && groupedRows.length > 0);
+        const rowsToExport = rowScope === 'selected'
+            ? sRows
+            : useGrouped
+                ? groupedRows!.flatMap(e => (e.type === 'leaf' && e.row ? [e.row] : []))
+                : allRows;
 
         // ─ Pre-fetch images for this sheet ──────────────────────────────────────────
         const imageColumns = exportColumns.filter(col => columnStyles[col.field]?.embedImage);
@@ -343,7 +364,7 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
         // Header occupies index 0 when present; first data row is at index 1.
         let excelRowIdx = includeHeaders ? 1 : 0;
 
-        rowsToExport.forEach((row, rowIdx) => {
+        const writeDataRow = (row: GridRowModel, rowIdx: number, outlineLevel: number) => {
             const cellValues = exportColumns.map(col => {
                 // Image columns: write empty string; image placed below
                 if (columnStyles[col.field]?.embedImage) return '';
@@ -361,6 +382,7 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
 
             const dataRow = ws.addRow(cellValues);
             dataRow.font = { size: bodyFontSize };
+            if (outlineLevel > 0) dataRow.outlineLevel = outlineLevel;
 
             // Alternate row background
             if (alternateRowColor && rowIdx % 2 === 1) {
@@ -440,10 +462,72 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
             }
 
             excelRowIdx++;
-        });
+        };
+
+        const groupLabel = (entry: GridGroupedExportRow): string => {
+            const colDef = exportColumns.find(c => c.field === entry.groupField);
+            if (colDef?.groupingValueFormatter && entry.groupField) {
+                return colDef.groupingValueFormatter({ field: entry.groupField, value: entry.groupValue });
+            }
+            return `${colDef?.headerName ?? entry.groupField ?? ''}: ${String(entry.groupValue ?? '')}`;
+        };
+
+        // Numbers are written raw so the column numFmt applies; other values use the formatter.
+        const aggregateCell = (col: GridColDef<GridRowModel>, values: Record<string, unknown>): unknown => {
+            const val = values[col.field];
+            if (val == null) return '';
+            if (typeof val === 'number') return val;
+            if (col.valueFormatter) return col.valueFormatter({ value: val, row: {} as GridRowModel, field: col.field });
+            return formatAggregationValue(val, aggregationModel?.[col.field] ?? '');
+        };
+
+        const writeSummaryRow = (label: string, values: Record<string, unknown>, fill: string, outlineLevel: number, bold: boolean) => {
+            const cells = exportColumns.map((col, i) => (i === 0 && values[col.field] == null ? label : aggregateCell(col, values)));
+            const summaryRow = ws.addRow(cells);
+            summaryRow.height = 18;
+            if (outlineLevel > 0) summaryRow.outlineLevel = outlineLevel;
+            summaryRow.font = { bold, italic: !bold, size: bodyFontSize, color: { argb: argb(headerTextColor) } };
+            summaryRow.eachCell((cell, colIndex) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(fill) } };
+                const colDef = exportColumns[colIndex - 1];
+                cell.alignment = { horizontal: colIndex === 1 ? 'left' : (colDef?.type === 'number' ? 'right' : 'left'), vertical: 'middle' };
+                cell.border = topBorder();
+            });
+            excelRowIdx++;
+        };
+
+        let wroteGrandTotal = false;
+
+        if (useGrouped) {
+            let stripe = 0;
+            groupedRows!.forEach(entry => {
+                if (entry.type === 'group-header') {
+                    const groupHeaderRow = ws.addRow([groupLabel(entry)]);
+                    groupHeaderRow.height = 18;
+                    if (entry.depth > 0) groupHeaderRow.outlineLevel = entry.depth;
+                    groupHeaderRow.font = { bold: true, size: bodyFontSize, color: { argb: argb(headerTextColor) } };
+                    for (let c = 1; c <= exportColumns.length; c++) {
+                        groupHeaderRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(groupHeaderFillColor) } };
+                    }
+                    groupHeaderRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: entry.depth };
+                    excelRowIdx++;
+                    stripe = 0;
+                } else if (entry.type === 'leaf' && entry.row) {
+                    writeDataRow(entry.row, stripe++, entry.depth);
+                } else if (entry.type === 'group-subtotal' && entry.aggregatedValues) {
+                    writeSummaryRow('Subtotal', entry.aggregatedValues, groupSubtotalFillColor, entry.depth, false);
+                } else if (entry.type === 'grand-total' && entry.aggregatedValues) {
+                    writeSummaryRow('Grand Total', entry.aggregatedValues, headerFillColor, 0, true);
+                    wroteGrandTotal = true;
+                }
+            });
+            ws.properties.outlineProperties = { summaryBelow: true, summaryRight: false };
+        } else {
+            rowsToExport.forEach((row, rowIdx) => writeDataRow(row, rowIdx, 0));
+        }
 
         // ── Aggregation totals row ────────────────────────────────────────────
-        if (includeSummary && aggregationResult && aggregationModel) {
+        if (includeSummary && !wroteGrandTotal && aggregationResult && aggregationModel) {
             // Label row
             const labelValues = exportColumns.map(col => {
                 const fn = aggregationModel![col.field];

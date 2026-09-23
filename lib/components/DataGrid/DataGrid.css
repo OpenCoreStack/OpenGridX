@@ -122,6 +122,13 @@
   color: var(--ogx-color-gray-300);
 }
 
+.ogx__loading-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
 .ogx-error-overlay {
   position: absolute;
   top: 0;

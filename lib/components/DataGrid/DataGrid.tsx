@@ -8,6 +8,7 @@ import { useGridColumns } from '../../hooks/core/useGridColumns';
 import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
 import { useGridScrollSync } from '../../hooks/core/useGridScrollSync';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
+import { useGridDevWarnings } from '../../hooks/core/useGridDevWarnings';
 import { GridAggregationFooter } from './GridAggregationFooter';
 import { GridEmptyState } from './GridEmptyState';
 import { GridErrorOverlay } from './GridErrorOverlay';
@@ -46,6 +47,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange: propOnRowSelectionModelChange,
         onRowClick,
+        onRowDoubleClick,
         onCellClick,
 
         filterModel: propFilterModel,
@@ -811,6 +813,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         pagination,
     });
 
+    useGridDevWarnings({
+        paginationRequested: propPagination,
+        isRowGrouping,
+        autoHeight,
+        viewportHeight: state.dimensions.viewportHeight,
+        renderedRowCount: visibleRows.length,
+        totalRowCount: pinnedTopRows.length + (pagination ? paginatedUnpinnedRows.length : sortedUnpinnedRows.length) + pinnedBottomRows.length,
+    });
 
     const allSelected = rows.length > 0 && selectedRowIds.size === rows.length;
     const someSelected = selectedRowIds.size > 0 && selectedRowIds.size < rows.length;
@@ -819,6 +829,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const [columnsPanelOpen, setColumnsPanelOpen] = React.useState(false);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const standalonePanelRef = React.useRef<HTMLDivElement>(null);
+
+    const NoRowsOverlaySlot = slots?.noRowsOverlay;
+    const LoadingOverlaySlot = slots?.loadingOverlay;
+    const FooterSlot = slots?.footer;
 
     const toolbarProps = React.useMemo(() => {
         if (!slots?.toolbar) return null;
@@ -1033,7 +1047,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
                         {/* Empty State Overlay (Standard View) — showing after header */}
                         {!effectiveLoading && !state.dataSource.error && filteredRows.length === 0 && (
-                            <GridEmptyState noRowsLabel={effectiveNoRowsLabel} width={virtualization.totalWidth} />
+                            <GridEmptyState
+                                noRowsLabel={effectiveNoRowsLabel}
+                                width={virtualization.totalWidth}
+                                overlay={NoRowsOverlaySlot ? <NoRowsOverlaySlot {...slotProps?.noRowsOverlay} /> : undefined}
+                            />
                         )}
 
                         <GridPinnedRows<R>
@@ -1043,6 +1061,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             selectedRowIds={selectedRowIds}
                             checkboxSelection={checkboxSelection}
                             onRowClick={handleRowClick}
+                            onRowDoubleClick={onRowDoubleClick}
                             onCellClick={handleCellClick}
                             onSelectionChange={handleSelectionChange}
                             columnWidths={columnWidths}
@@ -1077,6 +1096,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             pinnedRows={pinnedRows}
                             selectedRowIds={selectedRowIds}
                             onRowClick={handleRowClick}
+                            onRowDoubleClick={onRowDoubleClick}
                             onCellClick={handleCellClick}
                             onSelectionChange={handleSelectionChange}
                             columnWidths={columnWidths}
@@ -1098,6 +1118,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             infiniteScrollSkeletonCount={Math.min(effectivePaginationModel.pageSize, 20)}
                             unpinnedRowsLength={layout.unpinnedRowsLength}
                             rowMetaMap={rowMetaMap}
+                            loadingOverlay={LoadingOverlaySlot ? <LoadingOverlaySlot {...slotProps?.loadingOverlay} /> : undefined}
                         />
 
                         <GridPinnedRows<R>
@@ -1107,6 +1128,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             selectedRowIds={selectedRowIds}
                             checkboxSelection={checkboxSelection}
                             onRowClick={handleRowClick}
+                            onRowDoubleClick={onRowDoubleClick}
                             onCellClick={handleCellClick}
                             onSelectionChange={handleSelectionChange}
                             columnWidths={columnWidths}
@@ -1147,7 +1169,21 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 </div>
             )}
 
-            {!listView && pagination && (() => {
+            {!listView && FooterSlot && (
+                <FooterSlot
+                    apiRef={gridData.apiRef}
+                    aggregationModel={aggregationModel}
+                    aggregationResult={hasAggregation ? aggregationResult : null}
+                    rowCount={isRowGrouping ? effectiveRows.length : sortedUnpinnedRows.length}
+                    pagination={pagination}
+                    paginationModel={effectivePaginationModel}
+                    pageSizeOptions={pageSizeOptions}
+                    onPaginationModelChange={handlePaginationModelChange}
+                    {...slotProps?.footer}
+                />
+            )}
+
+            {!listView && !FooterSlot && pagination && (() => {
                 const PaginationComponent = slots?.pagination || Pagination;
                 return (
                     <PaginationComponent
