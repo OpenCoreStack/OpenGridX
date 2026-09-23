@@ -73,7 +73,7 @@ List view pages exactly like the grid view: with `pagination`, one page of the (
 
 ## ♿ Accessibility
 
-The list is a `role="grid"` whose rows carry an `aria-rowindex` over the whole data set (row 11 on the second page of 10) and whose `aria-rowcount` is the total number of rows. There is no header row in list view. Tree-data rows also carry `aria-level` and, for parents, `aria-expanded`.
+The list is a `role="grid"` whose rows carry an `aria-rowindex` over the whole data set (row 11 on the second page of 10) and whose `aria-rowcount` is the total number of rows. There is no header row in list view. Tree-data and grouped rows also carry `aria-level` and, for parents, `aria-expanded`; they are indented by depth, and parents show a chevron that expands or collapses them on click (the chevron is not a Tab stop).
 
 ### Keyboard (v3.0)
 

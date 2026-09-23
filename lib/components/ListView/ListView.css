@@ -49,6 +49,13 @@
 }
 
 /* ─── Checkbox column inside list row ────────────────────────────────────── */
+.ogx-list-view__expand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 32px;
+}
+
 .ogx-list-view__checkbox {
   display: flex;
   align-items: center;

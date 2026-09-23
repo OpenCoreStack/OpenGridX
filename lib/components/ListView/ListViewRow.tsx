@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatValueByType, getCellValue } from '../../utils/values';
+import { ExpandIcon } from '../ui/ExpandIcon';
 import type { GridColDef, GridRowModel, GridRowId, GridRowMeta, GridListViewColDef, GridRenderCellParams } from '../../types';
 
 export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
@@ -25,6 +26,8 @@ export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
     tabIndex?: number;
     /** Called when the row element itself receives focus. */
     onFocus?: (rowIndex: number) => void;
+    /** Expands / collapses a row with children. When set, hierarchy rows get an expand chevron. */
+    onToggleExpansion?: (rowId: GridRowId) => void;
 }
 
 export function ListViewRow<R extends GridRowModel = GridRowModel>({
@@ -43,6 +46,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
     onSelectionChange,
     tabIndex = -1,
     onFocus,
+    onToggleExpansion,
 }: ListViewRowProps<R>) {
     const id = rowId ?? row.id;
     const field = listViewColumn.field;
@@ -93,6 +97,20 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
                         // Not a Tab stop of its own: the list is one Tab stop, Shift+Space selects the focused row.
                         tabIndex={-1}
                     />
+                </div>
+            )}
+            {rowMeta && onToggleExpansion && (
+                // Tree data / row grouping: indentation by depth, and a chevron on rows with children
+                // (not a Tab stop: Enter or Alt+Arrow toggle the focused row).
+                <div
+                    className="ogx-list-view__expand"
+                    style={{ paddingLeft: (rowMeta.treeDepth ?? 0) * 16 }}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                >
+                    {rowMeta.hasChildren && (
+                        <ExpandIcon isExpanded={rowMeta.isExpanded === true} onClick={() => onToggleExpansion(id)} tabIndex={-1} />
+                    )}
                 </div>
             )}
             <div className="ogx-list-view__cell" role="gridcell">

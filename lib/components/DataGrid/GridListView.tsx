@@ -241,6 +241,7 @@ export function GridListView<R extends GridRowModel>({
                             onRowDoubleClick={onRowDoubleClick ? (r) => onRowDoubleClick({ row: r, id, rowIndex: idx }) : undefined}
                             onSelectionChange={onSelectionChange}
                             tabIndex={idx === tabStopIndex ? 0 : -1}
+                            onToggleExpansion={onToggleExpansion}
                             onFocus={(rowIndex) => setFocusedRowId(getRowId(allRenderableRows[rowIndex]))}
                         />
                         );
