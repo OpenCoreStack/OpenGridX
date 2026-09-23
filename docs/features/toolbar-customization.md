@@ -190,7 +190,7 @@ slotProps={{
 
 When you provide a custom button, the toolbar renders your element as the trigger but keeps its own open/close state. The panel (Columns, Filters, or Aggregation) is positioned relative to the wrapper `<div>` surrounding your custom button, so placement is automatic — you don't need to pass any refs.
 
-Panel close behaviour is unchanged: Escape key closes, click-outside closes (except the Filter panel, which requires an explicit Close button to let users type without it dismissing).
+Panel close behaviour is unchanged: Escape closes every panel, and click-outside closes every panel except the Filter panel, which has an explicit Close button so users can type without it dismissing. However the Columns panel closes, `onColumnsPanelClose` is called.
 
 ---
 

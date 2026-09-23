@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import type { GridRowScrollEndParams } from '../../types';
+import { getRowsScrollEndParams } from '../../utils/scroll/scrollEnd';
 
 export interface UseGridScrollSyncParams {
     onRowsScrollEnd?: (params: GridRowScrollEndParams) => void;
@@ -27,9 +28,6 @@ export interface UseGridScrollSyncResult {
      */
     attachViewport: (element: HTMLDivElement | null) => void;
 }
-
-/** `onRowsScrollEnd` fires when the viewport bottom is closer than this to the end of the rows. */
-export const ROWS_SCROLL_END_THRESHOLD = 100;
 
 /** Maps scroll velocity (px/ms) to an overscan row count. */
 function velocityToOverscan(velocity: number): number {
@@ -69,8 +67,8 @@ export function useGridScrollSync(params: UseGridScrollSyncParams): UseGridScrol
 
     /** Fires onRowsScrollEnd once per arrival within the threshold of the end. */
     const checkRowsScrollEnd = useCallback((target: HTMLElement) => {
-        const { scrollTop, scrollHeight, clientHeight } = target;
-        if (scrollHeight - scrollTop - clientHeight >= ROWS_SCROLL_END_THRESHOLD) {
+        const endParams = getRowsScrollEndParams(target);
+        if (!endParams) {
             armedRef.current = true;
             return;
         }
@@ -78,11 +76,7 @@ export function useGridScrollSync(params: UseGridScrollSyncParams): UseGridScrol
         const callback = onRowsScrollEndRef.current;
         if (!callback) return;
         armedRef.current = false;
-        callback({
-            visibleTop: scrollTop,
-            visibleBottom: scrollTop + clientHeight,
-            viewportHeight: clientHeight,
-        });
+        callback(endParams);
     }, []);
 
     const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {

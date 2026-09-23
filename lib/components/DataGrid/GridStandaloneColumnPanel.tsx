@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { ColumnVisibilityPanel } from '../ColumnVisibilityPanel/ColumnVisibilityPanel';
 import type { GridColDef, GridRowModel, GridColumnOrderChangeParams, GridColumnGroupingModel } from '../../types';
 import { canReorderWithinColumnGroups } from '../../utils/columnGroups';
+import { getViewportWidth } from '../../utils/viewport';
 
 export interface GridStandaloneColumnPanelProps<R extends GridRowModel> {
     isOpen: boolean;
@@ -44,7 +45,7 @@ export function GridStandaloneColumnPanel<R extends GridRowModel>({
         if (!isOpen || !containerRef.current) return;
         const rect = containerRef.current.getBoundingClientRect();
         setPanelTop(rect.top + 8);
-        setPanelRight(window.innerWidth - rect.right + 8);
+        setPanelRight(getViewportWidth() - rect.right + 8);
         setPortalTarget(containerRef.current.closest('.ogx-theme-provider') || document.body);
     }, [isOpen, containerRef]);
 
@@ -81,6 +82,7 @@ export function GridStandaloneColumnPanel<R extends GridRowModel>({
             }}
         >
             <button
+                type="button"
                 onClick={onClose}
                 style={{
                     position: 'absolute',

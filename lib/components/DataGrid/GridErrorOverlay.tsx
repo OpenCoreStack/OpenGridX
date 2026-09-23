@@ -23,6 +23,7 @@ export function GridErrorOverlay({ error }: GridErrorOverlayProps) {
                 {message}
             </div>
             <button
+                type="button"
                 onClick={() => window.location.reload()}
                 className="ogx-button ogx-button--primary"
             >

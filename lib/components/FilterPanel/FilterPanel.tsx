@@ -270,6 +270,7 @@ const FilterRow: React.FC<{
                 {/* Clear button — only when active */}
                 {isActive && (
                     <button
+                        type="button"
                         className="ogx-filter__row-clear"
                         onClick={handleClear}
                         aria-label={`Clear filter for ${label}`}
@@ -333,6 +334,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ filterModel, columns, 
                 <div className="ogx-filter__logic-bar">
                     <span className="ogx-filter__logic-label">Match:</span>
                     <button
+                        type="button"
                         className={`ogx-filter__logic-pill${logicOperator === 'and' ? ' ogx-filter__logic-pill--active' : ''}`}
                         onClick={() => handleLogicChange('and')}
                         aria-pressed={logicOperator === 'and'}
@@ -340,6 +342,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ filterModel, columns, 
                         ALL (AND)
                     </button>
                     <button
+                        type="button"
                         className={`ogx-filter__logic-pill${logicOperator === 'or' ? ' ogx-filter__logic-pill--active' : ''}`}
                         onClick={() => handleLogicChange('or')}
                         aria-pressed={logicOperator === 'or'}

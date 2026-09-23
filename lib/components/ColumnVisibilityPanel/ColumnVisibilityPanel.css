@@ -109,6 +109,12 @@
   font-size: var(--ogx-font-size-xs);
   color: var(--ogx-overlay-text, var(--ogx-color-gray-900));
   user-select: none;
+  cursor: inherit;
+}
+
+/* The column name fills the row, so a click anywhere after the checkbox toggles it. */
+.ogx-column-visibility-panel__item-label .ogx-column-visibility-panel__label {
+  flex: 1;
 }
 
 .ogx-column-visibility-panel__footer {

@@ -41,11 +41,12 @@ export const Checkbox: React.FC<CheckboxProps> = ({
 
     return (
         <label className={wrapperClassNames}>
+            {/* No fallback aria-label: it would override the name from `label`, a <label htmlFor>
+                or aria-labelledby. Pass `label` or `aria-label` when nothing else names it. */}
             <input
                 ref={setRef}
                 type="checkbox"
                 className="ogx-checkbox__input"
-                aria-label={label || props['aria-label'] || (indeterminate ? 'Select some' : props.checked ? 'Deselect' : 'Select')}
                 {...props}
             />
             <span className="ogx-checkbox__box">

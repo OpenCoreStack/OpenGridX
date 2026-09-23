@@ -133,7 +133,11 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
+<<<<<<< HEAD
 | `onRowsScrollEnd` | `(params: GridRowScrollEndParams) => void` | — | Fired once each time the end of the rows comes within 100px of the viewport bottom: when a vertical scroll arrives there, and after the rows change if the end is (still) in view, e.g. when the loaded rows do not fill the viewport. It fires again only after the user scrolls out of that zone or the row count changes. Horizontal scrolling never fires it. Use this to trigger the next page in infinite-scroll mode. |
+=======
+| `onRowsScrollEnd` | `(params: GridRowScrollEndParams) => void` | — | Fired when the user scrolls to within 100px of the bottom of the grid viewport, or of the list in `listView`. Use this to trigger the next page in infinite-scroll mode. |
+>>>>>>> main
 
 #### Accessibility & Appearance
 
@@ -182,7 +186,7 @@ The built-in toolbar component. Mount it via `slots={{ toolbar: GridToolbar }}`.
 | `columns` | `GridColDef[]` | `[]` | Column definitions — injected automatically when used via `slots`. |
 | `baseColumns` | `GridColDef[]` | — | Pre-pivot columns shown in the Pivot panel instead of synthetic pivot columns. |
 | `aggregationModel` | `GridAggregationModel` | `{}` | Current aggregation configuration. |
-| `onAggregationModelChange` | `(model: GridAggregationModel) => void` | — | Called when the user changes aggregation settings. |
+| `onAggregationModelChange` | `(model: GridAggregationModel) => void` | — | Called when the user changes aggregation settings. Presence of this prop renders the Summaries button. |
 | `pivotModel` | `GridPivotModel` | — | Current pivot configuration. Presence of this prop renders the Pivot button. |
 | `onPivotModelChange` | `(model: GridPivotModel) => void` | — | Called when the user changes pivot settings. |
 | `filterModel` | `GridFilterModel` | — | Current filter model. |
@@ -191,8 +195,8 @@ The built-in toolbar component. Mount it via `slots={{ toolbar: GridToolbar }}`.
 | `onColumnVisibilityModelChange` | `(model: Record<string, boolean>) => void` | — | Called when the user shows or hides a column. Presence renders the Columns button. |
 | `onColumnReorder` | `(from: string, to: string) => void` | — | Called when the user drags a column in the Columns panel. |
 | `onColumnOrderReset` | `() => void` | — | Called when the user clicks "Reset order" in the Columns panel. |
-| `forceColumnsOpen` | `boolean` | — | Forces the Columns panel open (used internally by the column header context menu). |
-| `onColumnsPanelClose` | `() => void` | — | Called when the Columns panel closes after a `forceColumnsOpen`. |
+| `forceColumnsOpen` | `boolean` | — | Opens the Columns panel when it becomes `true` (set by `DataGrid` for the column menu's **Manage columns**). If the toolbar slot does not render a `GridToolbar` that receives it, the grid opens its standalone Columns panel instead. |
+| `onColumnsPanelClose` | `() => void` | — | Called whenever the Columns panel closes (its button, a custom button, another panel opening, click-outside or Escape). |
 | `children` | `ReactNode` | — | Content rendered on the **left** side of the toolbar, before the spacer. |
 | `rightContent` | `ReactNode` | — | Content rendered on the **right** side, after all built-in buttons. |
 | `className` | `string` | — | Additional CSS class on the toolbar root `<div>`. Use for visual theme overrides. |
@@ -337,14 +341,14 @@ Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative 
 | `sortable` | `boolean` | `true` | Enable/disable sorting for this column. |
 | `filterable` | `boolean` | `true` | Enable/disable filtering for this column. `false` also removes it from the quick-filter search. |
 | `resizable` | `boolean` | `true` | Allow the user to drag-resize this column. |
-| `hideable` | `boolean` | `true` | Allow the user to hide this column via the panel. |
-| `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. |
+| `hideable` | `boolean` | `true` | Allow the user to hide this column from the UI. `false` removes it from the Columns panel (unless `showNonHideableColumns`) and removes **Hide Column** from its column menu. |
+| `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. `false` removes the pin actions from its column menu. |
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header kebab/context menu. |
 | `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, PDF and Print exports (including their subtotals and totals). |
 | `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`, or used as a pivot row or column field (the pivot panel does not offer it). |
 | `groupingValueFormatter` | `(params: { field: string; value: unknown }) => string` | — | Custom formatter for group-header labels when this column is the active grouping field. Falls back to `"field: value"` when omitted. |
 | `aggregable` | `boolean` | `true` | Allow this column to be aggregated. `false` keeps it out of the toolbar's Summaries panel and out of the pivot panel's value fields. |
-| `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are computed and available for this column (e.g. `['sum', 'avg']`). Functions outside this list are skipped even if set in `aggregationModel` or a pivot value field, and the pivot panel offers only these. |
+| `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are computed and available for this column (e.g. `['sum', 'avg']`). Functions outside this list are skipped even if set in `aggregationModel` or a pivot value field, the toolbar's Summaries panel and the pivot panel offer only these. |
 
 ---
 

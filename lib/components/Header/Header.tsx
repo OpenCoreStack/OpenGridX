@@ -492,6 +492,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                                 {isSortable && getSortIcon(colDef.field)}
                                 {!colDef.disableColumnMenu && (
                                     <button
+                                        type="button"
                                         className="ogx__menu-icon-btn"
                                         onClick={handleMenuOpen(colDef)}
                                         aria-label={`Open column menu for ${colDef.headerName || colDef.field}`}

@@ -23,10 +23,12 @@ Columns can be pinned to the left or right edges of the grid. Pinned columns rem
 - A pinned column is sized exactly as it would be unpinned: numbers, percentages, `flex` and `'auto'` all apply, clamped to `minWidth` / `maxWidth`. The sticky offsets use those widths, so pinned columns never overlap.
 
 ### Column Configuration
-Individual columns can be marked as non-pinnable:
+Individual columns can be marked as non-pinnable. Their column menu has no pin actions:
 ```typescript
 { field: 'id', pinnable: false }
 ```
+
+`pinnable: false` only affects the UI; a column listed in `pinnedColumns` is still pinned.
 
 ---
 
