@@ -142,3 +142,30 @@ describe('exportToJson — grouped', () => {
         expect(parsed.length).toBe(3);
     });
 });
+
+describe('grouped export — group-header labels match the grid', () => {
+    const formatted: GridColDef<Row>[] = [
+        { ...columns[0], groupingValueFormatter: ({ value }) => `Dept ${String(value)}` },
+        columns[1],
+    ];
+
+    it('CSV uses groupingValueFormatter when the entry has no groupLabel', async () => {
+        exportToCsv(flatRows, formatted, { fileName: 'g.csv', groupedRows });
+        const text = await capturedBlob!.text();
+        expect(text).toContain('Dept Engineering');
+        expect(text).not.toContain('dept: Engineering');
+    });
+
+    it('CSV prefers the groupLabel carried on the entry', async () => {
+        const labelled = groupedRows.map(e => (e.type === 'group-header' ? { ...e, groupLabel: `Grid ${String(e.groupValue)}` } : e));
+        exportToCsv(flatRows, formatted, { fileName: 'g.csv', groupedRows: labelled });
+        const text = await capturedBlob!.text();
+        expect(text).toContain('Grid Engineering');
+    });
+
+    it('JSON uses groupingValueFormatter for the group name', async () => {
+        exportToJson(flatRows, formatted, { fileName: 'g.json', groupedRows });
+        const text = await capturedBlob!.text();
+        expect(text).toContain('Dept Engineering');
+    });
+});

@@ -63,6 +63,16 @@ The most common cause is a flex child that is missing `min-height: 0`. A flex it
 
 `height="100%"` only helps if every ancestor up to a fixed-height element also has a definite height.
 
+**`DataGridThemeProvider` counts as an ancestor.** It renders a plain `<div class="ogx-theme-provider">` around the grid, and that wrapper is auto-height like any other `div`. When you use `height="100%"` inside it, give the wrapper a height as well:
+
+```tsx
+<div style={{ flex: 1, minHeight: 0 }}>
+  <DataGridThemeProvider theme={theme} style={{ height: '100%' }}>
+    <DataGrid rows={rows} columns={columns} height="100%" />
+  </DataGridThemeProvider>
+</div>
+```
+
 In development builds the grid logs a `console.warn` when it detects that it is rendering every row of a dataset larger than 200 rows because its viewport is unbounded.
 
 Pagination can hide this problem, because a paginated grid only has one page of rows to render. Row grouping switches pagination off (see below), so an unbounded container that looked fine with pagination can freeze the tab once grouping is enabled.

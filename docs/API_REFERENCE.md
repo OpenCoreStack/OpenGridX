@@ -249,7 +249,7 @@ Access these methods via the `apiRef` prop.
 | `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results. |
 | `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
 | `getAllFilteredRows()` | `GridRowModel[]` | Get all filtered+sorted rows regardless of the current pagination window. Use for full-dataset exports. |
-| `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total). Returns `null` when row grouping is not active. |
+| `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total). Group-header and subtotal entries carry `groupLabel`, the label the grid shows (v3.0+). Returns `null` when row grouping is not active. |
 | `copySelectedRows()` | `Promise<void>` | Copy selected rows to clipboard as TSV. |
 
 ---

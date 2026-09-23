@@ -204,7 +204,17 @@ await exportToExcelAdvanced(rows, columns, {
 });
 ```
 
-Sheets with `rows: 'all'` are written in grouped order: a bold group-header row (label from the column's `groupingValueFormatter`, else `"Header: value"`), the leaf rows, a `Subtotal` row per group, and a final `Grand Total`. Rows use Excel's native outlining, so users can collapse groups in Excel. Subtotal and total values are written as numbers so `columnStyles[field].numFmt` applies. A `grand-total` entry replaces the sheet's `includeSummary` rows, so totals are not duplicated. `rows: 'selected'` sheets ignore `groupedRows` and export flat.
+Sheets with `rows: 'all'` are written in grouped order: a bold group-header row (the same label the grid shows — see [Group labels in exports](#group-labels-in-exports)), the leaf rows, a `Subtotal` row per group, and a final `Grand Total`. Rows use Excel's native outlining, so users can collapse groups in Excel. Subtotal and total values are written as numbers so `columnStyles[field].numFmt` applies. A `grand-total` entry replaces the sheet's `includeSummary` rows, so totals are not duplicated. `rows: 'selected'` sheets ignore `groupedRows` and export flat.
+
+### Group labels in exports
+
+Every exporter (CSV, basic Excel, JSON, print, PDF and advanced Excel) writes the same group-header label the grid shows on screen:
+
+1. the entry's `groupLabel` — set by `apiRef.current.getGroupedExportRows()` from the grid's own label;
+2. else the grouping column's `groupingValueFormatter`;
+3. else `"field: value"`, the grid's documented default.
+
+Before v3.0, only advanced Excel applied `groupingValueFormatter` (falling back to `"Header: value"`), and the other formats always wrote `"field: value"`.
 
 ### Summary Sheet
 

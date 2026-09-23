@@ -5,6 +5,24 @@
 
 ---
 
+## [Unreleased]
+
+### Breaking
+
+- **Grouped-export default labels in `exportToExcelAdvanced` now match the grid.** Without a `groupingValueFormatter`, group headers read `"field: value"` (the grid's documented default) instead of `"Header: value"`. Set `groupingValueFormatter` on the grouping column to control the label in the grid and in every export format.
+
+### Fixed
+
+- **Group rows lost their label and expand toggle when the first column was hidden**, and showed them in the middle of the row when that column was reordered or another column was pinned left. The hierarchy UI was attached to whichever column came first in `columns`; it now goes on the leftmost column actually on screen.
+- **Grouped CSV, basic Excel, JSON, print and PDF exports ignored `groupingValueFormatter`** for group-header labels. All exporters now share one label rule, and `getGroupedExportRows()` entries carry the grid's label as `groupLabel`.
+- **Pivot mode crashed with `RangeError` on datasets over ~110k rows** when a `min` or `max` value field was used, and pivot `count` counted numeric values only. Pivot now uses the shared aggregation functions.
+
+### Added
+
+- `GridGroupedExportRow.groupLabel`.
+
+---
+
 ## [2.1.0] — 2026-09-23
 
 Fixes from a consumer defect report (migration of an ERP report writer from ag-grid) plus issues found while verifying it.

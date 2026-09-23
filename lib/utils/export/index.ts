@@ -1,6 +1,7 @@
 
 import type { GridColDef, GridRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
 import { formatAggregationValue } from '../../hooks/features/useAggregation';
+import { groupHeaderLabel } from './groupLabel';
 
 export interface CsvExportOptions {
     fileName?: string;
@@ -42,7 +43,7 @@ export function exportToCsv<R extends GridRowModel>(
         groupedRows.forEach(entry => {
             if (entry.type === 'group-header') {
                 const indent = '  '.repeat(entry.depth);
-                const label = `${indent}${entry.groupField ?? ''}: ${String(entry.groupValue ?? '')}`;
+                const label = `${indent}${groupHeaderLabel(entry, columns)}`;
                 const cells = exportColumns.map((_, i) => i === 0 ? escapeCSV(label) : '');
                 csvContent += cells.join(delimiter) + '\n';
             } else if (entry.type === 'leaf' && entry.row) {
@@ -201,7 +202,7 @@ export function exportToExcel<R extends GridRowModel>(
         groupedRows.forEach(entry => {
             if (entry.type === 'group-header') {
                 const indent = '  '.repeat(entry.depth * 2);
-                const label = `${indent}${entry.groupField ?? ''}: ${String(entry.groupValue ?? '')}`;
+                const label = `${indent}${groupHeaderLabel(entry, columns)}`;
                 html += `<tr style="font-weight:bold;background:#e8eaf6;">`;
                 html += `<td colspan="${exportColumns.length}">${escapeHTML(label)}</td>`;
                 html += '</tr>';
@@ -359,7 +360,7 @@ export function exportToJson<R extends GridRowModel>(
         groupedRows.forEach(entry => {
             if (entry.type === 'group-header') {
                 const node: GroupNode = {
-                    group: `${entry.groupField ?? ''}: ${String(entry.groupValue ?? '')}`,
+                    group: groupHeaderLabel(entry, columns),
                     field: entry.groupField ?? '',
                     value: entry.groupValue,
                     rows: [],
@@ -536,7 +537,7 @@ export async function printGrid<R extends GridRowModel>(
             groupedRows.forEach(entry => {
                 if (entry.type === 'group-header') {
                     const indent = '&nbsp;'.repeat(entry.depth * 4);
-                    const label = `${indent}${escapeHTML(entry.groupField ?? '')}: ${escapeHTML(String(entry.groupValue ?? ''))}`;
+                    const label = `${indent}${escapeHTML(groupHeaderLabel(entry, columns))}`;
                     html += `<tr class="group-header"><td colspan="${exportColumns.length}">${label}</td></tr>`;
                 } else if (entry.type === 'leaf' && entry.row) {
                     const row = entry.row as R;

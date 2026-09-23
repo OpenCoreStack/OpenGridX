@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useEffect } from 'react';
 import { DataGrid } from './DataGrid';
+import { useGridApiRef } from '../../hooks/core/useGridApiRef';
 import type { GridColDef } from '../../types';
+
+type GridApiRef = ReturnType<typeof useGridApiRef>;
 
 // Regression tests for the OpenGridX 2.0.4 consumer defect report.
 
@@ -99,5 +103,80 @@ describe('Row grouping — expansion survives row edits', () => {
         rerender(<DataGrid rows={ROWS.map(r => (r.id === 1 ? { ...r, amount: 1300 } : r))} columns={COLUMNS} rowGroupingModel={['region']} />);
         expect(rowCount()).toBe(4);
         expect(screen.getByText('$1300')).toBeInTheDocument();
+    });
+});
+
+describe('D3 acceptance (2.1.0 retest) — valueFormatter in all three states', () => {
+    const money = ({ value }: { value: unknown }) => Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const cols: GridColDef<Row>[] = [
+        { field: 'region', headerName: 'Region', groupingValueFormatter: ({ value }) => `Region: ${String(value)}` },
+        { field: 'amount', headerName: 'Amount', type: 'number', valueFormatter: money },
+    ];
+    const cellsOf = (row: Element) => [...row.querySelectorAll('[role="gridcell"]')].map(c => c.textContent);
+
+    it('formats ungrouped cells', () => {
+        render(<DataGrid rows={ROWS} columns={cols} />);
+        expect(screen.getByText('1,200.00')).toBeInTheDocument();
+    });
+
+    it('formats the aggregate on a group-header row', () => {
+        const { container } = render(<DataGrid rows={ROWS} columns={cols} rowGroupingModel={['region']} aggregationModel={{ amount: 'sum' }} />);
+        const header = container.querySelector('.ogx__rows [role="row"]')!;
+        expect(cellsOf(header)).toContain('2,000.00');
+    });
+
+    it('formats data cells inside an expanded group', () => {
+        const { container } = render(<DataGrid rows={ROWS} columns={cols} rowGroupingModel={['region']} aggregationModel={{ amount: 'sum' }} />);
+        fireEvent.click(container.querySelector('.ogx__rows [role="row"]')!);
+        const leaf = container.querySelectorAll('.ogx__rows [role="row"]')[1];
+        expect(cellsOf(leaf)).toContain('1,200.00');
+    });
+});
+
+describe('Row grouping — group label and toggle follow the leftmost on-screen column', () => {
+    const cols: GridColDef<Row>[] = [
+        { field: 'region', headerName: 'Region', groupingValueFormatter: ({ value }) => `Region: ${String(value)}` },
+        { field: 'amount', headerName: 'Amount' },
+    ];
+    const firstCellOfFirstRow = (c: HTMLElement) => c.querySelector('.ogx__rows [role="row"] [role="gridcell"]')!;
+
+    it('keeps the label and toggle when the first column is hidden', () => {
+        const { container } = render(<DataGrid rows={ROWS} columns={cols} rowGroupingModel={['region']} columnVisibilityModel={{ region: false }} />);
+        const cell = firstCellOfFirstRow(container);
+        expect(cell.getAttribute('data-field')).toBe('amount');
+        expect(cell.textContent).toContain('Region: North');
+        expect(cell.querySelector('.ogx-expand-icon, [aria-expanded], svg')).not.toBeNull();
+    });
+
+    it('puts the label in the first column of a custom columnOrder', () => {
+        const { container } = render(<DataGrid rows={ROWS} columns={cols} rowGroupingModel={['region']} columnOrder={['amount', 'region']} />);
+        const cell = firstCellOfFirstRow(container);
+        expect(cell.getAttribute('data-field')).toBe('amount');
+        expect(cell.textContent).toContain('Region: North');
+    });
+
+    it('puts the label in a column pinned to the left', () => {
+        const { container } = render(<DataGrid rows={ROWS} columns={cols} rowGroupingModel={['region']} pinnedColumns={{ left: ['amount'] }} />);
+        const cell = firstCellOfFirstRow(container);
+        expect(cell.getAttribute('data-field')).toBe('amount');
+        expect(cell.textContent).toContain('Region: North');
+    });
+});
+
+describe('getGroupedExportRows carries the grid label', () => {
+    it('sets groupLabel from groupingValueFormatter on group-header entries', () => {
+        let api: GridApiRef | null = null;
+        const cols: GridColDef<Row>[] = [
+            { field: 'region', headerName: 'Region', groupingValueFormatter: ({ value }) => `Region: ${String(value)}` },
+            { field: 'amount', headerName: 'Amount' },
+        ];
+        function Harness({ onApi }: { onApi: (a: GridApiRef) => void }) {
+            const apiRef = useGridApiRef();
+            useEffect(() => { onApi(apiRef); }, [apiRef, onApi]);
+            return <DataGrid apiRef={apiRef} rows={ROWS} columns={cols} rowGroupingModel={['region']} />;
+        }
+        render(<Harness onApi={(a) => { api = a; }} />);
+        const headers = api!.current.getGroupedExportRows()!.filter(e => e.type === 'group-header');
+        expect(headers.map(h => h.groupLabel)).toEqual(expect.arrayContaining(['Region: North', 'Region: South']));
     });
 });

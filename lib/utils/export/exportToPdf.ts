@@ -6,6 +6,7 @@ import type {
     GridGroupedExportRow,
 } from '../../types';
 import { formatAggregationValue } from '../../hooks/features/useAggregation';
+import { groupHeaderLabel } from './groupLabel';
 
 interface JsPDFDoc {
     save: (filename: string) => void;
@@ -215,7 +216,7 @@ export async function exportToPdf<R extends GridRowModel>(
         groupedRows.forEach((entry: GridGroupedExportRow) => {
             if (entry.type === 'group-header') {
                 const indent = '  '.repeat(entry.depth * 2);
-                const label = `${indent}${entry.groupField ?? ''}: ${String(entry.groupValue ?? '')}`;
+                const label = `${indent}${groupHeaderLabel(entry, columns)}`;
                 body.push(exportColumns.map((_, i) => i === 0 ? label : ''));
             } else if (entry.type === 'leaf' && entry.row) {
                 const row = entry.row as R;

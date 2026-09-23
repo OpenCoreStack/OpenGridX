@@ -494,6 +494,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowReordering,
         initialState,
         setColumns,
+        pinnedColumns: effectivePinnedColumns,
     });
 
     useGridStateSnapshot({
@@ -583,6 +584,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             depth: node.depth,
                             groupField: node.groupingField,
                             groupValue: node.groupingValue,
+                            groupLabel: node.label,
                         });
                         traverse(node.children!);
                         if (hasAggregation && node.aggregatedValues) {
@@ -591,6 +593,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                 depth: node.depth,
                                 groupField: node.groupingField,
                                 groupValue: node.groupingValue,
+                                groupLabel: node.label,
                                 aggregatedValues: node.aggregatedValues,
                             });
                         }

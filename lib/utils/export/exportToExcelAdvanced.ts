@@ -1,6 +1,7 @@
 
 import type { GridColDef, GridRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
 import { formatAggregationValue } from '../../hooks/features/useAggregation';
+import { groupHeaderLabel } from './groupLabel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -464,13 +465,7 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
             excelRowIdx++;
         };
 
-        const groupLabel = (entry: GridGroupedExportRow): string => {
-            const colDef = exportColumns.find(c => c.field === entry.groupField);
-            if (colDef?.groupingValueFormatter && entry.groupField) {
-                return colDef.groupingValueFormatter({ field: entry.groupField, value: entry.groupValue });
-            }
-            return `${colDef?.headerName ?? entry.groupField ?? ''}: ${String(entry.groupValue ?? '')}`;
-        };
+        const groupLabel = (entry: GridGroupedExportRow): string => groupHeaderLabel(entry, columns);
 
         // Numbers are written raw so the column numFmt applies; other values use the formatter.
         const aggregateCell = (col: GridColDef<GridRowModel>, values: Record<string, unknown>): unknown => {

@@ -38,6 +38,8 @@ export default function App() {
 
 The `DataGridThemeProvider` resolves each key in the `GridTheme` object to its corresponding `--ogx-*` CSS variable and applies it as an inline style on a wrapper `div`. **No CSS-in-JS, no runtime overhead.**
 
+> **Sizing:** the wrapper `div` (`.ogx-theme-provider`) is a normal auto-height block. If the grid uses `height="100%"`, pass `style={{ height: '100%' }}` (or a `className` that sets a height) to the provider too. Otherwise the wrapper grows to fit every row and row virtualization is effectively off. See [Virtualization → The grid needs a bounded height](../features/virtualization.md#the-grid-needs-a-bounded-height).
+
 ---
 
 ## Dark Mode

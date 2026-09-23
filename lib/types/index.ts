@@ -412,6 +412,13 @@ export interface GridGroupedExportRow {
   groupField?: string;
   /** The raw grouping value for this level (absent on 'leaf' and 'grand-total'). */
   groupValue?: unknown;
+  /**
+   * The group label exactly as the grid shows it (from `groupingValueFormatter`, else `"field: value"`),
+   * on 'group-header' and 'group-subtotal' entries from `getGroupedExportRows()`. Exporters use it for
+   * group-header rows; when absent they apply the column's `groupingValueFormatter` themselves.
+   * @since v3.0
+   */
+  groupLabel?: string;
   /** Per-group aggregation results (present on 'group-subtotal' and 'grand-total'). */
   aggregatedValues?: Record<string, unknown>;
   /** The original data row (only present when `type === 'leaf'`). */

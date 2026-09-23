@@ -1,11 +1,13 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useColumnReorder } from '../useColumnReorder';
 import { ExpandIcon } from '../../components/ui/ExpandIcon';
+import { isColumnPinned } from '../../utils/pinning';
 import type {
     GridColDef,
     GridRowModel,
     GridRowId,
     GridColumnOrderChangeParams,
+    GridColumnPinning,
     GridRenderCellParams,
 } from '../../types';
 import type { GridInitialState } from '../../state/types';
@@ -35,6 +37,7 @@ export interface UseGridColumnsParams<R extends GridRowModel> {
     rowReordering: boolean;
     initialState?: GridInitialState;
     setColumns: (cols: GridColDef[]) => void;
+    pinnedColumns?: GridColumnPinning;
 }
 
 export interface UseGridColumnsResult<R extends GridRowModel> {
@@ -68,14 +71,40 @@ export function useGridColumns<R extends GridRowModel>(
         rowReordering,
         initialState,
         setColumns,
+        pinnedColumns,
     } = params;
+
+    // ── Column order ──────────────────────────────────────────────────────────
+    const [internalColumnOrder, setInternalColumnOrder] = useState<string[]>(
+        () => initialState?.columns?.columnOrder ?? activeColumns.map(col => col.field)
+    );
+
+    const effectiveColumnOrder = columnOrder ?? internalColumnOrder;
+
+    // The expand toggle, indentation and group label go on the leftmost column actually
+    // on screen, so hiding, reordering or pinning columns never strips group rows of them.
+    // Mirrors the render order: left-pinned, then unpinned, then right-pinned.
+    const hierarchyField = useMemo<string | undefined>(() => {
+        if (!isHierarchyEnabled) return undefined;
+        const orderIndex = new Map(effectiveColumnOrder.map((field, idx) => [field, idx]));
+        const rank = (col: GridColDef<R>) => orderIndex.get(col.field) ?? activeColumns.indexOf(col);
+        const ordered = disableColumnReorder ? activeColumns : [...activeColumns].sort((a, b) => rank(a) - rank(b));
+        const pinRank = (col: GridColDef<R>) => {
+            const side = isColumnPinned(col.field, pinnedColumns);
+            return side === 'left' ? 0 : side === 'right' ? 2 : 1;
+        };
+        const onScreen = ordered
+            .filter(col => columnVisibilityModel[col.field] !== false)
+            .sort((a, b) => pinRank(a) - pinRank(b));
+        return (onScreen[0] ?? activeColumns[0])?.field;
+    }, [isHierarchyEnabled, effectiveColumnOrder, activeColumns, disableColumnReorder, columnVisibilityModel, pinnedColumns]);
 
     // ── Effective columns (hierarchy cell renderer injection) ─────────────────
     const effectiveColumns = useMemo<GridColDef<R>[]>(() => {
         if (!isHierarchyEnabled) return activeColumns;
 
-        return activeColumns.map((col, index) => {
-            if (index === 0) {
+        return activeColumns.map((col) => {
+            if (col.field === hierarchyField) {
                 return {
                     ...col,
                     renderCell: (cellParams: GridRenderCellParams<R>) => {
@@ -151,7 +180,7 @@ export function useGridColumns<R extends GridRowModel>(
                 }
             };
         }) as GridColDef<R>[];
-    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers]);
+    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers, hierarchyField]);
 
     // ── Column widths ─────────────────────────────────────────────────────────
     const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
@@ -161,13 +190,6 @@ export function useGridColumns<R extends GridRowModel>(
     const handleColumnResize = useCallback((field: string, newWidth: number) => {
         setColumnWidths(prev => ({ ...prev, [field]: newWidth }));
     }, []);
-
-    // ── Column order ──────────────────────────────────────────────────────────
-    const [internalColumnOrder, setInternalColumnOrder] = useState<string[]>(
-        () => initialState?.columns?.columnOrder ?? activeColumns.map(col => col.field)
-    );
-
-    const effectiveColumnOrder = columnOrder ?? internalColumnOrder;
 
     useEffect(() => {
         setColumns(activeColumns as unknown as GridColDef[]);

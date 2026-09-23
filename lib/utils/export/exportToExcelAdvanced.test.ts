@@ -78,11 +78,11 @@ describe('exportToExcelAdvanced — grouped', () => {
         const ws = await readSheet();
         expect(rowValues(ws)).toEqual([
             ['Department', 'Salary'],
-            ['Department: Engineering'],
+            ['dept: Engineering'],
             ['Engineering', 90000],
             ['Engineering', 85000],
             ['Subtotal', 175000],
-            ['Department: Marketing'],
+            ['dept: Marketing'],
             ['Marketing', 70000],
             ['Subtotal', 70000],
             ['Grand Total', 245000],
@@ -95,6 +95,13 @@ describe('exportToExcelAdvanced — grouped', () => {
         expect(ws.getRow(2).outlineLevel ?? 0).toBe(0);
         expect(ws.getRow(3).outlineLevel).toBe(1);
         expect(ws.getRow(4).outlineLevel).toBe(1);
+    });
+
+    it('uses the grid label carried on the entry (groupLabel) before anything else', async () => {
+        const labelled = groupedRows.map(e => (e.type === 'group-header' ? { ...e, groupLabel: `Grid label ${String(e.groupValue)}` } : e));
+        await exportToExcelAdvanced(flatRows, columns, { groupedRows: labelled });
+        const ws = await readSheet();
+        expect(ws.getRow(2).getCell(1).value).toBe('Grid label Engineering');
     });
 
     it('uses groupingValueFormatter for group-header labels', async () => {
