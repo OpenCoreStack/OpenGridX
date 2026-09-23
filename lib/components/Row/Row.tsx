@@ -157,6 +157,10 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     }, [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]);
 
     const isGroupRow = rowMeta?.hasChildren === true;
+    // A row-grouping group row is synthetic: it keeps the expand column's cell for alignment but
+    // has no detail panel and no toggle.
+    const rowHasDetailPanel = hasDetailPanel && rowMeta?.isGroupRow !== true;
+    const detailExpanded = rowHasDetailPanel && isDetailPanelExpanded;
 
     // Which cells may be edited is decided per cell below (resolveCellEditable), not per row:
     // tree-data parents are real rows and stay editable; synthetic group rows never are.
@@ -294,9 +298,9 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             } ${focusedCellField === '__expand_col__' ? 'ogx__cell--focused' : ''} ${(focusedCellField === '__expand_col__' && isFocusVisible) ? 'ogx__cell--focus-visible' : ''
                             }`}
                         role="gridcell"
-                        aria-label={isDetailPanelExpanded ? 'Collapse row details' : 'Expand row details'}
-                        aria-expanded={isDetailPanelExpanded}
-                        aria-controls={isDetailPanelExpanded ? detailPanelId : undefined}
+                        aria-label={rowHasDetailPanel ? (detailExpanded ? 'Collapse row details' : 'Expand row details') : undefined}
+                        aria-expanded={rowHasDetailPanel ? detailExpanded : undefined}
+                        aria-controls={detailExpanded ? detailPanelId : undefined}
                         aria-colindex={expandColIndex}
                         data-field="__expand_col__"
                         style={{
@@ -310,19 +314,21 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             onCellClick?.({
                                 row,
                                 field: '__expand_col__',
-                                value: isDetailPanelExpanded,
+                                value: detailExpanded,
                                 colDef: { field: '__expand_col__', width: 48 } as unknown as GridColDef<R>,
                                 rowIndex,
                                 colIndex: -1
                             });
                         }}
                     >
-                        <ExpandIcon
-                            isExpanded={isDetailPanelExpanded}
-                            onClick={handleDetailPanelToggle}
-                            variant="plus-minus"
-                            tabIndex={-1}
-                        />
+                        {rowHasDetailPanel && (
+                            <ExpandIcon
+                                isExpanded={detailExpanded}
+                                onClick={handleDetailPanelToggle}
+                                variant="plus-minus"
+                                tabIndex={-1}
+                            />
+                        )}
                     </div>
                 )}
 
@@ -447,7 +453,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     rowIndex={rowIndex}
                     content={detailPanelContent}
                     height={detailPanelHeight}
-                    isExpanded={isDetailPanelExpanded}
+                    isExpanded={detailExpanded}
                 />
             )}
         </>

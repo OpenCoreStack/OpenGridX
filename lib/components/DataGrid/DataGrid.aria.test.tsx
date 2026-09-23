@@ -54,7 +54,7 @@ describe('aria-rowindex and aria-rowcount', () => {
         const getDetailPanelContent = vi.fn(() => null);
         const { container } = render(
             <DataGrid rows={makeRows(4)} columns={COLS} pinnedRows={{ bottom: [4] }}
-                onRowClick={onRowClick} getDetailPanelContent={getDetailPanelContent} />
+                onRowClick={onRowClick} getDetailPanelContent={getDetailPanelContent} detailPanelExpandedRowIds={new Set([4])} />
         );
         const bottomRow = container.querySelector<HTMLElement>('.ogx__row--pinned-bottom')!;
         expect(bottomRow.getAttribute('data-rowindex')).toBe('3');

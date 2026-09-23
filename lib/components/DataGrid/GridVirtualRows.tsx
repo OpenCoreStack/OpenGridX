@@ -1,5 +1,6 @@
 import React from 'react';
 import { Row } from '../Row/Row';
+import { DetailPanelContent } from '../DetailPanel/DetailPanelContent';
 import { SkeletonRow } from '../SkeletonRow';
 import { isRowPinned } from '../../utils/pinning';
 import type {
@@ -179,8 +180,8 @@ export function GridVirtualRows<R extends GridRowModel>({
                             pinnedRows={pinnedRows}
                             hasDetailPanel={hasDetailPanel}
                             isDetailPanelExpanded={expandedRowIds.has(id)}
-                            detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id, rowIndex: actualIndex }) : null}
-                            detailPanelHeight={getDetailPanelHeight?.({ row, id, rowIndex: actualIndex }) || 200}
+                            detailPanelContent={expandedRowIds.has(id) && getDetailPanelContent ? <DetailPanelContent<R> getContent={getDetailPanelContent} params={{ row, id, rowIndex: actualIndex }} /> : null}
+                            detailPanelHeight={expandedRowIds.has(id) ? getDetailPanelHeight?.({ row, id, rowIndex: actualIndex }) || 200 : 200}
                             onDetailPanelToggle={onDetailPanelToggle}
                             pinCheckboxColumn={pinCheckboxColumn}
                             pinExpandColumn={pinExpandColumn}

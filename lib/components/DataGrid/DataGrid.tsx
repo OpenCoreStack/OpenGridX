@@ -424,10 +424,16 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // ── Detail panel (hoisted — hasDetailPanel feeds into useGridColumns) ──────
     const hasDetailPanel = Boolean(getDetailPanelContent);
     const [internalExpandedRowIds, setInternalExpandedRowIds] = useState<Set<GridRowId>>(new Set());
-    const expandedRowIds = controlledExpandedRowIds ?? internalExpandedRowIds;
+    const storedExpandedRowIds = controlledExpandedRowIds ?? internalExpandedRowIds;
+    // Row-grouping group rows are synthetic, not consumer rows, so they never get a detail panel.
+    const expandedRowIds = useMemo(
+        () => (isRowGrouping ? new Set(Array.from(storedExpandedRowIds).filter(id => !rowMetaMap.get(id)?.isGroupRow)) : storedExpandedRowIds),
+        [isRowGrouping, storedExpandedRowIds, rowMetaMap],
+    );
 
     const handleDetailPanelToggle = useCallback((rowId: GridRowId) => {
-        const newExpandedRowIds = new Set(expandedRowIds);
+        if (rowMetaMap.get(rowId)?.isGroupRow) return;
+        const newExpandedRowIds = new Set(storedExpandedRowIds);
         if (newExpandedRowIds.has(rowId)) {
             newExpandedRowIds.delete(rowId);
         } else {
@@ -437,7 +443,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             setInternalExpandedRowIds(newExpandedRowIds);
         }
         onDetailPanelExpandedRowIdsChange?.(newExpandedRowIds);
-    }, [expandedRowIds, controlledExpandedRowIds, onDetailPanelExpandedRowIdsChange]);
+    }, [storedExpandedRowIds, rowMetaMap, controlledExpandedRowIds, onDetailPanelExpandedRowIdsChange]);
 
     // ── Column management ─────────────────────────────────────────────────────
     const {
