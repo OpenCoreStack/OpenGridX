@@ -250,9 +250,13 @@ describe('items with an empty value do not filter', () => {
         expect(run({ field: 'n', operator, value: '   ' })).toEqual([1, 2, 3, 4]);
     });
 
-    it.each(['contains', 'equals', 'startsWith', 'endsWith', 'is', 'not', 'isAnyOf'] as const)('%s with "" keeps every row', (operator) => {
+    it.each(['contains', 'equals', 'startsWith', 'endsWith', 'is', 'not', 'isAnyOf', 'after', 'before'] as const)('%s with undefined, null or "" keeps every row', (operator) => {
         const srows = [{ id: 1, s: 'a' }, { id: 2, s: null }, { id: 3, s: '' }];
-        expect(ids(filterRows(srows, { items: [{ field: 's', operator, value: '' }] }))).toEqual([1, 2, 3]);
+        for (const value of [undefined, null, '', '  ']) {
+            expect(ids(filterRows(srows, { items: [{ field: 's', operator, value }] }))).toEqual([1, 2, 3]);
+        }
+        // An item with no value key at all behaves the same.
+        expect(ids(filterRows(srows, { items: [{ field: 's', operator }] }))).toEqual([1, 2, 3]);
     });
 
     it('isAnyOf with an empty array keeps every row', () => {
