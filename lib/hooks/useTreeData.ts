@@ -100,11 +100,10 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
                         });
                         pathLookup.set(parentPathKey, parentId);
 
-                        const groupRow = { 
+                        const groupRow = {
                             id: parentId,
-                            name: groupLabel, 
-                            _isGroupRow: true
-                        } as unknown as GridRowModel; 
+                            name: groupLabel,
+                        } as unknown as GridRowModel;
                         groupRows.push(groupRow);
 
                         if (parentPath.length === 1) {
@@ -275,14 +274,8 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
                 if (row && node) {
                     seenIds.add(id); 
 
-                    const enhancedRow = {
-                        ...row,
-                        _treeDepth: node.depth,
-                        _isExpanded: expandedGroupIds.has(id),
-                        _hasChildren: Boolean((node.children && node.children.length > 0) || (node.serverChildrenCount && node.serverChildrenCount > 0)),
-                        _descendantCount: node.children ? node.children.length : 0
-                    };
-                    result.push(enhancedRow);
+                    // Hierarchy info travels in rowMetaMap; the consumer's row object is passed through unchanged.
+                    result.push(row);
 
                     if (expandedGroupIds.has(id) && node.children && node.children.length > 0) {
                         traverse(node.children);

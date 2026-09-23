@@ -170,11 +170,19 @@ const columns: GridColDef[] = [
 
 ---
 
+## v2 → v3 migration (if this project was on v2)
+
+Read `node_modules/@opencorestack/opengridx/docs/migration/v2-to-v3.md`. In short:
+- `params.row._hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount` and `_isGroupRow` are no longer added to rows → use `params.rowMeta?.*`.
+- Under row grouping / tree data, `params.row` is now the consumer's own row object (it used to be a copy) → never mutate it in render callbacks.
+- Grouped exports write the same group label as the grid (`groupLabel` → `groupingValueFormatter` → `"field: value"`).
+- After upgrading, restart the dev server and clear `node_modules/.vite`, or Vite may keep serving the old version.
+
 ## v1 → v2 migration (if this project was on v1)
 
 Read the full guide:
 ```
-node_modules/@opencorestack/opengridx/docs/migration/v1-to-v2.md   ← if it ships
+node_modules/@opencorestack/opengridx/docs/migration/v1-to-v2.md
 ```
 
 ### Quick summary
@@ -203,14 +211,13 @@ node_modules/@opencorestack/opengridx/docs/migration/v1-to-v2.md   ← if it shi
 | `disableMultipleRowSelection` | Now caps selection to one row. Same caveat. |
 | `density` | Now sets row height. If you passed `density` expecting it to be ignored, row heights will change. |
 
-**Legacy row shim — still present, do not rely on it:**
+**Legacy row shim — removed in v3:** v2 still added `_hasChildren`, `_treeDepth` etc. to `params.row`; v3 does not.
 
 ```tsx
-// ⚠️ v1 shim — still injected on params.row as of v2.1.0 (deprecated, will be
-// removed in a future major version — do not write new code depending on it):
+// ❌ undefined in v3:
 const hasChildren = (params.row as Record<string, unknown>)._hasChildren;
 
-// ✅ use this instead, in both v1 and v2:
+// ✅ v1.1+, v2 and v3:
 const hasChildren = params.rowMeta?.hasChildren;
 ```
 

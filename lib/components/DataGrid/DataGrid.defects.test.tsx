@@ -180,3 +180,36 @@ describe('getGroupedExportRows carries the grid label', () => {
         expect(headers.map(h => h.groupLabel)).toEqual(expect.arrayContaining(['Region: North', 'Region: South']));
     });
 });
+
+describe('v3.0 — row objects are passed through unchanged under hierarchy', () => {
+    const UNDERSCORE = ['_hasChildren', '_treeDepth', '_isExpanded', '_groupingField', '_groupingValue', '_descendantCount', '_isGroupRow'];
+
+    it('row grouping hands renderCell the consumer row object with no injected fields', () => {
+        const seen: Row[] = [];
+        const cols: GridColDef<Row>[] = [
+            { field: 'region', headerName: 'Region' },
+            { field: 'amount', headerName: 'Amount', renderCell: (p) => { seen.push(p.row); return String(p.value); } },
+        ];
+        render(<DataGrid rows={ROWS} columns={cols} rowGroupingModel={['region']} defaultGroupingExpansionDepth={-1} />);
+        const leaf = seen.find(r => r.id === 1)!;
+        expect(leaf).toBe(ROWS[0]);
+        for (const key of UNDERSCORE) expect(leaf).not.toHaveProperty(key);
+    });
+
+    it('tree data hands renderCell the consumer row object with no injected fields', () => {
+        type TreeRow = { id: number; path: string[]; name: string };
+        const rows: TreeRow[] = [
+            { id: 1, path: ['A'], name: 'a' },
+            { id: 2, path: ['A', 'B'], name: 'b' },
+        ];
+        const seen: TreeRow[] = [];
+        const cols: GridColDef<TreeRow>[] = [
+            { field: 'name', headerName: 'Name' },
+            { field: 'id', headerName: 'Id', renderCell: (p) => { seen.push(p.row); return String(p.value); } },
+        ];
+        render(<DataGrid rows={rows} columns={cols} treeData getTreeDataPath={(r) => r.path} defaultGroupingExpansionDepth={-1} />);
+        const child = seen.find(r => r.id === 2)!;
+        expect(child).toBe(rows[1]);
+        for (const key of UNDERSCORE) expect(child).not.toHaveProperty(key);
+    });
+});

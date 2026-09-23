@@ -273,16 +273,8 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                 if (row && node) {
                      seenIds.add(id);
 
-                     const enhancedRow = {
-                        ...row,
-                        _treeDepth: node.depth,
-                        _isExpanded: expandedGroupIds.has(id),
-                        _hasChildren: isGroup,
-                        _groupingField: node.groupingField,
-                        _groupingValue: node.groupingValue,
-                        _descendantCount: node.descendantCount
-                    };
-                    result.push(enhancedRow);
+                    // Hierarchy info travels in rowMetaMap; the consumer's row object is passed through unchanged.
+                    result.push(row);
 
                     if (expandedGroupIds.has(id) && isGroup) {
                         traverse(node.children!);

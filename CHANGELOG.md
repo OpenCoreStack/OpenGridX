@@ -7,7 +7,12 @@
 
 ## [Unreleased]
 
+Upgrading from 2.x: see [docs/migration/v2-to-v3.md](docs/migration/v2-to-v3.md).
+
 ### Breaking
+
+- **The underscore hierarchy fields are no longer added to rows.** `_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount` and `_isGroupRow` (deprecated since 1.1) are gone at runtime; use `params.rowMeta`. TypeScript does not flag reads of them, because `GridRowModel` has an index signature.
+- **`params.row` under row grouping and tree data is now the consumer's own row object**, not a per-render copy. Code that mutated `params.row` in a render callback now mutates the source data. As a side effect, rows are no longer re-created on every render.
 
 - **Grouped-export default labels in `exportToExcelAdvanced` now match the grid.** Without a `groupingValueFormatter`, group headers read `"field: value"` (the grid's documented default) instead of `"Header: value"`. Set `groupingValueFormatter` on the grouping column to control the label in the grid and in every export format.
 
@@ -20,6 +25,8 @@
 ### Added
 
 - `GridGroupedExportRow.groupLabel`.
+- `formattedValue` and `rowMeta` are now passed to `renderEditCell` and to the function form of `cellClassName`, as they already were to `renderCell`.
+- `docs/migration/` now ships in the npm package; the v2 → v3 guide was missing from `node_modules`.
 
 ---
 

@@ -69,6 +69,10 @@ Reference for core hooks extracted from `DataGrid.tsx`. Intended for contributor
 - **[useGridScrollSync](architecture/use-grid-scroll-sync.md)** - RAF-batched scroll tick, scrollPosRef, onRowsScrollEnd threshold
 - **[useGridStateSnapshot](architecture/use-grid-state-snapshot.md)** - onStateChange callback delivery on sort/filter/pagination/column changes
 
+## 🔀 Migration Guides
+- **[v2 → v3](migration/v2-to-v3.md)** - Underscore row fields removed, `params.row` identity, grouped export labels
+- **[v1 → v2](migration/v1-to-v2.md)** - Removed dead props, `groupable` / `availableAggregationFunctions` enforcement
+
 ## 🛠️ Project Meta
 - **[Development Roadmap](roadmap.md)** - What's built and what's next
 - **[Research Notes](research/FEATURE_CATALOG.md)** - Comparative analysis and design decisions

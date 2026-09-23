@@ -94,7 +94,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 - Already shipped, previously listed as upcoming: npm publishing (since 0.1.0), native PDF export (v1.2.1), GitHub Pages deployment.
 
 ### Library Hardening *(completed 2026-09-02)*
-- **`GridRowMeta`**: Hierarchy metadata (`hasChildren`, `treeDepth`, `groupingField`, `groupingValue`, `descendantCount`, `isExpanded`, `isGroupRow`) moved from `GridRowModel` into a separate `Map<GridRowId, GridRowMeta>`. Exposed as `params.rowMeta` in `renderCell`. Runtime shim (underscore-prefixed fields on the row object) maintains backward compatibility; still present as of v2.1.0, deprecated for removal in a future major version — see `docs/architecture/grid-row-meta.md`.
+- **`GridRowMeta`**: Hierarchy metadata (`hasChildren`, `treeDepth`, `groupingField`, `groupingValue`, `descendantCount`, `isExpanded`, `isGroupRow`) moved from `GridRowModel` into a separate `Map<GridRowId, GridRowMeta>`. Exposed as `params.rowMeta` in `renderCell`. The runtime shim (underscore-prefixed fields on copied row objects) was kept through v2.x and removed in v3.0 — see `docs/migration/v2-to-v3.md`.
 - **`CellErrorBoundary`**: Custom `renderCell` errors are now caught per-cell. Failing cells show a `⚠` indicator with the error as a tooltip; the rest of the grid renders normally.
 - **`GridLocaleText` / `localeText` prop**: All user-visible pagination strings (`paginationRowsPerPage`, `paginationOf`, `paginationPage`, `noRowsLabel`) are now overrideable for internationalisation.
 - **Core hook tests**: `useGridRowPipeline`, `useGridControlledState`, `useGridKeyboardNavigation` now have full test coverage (25 new tests).

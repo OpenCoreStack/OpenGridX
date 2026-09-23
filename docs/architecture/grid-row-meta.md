@@ -65,11 +65,11 @@ renderCell: (params) => {
 
 ---
 
-## Runtime shim (still present as of v2.1.0)
+## Runtime shim (removed in v3.0)
 
-The underscore fields (`_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount`, `_isGroupRow`) continue to be injected onto the row object at runtime — this has not changed since v1.1. They are not declared on `GridRowModel`; because `GridRowModel` retains `[key: string]: unknown`, accessing `params.row._hasChildren` resolves to `unknown` rather than producing a TypeScript compile error. Assignment to a typed variable (e.g. `const x: boolean = params.row._hasChildren`) and arithmetic will error; truthiness checks will not. Migrate to `params.rowMeta?.hasChildren` for the typed path — new code should not rely on the underscore fields at all.
+From v1.1 to v2.x, `useTreeData` and `useRowGrouping` still copied each row and injected the underscore fields (`_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount`, `_isGroupRow`) onto the copy for backward compatibility. (An earlier revision of this doc wrongly said the injection was removed in v2.0.)
 
-**This shim is deprecated and scheduled for removal in a future major version, not v2.0.** An earlier revision of this doc (and of `roadmap.md`) stated the injection was removed in v2.0 — that was inaccurate; `useTreeData.ts` and `useRowGrouping.ts` both still assign these fields on every row. Treat `params.rowMeta` as the only supported API going forward, but do not assume the underscore fields are absent at runtime yet.
+**Since v3.0 nothing is injected.** Both hooks pass the consumer's row objects through unchanged and all hierarchy information lives in `rowMetaMap` / `params.rowMeta`. `params.row` under grouping is therefore the same object the consumer passed in `rows`, just as it is without grouping. See [Migrating from v2 to v3](../migration/v2-to-v3.md).
 
 ---
 

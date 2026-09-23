@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import './Docs.css';
 
 export default function MigrationV2() {
@@ -104,22 +105,24 @@ export default function MigrationV2() {
 
             {/* ── Row._* runtime shim removal ── */}
             <section className="docs-section">
-                <h2 className="docs-h2">5. Runtime <code>row._*</code> hierarchy fields removed</h2>
+                <h2 className="docs-h2">5. Runtime <code>row._*</code> hierarchy fields (deprecated — removed in v3)</h2>
                 <p>
                     In v1.1 the internal hierarchy fields (<code>_hasChildren</code>, <code>_treeDepth</code>,
                     <code>_isExpanded</code>, <code>_groupingField</code>, <code>_groupingValue</code>,
-                    <code>_descendantCount</code>, <code>_isGroupRow</code>) were deprecated and flagged for removal.
-                    They are now gone from the runtime row object in v2.
+                    <code>_descendantCount</code>, <code>_isGroupRow</code>) were deprecated. They are{' '}
+                    <strong>still added to rows at runtime in every v2 release</strong> (an earlier version of this page
+                    wrongly said they were removed in v2), and they are removed in v3.0 —
+                    see <Link to="/migration-v3">Migrating to v3</Link>.
                 </p>
-                <p>If your <code>renderCell</code> reads any of these, migrate to <code>params.rowMeta</code>:</p>
+                <p>No action is needed for v2, but migrate any <code>renderCell</code> that reads them to <code>params.rowMeta</code> before upgrading to v3:</p>
 
                 <div className="docs-code-block">
-                    <span className="docs-code-comment">{'// ❌ v1 (runtime shim — no longer injected):'}</span><br />
+                    <span className="docs-code-comment">{'// ❌ deprecated (still works in v2, undefined in v3):'}</span><br />
                     {'renderCell: (params) => {'}<br />
                     {'  const hasChildren = (params.row as Record<string, unknown>)._hasChildren;'}<br />
                     {'  return hasChildren ? <GroupIcon /> : params.value;'}<br />
                     {'},'}<br /><br />
-                    <span className="docs-code-comment">{'// ✅ v2:'}</span><br />
+                    <span className="docs-code-comment">{'// ✅ v1.1+, v2 and v3:'}</span><br />
                     {'renderCell: (params) => {'}<br />
                     {'  const hasChildren = params.rowMeta?.hasChildren;'}<br />
                     {'  return hasChildren ? <GroupIcon /> : params.value;'}<br />

@@ -93,10 +93,10 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
     const resolvedCellClassName = React.useMemo(() => {
         if (!colDef.cellClassName) return '';
         if (typeof colDef.cellClassName === 'function') {
-            return colDef.cellClassName({ value, row, field: colDef.field, colDef, rowIndex, colIndex }) || '';
+            return colDef.cellClassName({ value, formattedValue, row, field: colDef.field, colDef, rowIndex, colIndex, rowMeta }) || '';
         }
         return colDef.cellClassName;
-    }, [colDef, value, row, rowIndex, colIndex]);
+    }, [colDef, value, formattedValue, row, rowIndex, colIndex, rowMeta]);
 
     const cellRef = React.useRef<HTMLDivElement>(null);
 
@@ -218,6 +218,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                     colDef.renderEditCell ? (
                         colDef.renderEditCell({
                             value,
+                            formattedValue,
                             row,
                             field: colDef.field,
                             colDef,

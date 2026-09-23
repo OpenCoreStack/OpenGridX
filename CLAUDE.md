@@ -41,7 +41,7 @@ DataGridProps
        Header, GridVirtualRows, GridPinnedRows, Pagination, GridAggregationFooter
 ```
 
-Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGrouping`. They produce flat renderable row arrays with internal `_*` fields injected (runtime shim, still present as of v2.1.0 — deprecated, deferred to a future major version) **and** a `rowMetaMap: Map<GridRowId, GridRowMeta>` that is the clean typed API.
+Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGrouping`. They produce flat renderable row arrays of the consumer's own row objects (unchanged — nothing is injected since v3.0) **and** a `rowMetaMap: Map<GridRowId, GridRowMeta>` that carries all hierarchy information.
 
 ---
 
@@ -84,7 +84,7 @@ Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGroupin
 - **CSS variables:** `--ogx-*` (e.g. `--ogx-row-height`, `--ogx-color-primary`)
 - **Hook names:** `use-grid-*` for core hooks, `use*` for feature hooks
 - **Exported types:** `Grid*` prefix (e.g. `GridColDef`, `GridRowMeta`, `GridLocaleText`)
-- **Internal fields still on row at runtime (deprecated shim, not yet removed — was mistakenly documented as removed in v2.0):** `_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount`, `_isGroupRow`
+- **Never inject fields onto consumer row objects.** Hierarchy info goes in `rowMetaMap` / `params.rowMeta`; the old `_hasChildren`-style runtime fields were removed in v3.0.
 
 ---
 
@@ -92,7 +92,7 @@ Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGroupin
 
 Hierarchy metadata (`hasChildren`, `treeDepth`, `groupingField`, etc.) lives in a `Map<GridRowId, GridRowMeta>` returned by `useTreeData`/`useRowGrouping`, not on the row object. Access it in `renderCell` via `params.rowMeta`.
 
-The underscore fields remain on the row object at runtime — this shim was carried through v1.x **and is still present in v2.1.0**; the injection was never actually removed in v2.0 despite earlier drafts of this file and `docs/roadmap.md` claiming otherwise. Removal is deferred to a future major version. When it happens, delete the `_hasChildren = ...` assignments in `useTreeData.ts` and `useRowGrouping.ts`. Until then, don't write code that assumes the underscore fields are absent.
+The underscore fields (`_hasChildren`, `_treeDepth`, …) were injected onto copied rows from v1.1 to v2.x as a backward-compat shim and **removed in v3.0** — rows now pass through unchanged, so `params.row` is the consumer's own object. Migration: `docs/migration/v2-to-v3.md`.
 
 Full doc: `docs/architecture/grid-row-meta.md`
 

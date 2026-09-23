@@ -52,6 +52,7 @@ const examplesConfig = [
     { path: '/api-reference', name: 'API Reference', component: lazy(() => import('./pages/APIDocumentation')), category: 'Resources' },
     { path: '/licensing', name: 'Licensing', component: lazy(() => import('./pages/Licensing')), category: 'Resources' },
     { path: '/support', name: 'Support', component: lazy(() => import('./pages/Support')), category: 'Resources' },
+    { path: '/migration-v3', name: 'Migrating to v3', component: lazy(() => import('./pages/MigrationV3')), category: 'Resources' },
     { path: '/migration-v2', name: 'Migrating to v2', component: lazy(() => import('./pages/MigrationV2')), category: 'Resources' },
 
     // Main Features
