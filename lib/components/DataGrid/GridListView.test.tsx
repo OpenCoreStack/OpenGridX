@@ -36,6 +36,93 @@ describe('DataGrid list view rows', () => {
         expect(seen.filter(id => String(id).startsWith('__skeleton'))).toEqual([]);
     });
 
+    it('passes the cell value, formatted value, column and hierarchy metadata to renderCell', () => {
+        const got: GridRenderCellParams<GridRowModel>[] = [];
+        const cols: GridColDef[] = [
+            { field: 'name', headerName: 'Name', valueFormatter: ({ value }) => String(value).toUpperCase() },
+            { field: 'full', valueGetter: ({ row }) => `${String(row.name)}!` },
+        ];
+        render(
+            <DataGrid rows={[{ id: 1, name: 'Alice', path: ['Alice'] }]} columns={cols}
+                treeData getTreeDataPath={(r: GridRowModel) => r.path as string[]}
+                listView listViewColumn={{ field: 'name', renderCell: (p) => { got.push(p); return null; } }} />
+        );
+        const params = got[got.length - 1];
+        expect(params.value).toBe('Alice');
+        expect(params.formattedValue).toBe('ALICE');
+        expect(params.colDef.headerName).toBe('Name');
+        expect(params.rowMeta?.treeDepth).toBe(0);
+
+        const computed: unknown[] = [];
+        render(
+            <DataGrid rows={[{ id: 1, name: 'Bob' }]} columns={cols}
+                listView listViewColumn={{ field: 'full', renderCell: (p) => { computed.push(p.value); return null; } }} />
+        );
+        expect(computed[computed.length - 1]).toBe('Bob!');
+    });
+
+    it('gives a synthetic list field an undefined value and the list column as colDef', () => {
+        let params: GridRenderCellParams<GridRowModel> | null = null;
+        render(
+            <DataGrid rows={[{ id: 1, name: 'Alice' }]} columns={COLS}
+                listView listViewColumn={{ field: 'card', renderCell: (p) => { params = p; return null; } }} />
+        );
+        expect(params!.value).toBeUndefined();
+        expect(params!.formattedValue).toBe('');
+        expect(params!.colDef.field).toBe('card');
+    });
+
+    it('announces absolute row positions and the total row count', () => {
+        const rows: GridRowModel[] = Array.from({ length: 20 }, (_, i) => ({ id: i + 1, name: `n${i + 1}` }));
+        const { container } = render(
+            <DataGrid rows={rows} columns={COLS} pagination pageSizeOptions={[10]} listView
+                listViewColumn={{ field: 'name', renderCell: (p) => String(p.row.name) }}
+                initialState={{ pagination: { paginationModel: { page: 1, pageSize: 10 } } }} />
+        );
+        const list = container.querySelector('.ogx-list-view') as HTMLElement;
+        const first = container.querySelector('.ogx-list-view__row') as HTMLElement;
+        expect(first.textContent).toBe('n11');
+        expect(first.getAttribute('aria-rowindex')).toBe('11');
+        expect(list.getAttribute('aria-rowcount')).toBe('20');
+    });
+
+    it('counts pinned rows in their own positions', () => {
+        const rows: GridRowModel[] = Array.from({ length: 5 }, (_, i) => ({ id: i + 1, name: `n${i + 1}` }));
+        const { container } = render(
+            <DataGrid rows={rows} columns={COLS} pinnedRows={{ top: [5], bottom: [1] }} listView
+                listViewColumn={{ field: 'name', renderCell: (p) => String(p.row.name) }} />
+        );
+        const indexes = Array.from(container.querySelectorAll('.ogx-list-view__row'))
+            .map(r => `${r.textContent}:${r.getAttribute('aria-rowindex')}`);
+        expect(indexes).toEqual(['n5:1', 'n2:2', 'n3:3', 'n4:4', 'n1:5']);
+    });
+
+    it('summarises the server row count, not the loaded page, under server pagination', async () => {
+        const dataSource = {
+            getRows: vi.fn(async () => ({ rows: [{ id: 1, name: 'x' }, { id: 2, name: 'y' }], rowCount: 50 })),
+        };
+        const { container } = render(
+            <DataGrid rows={EMPTY} columns={COLS} dataSource={dataSource as never} paginationMode="server" pagination
+                listView listViewColumn={{ field: 'name', renderCell: (p) => String(p.row.name) }}
+                initialState={{ pagination: { paginationModel: { page: 0, pageSize: 2 } } }} />
+        );
+        await act(async () => { await new Promise(r => setTimeout(r, 450)); });
+        expect(container.querySelector('.ogx-list-view__toolbar')?.textContent).toBe('50 items · page 1 of 25');
+        expect(container.querySelector('.ogx-pagination__page-info')?.textContent).toBe('Page 1 of 25');
+        expect(container.querySelector('.ogx-list-view')?.getAttribute('aria-rowcount')).toBe('50');
+    });
+
+    it('pages only the unpinned rows, like the grid view', () => {
+        const rows: GridRowModel[] = Array.from({ length: 11 }, (_, i) => ({ id: i + 1, name: `n${i + 1}` }));
+        const { container } = render(
+            <DataGrid rows={rows} columns={COLS} pinnedRows={{ top: [11] }} pagination pageSizeOptions={[10]} listView
+                listViewColumn={{ field: 'name', renderCell: (p) => String(p.row.name) }}
+                initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }} />
+        );
+        expect(container.querySelector('.ogx-list-view__toolbar')?.textContent).toBe('11 items · page 1 of 1');
+        expect(container.querySelector('.ogx-pagination__page-info')?.textContent).toBe('Page 1 of 1');
+    });
+
     it('shows one page at a time under tree data with pagination', () => {
         const rows = Array.from({ length: 25 }, (_, i) => ({ id: i + 1, name: `r${i + 1}`, path: [`r${i + 1}`] }));
         const { container } = render(

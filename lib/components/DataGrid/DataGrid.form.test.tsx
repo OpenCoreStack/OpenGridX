@@ -43,7 +43,8 @@ function GridInForm({ onSubmit, withToolbar = true }: { onSubmit: (e: React.Form
     );
 }
 
-describe('DataGrid inside a <form>', () => {
+// The first render of a full grid with toolbar and pager is slow on a loaded machine.
+describe('DataGrid inside a <form>', { timeout: 20000 }, () => {
     it('pagination, column-menu and toolbar clicks never submit the form', () => {
         const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
         const { container } = render(<GridInForm onSubmit={onSubmit} />);

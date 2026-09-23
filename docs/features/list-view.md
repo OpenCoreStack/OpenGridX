@@ -32,7 +32,19 @@ When `listView` is active:
 - **Card Containers**: Each row maintains its standard selection and hover behaviors, but visually acts as a card.
 
 ### Custom Card Rendering
-The `renderCell` function in `listViewColumn` receives all standard `GridRenderCellParams`, allowing you to build rich, complex UIs for each item.
+The `renderCell` function in `listViewColumn` receives all standard `GridRenderCellParams`, allowing you to build rich, complex UIs for each item:
+
+| Param | Value |
+| :--- | :--- |
+| `row` | The consumer's row object. |
+| `field` | `listViewColumn.field`. |
+| `value` | The cell value for that field: the grid column with the same `field` reads it through its `valueGetter`; otherwise `row[field]` (so a synthetic field such as `'card'` gives `undefined`). |
+| `formattedValue` | That column's `valueFormatter` result, or `String(value)` (`''` for null/undefined). |
+| `colDef` | The grid column with the same `field`, or `listViewColumn` itself. |
+| `rowMeta` | Tree-data / row-grouping metadata (`treeDepth`, `hasChildren`, …), `undefined` for flat rows. |
+| `rowIndex` | Index of the row among the rendered rows (pinned rows first). |
+
+`renderCell` only ever receives real rows: while an infinite-scroll page loads, no placeholder rows are passed to it.
 
 ```tsx
 function MyEmployeeCard({ row }) {
@@ -48,6 +60,18 @@ function MyEmployeeCard({ row }) {
   );
 }
 ```
+
+---
+
+## 📄 Pagination and infinite scroll
+
+List view pages exactly like the grid view: with `pagination`, one page of the (unpinned) rows is shown between any pinned rows, also under tree data. The summary line above the list reads `N items · page X of Y`, where under server pagination (`paginationMode="server"` with a `dataSource`) `N` and the page count come from the server's `rowCount`.
+
+`onRowsScrollEnd` fires when the list is scrolled to within 100px of its bottom, as it does for the grid viewport, so the [infinite scroll](./infinite-scroll.md) pattern works in list view too.
+
+## ♿ Accessibility
+
+The list is a `role="grid"` whose rows carry an `aria-rowindex` over the whole data set (row 11 on the second page of 10) and whose `aria-rowcount` is the total number of rows. There is no header row in list view.
 
 ---
 

@@ -932,11 +932,17 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     ariaLabel={ariaLabel}
                     allRenderableRows={allRenderableRows}
                     filteredRows={filteredRows}
+                    pinnedTopRowCount={pinnedTopRows.length}
+                    pinnedBottomRowCount={pinnedBottomRows.length}
+                    unpinnedRowCount={sortedUnpinnedRows.length}
                     pagination={pagination}
                     effectivePaginationModel={effectivePaginationModel}
+                    currentPage={rowPipeline.currentPage}
                     pageSizeOptions={pageSizeOptions}
                     selectedRowIds={selectedRowIds}
                     listViewColumn={listViewColumn}
+                    columnsByField={columnLookup.byField}
+                    rowMetaMap={rowMetaMap}
                     noRowsLabel={effectiveNoRowsLabel}
                     rowHeight={effectiveRowHeight}
                     checkboxSelection={checkboxSelection}
@@ -954,6 +960,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     onRowDoubleClick={onRowDoubleClick}
                     onSelectionChange={handleSelectionChange}
                     onPaginationModelChange={handlePaginationModelChange}
+                    onRowsScrollEnd={onRowsScrollEnd}
                 />
             )}
 
