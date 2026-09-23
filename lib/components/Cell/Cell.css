@@ -106,6 +106,13 @@
   white-space: nowrap;
   width: 100%;
 }
+/* Default rendering of a type: 'image' column: the image fits the row height. */
+.ogx__cell-image {
+  display: block;
+  max-width: 100%;
+  max-height: calc(var(--ogx-row-height) - 8px);
+  object-fit: contain;
+}
 .ogx__cell--spanned {
   background-color: var(--ogx-grid-background);
   z-index: 10; 

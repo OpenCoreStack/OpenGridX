@@ -1,5 +1,6 @@
 import type { GridAggregationModel, GridColDef, GridGroupedExportRow, GridRowId, GridRowModel } from '../../types';
 import { computeAggregations, formatAggregateForColumn } from '../aggregation';
+import { formatValueByType } from '../values';
 
 /**
  * Helpers shared by every exporter (CSV, HTML .xls, JSON, print, PDF and advanced XLSX), so the
@@ -78,9 +79,11 @@ export function getRawExportValue<R extends GridRowModel>(row: R, col: GridColDe
  * The cell's display text, matching the grid (`Cell.tsx`): `valueFormatter` runs whenever it is set,
  * including for null/undefined, so placeholder text such as "Unassigned" is exported. A formatter
  * that throws for a missing value exports an empty cell, as before; any other throw propagates.
+ * Without a formatter the column type decides, as in the grid (`formatValueByType`): a locale date,
+ * Yes / No, or the singleSelect option label.
  */
 export function formatExportValue<R extends GridRowModel>(row: R, col: GridColDef<R>, value: unknown): string {
-    if (!col.valueFormatter) return value == null ? '' : String(value);
+    if (!col.valueFormatter) return formatValueByType(value, col);
     if (value == null) {
         try {
             return String(col.valueFormatter({ value, row, field: col.field }) ?? '');

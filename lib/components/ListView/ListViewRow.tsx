@@ -1,5 +1,5 @@
 import React from 'react';
-import { getCellValue } from '../../utils/values';
+import { formatValueByType, getCellValue } from '../../utils/values';
 import type { GridColDef, GridRowModel, GridRowId, GridRowMeta, GridListViewColDef, GridRenderCellParams } from '../../types';
 
 export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
@@ -44,7 +44,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
     const value = getCellValue(row, field, gridColumn as GridColDef | undefined);
     const formattedValue = gridColumn?.valueFormatter
         ? gridColumn.valueFormatter({ value, row, field })
-        : value == null ? '' : String(value);
+        : formatValueByType(value, gridColumn);
 
     const params: GridRenderCellParams<R> = {
         row,
