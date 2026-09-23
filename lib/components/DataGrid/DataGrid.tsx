@@ -51,11 +51,19 @@ import { GridLoadingOverlay } from './GridLoadingOverlay';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
-import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
+import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
 
 const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
 
-export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridProps<R>) {
+/**
+ * The grid. `R` is your row type: any object type (an interface works), inferred from `rows`. `columns`
+ * can be typed for it (`GridColDef<R>[]`, so callbacks see `params.row` as `R`) or untyped (`GridColDef[]`).
+ */
+export function DataGrid<R extends GridValidRowModel = GridRowModel>(props: DataGridProps<R>): React.JSX.Element;
+export function DataGrid<R extends GridValidRowModel = GridRowModel>(props: DataGridUntypedColumnsProps<R>): React.JSX.Element;
+// Internally every row is read as a GridRowModel (a record keyed by field): the overloads above are the
+// public signatures, and a consumer's row objects are passed through untouched.
+export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridProps<R>): React.JSX.Element {
     const {
         rows,
         columns,

@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DataGrid } from './DataGrid';
@@ -105,8 +104,8 @@ describe('DataGrid — disableMultipleRowSelection', () => {
         const rows = screen.getAllByRole('row');
         fireEvent.click(rows[1]); // select Alice (id=1)
         fireEvent.click(rows[2]); // select Bob (id=2) — should replace
-        expect(selections.at(-1)).toEqual([2]);
-        expect(selections.at(-1)?.length).toBe(1);
+        expect(selections[selections.length - 1]).toEqual([2]);
+        expect(selections[selections.length - 1]?.length).toBe(1);
     });
 
     it('clicking already-selected row deselects it when disableMultipleRowSelection=true', () => {
@@ -122,6 +121,6 @@ describe('DataGrid — disableMultipleRowSelection', () => {
         const rows = screen.getAllByRole('row');
         fireEvent.click(rows[1]); // select
         fireEvent.click(rows[1]); // deselect
-        expect(selections.at(-1)).toEqual([]);
+        expect(selections[selections.length - 1]).toEqual([]);
     });
 });

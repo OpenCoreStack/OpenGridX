@@ -1,6 +1,7 @@
 import React from 'react';
+import type { GridToolbarSlotProps as GridToolbarSlotComponentProps } from '../../types';
 
-type ToolbarProps = Record<string, unknown>;
+type ToolbarProps = GridToolbarSlotComponentProps & Record<string, unknown>;
 type ToolbarRender = (props: ToolbarProps) => React.ReactNode;
 
 interface GridToolbarSlotProps {

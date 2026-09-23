@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { DataGrid } from './DataGrid';
-import type { GridColDef, GridRowModel } from '../../types';
+import type { DataGridProps, GridColDef, GridRowModel } from '../../types';
 
 interface Row extends GridRowModel {
     id: number;
@@ -20,7 +20,7 @@ const COLS: GridColDef<Row>[] = [
     { field: 'd', width: 120 },
 ];
 
-const renderGrid = (props: Partial<React.ComponentProps<typeof DataGrid<Row>>> = {}) =>
+const renderGrid = (props: Partial<DataGridProps<Row>> = {}) =>
     render(<div style={{ height: 400, width: 800 }}><DataGrid<Row> rows={ROWS} columns={COLS} {...props} /></div>);
 
 /** Field, sticky side and offset of each pinned element in a row, in DOM order. */

@@ -2,31 +2,30 @@ import { describe, it, expect } from 'vitest';
 import React, { useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DataGrid } from './DataGrid';
-import type { GridColDef } from '../../types';
+import type { GridColDef, GridToolbarSlotProps } from '../../types';
 
-type ToolbarType = React.ComponentType<Record<string, unknown>>;
 const COLS: GridColDef[] = [{ field: 'name', headerName: 'Name' }];
 const ROWS = [{ id: 1, name: 'Ann' }];
 
 describe('slots.toolbar', () => {
     it('renders a React.memo toolbar', () => {
         const Memo = React.memo(function MemoToolbar() { return <div data-testid="tb">memo</div>; });
-        render(<DataGrid rows={ROWS} columns={COLS} slots={{ toolbar: Memo as ToolbarType }} />);
+        render(<DataGrid rows={ROWS} columns={COLS} slots={{ toolbar: Memo }} />);
         expect(screen.getByTestId('tb').textContent).toBe('memo');
     });
 
     it('renders a forwardRef toolbar', () => {
-        const Fwd = React.forwardRef<HTMLDivElement, Record<string, unknown>>(function FwdToolbar(_props, ref) {
+        const Fwd = React.forwardRef<HTMLDivElement, GridToolbarSlotProps>(function FwdToolbar(_props, ref) {
             return <div ref={ref} data-testid="tb">fwd</div>;
         });
-        render(<DataGrid rows={ROWS} columns={COLS} slots={{ toolbar: Fwd as ToolbarType }} />);
+        render(<DataGrid rows={ROWS} columns={COLS} slots={{ toolbar: Fwd }} />);
         expect(screen.getByTestId('tb').textContent).toBe('fwd');
     });
 
     it('renders a class toolbar and passes it the grid props', () => {
-        class ClassToolbar extends React.Component<Record<string, unknown>> {
+        class ClassToolbar extends React.Component<GridToolbarSlotProps> {
             render() {
-                const cols = this.props.columns as GridColDef[];
+                const cols = this.props.columns ?? [];
                 return <div data-testid="tb">{cols.map(c => c.field).join(',')}</div>;
             }
         }

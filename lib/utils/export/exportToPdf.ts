@@ -1,6 +1,7 @@
 import type {
     GridColDef,
     GridRowModel,
+    GridValidRowModel,
     GridFilterModel,
     GridFilterGroup,
     GridFilterItem,
@@ -141,10 +142,12 @@ function formatFilterSummary<R extends GridRowModel>(
 /** jsPDF's default line height factor, in mm per point of font size. */
 const LINE_HEIGHT_MM_PER_PT = 1.15 * 0.3528;
 
+export function exportToPdf<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef<R>[], options?: PdfExportOptions<R>): Promise<void>;
+export function exportToPdf<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef[], options?: PdfExportOptions<R>): Promise<void>;
 export async function exportToPdf<R extends GridRowModel>(
     rows: R[],
     columns: GridColDef<R>[],
-    options: PdfExportOptions = {}
+    options: PdfExportOptions<R> = {}
 ): Promise<void> {
     // Lazy-load peer deps — provides a clear error if not installed
     let JsPDF: new (opts: Record<string, unknown>) => JsPDFDoc;

@@ -10,13 +10,15 @@ import { renderHook, act } from '@testing-library/react';
 import { useDataGrid } from './useDataGrid';
 import type { GridColDef } from '../../types';
 
-const COLS: GridColDef[] = [
+type Row = { id: number; name: string; age: number };
+
+const COLS: GridColDef<Row>[] = [
     { field: 'id',   headerName: 'ID',   width: 80 },
     { field: 'name', headerName: 'Name', width: 150 },
     { field: 'age',  headerName: 'Age',  width: 100 },
 ];
 
-const ROWS = [
+const ROWS: Row[] = [
     { id: 1, name: 'Alice', age: 30 },
     { id: 2, name: 'Bob',   age: 25 },
 ];
@@ -39,7 +41,7 @@ describe('SET_COLUMNS preserves columnVisibilityModel', () => {
         expect(result.current.state.columns.columnVisibilityModel).toEqual({ age: false });
 
         // Simulate a column update (e.g. a width change coming from a resize handler).
-        const updatedCols: GridColDef[] = COLS.map(c =>
+        const updatedCols: GridColDef<Row>[] = COLS.map(c =>
             c.field === 'name' ? { ...c, width: 200 } : c
         );
 

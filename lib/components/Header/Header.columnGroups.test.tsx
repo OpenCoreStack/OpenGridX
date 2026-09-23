@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, fireEvent, act } from '@testing-library/react';
 import { DataGrid } from '../DataGrid/DataGrid';
-import type { GridColDef, GridColumnGroupingModel, GridRowModel } from '../../types';
+import type { DataGridProps, GridColDef, GridColumnGroupingModel, GridRowModel } from '../../types';
 
 interface Row extends GridRowModel {
     id: number;
@@ -12,7 +12,7 @@ interface Row extends GridRowModel {
 
 const ROWS: Row[] = [1, 2, 3].map(i => ({ id: i, a: `A${i}`, b: `B${i}`, c: `C${i}` }));
 
-const renderGrid = (props: Partial<React.ComponentProps<typeof DataGrid<Row>>> & { columns: GridColDef<Row>[] }) =>
+const renderGrid = (props: Partial<DataGridProps<Row>> & { columns: GridColDef<Row>[] }) =>
     render(<div style={{ height: 400, width: 800 }}><DataGrid<Row> rows={ROWS} {...props} /></div>);
 
 afterEach(() => { vi.restoreAllMocks(); });

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { DataGrid } from '../DataGrid/DataGrid';
-import type { GridColDef, GridRowModel } from '../../types';
+import type { GridColDef, GridDetailPanelParams, GridRowModel } from '../../types';
 
 type Row = GridRowModel & { id: number; name: string; city: string; orders: { n: number }[] };
 const ROWS: Row[] = [
@@ -26,7 +26,7 @@ describe('detail panel callbacks', () => {
     });
 
     it('calls them only for the row that is expanded', () => {
-        const content = vi.fn(({ row }: { row: Row }) => <div>{row.orders.length} orders</div>);
+        const content = vi.fn(({ row }: GridDetailPanelParams<Row>) => <div>{row.orders.length} orders</div>);
         render(<DataGrid rows={ROWS} columns={COLS} getDetailPanelContent={content} />);
         fireEvent.click(toggles()[1]);
         expect(screen.getByText('2 orders')).toBeTruthy();
@@ -34,7 +34,7 @@ describe('detail panel callbacks', () => {
     });
 
     it('never calls them for row-grouping group rows, which get no toggle', () => {
-        const content = vi.fn(({ row }: { row: Row }) => <div>{row.orders.length} orders</div>);
+        const content = vi.fn(({ row }: GridDetailPanelParams<Row>) => <div>{row.orders.length} orders</div>);
         const { container } = render(
             <DataGrid rows={ROWS} columns={COLS} rowGroupingModel={['city']} defaultGroupingExpansionDepth={-1} getDetailPanelContent={content} />
         );

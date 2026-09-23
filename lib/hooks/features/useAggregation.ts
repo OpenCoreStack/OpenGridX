@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useRef, useCallback, useState } from 'react';
 import type {
     GridRowModel,
+    GridValidRowModel,
     GridColDef,
     GridAggregationModel,
     GridAggregationResult,
@@ -13,9 +14,9 @@ import { computeAggregations } from '../../utils/aggregation';
 export type { BuiltInAggFn } from '../../utils/aggregation';
 export { formatAggregationValue } from '../../utils/aggregation';
 
-export interface UseAggregationParams<R extends GridRowModel> {
+export interface UseAggregationParams<R extends GridValidRowModel = GridRowModel> {
         rows: R[];
-        columns?: GridColDef[];
+        columns?: GridColDef<R>[];
         aggregationModel: GridAggregationModel;
         isServerSide: boolean;
         dataSource?: GridDataSource<R>;
@@ -56,6 +57,11 @@ export function useServerAggregationResults(
     return [state && state.modelKey === modelKey ? state.results : null, setResults];
 }
 
+export function useAggregation<R extends GridValidRowModel = GridRowModel>(params: UseAggregationParams<R>): UseAggregationReturn;
+export function useAggregation<R extends GridValidRowModel = GridRowModel>(
+    params: Omit<UseAggregationParams<R>, 'columns'> & { columns?: GridColDef[] },
+): UseAggregationReturn;
+// Internally rows are read as GridRowModel records; the signature above is the public one.
 export function useAggregation<R extends GridRowModel>(
     params: UseAggregationParams<R>
 ): UseAggregationReturn {

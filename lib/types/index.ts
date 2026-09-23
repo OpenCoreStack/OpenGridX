@@ -17,6 +17,22 @@ export interface GridRowModel {
 }
 
 /**
+ * The constraint on the row type `R` of the generic grid types (`DataGridProps<R>`, `GridColDef<R>`,
+ * `GridRenderCellParams<R>` …): any object type. Your own interfaces and type aliases can be used as `R`
+ * directly; they do not need an index signature or to extend `GridRowModel`. Rows without an `id`
+ * field need `getRowId`. `GridRowModel` stays the default `R` (rows with any keys, read as `unknown`).
+ * @since v3.0
+ */
+export type GridValidRowModel = object;
+
+/**
+ * A callback that is checked bivariantly in its parameter, like a method. Used for `GridColDef`
+ * options that are either a value or a function, so a column typed for your rows (`GridColDef<Row>`)
+ * can still be used where an untyped `GridColDef` is expected.
+ */
+type GridColDefCallback<P, T> = { bivarianceHack(params: P): T }['bivarianceHack'];
+
+/**
  * Hierarchy metadata for a row. Exposed via `params.rowMeta` in `renderCell`.
  * Not present (`undefined`) for flat rows with no active tree-data or row-grouping.
  *
@@ -94,7 +110,7 @@ export type GridSortDirection = 'asc' | 'desc' | null;
  * Metadata for a single column.
  * Governs rendering, sorting, filtering, and data transformation.
  */
-export interface GridColDef<R extends GridRowModel = GridRowModel> {
+export interface GridColDef<R extends GridValidRowModel = GridRowModel> {
   /** The unique identifier for the column, typically matching a row object key. */
   field: string;
   /** Text displayed in the column header. */
@@ -145,23 +161,25 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
   /** Options used for 'singleSelect' type. */
   valueOptions?: Array<string | number | { value: unknown; label: string }>;
 
+  // The row callbacks below are declared as methods so that `GridColDef<Row>` stays assignable to an
+  // untyped `GridColDef` (method parameters are checked bivariantly).
   /** Function to compute a cell value from raw row data. */
-  valueGetter?: (params: GridValueGetterParams<R>) => unknown;
+  valueGetter?(params: GridValueGetterParams<R>): unknown;
   /**
    * Maps an edited value back onto the row when an edit is committed; return the updated row.
    * Needed for editable columns with a `valueGetter`, whose value is not stored in `row[field]`.
    * Without it the commit writes `row[field] = value`.
    * @since v3.0
    */
-  valueSetter?: (params: GridValueSetterParams<R>) => R;
+  valueSetter?(params: GridValueSetterParams<R>): R;
   /** Function to format a value into a human-readable string. */
-  valueFormatter?: (params: GridValueFormatterParams<R>) => string;
+  valueFormatter?(params: GridValueFormatterParams<R>): string;
   /** Custom component or element to render in the cell. */
-  renderCell?: (params: GridRenderCellParams<R>) => React.ReactNode;
+  renderCell?(params: GridRenderCellParams<R>): React.ReactNode;
   /** Custom component or element to render in the header. */
-  renderHeader?: (params: GridRenderHeaderParams) => React.ReactNode;
+  renderHeader?(params: GridRenderHeaderParams): React.ReactNode;
   /** Component to render when the cell is in edit mode. Receives `onValueChange`, `onCommit` and `onCancel`. */
-  renderEditCell?: (params: GridRenderEditCellParams<R>) => React.ReactNode;
+  renderEditCell?(params: GridRenderEditCellParams<R>): React.ReactNode;
   /** If true, the cell's value can be modified by the user. */
   editable?: boolean;
   /** Optional stacking order (CSS z-index). */
@@ -175,13 +193,13 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
    * `Infinity` means "to the end", and NaN / values below 1 mean no span. `params.value` is the
    * `valueGetter` result. A function that throws is treated as 1.
    */
-  colSpan?: number | ((params: GridRenderCellParams<R>) => number);
+  colSpan?: number | GridColDefCallback<GridRenderCellParams<R>, number>;
   /**
    * Number of rows this cell should occupy vertically, clamped to the end of its row section
    * (top-pinned, scrolling or bottom-pinned rows) and to the first row with an expanded detail
    * panel. Normalised like `colSpan`. With both set, the origin covers the whole rectangle.
    */
-  rowSpan?: number | ((params: GridRenderCellParams<R>) => number);
+  rowSpan?: number | GridColDefCallback<GridRenderCellParams<R>, number>;
 
   /**
    * Custom CSS class applied to every cell in this column.
@@ -191,7 +209,7 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
    *   cellClassName: 'my-class'
    *   cellClassName: ({ value }) => value > 100 ? 'cell--high' : 'cell--low'
    */
-  cellClassName?: string | ((params: GridRenderCellParams<R>) => string);
+  cellClassName?: string | GridColDefCallback<GridRenderCellParams<R>, string>;
 
   /**
    * Custom CSS class applied to the header cell of this column.
@@ -209,9 +227,9 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
 }
 
 /** Column definition used exclusively in List View mode. */
-export interface GridListViewColDef<R extends GridRowModel = GridRowModel> {
+export interface GridListViewColDef<R extends GridValidRowModel = GridRowModel> {
   field: string;
-  renderCell: (params: GridRenderCellParams<R>) => React.ReactNode;
+  renderCell(params: GridRenderCellParams<R>): React.ReactNode;
 }
 
 /**
@@ -245,7 +263,7 @@ export type GridColumnGroupingModel = GridColumnGroup[];
 
 
 /** Parameters passed to the `valueGetter` function. */
-export interface GridValueGetterParams<R extends GridRowModel = GridRowModel> {
+export interface GridValueGetterParams<R extends GridValidRowModel = GridRowModel> {
   /** The row object. */
   row: R;
   /** The field name. */
@@ -258,7 +276,7 @@ export interface GridValueGetterParams<R extends GridRowModel = GridRowModel> {
  * Parameters passed to the `valueSetter` function.
  * @since v3.0
  */
-export interface GridValueSetterParams<R extends GridRowModel = GridRowModel> {
+export interface GridValueSetterParams<R extends GridValidRowModel = GridRowModel> {
   /** The committed value from the editor. */
   value: unknown;
   /** The row as it was before the edit. */
@@ -268,7 +286,7 @@ export interface GridValueSetterParams<R extends GridRowModel = GridRowModel> {
 }
 
 /** Parameters passed to the `valueFormatter` function. */
-export interface GridValueFormatterParams<R extends GridRowModel = GridRowModel> {
+export interface GridValueFormatterParams<R extends GridValidRowModel = GridRowModel> {
   /** The raw value to format. */
   value: unknown;
   /** The row object. */
@@ -278,7 +296,7 @@ export interface GridValueFormatterParams<R extends GridRowModel = GridRowModel>
 }
 
 /** Parameters passed to the `renderCell` function. */
-export interface GridRenderCellParams<R extends GridRowModel = GridRowModel> {
+export interface GridRenderCellParams<R extends GridValidRowModel = GridRowModel> {
   /** The current cell value. */
   value: unknown;
   /**
@@ -307,7 +325,7 @@ export interface GridRenderCellParams<R extends GridRowModel = GridRowModel> {
  * Parameters passed to `renderEditCell`. `value` is the pending (uncommitted) value.
  * @since v3.0
  */
-export interface GridRenderEditCellParams<R extends GridRowModel = GridRowModel> extends GridRenderCellParams<R> {
+export interface GridRenderEditCellParams<R extends GridValidRowModel = GridRowModel> extends GridRenderCellParams<R> {
   /** Updates the pending value. Call it on every change; nothing is saved until `onCommit`. */
   onValueChange: (value: unknown) => void;
   /** Commits the pending value (runs `processRowUpdate`) and leaves edit mode. */
@@ -389,7 +407,7 @@ export interface GridFilterModel {
  * Configuration options for exporting the DataGrid to PDF format.
  * Requires jspdf and jspdf-autotable peer dependencies.
  */
-export interface PdfExportOptions {
+export interface PdfExportOptions<R extends GridValidRowModel = GridRowModel> {
   /**
    * Output filename without extension. Default: 'export'
    */
@@ -423,7 +441,7 @@ export interface PdfExportOptions {
    * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
    * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
    */
-  getRowId?: (row: GridRowModel) => GridRowId;
+  getRowId?: (row: R) => GridRowId;
 
   /**
    * Aggregation result from apiRef.current.getAggregationResult().
@@ -543,7 +561,7 @@ export interface GridColumnOrderChangeParams {
 
 export type GridColumnOrder = string[]; 
 
-export interface GridRowOrderChangeParams<R extends GridRowModel = GridRowModel> {
+export interface GridRowOrderChangeParams<R extends GridValidRowModel = GridRowModel> {
   row: R;
   oldIndex: number; 
   targetIndex: number; 
@@ -558,7 +576,7 @@ export interface GridGetRowsParams {
     aggregationModel?: GridAggregationModel;
 }
 
-export interface GridGetRowsResponse<R extends GridRowModel = GridRowModel> {
+export interface GridGetRowsResponse<R extends GridValidRowModel = GridRowModel> {
   rows: R[];
   rowCount?: number;
     aggregationResults?: Record<string, unknown>;
@@ -568,7 +586,7 @@ export interface GridGetRowsResponse<R extends GridRowModel = GridRowModel> {
  * Interface for providing data to the grid from a remote source.
  * Enables server-side sorting, filtering, and pagination.
  */
-export interface GridDataSource<R extends GridRowModel = GridRowModel> {
+export interface GridDataSource<R extends GridValidRowModel = GridRowModel> {
   /**
    * Fetches a chunk of rows based on current grid state.
    * @param params Sorting, filtering, and range parameters.
@@ -592,18 +610,12 @@ export interface GridPinnedColumns {
   right?: string[];
 }
 
-export interface GridPinnedRows<R extends GridRowModel = GridRowModel> {
+export interface GridPinnedRows<R extends GridValidRowModel = GridRowModel> {
   top?: R[];
   bottom?: R[];
 }
 
-export interface GridVirtualizationState {
-  renderContext: GridRenderContext;
-}
-
 export type GridRowGroupingModel = string[]; 
-
-export type GridAggregationFunction = (values: unknown[]) => unknown;
 
 export interface GridAggregationModel {
   [field: string]: string;
@@ -631,13 +643,6 @@ export interface GridPivotModel {
     valueFields:  GridPivotValueField[];
 }
 
-export interface GridRenderContext {
-  firstRowIndex: number;
-  lastRowIndex: number;
-  firstColumnIndex: number;
-  lastColumnIndex: number;
-}
-
 export interface GridInternalState {
   rows: {
     idRowsLookup: Map<GridRowId, GridRowModel>;
@@ -659,7 +664,6 @@ export interface GridInternalState {
     pinnedColumns: GridPinnedColumns;
     pinnedRows: GridPinnedRows;
   };
-  virtualization: GridVirtualizationState;
   dimensions: {
     rowHeight: number;
     headerHeight: number;
@@ -693,7 +697,7 @@ export interface GridLocaleText {
 /**
  * Main properties for the DataGrid component.
  */
-export interface DataGridProps<R extends GridRowModel = GridRowModel> {
+export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
   /** The dataset to display in the grid. */
   rows: R[];
   /** Column definitions governing how data is displayed and interacted with. */
@@ -913,19 +917,25 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
 
   /** Custom components to replace internal grid parts. */
   slots?: {
-    /** Component rendered as the grid toolbar. */
-    toolbar?: React.ComponentType<Record<string, unknown>>;
+    /**
+     * Component rendered as the grid toolbar. Receives `GridToolbarSlotProps` (plus `slotProps.toolbar`),
+     * so it can be typed with `GridToolbarProps` or wrap the exported `GridToolbar`.
+     */
+    toolbar?: React.ComponentType<GridToolbarSlotProps & Record<string, unknown>>;
     /**
      * Component rendered as the pagination control. Receives `PaginationProps` (plus `slotProps.pagination`),
      * so it can be typed with `PaginationProps` or wrap the exported `Pagination`.
      */
-    pagination?: React.ComponentType<PaginationProps & Record<string, unknown>>;
-    /** Component rendered when the grid is empty. */
-    noRowsOverlay?: React.ComponentType<Record<string, unknown>>;
-    /** Component rendered during loading states. */
-    loadingOverlay?: React.ComponentType<Record<string, unknown>>;
-    /** Component rendered at the very bottom of the grid. */
-    footer?: React.ComponentType<Record<string, unknown>>;
+    pagination?: React.ComponentType<GridPaginationSlotProps & Record<string, unknown>>;
+    /** Component rendered when the grid is empty. Receives only `slotProps.noRowsOverlay`. */
+    noRowsOverlay?: React.ComponentType<GridOverlaySlotProps>;
+    /** Component rendered during loading states. Receives only `slotProps.loadingOverlay`. */
+    loadingOverlay?: React.ComponentType<GridOverlaySlotProps>;
+    /**
+     * Component rendered at the very bottom of the grid, in place of the pagination area.
+     * Receives `GridFooterSlotProps` (plus `slotProps.footer`).
+     */
+    footer?: React.ComponentType<GridFooterSlotProps & Record<string, unknown>>;
   };
   /** Properties passed directly to custom slots. */
   slotProps?: {
@@ -935,10 +945,12 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
      * toolbar reads. `columns` / `baseColumns` are not checked, so typed `GridColDef<R>[]` can be passed.
      */
     toolbar?: Omit<Partial<GridToolbarProps>, 'columns' | 'baseColumns'> & Record<string, unknown>;
-    pagination?: Record<string, unknown>;
-    noRowsOverlay?: Record<string, unknown>;
-    loadingOverlay?: Record<string, unknown>;
-    footer?: Record<string, unknown>;
+    /** Merged over the `PaginationProps` the grid passes to the pagination slot. */
+    pagination?: Partial<GridPaginationSlotProps> & Record<string, unknown>;
+    noRowsOverlay?: GridOverlaySlotProps;
+    loadingOverlay?: GridOverlaySlotProps;
+    /** Merged over the `GridFooterSlotProps` the grid passes to the footer slot. */
+    footer?: Partial<GridFooterSlotProps> & Record<string, unknown>;
   };
 
   /** When true, renders the grid as a single-column list of cards. Perfect for mobile/responsive views. */
@@ -953,32 +965,70 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   columnGroupingModel?: GridColumnGroupingModel;
 }
 
+/**
+ * `DataGridProps<R>` with untyped `columns` (`GridColDef[]`, i.e. `GridColDef<GridRowModel>[]`). `DataGrid`
+ * accepts these props as well as `DataGridProps<R>`, so columns written without a row type work with rows of
+ * any type `R`. Their callbacks then see `params.row` as `GridRowModel`; type the columns as
+ * `GridColDef<R>[]` to get your row type there.
+ * @since v3.0
+ */
+export type DataGridUntypedColumnsProps<R extends GridValidRowModel = GridRowModel> =
+  Omit<DataGridProps<R>, 'columns'> & { columns: GridColDef[] };
+
+/**
+ * Props the grid passes to `slots.toolbar`, before `slotProps.toolbar` is merged over them: the
+ * `GridToolbarProps` it controls (columns, models and their change handlers) plus `apiRef`.
+ * @since v3.0
+ */
+export interface GridToolbarSlotProps extends GridToolbarProps {
+  apiRef: React.MutableRefObject<GridApi>;
+}
+
+/**
+ * Props the grid passes to `slots.pagination`, before `slotProps.pagination` is merged over them.
+ * @since v3.0
+ */
+export type GridPaginationSlotProps = PaginationProps;
+
+/**
+ * Props of `slots.noRowsOverlay` and `slots.loadingOverlay`: the grid passes none of its own, only
+ * `slotProps.noRowsOverlay` / `slotProps.loadingOverlay`.
+ * @since v3.0
+ */
+export type GridOverlaySlotProps = Record<string, unknown>;
+
+/**
+ * Props the grid passes to `slots.footer`, before `slotProps.footer` is merged over them.
+ * @since v3.0
+ */
+export interface GridFooterSlotProps {
+  apiRef: React.MutableRefObject<GridApi>;
+  /** The `aggregationModel` prop. */
+  aggregationModel: GridAggregationModel | undefined;
+  /** The grand-total aggregation result, or `null` when no aggregation is active. */
+  aggregationResult: GridAggregationResult | null;
+  /** Rows after filtering (`rowCount` from the server in server pagination mode). */
+  rowCount: number;
+  /** Whether pagination is in effect (false under row grouping and infinite scroll). */
+  pagination: boolean;
+  paginationModel: GridPaginationModel;
+  pageSizeOptions: number[];
+  onPaginationModelChange: (model: GridPaginationModel) => void;
+}
+
 /** The `slots` prop of `DataGrid`: components that replace built-in parts of the grid. */
 export type GridSlots = NonNullable<DataGridProps['slots']>;
 
 /** The `slotProps` prop of `DataGrid`: props for each slot, keyed like `GridSlots`. */
 export type GridSlotProps = NonNullable<DataGridProps['slotProps']>;
 
-export interface GridEditCellProps<V = unknown> {
-  id: GridRowId;
-  field: string;
-  value?: V;
-  formattedValue?: string;
-}
-
-export type GridRowModes = 'view' | 'edit';
-
-export interface GridRowModesModel {
-  [id: GridRowId]: { mode: GridRowModes; fieldToFocus?: string };
-}
-
-export interface GridRowParams<R extends GridRowModel = GridRowModel> {
+export interface GridRowParams<R extends GridValidRowModel = GridRowModel> {
   row: R;
   id: GridRowId;
   rowIndex: number;
 }
 
-export interface GridCellParams<R extends GridRowModel = GridRowModel> {
+export interface GridCellParams<R extends GridValidRowModel = GridRowModel> {
   row: R;
   field: string;
   value: unknown;
@@ -987,22 +1037,13 @@ export interface GridCellParams<R extends GridRowModel = GridRowModel> {
   colIndex: number;
 }
 
-export interface GridDetailPanelParams<R extends GridRowModel = GridRowModel> {
+export interface GridDetailPanelParams<R extends GridValidRowModel = GridRowModel> {
   row: R;
   id: GridRowId;
   rowIndex: number;
 }
 
 export type GridDetailPanelHeight = number | 'auto';
-
-export type GridDetailPanelContent<R extends GridRowModel = GridRowModel> = 
-  | React.ReactNode 
-  | ((params: GridDetailPanelParams<R>) => React.ReactNode);
-
-export interface GridDetailPanelState {
-  expandedRowIds: Set<GridRowId>;
-  contentCache: Map<GridRowId, React.ReactNode>;
-}
 
 /**
  * The Imperative API for interacting with the DataGrid.

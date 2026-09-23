@@ -1,5 +1,5 @@
 
-import type { GridColDef, GridRowId, GridRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
+import type { GridColDef, GridRowId, GridRowModel, GridValidRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
 import { groupHeaderLabel } from './groupLabel';
 import {
     aggregationForExport,
@@ -56,7 +56,7 @@ export interface ExcelSheetDefinition {
     alternateRowColor?: string | false;
 }
 
-export interface ExcelAdvancedExportOptions {
+export interface ExcelAdvancedExportOptions<R extends GridValidRowModel = GridRowModel> {
     /** Output filename (default: 'export.xlsx') */
     fileName?: string;
     /**
@@ -87,7 +87,7 @@ export interface ExcelAdvancedExportOptions {
      * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
      * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
      */
-    getRowId?: (row: GridRowModel) => GridRowId;
+    getRowId?: (row: R) => GridRowId;
     /**
      * Grouped row structure, typically from `apiRef.current.getGroupedExportRows()`.
      * When provided, sheets with `rows: 'all'` are written in grouped order: group-header,
@@ -334,6 +334,8 @@ async function fetchImages(
  * ExcelJS is loaded lazily so it does not affect bundle size for apps
  * that only use CSV/JSON export.
  */
+export function exportToExcelAdvanced<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef<R>[], options?: ExcelAdvancedExportOptions<R>): Promise<void>;
+export function exportToExcelAdvanced<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef[], options?: ExcelAdvancedExportOptions<R>): Promise<void>;
 export async function exportToExcelAdvanced<R extends GridRowModel>(
     rows: R[],
     columns: GridColDef<R>[],

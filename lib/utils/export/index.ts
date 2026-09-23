@@ -1,5 +1,5 @@
 
-import type { GridColDef, GridRowId, GridRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
+import type { GridColDef, GridRowId, GridRowModel, GridValidRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
 import { groupHeaderLabel } from './groupLabel';
 import {
     aggregationForExport,
@@ -18,7 +18,7 @@ import {
     summaryLabelText,
 } from './exportShared';
 
-export interface CsvExportOptions {
+export interface CsvExportOptions<R extends GridValidRowModel = GridRowModel> {
     fileName?: string;
     includeHeaders?: boolean;
     delimiter?: string;
@@ -31,7 +31,7 @@ export interface CsvExportOptions {
      * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
      * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
      */
-    getRowId?: (row: GridRowModel) => GridRowId;
+    getRowId?: (row: R) => GridRowId;
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     /** When provided, emits group headers, leaf rows, subtotals, and a grand total instead of a flat row list. */
@@ -73,10 +73,12 @@ function aggregateTexts<R extends GridRowModel>(
 
 const UTF8_BOM = String.fromCharCode(0xfeff);
 
+export function exportToCsv<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef<R>[], options?: CsvExportOptions<R>): void;
+export function exportToCsv<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef[], options?: CsvExportOptions<R>): void;
 export function exportToCsv<R extends GridRowModel>(
     rows: R[],
     columns: GridColDef<R>[],
-    options: CsvExportOptions = {}
+    options: CsvExportOptions<R> = {}
 ): void {
     const {
         fileName = 'export.csv',
@@ -161,7 +163,7 @@ function escapeCSV(value: string, delimiter: string): string {
     return value;
 }
 
-export interface ExcelExportOptions {
+export interface ExcelExportOptions<R extends GridValidRowModel = GridRowModel> {
     /**
      * Output filename. The file is an HTML table that Excel opens as a legacy `.xls` workbook, so a
      * `.xlsx` extension is replaced with `.xls` (Excel refuses HTML content named `.xlsx`). Use
@@ -180,7 +182,7 @@ export interface ExcelExportOptions {
      * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
      * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
      */
-    getRowId?: (row: GridRowModel) => GridRowId;
+    getRowId?: (row: R) => GridRowId;
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     /** When provided, emits group headers, leaf rows, subtotals, and a grand total instead of a flat row list. */
@@ -214,10 +216,12 @@ function xlsFileName(fileName: string): string {
     return corrected;
 }
 
+export function exportToExcel<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef<R>[], options?: ExcelExportOptions<R>): void;
+export function exportToExcel<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef[], options?: ExcelExportOptions<R>): void;
 export function exportToExcel<R extends GridRowModel>(
     rows: R[],
     columns: GridColDef<R>[],
-    options: ExcelExportOptions = {}
+    options: ExcelExportOptions<R> = {}
 ): void {
     const {
         fileName = 'export.xls',
@@ -318,7 +322,7 @@ export function exportToExcel<R extends GridRowModel>(
 // JSON Export
 // ============================================================================
 
-export interface JsonExportOptions {
+export interface JsonExportOptions<R extends GridValidRowModel = GridRowModel> {
     fileName?: string;
     pretty?: boolean;
     /**
@@ -330,7 +334,7 @@ export interface JsonExportOptions {
      * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
      * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
      */
-    getRowId?: (row: GridRowModel) => GridRowId;
+    getRowId?: (row: R) => GridRowId;
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     /** When provided, emits a nested grouping tree instead of a flat array. */
@@ -341,10 +345,12 @@ export interface JsonExportOptions {
  * Export data to JSON format. Values are written raw (after `valueGetter`, without
  * `valueFormatter`), including aggregation values, so the output can be parsed as data.
  */
+export function exportToJson<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef<R>[], options?: JsonExportOptions<R>): void;
+export function exportToJson<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef[], options?: JsonExportOptions<R>): void;
 export function exportToJson<R extends GridRowModel>(
     rows: R[],
     columns: GridColDef<R>[],
-    options: JsonExportOptions = {}
+    options: JsonExportOptions<R> = {}
 ): void {
     const {
         fileName = 'export.json',
@@ -442,7 +448,7 @@ export function exportToJson<R extends GridRowModel>(
 // Print
 // ============================================================================
 
-export interface PrintOptions {
+export interface PrintOptions<R extends GridValidRowModel = GridRowModel> {
     title?: string;
     /**
      * Print only these row IDs. A non-empty selection takes precedence over `groupedRows` (the
@@ -453,7 +459,7 @@ export interface PrintOptions {
      * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
      * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
      */
-    getRowId?: (row: GridRowModel) => GridRowId;
+    getRowId?: (row: R) => GridRowId;
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     /** When provided, emits group headers, leaf rows, subtotals, and a grand total instead of a flat row list. */
@@ -478,10 +484,12 @@ function printableImageUrl(value: string): string | null {
 /**
  * Open print dialog with formatted table
  */
+export function printGrid<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef<R>[], titleOrOptions?: string | PrintOptions<R>): Promise<void>;
+export function printGrid<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef[], titleOrOptions?: string | PrintOptions<R>): Promise<void>;
 export async function printGrid<R extends GridRowModel>(
     rows: R[],
     columns: GridColDef<R>[],
-    titleOrOptions?: string | PrintOptions
+    titleOrOptions?: string | PrintOptions<R>
 ): Promise<void> {
     // 1. Open window immediately to resolve user activation constraints and provide feedback
     const printWindow = window.open('', '_blank');
@@ -521,7 +529,7 @@ export async function printGrid<R extends GridRowModel>(
     try {
         let title = 'Print';
         let selectedRows: (string | number)[] | undefined;
-        let getRowId: ((row: GridRowModel) => GridRowId) | undefined;
+        let getRowId: ((row: R) => GridRowId) | undefined;
         let aggregationResult: Record<string, unknown> | null = null;
         let aggregationModel: GridAggregationModel | null = null;
 

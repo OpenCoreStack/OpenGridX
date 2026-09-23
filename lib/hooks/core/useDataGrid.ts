@@ -90,14 +90,6 @@ function createInitialState<R extends GridRowModel>(rows: R[], getRowId: GetRowI
       pinnedColumns: {},
       pinnedRows: {}
     },
-    virtualization: {
-      renderContext: {
-        firstRowIndex: 0,
-        lastRowIndex: 0,
-        firstColumnIndex: 0,
-        lastColumnIndex: 0
-      },
-    },
     dimensions: {
       rowHeight: 52,
       headerHeight: 56,

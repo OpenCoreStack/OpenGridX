@@ -1,9 +1,9 @@
 import { useState, useMemo, useRef, useId } from 'react';
 import { Checkbox } from '../ui/Checkbox';
-import type { GridColDef, GridRowModel } from '../../types';
+import type { GridColDef, GridRowModel, GridValidRowModel } from '../../types';
 
 
-export interface ColumnVisibilityPanelProps<R extends GridRowModel = GridRowModel> {
+export interface ColumnVisibilityPanelProps<R extends GridValidRowModel = GridRowModel> {
     columns: GridColDef<R>[];
     visibleColumns: Set<string>;
     onVisibilityChange: (field: string, isVisible: boolean) => void;
@@ -43,7 +43,7 @@ function DragHandleIcon() {
     );
 }
 
-export function ColumnVisibilityPanel<R extends GridRowModel = GridRowModel>(
+export function ColumnVisibilityPanel<R extends GridValidRowModel = GridRowModel>(
     props: ColumnVisibilityPanelProps<R>
 ) {
     const { columns, visibleColumns, onVisibilityChange, onShowAll, onHideAll, onColumnReorder, onColumnOrderReset, showNonHideableColumns } = props;
