@@ -20,7 +20,7 @@ import { DataGrid, GridToolbar } from '@opencorestack/opengridx';
 />
 ```
 
-`GridToolbar` automatically hides buttons for features whose callbacks are not wired. For example, if you don't pass `onFilterModelChange` the search bar and filter button are not rendered, and without `onAggregationModelChange` there is no Summaries button.
+`GridToolbar` hides the buttons whose callbacks it does not receive: no `onFilterModelChange`, no search bar and Filters button; no `onColumnVisibilityModelChange`, no Columns button; no `onAggregationModelChange`, no Summaries button; no `onPivotModelChange`, no Pivot button. Mounted through `slots.toolbar`, the grid always passes the filter, column-visibility and aggregation callbacks, and the pivot ones when `pivotMode`, `pivotModel` or `onPivotModelChange` is set, so those buttons show without further props. A standalone `<GridToolbar />` shows only what you wire.
 
 One panel is open at a time. Every panel closes on Escape; the Columns, Summaries and Pivot panels also close on a click outside them. Each trigger button has `aria-haspopup="dialog"` and an `aria-expanded` state.
 
@@ -38,14 +38,15 @@ The Summaries panel lists each aggregable column with the functions it allows: i
 | `onAggregationModelChange` | `(model) => void` | — | Called when the user changes aggregation settings. Presence of this prop shows the Summaries button. |
 | `pivotModel` | `GridPivotModel` | — | Current pivot configuration. |
 | `onPivotModelChange` | `(model) => void` | — | Called when the user changes pivot settings. Presence of this prop shows the Pivot button. |
-| `filterModel` | `GridFilterModel` | — | Current filter model. Presence of this prop shows the search bar and Filter button. |
-| `onFilterModelChange` | `(model) => void` | — | Called when the user changes filters or the search query. |
+| `filterModel` | `GridFilterModel` | — | Current filter model. |
+| `onFilterModelChange` | `(model) => void` | — | Called when the user changes filters or the search query. Presence of this prop shows the search bar and Filters button. |
 | `columnVisibilityModel` | `Record<string, boolean>` | `{}` | Current column visibility state. |
 | `onColumnVisibilityModelChange` | `(model) => void` | — | Called when the user shows/hides columns. Presence shows the Columns button. |
 | `onColumnReorder` | `(from, to) => void` | — | Called when the user drags a column in the Columns panel. |
 | `onColumnOrderReset` | `() => void` | — | Called when the user clicks "Reset order" in the Columns panel. |
 | `forceColumnsOpen` | `boolean` | — | When it becomes `true`, opens the Columns panel. `DataGrid` sets it for the column menu's **Manage columns**. A `GridToolbar` that receives it from the grid (spread the slot props into it) shows the panel; when no such toolbar is rendered, the grid opens its standalone Columns panel instead. |
 | `onColumnsPanelClose` | `() => void` | — | Called whenever the Columns panel closes: its button, a custom `renderColumnsButton`, another panel opening, click-outside or Escape. |
+| `showNonHideableColumns` | `boolean` | `false` | Show `hideable: false` columns in the Columns panel as disabled rows. |
 | `children` | `ReactNode` | — | Content rendered in the **left** side of the toolbar (before the spacer). |
 | `rightContent` | `ReactNode` | — | Content rendered in the **right** side of the toolbar (after all built-in buttons). |
 | `className` | `string` | — | Additional CSS class applied to the toolbar root `<div>`. Use for visual overrides without replacing the component. |
@@ -224,4 +225,15 @@ function MyToolbar() {
 <DataGrid slots={{ toolbar: MyToolbar }} />
 ```
 
-The custom component receives all `GridToolbarProps` via `slotProps.toolbar`.
+The custom component receives the toolbar props the grid owns (`columns`, `baseColumns`, the filter / visibility / aggregation / pivot models and their change handlers, `onColumnReorder`, `onColumnOrderReset`, `forceColumnsOpen`, `onColumnsPanelClose`) plus `apiRef`, with `slotProps.toolbar` spread over them. Spread them into a `GridToolbar` to keep the built-in buttons:
+
+```tsx
+import { GridToolbar } from '@opencorestack/opengridx';
+import type { GridToolbarProps } from '@opencorestack/opengridx';
+
+function MyToolbar(props: GridToolbarProps) {
+  return <GridToolbar {...props} rightContent={<span>Custom</span>} />;
+}
+```
+
+`slotProps.toolbar` is typed as `GridToolbarProps` plus any extra keys (v3.0+), so the render props above get their parameter types inferred and a misspelt built-in key with a wrong value type is a type error.

@@ -8,10 +8,11 @@ Internal component rendered when the grid has no rows to display. Replaces the r
 | :--- | :--- | :--- |
 | `noRowsLabel` | `string` | Text shown beneath the empty-state icon. Controlled by the `noRowsLabel` DataGrid prop. |
 | `width` | `number` | Pixel width of the empty-state container, matched to the grid's total column width. |
+| `overlay` | `ReactNode` | The rendered `noRowsOverlay` slot, shown instead of the icon and label. |
 
 ## 🔄 When it renders
 
-`GridEmptyState` renders when `allRenderableRows.length === 0` and the grid is not in a loading state. The loading skeleton takes precedence — if `loading={true}` the skeleton rows are shown instead.
+`GridEmptyState` renders when no row passes the filter, the grid is not loading and no data-source error is shown. The loading state takes precedence — while `loading` (or a `dataSource` request) is pending the skeleton rows (or the `loadingOverlay` slot) are shown instead, and a `dataSource` error shows the error overlay.
 
 ## 🎨 Customizing via slot
 

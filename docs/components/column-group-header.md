@@ -1,50 +1,77 @@
-# `<ColumnGroupHeader />`
+# Column Group Headers
 
-The `ColumnGroupHeader` component handles the rendering of nested header groups in multi-level column layouts. It allows for advanced data organization where multiple columns are grouped under a single, semantic parent.
-
-## 📑 Overview
-- **Hierarchical Layout**: Supports an unlimited depth of nested groupings (Year → Quarter → Metric).
-- **Sticky Behavior**: Automatically stays within the grid's header section during horizontal scroll.
-- **Dynamic Calculation**: Positions itself based on the combined width of its child columns.
-- **Reflective Styles**: Inherits header-level styling while providing specialized group-level CSS hooks.
-
----
+Column group headers are spanning header cells above the regular column headers, so related columns can sit under a shared label (Year → Quarter → Metric). They are rendered by `<Header />` from the `columnGroupingModel` prop on `<DataGrid />`; there is no separate component to import or replace (the old internal `ColumnGroupHeader` component was removed in v3.0).
 
 ## 🛠️ Usage
 
-### Define Multi-Level Grouping
-In your columns definition, include nested `columnGroups`.
+Pass a `columnGroupingModel`. Each group lists column `field`s, or nested groups, in `children`:
 
 ```tsx
-const columns = [
-  { field: 'id', headerName: 'ID', width: 100 },
-  { field: 'q1', headerName: 'Q1 Sales', width: 120 },
-  { field: 'q2', headerName: 'Q2 Sales', width: 120 },
+import { DataGrid } from '@opencorestack/opengridx';
+import type { GridColDef, GridColumnGroupingModel } from '@opencorestack/opengridx';
+
+const columns: GridColDef[] = [
+  { field: 'name', headerName: 'Name', width: 160 },
+  { field: 'q1Sales', headerName: 'Sales', type: 'number' },
+  { field: 'q1Target', headerName: 'Target', type: 'number' },
+  { field: 'q2Sales', headerName: 'Sales', type: 'number' },
+  { field: 'q2Target', headerName: 'Target', type: 'number' },
 ];
 
-// Define your mapping logic in your component or use the columns API:
-// ColumnGroupHeader is typically used by the DataGrid automatically when 
-// nested structures are detected.
+const columnGroupingModel: GridColumnGroupingModel = [
+  {
+    groupId: '2024',
+    headerName: '2024 Performance',
+    children: [
+      { groupId: 'q1', headerName: 'Q1', children: ['q1Sales', 'q1Target'] },
+      { groupId: 'q2', headerName: 'Q2', children: ['q2Sales', 'q2Target'], headerClassName: 'my-q2-header' },
+    ],
+  },
+];
+
+<DataGrid rows={rows} columns={columns} columnGroupingModel={columnGroupingModel} height={500} />
 ```
 
-### Direct Customization
-While the grid uses this component internally, you can customize its appearance via specific CSS classes or by replacing it in the `slots` API.
+This renders two group rows (`2024 Performance`, then `Q1` / `Q2`) above the column header row: one group row per nesting level. `name` is not in any group, so it gets an empty filler cell in both group rows.
+
+See [`GridColumnGroup`](../API_REFERENCE.md#️-column-group-headers) for the type.
 
 ---
 
-## ⚙️ How it Works
+## ⚙️ How it works
 
-1. **Hierarchy Resolution**: The component takes a structure and determines which headers need to be "merged" into groups.
-2. **Width Aggregation**: Each group header calculates its own total width by summing the widths of all its children (including other nested groups).
-3. **Alignment**: Ensuring that the group labels are centered over their respective child columns for a clean visual hierarchy.
+- **Order, visibility and pinning**: a group cell covers its visible member columns in their rendered order. When the members are not adjacent (because of reordering, hiding or a pinned-section boundary), the group renders one labelled cell per run of adjacent members. Group cells over pinned columns are sticky, so they stay above their columns on horizontal scroll.
+- **Widths**: a group cell is exactly as wide as its member columns, including flex, `auto` and percentage widths and manual resizes.
+- **Reordering**: header drag and the toolbar / Columns-panel reorder keep groups intact: a column can only be moved onto a column of the same innermost group, and an ungrouped column only onto another ungrouped column.
+- **Accessibility**: group rows are `role="row"` with `aria-rowindex`; group cells are `role="columnheader"` with `aria-colspan` (visible member columns) and `aria-colindex`; filler cells are `aria-hidden`. The grid's `aria-rowcount` includes the group rows.
 
 ---
 
-## 🎨 Customization
+## 🎨 Styling
 
-Column group headers are rendered internally; they cannot be replaced via the slots API. Style them through CSS targeting `.ogx__column-group-header`, or use the `columnGroupingModel` to control grouping structure.
+Group headers cannot be replaced through the `slots` API. Style them with CSS:
+
+| Class | Element |
+| :--- | :--- |
+| `.ogx-col-group-row` | One group header row (one per nesting level). |
+| `.ogx-col-group-cell` | Every cell in a group row. |
+| `.ogx-col-group-cell--group` | A cell that shows a group label. |
+| `.ogx-col-group-cell--filler` | An empty cell over columns that are not in a group at that level. |
+| `.ogx-col-group-cell--pinned` | A cell over pinned columns (sticky), with `--pinned-left` or `--pinned-right`. |
+| `.ogx-col-group-cell__label` | The label text inside a group cell. |
+
+A group's `headerClassName` is added to its group cells, next to `ogx-col-group-cell` and `ogx-col-group-cell--group`:
+
+```css
+.ogx-col-group-cell--group {
+  font-weight: 600;
+}
+.my-q2-header {
+  background: #eef2ff;
+}
+```
 
 ## 📝 Best Practices
 - **Logical Labels**: Use clear, concise labels for groups like `2024 Performance` or `Contact Info`.
 - **Type-Based Grouping**: Align related data types (e.g., all currency fields under a `Finance` group) for better user comprehension.
-- **Limit Depth**: While technically unlimited, more than 3-4 levels of nesting can become difficult for users to follow on small screens.
+- **Limit Depth**: More than 3-4 levels of nesting becomes hard to follow, especially on small screens.

@@ -22,8 +22,8 @@ function MyGrid() {
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `rows` | `R[]` | `[]` | The dataset to display. |
-| `columns` | `GridColDef[]` | `[]` | Column definitions. |
+| `rows` | `R[]` | — | **Required.** The dataset to display (`[]` when a `dataSource` supplies the rows). |
+| `columns` | `GridColDef<R>[]` | — | **Required.** Column definitions. |
 | `getRowId` | `(row: R) => GridRowId` | `row.id` | Unique ID for each row. Only keys the grid's store; row objects are never copied or given an `id` (v3.0+). Duplicate ids keep the first row and log a development warning. |
 | `height` | `number \| string` | `undefined` | Height of the grid container. |
 | `loading` | `boolean` | `false` | Displays a loading skeleton/shimmer. |
@@ -51,21 +51,22 @@ function MyGrid() {
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `rowGroupingModel` | `string[]` | `[]` | Fields to group by (in order). |
-| `groupingColDef` | `GridColDef` | — | Config for the dedicated `__group__` column created at position 0, auto-pinned left, when grouping is active. |
+| `groupingColDef` | `Partial<GridColDef<R>>` | — | Config for the dedicated `__group__` column created at position 0, auto-pinned left, when row grouping or tree data is active. Every key is optional; `field` is always `'__group__'`. |
 
 ## 🖱️ Interaction & Events
 
 | Prop | Type | Description |
 | :--- | :--- | :--- |
-| `onRowClick` | `(params) => void` | Fired when clicking a row body. |
-| `onCellClick` | `(params) => void` | Fired when clicking a specific cell. |
+| `onRowClick` | `(params: GridRowParams) => void` | Fired when clicking a row body (not for synthetic group rows, which toggle instead). |
+| `onRowDoubleClick` | `(params: GridRowParams) => void` | Fired when double-clicking a row. |
+| `onCellClick` | `(params: GridCellParams) => void` | Fired when clicking a specific cell. |
 | `onPaginationModelChange` | `(model: GridPaginationModel) => void` | Fired when page or page size changes. |
-| `onStateChange` | `(state) => void` | Fired on mount and whenever the value of the sort, filter, pagination, column or density state changes. |
+| `onStateChange` | `(state: GridState) => void` | Fired on mount and whenever the value of the sort, filter, pagination, column or density state changes. |
 | `processRowUpdate` | `(new, old) => R \| Promise<R>` | Called once per committed cell edit; return the row to store (or a Promise of it). See [Editing](../features/editing-reordering.md#commit-and-cancel). |
 
 ## 📦 Slots
 
-Customize internal components using the `slots` prop.
+Customize internal components using the `slots` prop (`GridSlots`: `toolbar`, `pagination`, `noRowsOverlay`, `loadingOverlay`, `footer`) and pass them props with `slotProps`. See [`GridSlots`](../API_REFERENCE.md#gridslots-and-gridslotprops).
 
 ```tsx
 <DataGrid
@@ -88,7 +89,7 @@ Customize internal components using the `slots` prop.
 - [Pagination](pagination.md)
 - [Tooltip](tooltip.md)
 - [Column Visibility](column-visibility.md)
-- [Column Grouping](column-group-header.md)
+- [Column Group Headers](column-group-header.md)
 - [Column Resizing](column-resize.md)
 - [Empty State](empty-state.md)
 - [Error Overlay](error-overlay.md)

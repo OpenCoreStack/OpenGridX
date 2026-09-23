@@ -4,9 +4,11 @@ The atomic unit of the grid. Handles rendering, formatting, editing, and selecti
 
 ## ⚙️ Props
 
+`Cell` and its props type `CellProps` are exported. The main props:
+
 | Prop | Type | Description |
 | :--- | :--- | :--- |
-| `value` | `any` | The raw value to display. |
+| `value` | `unknown` | The cell value (after `valueGetter`). |
 | `row` | `GridRowModel` | The full row data object. |
 | `colDef` | `GridColDef` | Configuration for the column. |
 | `rowIndex` | `number` | 0-indexed position in the current view. |
@@ -19,6 +21,8 @@ The atomic unit of the grid. Handles rendering, formatting, editing, and selecti
 | `onEditStop` | `(cancel?: boolean, field?: string) => void` | Ends this cell's edit (commit, or discard when `cancel` is true). The cell passes its own `field` so a late call cannot end another cell's edit. Also called (commit) when the cell unmounts while editing. |
 | `width` | `number` | Calculated width including resizing and flex. |
 | `pinnedPosition` | `'left' \| 'right' \| null` | Sticky positioning state. |
+| `rowMeta` | `GridRowMeta` | Hierarchy metadata, passed to `renderCell` as `params.rowMeta`. |
+| `onCellClick` | `(params: GridCellParams) => void` | Click handler (not called for clicks inside an open editor). |
 
 ## 🧩 Modifiers & Classes
 

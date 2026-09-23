@@ -13,6 +13,7 @@ import type {
     GridPaginationModel,
     GridLocaleText,
     GridRowScrollEndParams,
+    GridSlots,
 } from '../../types';
 
 export interface GridListViewProps<R extends GridRowModel> {
@@ -42,7 +43,7 @@ export interface GridListViewProps<R extends GridRowModel> {
     paginationMode: 'client' | 'server' | 'infinite';
     /** The grid's pagination total; used in server mode. */
     serverRowCount: number;
-    paginationSlot?: React.ComponentType<Record<string, unknown>>;
+    paginationSlot?: GridSlots['pagination'];
     paginationSlotProps?: Record<string, unknown>;
     localeText?: Pick<GridLocaleText, 'paginationRowsPerPage' | 'paginationOf' | 'paginationPage'>;
     onRowClick: (params: GridRowParams<R>) => void;

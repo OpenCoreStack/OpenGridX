@@ -6,6 +6,7 @@ export type {
   GridPaginationState,
   GridColumnsState,
   GridDensityState,
+  GridDataSourceState,
 } from './types';
 
 export {
