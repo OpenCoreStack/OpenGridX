@@ -16,6 +16,7 @@ import { useGridColumnLookup } from '../../hooks/core/useGridColumnLookup';
 import { useGridPageCorrection } from '../../hooks/core/useGridPageCorrection';
 import { useGridColumnsPanel } from '../../hooks/core/useGridColumnsPanel';
 import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
+import { GridToolbarSlot } from './GridToolbarSlot';
 import { scrollRowIntoView } from '../../utils/scroll';
 import { upsertSortItem } from '../../utils/sorting';
 import { getAriaRowLayout } from '../../utils/aria';
@@ -146,32 +147,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // Stable defaults
     const defaultRowGroupingModel = useMemo(() => [], []);
     const rowGroupingModel = propRowGroupingModel || defaultRowGroupingModel;
-
-    // ─── Stabilize toolbar component identity ────────────────────────────────
-    // Problem: demos/users often define their toolbar as an inline function
-    // INSIDE their component body, e.g.:
-    //   const MyToolbar = (props) => <GridToolbar {...props} />  // inside render!
-    // This creates a NEW function reference on every parent re-render. React
-    // reconciles by component *identity*, so a new reference = unmount old
-    // toolbar + mount fresh one = all toolbar state (search expansion, filter
-    // open, typed text) is destroyed on every keystroke.
-    //
-    // Fix: a stable wrapper component created ONCE via useRef. Its identity
-    // never changes, so React keeps it mounted. It reads the latest toolbar
-    // from a separate ref that is updated on every render, so the rendered
-    // output is always current — zero stale closures.
-    const latestToolbarRef = useRef(slots?.toolbar);
-    latestToolbarRef.current = slots?.toolbar;
-    // The wrapper itself has a stable identity (created once via useRef).
-    // We call latestToolbarRef.current(props) as a PLAIN FUNCTION — not via
-    // React.createElement — so React never sees a changing component type.
-    // The elements the toolbar function returns are reconciled normally, so
-    // GridToolbar's internal state (filterOpen, search expansion) is preserved
-    // even when the toolbar is defined as an inline function inside the parent.
-    const StableToolbar = useRef((props: Record<string, unknown>) => {
-        const Toolbar = latestToolbarRef.current;
-        return Toolbar ? (Toolbar as (p: typeof props) => React.ReactElement | null)(props) : null;
-    }).current;
 
     const controlledState = useGridControlledState({
         initialState,
@@ -871,6 +846,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const NoRowsOverlaySlot = slots?.noRowsOverlay;
     const LoadingOverlaySlot = slots?.loadingOverlay;
     const FooterSlot = slots?.footer;
+    const ToolbarSlot = slots?.toolbar;
 
     const toolbarProps = React.useMemo(() => {
         if (!slots?.toolbar) return null;
@@ -931,9 +907,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             } as unknown as React.CSSProperties}
             aria-busy={effectiveLoading}
         >
-            {toolbarProps && (
+            {ToolbarSlot && toolbarProps && (
                 <GridToolbarHostContext.Provider value={columnsPanel.toolbarHost}>
-                    <StableToolbar {...toolbarProps} />
+                    <GridToolbarSlot component={ToolbarSlot} toolbarProps={toolbarProps} />
                 </GridToolbarHostContext.Provider>
             )}
 
