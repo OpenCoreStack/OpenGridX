@@ -9,6 +9,7 @@ import {
   GridAggregationModel,
   GridAggregationResult,
 } from '../../types';
+import { isServerDrivenDataSource } from '../../utils/dataSource';
 
 interface UseGridDataSourceParams<R extends GridRowModel> {
   dataSource?: GridDataSource<R>;
@@ -144,9 +145,7 @@ export function useGridDataSource<R extends GridRowModel>(params: UseGridDataSou
   ]);
 
   useEffect(() => {
-    const isServerSide = paginationMode === 'server' || paginationMode === 'infinite' || sortingMode === 'server' || filterMode === 'server';
-
-    if (dataSource && isServerSide) {
+    if (isServerDrivenDataSource({ dataSource, paginationMode, sortingMode, filterMode })) {
       const timer = setTimeout(() => {
         fetchRows();
       }, 300);

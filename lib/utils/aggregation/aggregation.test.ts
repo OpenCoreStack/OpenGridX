@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { AGGREGATION_FUNCTIONS } from './index';
+import { AGGREGATION_FUNCTIONS, computeAggregations, formatAggregateForColumn } from './index';
+import type { GridColDef, GridRowModel } from '../../types';
 
 describe('AGGREGATION_FUNCTIONS', () => {
     it('computes min / max over more values than a spread argument list allows', () => {
@@ -12,5 +13,92 @@ describe('AGGREGATION_FUNCTIONS', () => {
         expect(AGGREGATION_FUNCTIONS.min([null, undefined])).toBeNull();
         expect(AGGREGATION_FUNCTIONS.max([])).toBeNull();
         expect(AGGREGATION_FUNCTIONS.avg(['x'])).toBeNull();
+    });
+
+    it('ignores blank strings instead of treating them as zero', () => {
+        expect(AGGREGATION_FUNCTIONS.avg([10, '', 20])).toBe(15);
+        expect(AGGREGATION_FUNCTIONS.min([10, ' ', 20])).toBe(10);
+        expect(AGGREGATION_FUNCTIONS.max([-5, '', -1])).toBe(-1);
+        expect(AGGREGATION_FUNCTIONS.sum(['', '  ', 4])).toBe(4);
+    });
+
+    it('ignores booleans and arrays, which Number() would coerce to 0 or 1', () => {
+        expect(AGGREGATION_FUNCTIONS.min([false, 5, 7])).toBe(5);
+        expect(AGGREGATION_FUNCTIONS.max([true, -3])).toBe(-3);
+        expect(AGGREGATION_FUNCTIONS.avg([[], 8, 12])).toBe(10);
+    });
+
+    it('still accepts numeric strings and dates', () => {
+        expect(AGGREGATION_FUNCTIONS.sum(['12', 3])).toBe(15);
+        expect(AGGREGATION_FUNCTIONS.min(['10', 9])).toBe(9);
+    });
+
+    it('returns the date itself for min / max over dates, not its epoch milliseconds', () => {
+        const early = new Date(2024, 0, 15);
+        const late = new Date(2024, 5, 1);
+        expect(AGGREGATION_FUNCTIONS.min([late, null, early])).toBe(early);
+        expect(AGGREGATION_FUNCTIONS.max([early, late])).toBe(late);
+    });
+
+    it('does not count or distinguish blank strings', () => {
+        expect(AGGREGATION_FUNCTIONS.count(['a', '', null, undefined, ' ', 0])).toBe(2);
+        expect(AGGREGATION_FUNCTIONS.unique(['a', 'a', '', 'b'])).toBe(2);
+    });
+});
+
+describe('computeAggregations', () => {
+    it('aggregates the value a column displays when it has a valueGetter', () => {
+        const rows: GridRowModel[] = [{ id: 1, price: 2, qty: 3 }, { id: 2, price: 5, qty: 2 }];
+        const total: GridColDef = {
+            field: 'total',
+            valueGetter: ({ row }) => (row.price as number) * (row.qty as number),
+        };
+        const result = computeAggregations(rows, { total: 'sum' }, new Map([['total', total]]), 'test');
+        expect(result.total).toBe(16);
+    });
+});
+
+describe('formatAggregateForColumn', () => {
+    const money: GridColDef = {
+        field: 'salary',
+        valueFormatter: ({ value, row }) => `${(row as { cur?: string }).cur ?? '$'}${Number(value).toFixed(0)}`,
+    };
+
+    it('applies the column valueFormatter to sum / avg / min / max', () => {
+        expect(formatAggregateForColumn(6000, 'sum', money)).toBe('$6000');
+        expect(formatAggregateForColumn(2000.4, 'avg', money)).toBe('$2000');
+        expect(formatAggregateForColumn(10, 'min', money)).toBe('$10');
+    });
+
+    it('passes the record of aggregated values to the valueFormatter as its row', () => {
+        expect(formatAggregateForColumn(5, 'max', money, { cur: '€', salary: 5 })).toBe('€5');
+    });
+
+    it('formats date min / max as dates: through the valueFormatter, else as a locale date', () => {
+        const dateCol: GridColDef = { field: 'joined', type: 'date' };
+        const withFormatter: GridColDef = { ...dateCol, valueFormatter: ({ value }) => (value as Date).toISOString().slice(0, 10) };
+        const day = new Date(Date.UTC(2024, 0, 15));
+        expect(formatAggregateForColumn(day, 'min', dateCol)).toBe(day.toLocaleDateString());
+        expect(formatAggregateForColumn(day, 'max', withFormatter)).toBe('2024-01-15');
+        // a server may return epoch milliseconds for a date column
+        expect(formatAggregateForColumn(day.getTime(), 'max', withFormatter)).toBe('2024-01-15');
+    });
+
+    it('does not apply the valueFormatter to count or unique, which are not in the column unit', () => {
+        expect(formatAggregateForColumn(1234, 'count', money)).toBe('1,234');
+        expect(formatAggregateForColumn(3, 'unique', money)).toBe('3');
+    });
+
+    it('falls back to the default format when the valueFormatter throws', () => {
+        const fragile: GridColDef = {
+            field: 'salary',
+            valueFormatter: ({ row }) => (row as unknown as { cur: { s: string } }).cur.s,
+        };
+        expect(formatAggregateForColumn(6000, 'sum', fragile)).toBe('6,000');
+    });
+
+    it('shows an em dash for a missing value', () => {
+        expect(formatAggregateForColumn(null, 'sum', money)).toBe('—');
+        expect(formatAggregateForColumn(undefined, 'avg')).toBe('—');
     });
 });

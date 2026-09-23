@@ -192,6 +192,18 @@
   z-index: 3;
   background: var(--ogx-grid-header-background);
 }
+/* Aligns with the row's drag-handle / expand / checkbox column. */
+.ogx__aggregation-spacer {
+  width: 48px;
+  min-width: 48px;
+  flex-shrink: 0;
+  align-self: stretch;
+}
+.ogx__aggregation-spacer--pinned {
+  position: sticky;
+  z-index: 3;
+  background: var(--ogx-grid-header-background);
+}
 .ogx__aggregation-cell--pinned-right {
   border-left: 1px solid var(--ogx-grid-border-color);
 }

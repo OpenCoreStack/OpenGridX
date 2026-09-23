@@ -125,7 +125,7 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `pivotMode` | `boolean` | `false` | Switches the grid to multidimensional Pivot Mode. |
+| `pivotMode` | `boolean` | `false` | Switches the grid to multidimensional Pivot Mode (client-side: ignored when a `dataSource` is set; tree data and row grouping are turned off while pivoting). See [Aggregation & Pivot](features/aggregation-pivot.md#-pivot-mode). |
 | `pivotModel` | `GridPivotModel` | — | Controlled pivot configuration (row fields, column fields, value fields). |
 | `onPivotModelChange` | `(model: GridPivotModel) => void` | — | Fired when the pivot model changes. |
 
@@ -246,7 +246,7 @@ Access these methods via the `apiRef` prop.
 | `setPageSize(pageSize)` | `void` | Change the page size and go to page 0. Fires `onPaginationModelChange`. |
 | `scrollToIndexes(params)` | `void` | Scroll to specific row/column index. |
 | `getAllColumns()` | `GridColDef[]` | Get all defined columns. |
-| `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results. |
+| `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results (`null` without an `aggregationModel`, and in pivot mode). |
 | `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
 | `getAllFilteredRows()` | `GridRowModel[]` | Get every row that passes the filter, sorted, regardless of pagination, including pinned rows. Under row grouping and tree data it returns the data rows (no group rows) in hierarchy order with every group expanded. Use for full-dataset exports. |
 | `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total), sorted and filtered like the screen. Collapsed groups are included with their rows, and subtotals are computed over each group's exported rows. Group-header and subtotal entries carry `groupLabel`, the label the grid shows (v3.0+). Returns `null` when row grouping is not active. |
@@ -341,10 +341,10 @@ Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative 
 | `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. |
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header kebab/context menu. |
 | `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, PDF and Print exports (including their subtotals and totals). |
-| `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`. |
+| `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`, or used as a pivot row or column field (the pivot panel does not offer it). |
 | `groupingValueFormatter` | `(params: { field: string; value: unknown }) => string` | — | Custom formatter for group-header labels when this column is the active grouping field. Falls back to `"field: value"` when omitted. |
-| `aggregable` | `boolean` | `true` | Allow this column to be aggregated. |
-| `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are computed and available for this column (e.g. `['sum', 'avg']`). Functions outside this list are skipped even if set in `aggregationModel`. |
+| `aggregable` | `boolean` | `true` | Allow this column to be aggregated. `false` keeps it out of the toolbar's Summaries panel and out of the pivot panel's value fields. |
+| `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are computed and available for this column (e.g. `['sum', 'avg']`). Functions outside this list are skipped even if set in `aggregationModel` or a pivot value field, and the pivot panel offers only these. |
 
 ---
 
@@ -428,10 +428,10 @@ const { aggregationResult, isLoading } = useAggregation({
 
 | Param | Type | Description |
 | :--- | :--- | :--- |
-| `rows` | `GridRowModel[]` | The rows to aggregate. |
+| `rows` | `GridRowModel[]` | The rows to aggregate (already filtered: the hook aggregates every row it is given). |
 | `aggregationModel` | `GridAggregationModel` | Map of `field → aggFn` (e.g. `{ salary: 'sum' }`). |
-| `isServerSide` | `boolean` | If `true`, skips client computation and uses `serverAggregationResults`. |
-| `filterModel` | `GridFilterModel` | Optional — restricts aggregation to filtered rows. |
+| `isServerSide` | `boolean` | If `true`, skips client computation and uses `serverAggregationResults`, else the result of `dataSource.getAggregations`. The grid sets it whenever a `dataSource` drives the rows (server or infinite pagination, server sorting or server filtering). |
+| `filterModel` | `GridFilterModel` | Optional — sent to `dataSource.getAggregations`. It does not filter `rows`. |
 | `sortModel` | `GridSortItem[]` | Optional — used when `dataSource` is provided. |
 | `dataSource` | `GridDataSource` | Optional — server-side data adapter for async aggregation. |
 | `serverAggregationResults` | `GridAggregationResult \| null` | Pre-fetched results when `isServerSide: true`. |
@@ -441,8 +441,8 @@ const { aggregationResult, isLoading } = useAggregation({
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `aggregationResult` | `GridAggregationResult` | Map of `field → computed value`. |
-| `isLoading` | `boolean` | `true` while a server-side fetch is in progress. |
-| `error` | `unknown` | Set if the server-side fetch threw. |
+| `isLoading` | `boolean` | `true` while the `getAggregations` request for the current model, filter and sort is pending. |
+| `error` | `unknown` | Set if the request for the current model, filter and sort failed. |
 
 **Built-in aggregation functions:** `sum`, `avg`, `min`, `max`, `count`, `unique`
 
@@ -452,7 +452,7 @@ You can also use `formatAggregationValue(value, fnName)` to produce a display st
 
 ### `usePivot(rawRows, rawCols, model, enabled)`
 
-Headless hook that transforms a flat dataset into pivot rows and pivot column definitions. Pass the output directly to `<DataGrid rows={} columns={} />` when `pivotMode` is active.
+Headless hook that transforms a flat dataset into pivot rows and pivot column definitions, with the same engine `<DataGrid pivotMode />` uses. Use it to pivot outside the grid (charts, custom exports). To show a pivot in the grid, prefer `pivotMode`: it also filters the source rows, keeps the Grand Total row last when sorting and leaves it out of select-all, which a grid given `pivotRows` as plain rows does not do.
 
 ```tsx
 import { usePivot } from '@opencorestack/opengridx';
@@ -487,10 +487,10 @@ const { pivotRows, pivotColumns, isValid } = usePivot(
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `pivotRows` | `GridRowModel[]` | Transformed rows ready for the grid. |
-| `pivotColumns` | `GridColDef[]` | Generated column definitions for each pivot key. |
-| `colKeys` | `string[]` | The distinct column pivot values used. |
-| `isValid` | `boolean` | `false` if the model is incomplete (e.g. no `rowFields` or `valueFields`). |
+| `pivotRows` | `GridRowModel[]` | One row per row-field combination (ids `0, 1, …`), then the Grand Total row (id `'__pivot_grand_total__'`). There is no Grand Total row when `rawRows` is empty. |
+| `pivotColumns` | `GridColDef[]` | Row-label columns (keeping the source column's formatter, renderer, type and alignment; `hideable: false`), then one value column per column key and value field. Value columns format aggregates like the footer. |
+| `colKeys` | `string[]` | The distinct column-field value combinations, ordered by value (numbers numerically, strings naturally, blanks last). `['']` when there are no column fields. |
+| `isValid` | `boolean` | `false` if the model has no usable row field or value field (fields on `groupable: false` columns and value fields whose function `availableAggregationFunctions` does not allow are skipped). |
 
 #### `GridPivotModel`
 

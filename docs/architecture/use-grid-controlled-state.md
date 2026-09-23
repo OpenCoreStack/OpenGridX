@@ -140,6 +140,8 @@ interface UseGridControlledStateReturn {
 
 **Default page size:** without `paginationModel` or `initialState.pagination`, the page size is 100 when `pageSizeOptions` offers it, otherwise the first option, so the page-size select always shows the size in use.
 
+**`aggregationModel` identity follows content:** an inline `aggregationModel={{ salary: 'sum' }}` is a new object on every parent render. The returned `aggregationModel` keeps its identity while its content is unchanged (it is keyed on its JSON), so the server fetches and memos that depend on it do not rerun for an unchanged model.
+
 **`selectedRowIds` (Set):** The array `rowSelectionModel` is converted to a `Set` via `useMemo` for O(1) membership checks during row rendering. Both are returned so callers can choose the right structure.
 
 ---

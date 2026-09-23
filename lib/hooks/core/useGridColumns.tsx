@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useColumnReorder } from '../useColumnReorder';
 import { ExpandIcon } from '../../components/ui/ExpandIcon';
 import { isColumnPinned } from '../../utils/pinning';
+import { formatAggregateForColumn } from '../../utils/aggregation';
 import type {
     GridColDef,
     GridRowModel,
@@ -9,11 +10,36 @@ import type {
     GridColumnOrderChangeParams,
     GridColumnPinning,
     GridRenderCellParams,
+    GridAggregationModel,
 } from '../../types';
 import type { GridInitialState } from '../../state/types';
 
 interface HierarchyHandlers {
     toggleExpansion: (id: GridRowId) => void;
+}
+
+// A group row carries each column's aggregate in the column's field. It is shown like the footer
+// shows totals: the stored aggregate (a valueGetter would recompute it from fields a group row does
+// not have), formatted with formatAggregateForColumn (so a count is never put in a currency format).
+function withGroupRowAggregates<R extends GridRowModel>(
+    col: GridColDef<R>,
+    fnName: string | undefined,
+    groupingRows: ReadonlyMap<GridRowId, unknown> | undefined,
+): Pick<GridColDef<R>, 'valueGetter' | 'valueFormatter'> {
+    if (!fnName || !groupingRows) return { valueGetter: col.valueGetter, valueFormatter: col.valueFormatter };
+    const isGroupRow = (row: R) => groupingRows.has(row.id);
+    const ownGetter = col.valueGetter;
+    const ownFormatter = col.valueFormatter;
+    return {
+        valueGetter: ownGetter
+            ? (p) => (isGroupRow(p.row) ? p.value : ownGetter(p))
+            : undefined,
+        valueFormatter: (p) => {
+            if (isGroupRow(p.row)) return formatAggregateForColumn(p.value, fnName, col, p.row);
+            if (ownFormatter) return ownFormatter(p);
+            return p.value == null ? '' : String(p.value);
+        },
+    };
 }
 
 // Injected hierarchy renderers replace the plain-cell path in Cell, so they must
@@ -40,6 +66,10 @@ export interface UseGridColumnsParams<R extends GridRowModel> {
     pinnedColumns?: GridColumnPinning;
     /** Resolves a row's id (getRowId) when the injected expand toggle is clicked; defaults to `row.id`. */
     getRowId?: (row: R) => GridRowId;
+    /** Formats the aggregates on row-grouping group rows. */
+    aggregationModel?: GridAggregationModel;
+    /** Row grouping only: the synthetic group rows, keyed by id. */
+    groupingRows?: ReadonlyMap<GridRowId, unknown>;
 }
 
 const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
@@ -77,14 +107,46 @@ export function useGridColumns<R extends GridRowModel>(
         setColumns,
         pinnedColumns,
         getRowId = defaultGetRowId,
+        aggregationModel,
+        groupingRows,
     } = params;
 
     // ── Column order ──────────────────────────────────────────────────────────
-    const [internalColumnOrder, setInternalColumnOrder] = useState<string[]>(
-        () => initialState?.columns?.columnOrder ?? activeColumns.map(col => col.field)
+    const naturalOrder = useMemo(() => activeColumns.map(col => col.field), [activeColumns]);
+
+    // null = the columns' own order, until the user reorders. Deriving it (instead of snapshotting the
+    // columns at mount) keeps it right when the grid mounts in pivot mode or the columns change.
+    const [storedColumnOrder, setStoredColumnOrder] = useState<string[] | null>(
+        () => initialState?.columns?.columnOrder ?? null
     );
 
-    const effectiveColumnOrder = columnOrder ?? internalColumnOrder;
+    // Generated pivot columns keep an order of their own, so pivoting never rewrites the user's column
+    // order, and a controlled `columnOrder` (which names source columns) does not apply to them. It
+    // resets whenever the generated column set changes.
+    const pivotColumnsKey = pivotMode ? naturalOrder.join('\u0000') : '';
+    const [pivotOrderState, setPivotOrderState] = useState<{ key: string; order: string[] } | null>(null);
+    const pivotColumnOrder = pivotOrderState && pivotOrderState.key === pivotColumnsKey ? pivotOrderState.order : naturalOrder;
+
+    const internalColumnOrder = storedColumnOrder ?? naturalOrder;
+    const effectiveColumnOrder = pivotMode ? pivotColumnOrder : (columnOrder ?? internalColumnOrder);
+
+    const setInternalColumnOrder = useCallback<React.Dispatch<React.SetStateAction<string[]>>>((action) => {
+        if (pivotMode) {
+            setPivotOrderState(prev => {
+                const base = prev && prev.key === pivotColumnsKey ? prev.order : naturalOrder;
+                return { key: pivotColumnsKey, order: typeof action === 'function' ? action(base) : action };
+            });
+            return;
+        }
+        setStoredColumnOrder(prev => (typeof action === 'function' ? action(prev ?? naturalOrder) : action));
+    }, [pivotMode, pivotColumnsKey, naturalOrder]);
+
+    // In pivot mode the row-label columns (marked hideable: false) always show: the pivot rows are
+    // labelled by them, and they share their field with the source column a visibility model may hide.
+    const isColumnShown = useCallback(
+        (col: GridColDef<R>) => (pivotMode && col.hideable === false) || columnVisibilityModel[col.field] !== false,
+        [pivotMode, columnVisibilityModel],
+    );
 
     // The expand toggle, indentation and group label go on the leftmost column actually
     // on screen, so hiding, reordering or pinning columns never strips group rows of them.
@@ -108,10 +170,14 @@ export function useGridColumns<R extends GridRowModel>(
     const effectiveColumns = useMemo<GridColDef<R>[]>(() => {
         if (!isHierarchyEnabled) return activeColumns;
 
+        const groupRows = isRowGrouping ? groupingRows : undefined;
+
         return activeColumns.map((col) => {
+            const groupRowAggregates = withGroupRowAggregates(col, aggregationModel?.[col.field], groupRows);
             if (col.field === hierarchyField) {
                 return {
                     ...col,
+                    ...groupRowAggregates,
                     renderCell: (cellParams: GridRenderCellParams<R>) => {
                         const meta = cellParams.rowMeta;
                         const depth = meta?.treeDepth ?? 0;
@@ -168,6 +234,7 @@ export function useGridColumns<R extends GridRowModel>(
 
             return {
                 ...col,
+                ...groupRowAggregates,
                 renderCell: (cellParams: GridRenderCellParams<R>) => {
                     const meta = cellParams.rowMeta;
                     const hasChildren = Boolean(meta?.hasChildren);
@@ -185,7 +252,7 @@ export function useGridColumns<R extends GridRowModel>(
                 }
             };
         }) as GridColDef<R>[];
-    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers, hierarchyField, getRowId]);
+    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers, hierarchyField, getRowId, aggregationModel, groupingRows]);
 
     // ── Column widths ─────────────────────────────────────────────────────────
     const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
@@ -200,12 +267,6 @@ export function useGridColumns<R extends GridRowModel>(
         setColumns(activeColumns as unknown as GridColDef[]);
     }, [activeColumns, setColumns]);
 
-    useEffect(() => {
-        if (pivotMode) {
-            setInternalColumnOrder(activeColumns.map(col => col.field));
-        }
-    }, [pivotMode, activeColumns]);
-
     // ── Ordered / visible columns ─────────────────────────────────────────────
     const orderedColumns = useMemo<GridColDef<R>[]>(() => {
         if (disableColumnReorder) return effectiveColumns;
@@ -219,8 +280,8 @@ export function useGridColumns<R extends GridRowModel>(
     }, [effectiveColumns, effectiveColumnOrder, disableColumnReorder]);
 
     const visibleOrderedColumns = useMemo<GridColDef<R>[]>(
-        () => orderedColumns.filter(col => columnVisibilityModel[col.field] !== false),
-        [orderedColumns, columnVisibilityModel]
+        () => orderedColumns.filter(isColumnShown),
+        [orderedColumns, isColumnShown]
     );
 
     // ── Column reorder handlers ───────────────────────────────────────────────
@@ -231,9 +292,9 @@ export function useGridColumns<R extends GridRowModel>(
             const newOrder = [...effectiveColumnOrder];
             const [movedField] = newOrder.splice(oldIndex, 1);
             newOrder.splice(targetIndex, 0, movedField);
-            if (!columnOrder) setInternalColumnOrder(newOrder);
+            if (pivotMode || !columnOrder) setInternalColumnOrder(newOrder);
             onColumnOrderChange?.(reorderParams);
-        }, [effectiveColumnOrder, columnOrder, onColumnOrderChange]),
+        }, [effectiveColumnOrder, pivotMode, columnOrder, setInternalColumnOrder, onColumnOrderChange]),
         disableColumnReorder,
     });
 
