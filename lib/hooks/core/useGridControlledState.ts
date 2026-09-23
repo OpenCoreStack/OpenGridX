@@ -2,18 +2,24 @@ import { useState, useCallback, useMemo } from 'react';
 import type {
     GridRowId,
     GridSortItem,
+    GridFilterModel,
     GridColumnPinning,
     GridPaginationModel,
     GridAggregationModel,
     GridPivotModel,
 } from '../../types';
-import type { GridInitialState } from '../../state/types';
+import type { GridInitialState, GridDensityState } from '../../state/types';
+
+export type GridDensity = GridDensityState['density'];
 
 export interface UseGridControlledStateParams {
     initialState?: GridInitialState;
 
     sortModel?: GridSortItem[];
     onSortModelChange?: (model: GridSortItem[]) => void;
+
+    filterModel?: GridFilterModel;
+    onFilterModelChange?: (model: GridFilterModel) => void;
 
     aggregationModel?: GridAggregationModel;
     onAggregationModelChange?: (model: GridAggregationModel) => void;
@@ -29,9 +35,13 @@ export interface UseGridControlledStateParams {
 
     paginationModel?: GridPaginationModel;
     onPaginationModelChange?: (model: GridPaginationModel) => void;
+    /** Used to pick the uncontrolled default page size: 100 when offered, else the first option. */
+    pageSizeOptions?: number[];
 
     rowSelectionModel?: GridRowId[];
     onRowSelectionModelChange?: (model: GridRowId[]) => void;
+
+    density?: GridDensity;
 }
 
 export interface UseGridControlledStateReturn {
@@ -39,6 +49,14 @@ export interface UseGridControlledStateReturn {
     sortModel: GridSortItem[];
     isSortControlled: boolean;
     setInternalSortModel: React.Dispatch<React.SetStateAction<GridSortItem[]>>;
+    /** Sets the internal model when uncontrolled and fires onSortModelChange. */
+    handleSortModelChange: (model: GridSortItem[]) => void;
+
+    // filter
+    filterModel: GridFilterModel;
+    isFilterControlled: boolean;
+    /** Sets the internal model when uncontrolled and fires onFilterModelChange. */
+    handleFilterModelChange: (model: GridFilterModel) => void;
 
     // aggregation
     aggregationModel: GridAggregationModel;
@@ -65,14 +83,31 @@ export interface UseGridControlledStateReturn {
     selectedRowIds: Set<GridRowId>;
     isSelectionControlled: boolean;
     setInternalRowSelectionModel: React.Dispatch<React.SetStateAction<GridRowId[]>>;
+    /** Sets the internal model when uncontrolled and fires onRowSelectionModelChange. */
+    handleRowSelectionModelChange: (model: GridRowId[]) => void;
+
+    // density (prop, else initialState.density, else 'standard')
+    density: GridDensity;
 }
 
 const EMPTY_PIVOT_MODEL: GridPivotModel = { rowFields: [], columnFields: [], valueFields: [] };
+const DEFAULT_PAGE_SIZE = 100;
+
+/** The uncontrolled page size must be one the page-size select can show. */
+export function getDefaultPageSize(pageSizeOptions?: number[]): number {
+    if (!pageSizeOptions || pageSizeOptions.length === 0 || pageSizeOptions.includes(DEFAULT_PAGE_SIZE)) {
+        return DEFAULT_PAGE_SIZE;
+    }
+    return pageSizeOptions[0];
+}
 
 export function useGridControlledState(params: UseGridControlledStateParams): UseGridControlledStateReturn {
     const {
         initialState,
         sortModel: propSortModel,
+        onSortModelChange,
+        filterModel: propFilterModel,
+        onFilterModelChange,
         aggregationModel: propAggregationModel,
         onAggregationModelChange,
         columnVisibilityModel: propColumnVisibilityModel,
@@ -83,8 +118,10 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
         onPivotModelChange,
         paginationModel: propPaginationModel,
         onPaginationModelChange,
+        pageSizeOptions,
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange,
+        density: propDensity,
     } = params;
 
     // ── Sort ─────────────────────────────────────────────────────────────────
@@ -93,6 +130,24 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
     );
     const isSortControlled = propSortModel !== undefined;
     const sortModel = isSortControlled ? propSortModel! : internalSortModel;
+
+    const handleSortModelChange = useCallback((model: GridSortItem[]) => {
+        if (!isSortControlled) setInternalSortModel(model);
+        onSortModelChange?.(model);
+    }, [isSortControlled, onSortModelChange]);
+
+    // ── Filter ───────────────────────────────────────────────────────────────
+    const [internalFilterModel, setInternalFilterModel] = useState<GridFilterModel>(
+        () => initialState?.filter?.filterModel ?? { items: [] }
+    );
+    // `!= null` so a JS consumer's `filterModel={null}` behaves like "not passed", as before.
+    const isFilterControlled = propFilterModel != null;
+    const filterModel = isFilterControlled ? propFilterModel : internalFilterModel;
+
+    const handleFilterModelChange = useCallback((model: GridFilterModel) => {
+        if (!isFilterControlled) setInternalFilterModel(model);
+        onFilterModelChange?.(model);
+    }, [isFilterControlled, onFilterModelChange]);
 
     // ── Aggregation ──────────────────────────────────────────────────────────
     const isAggregationControlled = propAggregationModel !== undefined;
@@ -152,7 +207,7 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
     // ── Pagination ───────────────────────────────────────────────────────────
     const isPaginationControlled = propPaginationModel !== undefined;
     const [internalPaginationModel, setInternalPaginationModel] = useState<GridPaginationModel>(
-        () => initialState?.pagination?.paginationModel ?? propPaginationModel ?? { page: 0, pageSize: 100 }
+        () => initialState?.pagination?.paginationModel ?? propPaginationModel ?? { page: 0, pageSize: getDefaultPageSize(pageSizeOptions) }
     );
     const effectivePaginationModel = isPaginationControlled ? propPaginationModel : internalPaginationModel;
 
@@ -167,13 +222,26 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
     const rowSelectionModel = isSelectionControlled ? propRowSelectionModel! : internalRowSelectionModel;
     const selectedRowIds = useMemo(() => new Set(rowSelectionModel), [rowSelectionModel]);
 
-    // onRowSelectionModelChange is consumed by the caller directly (they call it when selection changes)
-    void onRowSelectionModelChange;
+    const handleRowSelectionModelChange = useCallback((model: GridRowId[]) => {
+        if (!isSelectionControlled) setInternalRowSelectionModel(model);
+        onRowSelectionModelChange?.(model);
+    }, [isSelectionControlled, onRowSelectionModelChange]);
+
+    // ── Density ──────────────────────────────────────────────────────────────
+    // No built-in density UI exists, so there is no internal setter: the prop wins,
+    // otherwise the persisted/initial density applies.
+    const [initialDensity] = useState<GridDensity>(() => initialState?.density?.density ?? 'standard');
+    const density = propDensity ?? initialDensity;
 
     return {
         sortModel: sortModel as GridSortItem[],
         isSortControlled,
         setInternalSortModel: setInternalSortModel as React.Dispatch<React.SetStateAction<GridSortItem[]>>,
+        handleSortModelChange,
+
+        filterModel,
+        isFilterControlled,
+        handleFilterModelChange,
 
         aggregationModel,
         handleAggregationModelChange,
@@ -194,5 +262,8 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
         selectedRowIds,
         isSelectionControlled,
         setInternalRowSelectionModel,
+        handleRowSelectionModelChange,
+
+        density,
     };
 }

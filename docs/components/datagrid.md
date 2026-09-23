@@ -24,7 +24,7 @@ function MyGrid() {
 | :--- | :--- | :--- | :--- |
 | `rows` | `R[]` | `[]` | The dataset to display. |
 | `columns` | `GridColDef[]` | `[]` | Column definitions. |
-| `getRowId` | `(row: R) => GridRowId` | `row.id` | Unique ID for each row. |
+| `getRowId` | `(row: R) => GridRowId` | `row.id` | Unique ID for each row. Only keys the grid's store; row objects are never copied or given an `id` (v3.0+). Duplicate ids keep the first row and log a development warning. |
 | `height` | `number \| string` | `undefined` | Height of the grid container. |
 | `loading` | `boolean` | `false` | Displays a loading skeleton/shimmer. |
 | `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Row height preset: compact = 32 px, standard = `rowHeight`, comfortable = 72 px. |
@@ -34,7 +34,7 @@ function MyGrid() {
 | `pagination` | `boolean` | `false` | Enable/Disable bottom pagination bar. |
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). Omit for uncontrolled; use `initialState` to set the initial page/pageSize. |
 | `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. |
-| `initialState` | `GridInitialState` | `undefined` | Initial configuration (sorting, columns, pagination, etc). |
+| `initialState` | `GridInitialState` | `undefined` | Initial configuration (sorting, filter, columns, pagination, density), read on mount. |
 | `overscanRowCount` | `number` | `3` | Minimum rows rendered outside the visible viewport. The grid adapts this upward automatically based on scroll velocity — this prop sets the floor. |
 
 ## 🔃 Sorting
@@ -59,7 +59,7 @@ function MyGrid() {
 | `onRowClick` | `(params) => void` | Fired when clicking a row body. |
 | `onCellClick` | `(params) => void` | Fired when clicking a specific cell. |
 | `onPaginationModelChange` | `(model: GridPaginationModel) => void` | Fired when page or page size changes. |
-| `onStateChange` | `(state) => void` | Fired on any internal state update. |
+| `onStateChange` | `(state) => void` | Fired on mount and whenever the value of the sort, filter, pagination, column or density state changes. |
 | `processRowUpdate` | `(new, old) => R \| Promise<R>` | Called once per committed cell edit; return the row to store (or a Promise of it). See [Editing](../features/editing-reordering.md#commit-and-cancel). |
 
 ## 📦 Slots

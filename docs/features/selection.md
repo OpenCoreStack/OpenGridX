@@ -49,7 +49,7 @@ Use `disableRowSelectionOnClick` to prevent clicking a row from changing the sel
 
 ### Single-Row Selection Only
 
-Use `disableMultipleRowSelection` to cap selection to one row at a time. Clicking a second row deselects the first; clicking an already-selected row deselects it.
+Use `disableMultipleRowSelection` to cap selection to one row at a time. Clicking a second row deselects the first; clicking an already-selected row deselects it. The cap applies to row clicks, row checkboxes, the Space key and `apiRef.selectRow` / `selectRows` alike, and the header select-all checkbox is not shown.
 
 ```tsx
 <DataGrid
@@ -57,6 +57,10 @@ Use `disableMultipleRowSelection` to cap selection to one row at a time. Clickin
   onRowSelectionModelChange={(model) => console.log('selected:', model)}
 />
 ```
+
+### Select All
+
+With `checkboxSelection`, the header checkbox selects the rows that pass the current filter (including pinned rows) and adds them to the selection; unchecking it removes those rows again. Rows hidden by the filter keep their selection state, and under row grouping group rows are not part of select-all. The header shows checked when every such row is selected and indeterminate when only some are, so ids of rows that are no longer in `rows` do not affect it.
 
 ---
 

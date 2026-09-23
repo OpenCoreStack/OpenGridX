@@ -402,6 +402,12 @@ export interface PdfExportOptions {
   selectedRows?: (string | number)[];
 
   /**
+   * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
+   * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
+   */
+  getRowId?: (row: GridRowModel) => GridRowId;
+
+  /**
    * Aggregation result from apiRef.current.getAggregationResult().
    * When provided alongside aggregationModel, appends a footer row.
    */
@@ -614,25 +620,18 @@ export interface GridInternalState {
   rows: {
     idRowsLookup: Map<GridRowId, GridRowModel>;
     allRows: GridRowId[];
-  };
-  sorting: {
-    sortModel: GridSortItem[];
-  };
-  filter: {
-    filterModel: GridFilterModel;
+    /** Row object → its getRowId() key. Rows are stored untouched, so this is how ids are resolved. */
+    idByRow: Map<GridRowModel, GridRowId>;
   };
   pagination: {
-    paginationModel: GridPaginationModel;
-    rowCount: number;
+    /** Server-reported total (dataSource responses); undefined until one arrives. */
+    rowCount?: number;
   };
   columns: {
     all: GridColDef[];
     lookup: Map<string, GridColDef>;
     orderedFields: string[];
     columnVisibilityModel: GridColumnVisibilityModel;
-  };
-  selection: {
-    selectedRows: Set<GridRowId>;
   };
   pinning: {
     pinnedColumns: GridPinnedColumns;

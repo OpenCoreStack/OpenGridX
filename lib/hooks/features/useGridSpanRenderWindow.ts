@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { GridColDef, GridRowModel } from '../../types';
+import type { GridColDef, GridRowId, GridRowModel } from '../../types';
 import type { GridSpanningResult } from './useGridSpanning';
 
 interface RowRenderContext {
@@ -54,8 +54,8 @@ export interface UseGridSpanColumnWindowParams<R extends GridRowModel> {
     lastColumnIndex: number;
     virtualColumns: GridColDef<R>[];
     layout: ColumnLayout<R>;
-    /** Rows that will be rendered. */
-    rows: { row: R }[];
+    /** Rows that will be rendered, with their resolved id (rows do not have to carry it in `row.id`). */
+    rows: { row: R; id?: GridRowId }[];
 }
 
 /**
@@ -75,8 +75,8 @@ export function useGridSpanColumnWindow<R extends GridRowModel>(params: UseGridS
         let changed = true;
         while (changed) {
             changed = false;
-            for (const { row } of rows) {
-                const ranges = spanning.getUnpinnedColSpanRanges(row.id);
+            for (const { row, id } of rows) {
+                const ranges = spanning.getUnpinnedColSpanRanges(id ?? row.id);
                 if (!ranges) continue;
                 for (let k = 0; k < ranges.length; k += 2) {
                     const start = ranges[k];

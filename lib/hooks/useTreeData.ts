@@ -207,9 +207,11 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
         }
     }, [expandedGroupIds, configKey, treeNodes, onRowExpansionChange]);
 
-    const getVisibleRows = useCallback(() => {
+    // `expandAll` walks every node regardless of the expansion state (getAllFilteredRows).
+    const getVisibleRows = useCallback((options?: { expandAll?: boolean }) => {
 
         if (!treeData) return null; 
+        const expandAll = options?.expandAll ?? false;
 
         const rowLookup = new Map<GridRowId, GridRowModel>();
         rows.forEach(r => rowLookup.set(getRowId(r), r));
@@ -277,7 +279,7 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
                     // Hierarchy info travels in rowMetaMap; the consumer's row object is passed through unchanged.
                     result.push(row);
 
-                    if (expandedGroupIds.has(id) && node.children && node.children.length > 0) {
+                    if ((expandAll || expandedGroupIds.has(id)) && node.children && node.children.length > 0) {
                         traverse(node.children);
                     }
                 }

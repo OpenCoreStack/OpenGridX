@@ -1,5 +1,5 @@
 
-import type { GridColDef, GridRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
+import type { GridColDef, GridRowId, GridRowModel, GridAggregationModel, GridGroupedExportRow } from '../../types';
 import { groupHeaderLabel } from './groupLabel';
 import {
     aggregationForExport,
@@ -27,6 +27,11 @@ export interface CsvExportOptions {
      * selected rows are exported flat), and the totals row is recomputed over the selected rows.
      */
     selectedRows?: (string | number)[];
+    /**
+     * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
+     * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
+     */
+    getRowId?: (row: GridRowModel) => GridRowId;
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     /** When provided, emits group headers, leaf rows, subtotals, and a grand total instead of a flat row list. */
@@ -119,7 +124,7 @@ export function exportToCsv<R extends GridRowModel>(
             }
         });
     } else {
-        const rowsToExport = rowsForExport(rows, selectedRows);
+        const rowsToExport = rowsForExport(rows, selectedRows, options.getRowId);
 
         if (rowsToExport.length === 0) {
             console.warn('No rows to export');
@@ -171,6 +176,11 @@ export interface ExcelExportOptions {
      * selected rows are exported flat), and the totals rows are recomputed over the selected rows.
      */
     selectedRows?: (string | number)[];
+    /**
+     * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
+     * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
+     */
+    getRowId?: (row: GridRowModel) => GridRowId;
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     /** When provided, emits group headers, leaf rows, subtotals, and a grand total instead of a flat row list. */
@@ -270,7 +280,7 @@ export function exportToExcel<R extends GridRowModel>(
             }
         });
     } else {
-        const rowsToExport = rowsForExport(rows, selectedRows);
+        const rowsToExport = rowsForExport(rows, selectedRows, options.getRowId);
 
         if (rowsToExport.length === 0) {
             console.warn('No rows to export');
@@ -316,6 +326,11 @@ export interface JsonExportOptions {
      * selected rows are exported flat), and the aggregation values are recomputed over them.
      */
     selectedRows?: (string | number)[];
+    /**
+     * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
+     * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
+     */
+    getRowId?: (row: GridRowModel) => GridRowId;
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     /** When provided, emits a nested grouping tree instead of a flat array. */
@@ -396,7 +411,7 @@ export function exportToJson<R extends GridRowModel>(
 
         outData = grandTotal ? { groups: roots, grandTotal } : { groups: roots };
     } else {
-        const rowsToExport = rowsForExport(rows, selectedRows);
+        const rowsToExport = rowsForExport(rows, selectedRows, options.getRowId);
 
         if (rowsToExport.length === 0) {
             console.warn('No rows to export');
@@ -434,6 +449,11 @@ export interface PrintOptions {
      * selected rows are printed flat), and the totals are recomputed over the selected rows.
      */
     selectedRows?: (string | number)[];
+    /**
+     * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
+     * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
+     */
+    getRowId?: (row: GridRowModel) => GridRowId;
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     /** When provided, emits group headers, leaf rows, subtotals, and a grand total instead of a flat row list. */
@@ -501,6 +521,7 @@ export async function printGrid<R extends GridRowModel>(
     try {
         let title = 'Print';
         let selectedRows: (string | number)[] | undefined;
+        let getRowId: ((row: GridRowModel) => GridRowId) | undefined;
         let aggregationResult: Record<string, unknown> | null = null;
         let aggregationModel: GridAggregationModel | null = null;
 
@@ -511,6 +532,7 @@ export async function printGrid<R extends GridRowModel>(
         } else if (typeof titleOrOptions === 'object') {
             title = titleOrOptions.title || 'Print';
             selectedRows = titleOrOptions.selectedRows;
+            getRowId = titleOrOptions.getRowId;
             aggregationResult = titleOrOptions.aggregationResult || null;
             aggregationModel = titleOrOptions.aggregationModel || null;
             groupedRows = titleOrOptions.groupedRows;
@@ -574,7 +596,7 @@ export async function printGrid<R extends GridRowModel>(
                 }
             });
         } else {
-            const rowsToExport = rowsForExport(rows, selectedRows);
+            const rowsToExport = rowsForExport(rows, selectedRows, getRowId);
 
             if (rowsToExport.length === 0) {
                 printWindow.document.body.innerHTML = '<h3>No rows to export</h3>';

@@ -7,7 +7,6 @@ import type {
     GridRowParams,
     GridListViewColDef,
     GridPaginationModel,
-    GridDataSource,
     GridLocaleText,
 } from '../../types';
 
@@ -24,7 +23,7 @@ export interface GridListViewProps<R extends GridRowModel> {
     rowHeight: number;
     checkboxSelection: boolean;
     paginationMode: 'client' | 'server' | 'infinite';
-    dataSource?: GridDataSource<R>;
+    /** The grid's pagination total; used in server mode. */
     serverRowCount: number;
     paginationSlot?: React.ComponentType<Record<string, unknown>>;
     paginationSlotProps?: Record<string, unknown>;
@@ -33,7 +32,11 @@ export interface GridListViewProps<R extends GridRowModel> {
     onRowDoubleClick?: (params: GridRowParams<R>) => void;
     onSelectionChange: (rowId: GridRowId, isSelected: boolean) => void;
     onPaginationModelChange: (model: GridPaginationModel) => void;
+    /** Resolves a row's id; defaults to `row.id`. */
+    getRowId?: (row: R) => GridRowId;
 }
+
+const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 
 export function GridListView<R extends GridRowModel>({
     ariaLabel,
@@ -48,7 +51,6 @@ export function GridListView<R extends GridRowModel>({
     rowHeight,
     checkboxSelection,
     paginationMode,
-    dataSource,
     serverRowCount,
     paginationSlot,
     paginationSlotProps,
@@ -57,11 +59,14 @@ export function GridListView<R extends GridRowModel>({
     onRowDoubleClick,
     onSelectionChange,
     onPaginationModelChange,
+    getRowId = defaultGetRowId,
 }: GridListViewProps<R>) {
     const PaginationComponent = paginationSlot || Pagination;
 
-    const totalRowCount = (paginationMode === 'server' && dataSource)
-        ? (serverRowCount || 0)
+    // serverRowCount is the grid's pagination total (server total in server mode, with or
+    // without a dataSource); the client total counts the rows being paged.
+    const totalRowCount = paginationMode === 'server'
+        ? serverRowCount
         : filteredRows.length;
 
     return (
@@ -89,20 +94,24 @@ export function GridListView<R extends GridRowModel>({
                         {noRowsLabel}
                     </div>
                 ) : (
-                    allRenderableRows.map((row, idx) => (
+                    allRenderableRows.map((row, idx) => {
+                        const id = getRowId(row);
+                        return (
                         <ListViewRow<R>
-                            key={row.id}
+                            key={id}
                             row={row}
+                            rowId={id}
                             rowIndex={idx}
                             listViewColumn={listViewColumn}
-                            isSelected={selectedRowIds.has(row.id)}
+                            isSelected={selectedRowIds.has(id)}
                             checkboxSelection={checkboxSelection}
                             rowHeight={rowHeight}
-                            onRowClick={(r) => onRowClick({ row: r, id: r.id, rowIndex: idx })}
-                            onRowDoubleClick={onRowDoubleClick ? (r) => onRowDoubleClick({ row: r, id: r.id, rowIndex: idx }) : undefined}
+                            onRowClick={(r) => onRowClick({ row: r, id, rowIndex: idx })}
+                            onRowDoubleClick={onRowDoubleClick ? (r) => onRowDoubleClick({ row: r, id, rowIndex: idx }) : undefined}
                             onSelectionChange={onSelectionChange}
                         />
-                    ))
+                        );
+                    })
                 )}
             </div>
 

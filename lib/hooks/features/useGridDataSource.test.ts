@@ -939,7 +939,7 @@ describe('useGridDataSource — getRowId', () => {
     const byKey = (row: Row) => (row as unknown as KeyedRow).key;
     const keyed = (keys: string[]) => keys.map(key => ({ key, name: key.toUpperCase() })) as unknown as Row[];
 
-    it('keys fetched rows by getRowId', async () => {
+    it('keeps fetched rows as given (no id written) when keyed by getRowId', async () => {
         const { dataSource, requests } = createManualDataSource();
         const { result } = renderHarness({
             dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server', getRowId: byKey,
@@ -947,7 +947,7 @@ describe('useGridDataSource — getRowId', () => {
         await advance(DEBOUNCE_MS);
         await settle(requests[0], { rows: keyed(['a', 'b', 'c']), rowCount: 3 });
         expect(result.current.rows.map(byKey)).toEqual(['a', 'b', 'c']);
-        expect(result.current.rows.map(r => r.id)).toEqual(['a', 'b', 'c']);
+        expect(result.current.rows[0]).not.toHaveProperty('id');
     });
 
     it('skips children already loaded, compared by getRowId', async () => {

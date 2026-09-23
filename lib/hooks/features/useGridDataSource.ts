@@ -32,7 +32,7 @@ interface UseGridDataSourceParams<R extends GridRowModel> {
   sortingMode?: 'client' | 'server';
   filterMode?: 'client' | 'server';
   aggregationModel?: GridAggregationModel;
-  /** Resolves a row's id, to key fetched rows and skip rows that are already loaded. Defaults to `row.id`. */
+  /** Resolves a row's id, to skip fetched rows that are already loaded. Defaults to `row.id`. */
   getRowId?: (row: R) => GridRowId;
   setRows: (rows: R[] | ((prev: R[]) => R[]), preserveRowCount?: boolean) => void;
   setRowCount: (count: number) => void;
@@ -75,8 +75,8 @@ function getFetchKind(paginationMode: UseGridDataSourceParams<GridRowModel>['pag
 }
 
 /**
- * Keys fetched rows the way prop rows are keyed (`id === getRowId(row)`) and drops rows whose id
- * is already loaded or repeats within the response, keeping the first occurrence.
+ * Drops fetched rows whose id (getRowId) is already loaded or repeats within the response, keeping
+ * the first occurrence. Rows are kept as given: the store keys them by getRowId.
  */
 function prepareRows<R extends GridRowModel>(rows: R[], getRowId: (row: R) => GridRowId, loaded: R[] = []): R[] {
   const seen = new Set<GridRowId>(loaded.map(getRowId));
@@ -85,7 +85,7 @@ function prepareRows<R extends GridRowModel>(rows: R[], getRowId: (row: R) => Gr
     const id = getRowId(row);
     if (seen.has(id)) return;
     seen.add(id);
-    result.push(id === row.id ? row : { ...row, id });
+    result.push(row);
   });
   return result;
 }

@@ -97,7 +97,7 @@ The generated value columns are named `<field>␟<aggFn>` (for example `'salary\
 - **Value columns** are formatted like every other aggregate (see [Formatting Totals](#-formatting-totals)).
 - **Column keys** are ordered by value: numbers and dates numerically, strings naturally (`'9'` before `'10'`), blanks last. Column-field header labels use the source column's `valueFormatter` (a boolean column formatted as Yes / No reads `Active: Yes — Salary (sum)`).
 - **Column rules.** A row or column field on a `groupable: false` column is skipped (as in row grouping), and a value field whose function the column's `availableAggregationFunctions` does not allow is skipped. Listing the same field and function twice produces one column. The toolbar's pivot panel offers only what these rules allow and never offers an `aggregable: false` column as a value.
-- **Column order.** The generated columns keep an order of their own: dragging them does not change your column order, and a controlled `columnOrder` (which names source columns) does not apply to them. When pivot mode is turned off, the previous column order is back.
+- **Column order.** The generated columns keep an order of their own: reordering them (in the header or the Columns panel) does not change your column order, and a controlled `columnOrder` (which names source columns) does not apply to them. When pivot mode is turned off, the previous column order is back.
 
 ### Not combined with pivot mode
 

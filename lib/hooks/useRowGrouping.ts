@@ -218,8 +218,10 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
         return expandedGroupIds.has(id);
     }, [expandedGroupIds]);
 
-    const getVisibleRows = useCallback(() => {
+    // `expandAll` walks every group regardless of the expansion state (exports, getAllFilteredRows).
+    const getVisibleRows = useCallback((options?: { expandAll?: boolean }) => {
         if (rowGroupingModel.length === 0) return null;
+        const expandAll = options?.expandAll ?? false;
 
         const result: R[] = [];
         const seenIds = new Set<GridRowId>();
@@ -284,7 +286,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                     // Hierarchy info travels in rowMetaMap; the consumer's row object is passed through unchanged.
                     result.push(row);
 
-                    if (expandedGroupIds.has(id) && isGroup) {
+                    if (isGroup && (expandAll || expandedGroupIds.has(id))) {
                         traverse(node.children!);
                     }
                 }
