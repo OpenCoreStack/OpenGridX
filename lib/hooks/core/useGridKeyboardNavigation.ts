@@ -41,7 +41,11 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
     viewportRef: React.RefObject<HTMLDivElement | null>;
     /** Number of top-pinned rows at the start of allRenderableRows. */
     pinnedTopRowCount?: number;
+    /** Resolves a row's id (getRowId); defaults to `row.id`. */
+    getRowId?: (row: R) => GridRowId;
 }
+
+const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 
 export interface FocusedCell {
     id: GridRowId;
@@ -76,6 +80,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         virtualization,
         viewportRef,
         pinnedTopRowCount = 0,
+        getRowId = defaultGetRowId,
     } = params;
 
     const [focusedCell, setFocusedCell] = useState<FocusedCell | null>(null);
@@ -90,12 +95,12 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
                 const firstRow = allRenderableRows[0];
                 const firstCol = navigationColumns[0];
                 if (firstRow && firstCol) {
-                    return { id: firstRow.id, field: firstCol.field };
+                    return { id: getRowId(firstRow), field: firstCol.field };
                 }
                 return null;
             });
         }
-    }, [allRenderableRows, navigationColumns, checkboxSelection]);
+    }, [allRenderableRows, navigationColumns, checkboxSelection, getRowId]);
 
     const handleBlur = useCallback((event: React.FocusEvent<HTMLDivElement>) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node)) {
@@ -132,7 +137,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
             } else {
                 const col = navigationColumns.find(c => c.field === field);
                 if (col?.editable) {
-                    const row = allRenderableRows.find(r => r.id === id);
+                    const row = allRenderableRows.find(r => getRowId(r) === id);
                     if (row) {
                         editingHandlers.startCellEdit({ id, field, value: (row as R & Record<string, unknown>)[field] });
                     }
@@ -167,7 +172,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         if (isEditing && event.key !== 'Tab') return;
 
         const isHeader = id === 'HEADER';
-        const rowIndex = isHeader ? -1 : allRenderableRows.findIndex(r => r.id === id);
+        const rowIndex = isHeader ? -1 : allRenderableRows.findIndex(r => getRowId(r) === id);
         const colIndex = navigationColumns.findIndex(c => c.field === field);
 
         if (!isHeader && rowIndex === -1) return;
@@ -311,7 +316,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
                 if (nextRowIndex === -1) {
                     setFocusedCell({ id: 'HEADER', field: nextCol.field });
                 } else {
-                    setFocusedCell({ id: allRenderableRows[nextRowIndex].id, field: nextCol.field });
+                    setFocusedCell({ id: getRowId(allRenderableRows[nextRowIndex]), field: nextCol.field });
                 }
 
                 const el = viewportRef.current;
@@ -363,6 +368,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         pageSize,
         viewportRef,
         pinnedTopRowCount,
+        getRowId,
     ]);
 
     return { focusedCell, setFocusedCell, handleFocus, handleBlur, handleKeyDown };

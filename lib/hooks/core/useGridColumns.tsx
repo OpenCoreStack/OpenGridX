@@ -38,7 +38,11 @@ export interface UseGridColumnsParams<R extends GridRowModel> {
     initialState?: GridInitialState;
     setColumns: (cols: GridColDef[]) => void;
     pinnedColumns?: GridColumnPinning;
+    /** Resolves a row's id (getRowId) when the injected expand toggle is clicked; defaults to `row.id`. */
+    getRowId?: (row: R) => GridRowId;
 }
+
+const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 
 export interface UseGridColumnsResult<R extends GridRowModel> {
     effectiveColumns: GridColDef<R>[];
@@ -72,6 +76,7 @@ export function useGridColumns<R extends GridRowModel>(
         initialState,
         setColumns,
         pinnedColumns,
+        getRowId = defaultGetRowId,
     } = params;
 
     // ── Column order ──────────────────────────────────────────────────────────
@@ -143,13 +148,13 @@ export function useGridColumns<R extends GridRowModel>(
                                 <div style={{ marginRight: 4, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: hasChildren ? 'pointer' : 'default', flexShrink: 0 }}>
                                     {hasChildren ? (
                                         <div
-                                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); activeHierarchyHandlers?.toggleExpansion(cellParams.row.id); }}
+                                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); activeHierarchyHandlers?.toggleExpansion(getRowId(cellParams.row)); }}
                                             onMouseDown={(e) => { e.stopPropagation(); }}
                                             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto', zIndex: 10, position: 'relative' }}
                                         >
                                             <ExpandIcon
                                                 isExpanded={isExpanded}
-                                                onClick={(e) => { e.stopPropagation(); e.preventDefault(); activeHierarchyHandlers?.toggleExpansion(cellParams.row.id); }}
+                                                onClick={(e) => { e.stopPropagation(); e.preventDefault(); activeHierarchyHandlers?.toggleExpansion(getRowId(cellParams.row)); }}
                                             />
                                         </div>
                                     ) : null}
@@ -180,7 +185,7 @@ export function useGridColumns<R extends GridRowModel>(
                 }
             };
         }) as GridColDef<R>[];
-    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers, hierarchyField]);
+    }, [activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers, hierarchyField, getRowId]);
 
     // ── Column widths ─────────────────────────────────────────────────────────
     const [columnWidths, setColumnWidths] = useState<Record<string, number>>(

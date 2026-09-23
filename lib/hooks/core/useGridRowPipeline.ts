@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { filterRows } from '../../utils/filtering';
 import { sortRows } from '../../utils/sorting';
 import { getPinnedRowGroups } from '../../utils/pinning';
-import type { GridRowModel, GridFilterModel, GridSortItem, GridPaginationModel, GridRowPinning } from '../../types';
+import type { GridRowModel, GridRowId, GridFilterModel, GridSortItem, GridPaginationModel, GridRowPinning } from '../../types';
 
 interface HierarchyHandlers<R extends GridRowModel> {
     getVisibleRows: () => R[];
@@ -19,6 +19,8 @@ export interface UseGridRowPipelineParams<R extends GridRowModel> {
     paginationMode: string;
     effectivePaginationModel: GridPaginationModel;
     pinnedRows?: GridRowPinning;
+    /** Resolves a row's id for pinnedRows lookups; defaults to `row.id`. */
+    getRowId?: (row: R) => GridRowId;
     isLoading: boolean;
     pageSize: number;
 }
@@ -54,6 +56,7 @@ export function useGridRowPipeline<R extends GridRowModel>(
         paginationMode,
         effectivePaginationModel,
         pinnedRows,
+        getRowId,
         isLoading,
         pageSize,
     } = params;
@@ -74,8 +77,8 @@ export function useGridRowPipeline<R extends GridRowModel>(
 
     const { top: pinnedTopRows, center: unpinnedRows, bottom: pinnedBottomRows } = useMemo(() => {
         if (activeHierarchyHandlers) return { top: [] as R[], center: filteredRows, bottom: [] as R[] };
-        return getPinnedRowGroups(filteredRows, pinnedRows);
-    }, [filteredRows, pinnedRows, activeHierarchyHandlers]);
+        return getPinnedRowGroups(filteredRows, pinnedRows, getRowId);
+    }, [filteredRows, pinnedRows, activeHierarchyHandlers, getRowId]);
 
     const sortedUnpinnedRows = useMemo<R[]>(() => {
         if (activeHierarchyHandlers) return unpinnedRows;

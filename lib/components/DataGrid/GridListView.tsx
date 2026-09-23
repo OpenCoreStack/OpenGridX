@@ -32,7 +32,11 @@ export interface GridListViewProps<R extends GridRowModel> {
     onRowDoubleClick?: (params: GridRowParams<R>) => void;
     onSelectionChange: (rowId: GridRowId, isSelected: boolean) => void;
     onPaginationModelChange: (model: GridPaginationModel) => void;
+    /** Resolves a row's id; defaults to `row.id`. */
+    getRowId?: (row: R) => GridRowId;
 }
+
+const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 
 export function GridListView<R extends GridRowModel>({
     ariaLabel,
@@ -55,6 +59,7 @@ export function GridListView<R extends GridRowModel>({
     onRowDoubleClick,
     onSelectionChange,
     onPaginationModelChange,
+    getRowId = defaultGetRowId,
 }: GridListViewProps<R>) {
     const PaginationComponent = paginationSlot || Pagination;
 
@@ -89,20 +94,24 @@ export function GridListView<R extends GridRowModel>({
                         {noRowsLabel}
                     </div>
                 ) : (
-                    allRenderableRows.map((row, idx) => (
+                    allRenderableRows.map((row, idx) => {
+                        const id = getRowId(row);
+                        return (
                         <ListViewRow<R>
-                            key={row.id}
+                            key={id}
                             row={row}
+                            rowId={id}
                             rowIndex={idx}
                             listViewColumn={listViewColumn}
-                            isSelected={selectedRowIds.has(row.id)}
+                            isSelected={selectedRowIds.has(id)}
                             checkboxSelection={checkboxSelection}
                             rowHeight={rowHeight}
-                            onRowClick={(r) => onRowClick({ row: r, id: r.id, rowIndex: idx })}
-                            onRowDoubleClick={onRowDoubleClick ? (r) => onRowDoubleClick({ row: r, id: r.id, rowIndex: idx }) : undefined}
+                            onRowClick={(r) => onRowClick({ row: r, id, rowIndex: idx })}
+                            onRowDoubleClick={onRowDoubleClick ? (r) => onRowDoubleClick({ row: r, id, rowIndex: idx }) : undefined}
                             onSelectionChange={onSelectionChange}
                         />
-                    ))
+                        );
+                    })
                 )}
             </div>
 

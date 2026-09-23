@@ -252,20 +252,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const contentRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<HTMLDivElement>(null);
 
+    // Rows are stored and handed to consumers untouched: getRowId only decides the internal
+    // key. Pivot rows are the grid's own and carry their own ids, so a getRowId written for
+    // the source rows does not apply to them.
     const defaultGetRowId = useCallback((row: R) => row.id, []);
-    const effectiveGetRowId = getRowId || defaultGetRowId;
-
-    // Normalize rows so every row has `id === getRowId(row)`.
-    // createInitialState and SET_ROWS both key the internal store by row.id,
-    // so rows without a native id field collide on undefined without this.
-    // When getRowId is the default (row) => row.id this is a no-op per row.
-    const normalizedRows = useMemo(
-        () => activeRows.map(row => {
-            const id = effectiveGetRowId(row);
-            return id === row.id ? row : ({ ...row, id } as R);
-        }),
-        [activeRows, effectiveGetRowId]
-    );
+    const effectiveGetRowId = (!(pivotMode && pivot.isValid) && getRowId) || defaultGetRowId;
 
     // Keyboard-mode flag: toggled via DOM classname — no React state needed
     // so the ring appears instantly without a re-render cycle.
@@ -291,7 +282,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     }, [treeData]);
 
     const gridData = useDataGrid({
-        rows: normalizedRows,
+        rows: activeRows,
+        getRowId: effectiveGetRowId,
         columns: activeColumns,
         rowHeight: effectiveRowHeight,
         headerHeight,
@@ -309,6 +301,18 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         setRowCount
     } = gridData;
 
+    // The key of any row the grid renders: stored rows resolve through the store, and
+    // grid-made rows (group rows, skeletons, generated tree parents) through their own `id`.
+    const getRowIdOf = useCallback(
+        (row: GridRowModel): GridRowId => state.rows.idByRow.get(row) ?? row.id,
+        [state.rows.idByRow]
+    );
+    // Same resolver with a stable identity, for event handlers only (it reads the last
+    // committed store), so column definitions are not rebuilt on every rows change.
+    const getRowIdOfRef = useRef(getRowIdOf);
+    useLayoutEffect(() => { getRowIdOfRef.current = getRowIdOf; });
+    const getRowIdOfInEvents = useCallback((row: GridRowModel) => getRowIdOfRef.current(row), []);
+
     const { scrollTop, scrollLeft, overscanRows, handleScroll } = useGridScrollSync({ onRowsScrollEnd, overscanRowCount });
 
     // Layout effect: the live API must be in place before the parent's layout effects run.
@@ -322,7 +326,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         selectedRowIds,
         columns: activeColumns as unknown as GridColDef[],
         getVisibleRows: () => apiRef.current.getVisibleRows(),
-        getRowId: effectiveGetRowId as unknown as (row: GridRowModel) => GridRowId,
+        getRowId: getRowIdOf,
     });
 
     // Expose on apiRef for programmatic use
@@ -339,7 +343,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const treeDataHandlers = useTreeData({
         rows: effectiveRows,
-        getRowId: effectiveGetRowId,
+        getRowId: getRowIdOf,
         getTreeDataPath,
         treeData,
         defaultGroupingExpansionDepth,
@@ -355,7 +359,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const rowGroupingHandlers = useRowGrouping({
         rows: effectiveRows,
-        getRowId: effectiveGetRowId,
+        getRowId: getRowIdOf,
         columns: activeColumns,
         rowGroupingModel,
         aggregationModel,
@@ -367,14 +371,15 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const editingHandlers = useGridEditing({
         rows: effectiveRows,
-        getRowId: effectiveGetRowId,
+        getRowId: getRowIdOf,
         processRowUpdate,
         onProcessRowUpdateError,
         onRowChange: (updatedRow) => {
             // A functional update against the *current* store: this runs after an awaited
             // processRowUpdate, by which time the rows prop (or a dataSource fetch) may have
             // replaced the rows this render saw.
-            setRows(prev => prev.map(r => (r.id === updatedRow.id ? updatedRow : r)));
+            const updatedId = effectiveGetRowId(updatedRow);
+            setRows(prev => prev.map(r => (effectiveGetRowId(r as R) === updatedId ? updatedRow : r)));
         },
     });
 
@@ -415,9 +420,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     useEffect(() => {
         if (!dataSource) {
-            setRows(normalizedRows);
+            setRows(activeRows);
         }
-    }, [normalizedRows, setRows, dataSource]);
+    }, [activeRows, setRows, dataSource]);
 
     // ── Detail panel (hoisted — hasDetailPanel feeds into useGridColumns) ──────
     const hasDetailPanel = Boolean(getDetailPanelContent);
@@ -465,6 +470,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         initialState,
         setColumns,
         pinnedColumns: effectivePinnedColumns,
+        getRowId: getRowIdOfInEvents,
     });
 
     useGridStateSnapshot({
@@ -490,6 +496,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         paginationMode,
         effectivePaginationModel,
         pinnedRows,
+        getRowId: getRowIdOf,
         isLoading: state.dataSource.loading,
         pageSize: effectivePaginationModel.pageSize,
     });
@@ -509,7 +516,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     // Select-all acts on, and the header checkbox reflects, the data rows that pass the
     // filter: never rows hidden by it, synthetic group rows, or stale ids in the selection.
-    const selectableRowIds = useMemo(() => dataRows.map(row => row.id), [dataRows]);
+    const selectableRowIds = useMemo(() => dataRows.map(getRowIdOf), [dataRows, getRowIdOf]);
     const rowSelection = useGridRowSelection({
         selectedRowIds,
         onSelectionModelChange: handleRowSelectionModelChange,
@@ -548,14 +555,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         getAllFilteredRows: () => {
             const hierarchyRows = activeHierarchyHandlers?.getVisibleRows({ expandAll: true }) as R[] | null | undefined;
             if (!hierarchyRows) return [...pinnedTopRows, ...sortedUnpinnedRows, ...pinnedBottomRows];
-            return hierarchyRows.filter(row => !rowMetaMap.get(row.id)?.isGroupRow);
+            return hierarchyRows.filter(row => !rowMetaMap.get(getRowIdOf(row))?.isGroupRow);
         },
         visibleColumns: visibleOrderedColumns as unknown as GridColDef[],
     });
 
     const rowReorderHandlers = useRowReorder({
         rows: pagination ? paginatedUnpinnedRows : sortedUnpinnedRows,
-        getRowId: (row) => row.id,
+        getRowId: getRowIdOf,
         onRowOrderChange,
         rowReordering
     });
@@ -563,7 +570,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const spanning = useGridSpanning(
         allRenderableRows,
         navigationColumns,
-        columnWidths
+        columnWidths,
+        getRowIdOf
     );
 
     const { aggregationResult } = useAggregation({
@@ -588,14 +596,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             // export their rows.
             return buildGroupedExportRows<R>({
                 rows: (rowGroupingHandlers.getVisibleRows({ expandAll: true }) ?? []) as R[],
-                getRowId: (row) => row.id,
+                getRowId: getRowIdOf,
                 rowMetaMap,
                 columns: activeColumns,
                 aggregationModel,
                 aggregationResult: hasAggregation ? aggregationResult : null,
             });
         };
-    }, [aggregationResult, aggregationModel, hasAggregation, gridData.apiRef, isRowGrouping, rowGroupingHandlers, rowMetaMap, activeColumns]);
+    }, [aggregationResult, aggregationModel, hasAggregation, gridData.apiRef, isRowGrouping, rowGroupingHandlers, rowMetaMap, activeColumns, getRowIdOf]);
 
     const layout = useLayout({
         rowHeight: effectiveRowHeight,
@@ -619,6 +627,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         paginationMode,
         isLoading: state.dataSource.loading,
         pageSize: effectivePaginationModel.pageSize,
+        getRowId: getRowIdOf,
     });
 
     // Merge layout-computed widths (which include flex resolution) with user-resize
@@ -737,15 +746,16 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         virtualization,
         viewportRef,
         pinnedTopRowCount: pinnedTopRows.length,
+        getRowId: getRowIdOf,
     });
 
     const handleCellClick = useCallback((params: GridCellParams<R>) => {
         setKeyboardMode(false);
-        setFocusedCell({ id: params.row.id, field: params.field });
+        setFocusedCell({ id: getRowIdOf(params.row), field: params.field });
 
         gridRef.current?.focus({ preventScroll: true });
         onCellClick?.(params);
-    }, [onCellClick, setKeyboardMode, setFocusedCell]);
+    }, [onCellClick, setKeyboardMode, setFocusedCell, getRowIdOf]);
 
     const prevEditingCellRef = useRef(editingHandlers.editingCell);
     useEffect(() => {
@@ -767,6 +777,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         paginatedUnpinnedRows,
         sortedUnpinnedRows,
         pagination,
+        getRowId: getRowIdOf,
     });
 
     useGridDevWarnings({
@@ -903,6 +914,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     onRowDoubleClick={onRowDoubleClick}
                     onSelectionChange={handleSelectionChange}
                     onPaginationModelChange={handlePaginationModelChange}
+                    getRowId={getRowIdOf}
                 />
             )}
 
@@ -1034,6 +1046,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             rowSpanningCaches={spanning.rowSpanningState.caches}
                             rowHeight={effectiveRowHeight}
                             rowMetaMap={rowMetaMap}
+                            getRowId={getRowIdOf}
                         />
 
                         <GridVirtualRows<R>
@@ -1101,6 +1114,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             rowSpanningCaches={spanning.rowSpanningState.caches}
                             rowHeight={effectiveRowHeight}
                             rowMetaMap={rowMetaMap}
+                            getRowId={getRowIdOf}
                         />
 
                         {/* Aggregation Footer Row — suppressed in pivot mode because pivot rows

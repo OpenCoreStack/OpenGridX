@@ -31,10 +31,14 @@ export interface RowSpanningState {
   processedRange: { firstRowIndex: number; lastRowIndex: number; };
 }
 
+const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
+
 export function useGridSpanning<R extends GridRowModel>(
   rows: R[],
   columns: GridColDef<R>[],
-  columnWidths: Record<string, number>
+  columnWidths: Record<string, number>,
+  /** Resolves a row's id (getRowId); span caches are keyed by it. Defaults to `row.id`. */
+  getRowId: (row: R) => GridRowId = defaultGetRowId
 ) {
 
   const [colspanMap, setColspanMap] = useState<ColspanMap>(new Map());
@@ -137,7 +141,7 @@ export function useGridSpanning<R extends GridRowModel>(
         const row = rows[index];
         if (!row) continue;
 
-        if (hiddenCells[row.id]?.[colDef.field]) continue;
+        if (hiddenCells[getRowId(row)]?.[colDef.field]) continue;
 
         const cellValue = colDef.valueGetter
           ? colDef.valueGetter({ row, field: colDef.field, value: row[colDef.field as keyof R] })
@@ -159,15 +163,15 @@ export function useGridSpanning<R extends GridRowModel>(
         }
 
         if (span > 1) {
-          if (!spannedCells[row.id]) spannedCells[row.id] = {};
-          spannedCells[row.id][colDef.field] = span; 
+          if (!spannedCells[getRowId(row)]) spannedCells[getRowId(row)] = {};
+          spannedCells[getRowId(row)][colDef.field] = span; 
 
           for (let k = 1; k < span; k++) {
             const nextIndex = index + k;
             if (nextIndex < lastRowIndex && rows[nextIndex]) {
               const nextRow = rows[nextIndex];
-              if (!hiddenCells[nextRow.id]) hiddenCells[nextRow.id] = {};
-              hiddenCells[nextRow.id][colDef.field] = true; 
+              if (!hiddenCells[getRowId(nextRow)]) hiddenCells[getRowId(nextRow)] = {};
+              hiddenCells[getRowId(nextRow)][colDef.field] = true; 
 
               if (!hiddenCellOriginMap[nextIndex]) hiddenCellOriginMap[nextIndex] = {};
               hiddenCellOriginMap[nextIndex][colDef.field] = index; 
@@ -181,7 +185,7 @@ export function useGridSpanning<R extends GridRowModel>(
       caches: { spannedCells, hiddenCells, hiddenCellOriginMap },
       processedRange: { firstRowIndex, lastRowIndex }
     });
-  }, [rows, columns]);
+  }, [rows, columns, getRowId]);
 
   const resetRowSpan = useCallback(() => {
     setRowSpanningState({
@@ -222,7 +226,7 @@ export function useGridSpanning<R extends GridRowModel>(
 
         if (colSpan <= 1) {
           const colWidth = columnWidths[colDef.field] || (typeof colDef.width === 'number' ? colDef.width : 100);
-          setCellColSpanInfo(newMap, row.id, colDef.field, {
+          setCellColSpanInfo(newMap, getRowId(row), colDef.field, {
             spannedByColSpan: false,
             cellProps: { colSpan: 1, width: colWidth }
           });
@@ -237,7 +241,7 @@ export function useGridSpanning<R extends GridRowModel>(
               const nextColWidth = columnWidths[nextCol.field] || (typeof nextCol.width === 'number' ? nextCol.width : 100);
               width += nextColWidth;
 
-              setCellColSpanInfo(newMap, row.id, nextCol.field, {
+              setCellColSpanInfo(newMap, getRowId(row), nextCol.field, {
                 spannedByColSpan: true,
                 leftVisibleCellIndex: i,
                 rightVisibleCellIndex: Math.min(i + colSpan - 1, columns.length - 1)
@@ -246,7 +250,7 @@ export function useGridSpanning<R extends GridRowModel>(
           }
         }
 
-        setCellColSpanInfo(newMap, row.id, colDef.field, {
+        setCellColSpanInfo(newMap, getRowId(row), colDef.field, {
           spannedByColSpan: false,
           cellProps: { colSpan, width }
         });
@@ -268,7 +272,7 @@ export function useGridSpanning<R extends GridRowModel>(
         const row = rows[index];
         if (!row) continue;
 
-        if (hiddenCells[row.id]?.[colDef.field]) continue;
+        if (hiddenCells[getRowId(row)]?.[colDef.field]) continue;
 
         const cellValue = colDef.valueGetter
           ? colDef.valueGetter({ row, field: colDef.field, value: row[colDef.field as keyof R] })
@@ -290,15 +294,15 @@ export function useGridSpanning<R extends GridRowModel>(
         }
 
         if (span > 1) {
-          if (!spannedCells[row.id]) spannedCells[row.id] = {};
-          spannedCells[row.id][colDef.field] = span;
+          if (!spannedCells[getRowId(row)]) spannedCells[getRowId(row)] = {};
+          spannedCells[getRowId(row)][colDef.field] = span;
 
           for (let k = 1; k < span; k++) {
             const nextIndex = index + k;
             if (nextIndex < rows.length && rows[nextIndex]) {
               const nextRow = rows[nextIndex];
-              if (!hiddenCells[nextRow.id]) hiddenCells[nextRow.id] = {};
-              hiddenCells[nextRow.id][colDef.field] = true;
+              if (!hiddenCells[getRowId(nextRow)]) hiddenCells[getRowId(nextRow)] = {};
+              hiddenCells[getRowId(nextRow)][colDef.field] = true;
 
               if (!hiddenCellOriginMap[nextIndex]) hiddenCellOriginMap[nextIndex] = {};
               hiddenCellOriginMap[nextIndex][colDef.field] = index;
@@ -312,7 +316,7 @@ export function useGridSpanning<R extends GridRowModel>(
       caches: { spannedCells, hiddenCells, hiddenCellOriginMap },
       processedRange: { firstRowIndex: 0, lastRowIndex: rows.length }
     });
-  }, [rows, columns, columnWidths]);
+  }, [rows, columns, columnWidths, getRowId]);
 
   const getSpannedCells = useCallback(() => rowSpanningState.caches.spannedCells, [rowSpanningState]);
   const getHiddenCells = useCallback(() => rowSpanningState.caches.hiddenCells, [rowSpanningState]);

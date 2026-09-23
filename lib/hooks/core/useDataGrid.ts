@@ -13,33 +13,41 @@ import { createGridApiPlaceholder } from './gridApiPlaceholder';
 // Sort, filter, pagination and selection deliberately have no slice here: they live in
 // useGridControlledState, which is what the grid renders from. (Copies of them in this
 // reducer used to drift from it, which made the imperative API a no-op.)
+type GetRowId = (row: GridRowModel) => GridRowId;
+
 type GridAction =
-  | { type: 'SET_ROWS'; payload: GridRowModel[] | ((prev: GridRowModel[]) => GridRowModel[]) }
+  | { type: 'SET_ROWS'; payload: GridRowModel[] | ((prev: GridRowModel[]) => GridRowModel[]); getRowId: GetRowId }
   | { type: 'SET_COLUMNS'; payload: GridColDef[] }
   | { type: 'SET_DIMENSIONS'; payload: { viewportWidth: number; viewportHeight: number } }
   | { type: 'SET_DATASOURCE_LOADING'; payload: boolean }
   | { type: 'SET_DATASOURCE_ERROR'; payload: unknown }
   | { type: 'SET_ROW_COUNT'; payload: number };
 
+const defaultGetRowId: GetRowId = (row) => row.id;
+
 // Rows are re-keyed on every rows change, so warn once rather than on every update.
 let warnedDuplicateIds = false;
 
 /**
- * Keys rows by id. A duplicate id keeps the first row, so a later row never silently
- * replaces it (or renders twice), and warns once in development.
+ * Keys rows by getRowId(row). The row objects are stored as given (never copied or given an
+ * `id` field), so `idByRow` maps each one back to its key. A duplicate id keeps the first
+ * row, so a later row never silently replaces it (or renders twice), and warns once in
+ * development.
  */
-function buildRowsState(rows: GridRowModel[]): GridState['rows'] {
+function buildRowsState(rows: GridRowModel[], getRowId: GetRowId): GridState['rows'] {
   const idRowsLookup = new Map<GridRowId, GridRowModel>();
+  const idByRow = new Map<GridRowModel, GridRowId>();
   const allRows: GridRowId[] = [];
   const duplicates: GridRowId[] = [];
 
   rows.forEach(row => {
-    const id = row.id;
+    const id = getRowId(row);
     if (idRowsLookup.has(id)) {
       duplicates.push(id);
       return;
     }
     idRowsLookup.set(id, row);
+    idByRow.set(row, id);
     allRows.push(id);
   });
 
@@ -52,10 +60,10 @@ function buildRowsState(rows: GridRowModel[]): GridState['rows'] {
     );
   }
 
-  return { idRowsLookup, allRows };
+  return { idRowsLookup, allRows, idByRow };
 }
 
-function createInitialState<R extends GridRowModel>(rows: R[], columns: GridColDef<R>[], columnVisibilityModel: GridColumnVisibilityModel = {}): GridState {
+function createInitialState<R extends GridRowModel>(rows: R[], getRowId: GetRowId, columns: GridColDef<R>[], columnVisibilityModel: GridColumnVisibilityModel = {}): GridState {
   const columnLookup = new Map<string, GridColDef>();
   const orderedFields: string[] = [];
 
@@ -65,7 +73,7 @@ function createInitialState<R extends GridRowModel>(rows: R[], columns: GridColD
   });
 
   return {
-    rows: buildRowsState(rows),
+    rows: buildRowsState(rows, getRowId),
     columns: {
       all: columns as unknown as GridColDef[],
       lookup: columnLookup,
@@ -112,7 +120,7 @@ function gridReducer(state: GridState, action: GridAction): GridState {
       // counts are derived from the rows the grid shows, so replacing rows never touches it.
       return {
         ...state,
-        rows: buildRowsState(newRows),
+        rows: buildRowsState(newRows, action.getRowId),
       };
     }
 
@@ -180,6 +188,8 @@ function gridReducer(state: GridState, action: GridAction): GridState {
 
 export interface UseDataGridParams<R extends GridRowModel = GridRowModel> {
   rows: R[];
+  /** Keys the store. Read when rows are set; defaults to `row.id`. */
+  getRowId?: (row: R) => GridRowId;
   columns: GridColDef<R>[];
   rowHeight?: number;
   headerHeight?: number;
@@ -194,9 +204,15 @@ export interface UseDataGridParams<R extends GridRowModel = GridRowModel> {
  */
 export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDataGridParams<R>) {
   const { rows, columns, rowHeight = 52, headerHeight = 56, columnVisibilityModel, initialState: propInitialState } = params;
+  const getRowId = (params.getRowId ?? defaultGetRowId) as GetRowId;
+
+  // Latest getRowId for dispatches from effects and event handlers. An inline getRowId
+  // therefore never re-keys (or resets) the store by itself; new rows are keyed with it.
+  const getRowIdRef = useRef(getRowId);
+  useLayoutEffect(() => { getRowIdRef.current = getRowId; });
 
   const [internalInitialState] = useState(() =>
-    createInitialState(rows, columns, columnVisibilityModel)
+    createInitialState(rows, getRowId, columns, columnVisibilityModel)
   );
 
   const [state, dispatch] = useReducer(gridReducer, {
@@ -220,7 +236,7 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
   // `_preserveRowCount` is still accepted from callers written against the old signature;
   // replacing rows never changes the server row count any more.
   const setRows = useCallback((rowsOrUpdater: GridRowModel[] | ((prev: GridRowModel[]) => GridRowModel[]), _preserveRowCount?: boolean) => {
-    dispatch({ type: 'SET_ROWS', payload: rowsOrUpdater });
+    dispatch({ type: 'SET_ROWS', payload: rowsOrUpdater, getRowId: getRowIdRef.current });
   }, []);
 
   const setColumns = useCallback((newColumns: GridColDef[]) => {
