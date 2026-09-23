@@ -71,7 +71,7 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `disableColumnReorder` | `boolean` | `false` | Disables drag-and-drop column reordering. |
+| `disableColumnReorder` | `boolean` | `false` | Disables drag-and-drop and Columns-panel reordering. A controlled `columnOrder` or `initialState.columns.columnOrder` still applies. |
 | `columnOrder` | `GridColumnOrder` | — | Controlled ordered array of column field names. |
 | `onColumnOrderChange` | `(params: GridColumnOrderChangeParams) => void` | — | Fired after a column is dragged to a new position. |
 | `rowReordering` | `boolean` | `false` | Enables drag-and-drop row reordering. |

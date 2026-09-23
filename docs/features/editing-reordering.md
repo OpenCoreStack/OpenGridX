@@ -168,6 +168,8 @@ Use the `disableColumnReorder` prop to control this feature globally.
 <DataGrid disableColumnReorder={true} />
 ```
 
+`disableColumnReorder` only removes the user's ways to reorder (header drag, Columns-panel reorder). A controlled `columnOrder` or `initialState.columns.columnOrder` still sets the order, so you can fix a custom order and stop users from changing it.
+
 ### Controlled Column Order
 You can manage the column order state explicitly using `columnOrder` and `onColumnOrderChange`.
 
