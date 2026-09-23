@@ -73,7 +73,23 @@ List view pages exactly like the grid view: with `pagination`, one page of the (
 
 ## ♿ Accessibility
 
-The list is a `role="grid"` whose rows carry an `aria-rowindex` over the whole data set (row 11 on the second page of 10) and whose `aria-rowcount` is the total number of rows. There is no header row in list view.
+The list is a `role="grid"` whose rows carry an `aria-rowindex` over the whole data set (row 11 on the second page of 10) and whose `aria-rowcount` is the total number of rows. There is no header row in list view. Tree-data rows also carry `aria-level` and, for parents, `aria-expanded`.
+
+### Keyboard (v3.0)
+
+Rows are focusable with a roving tab stop:
+
+| Key | Action |
+| :--- | :--- |
+| **Tab** | The list is one Tab stop: it lands on the last focused row (the first row at first). Row checkboxes are not separate Tab stops. |
+| **ArrowDown** / **ArrowUp** | Next / previous row. |
+| **Home** / **End** | First / last row. |
+| **PageDown** / **PageUp** | Ten rows down / up. |
+| **Enter** / **Space** | A row with children (tree-data parent, group row): expand or collapse it. Any other row: same as clicking it (`onRowClick`, and click selection unless `disableRowSelectionOnClick`). |
+| **Alt+ArrowRight** / **Alt+ArrowLeft** | Expand / collapse the focused parent row. |
+| **Shift+Space** | Select or deselect the focused row, when rows can be selected. |
+
+Keys pressed in content your `renderCell` puts in a row (inputs, buttons) are left to that content.
 
 ---
 

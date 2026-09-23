@@ -50,6 +50,22 @@ When an edit ends, focus returns to the edited cell unless you moved it elsewher
 
 In the column menu, **ArrowUp** / **ArrowDown** / **Home** / **End** move between items, **Enter** / **Space** choose one, and **Escape** or **Tab** closes the menu. Focus returns to the column header.
 
+### List view
+
+In `listView`, focus moves between whole rows instead of cells:
+
+| Key | Action |
+| :--- | :--- |
+| **Tab** | The list is one Tab stop: it lands on the last focused row (the first row at first). Row checkboxes are not separate Tab stops. |
+| **ArrowDown** / **ArrowUp** | Next / previous row. |
+| **Home** / **End** | First / last row. |
+| **PageDown** / **PageUp** | Ten rows down / up. |
+| **Enter** / **Space** | A row with children (tree-data parent, group row): expand or collapse it. Any other row: same as clicking it (`onRowClick`, and click selection unless `disableRowSelectionOnClick`). |
+| **Alt+ArrowRight** / **Alt+ArrowLeft** | Expand / collapse the focused parent row. |
+| **Shift+Space** | Select or deselect the focused row, when rows can be selected. |
+
+Keys pressed in content your `renderCell` puts in a row (inputs, buttons) are left to that content.
+
 ## ARIA structure
 
 | Element | Attributes |

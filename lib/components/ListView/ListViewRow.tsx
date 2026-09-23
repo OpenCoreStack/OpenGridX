@@ -21,6 +21,10 @@ export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
     onRowClick?: (row: R) => void;
     onRowDoubleClick?: (row: R) => void;
     onSelectionChange?: (rowId: GridRowId, isSelected: boolean) => void;
+    /** Roving tab stop: 0 for the one row the list's Tab stop lands on, -1 for the others. */
+    tabIndex?: number;
+    /** Called when the row element itself receives focus. */
+    onFocus?: (rowIndex: number) => void;
 }
 
 export function ListViewRow<R extends GridRowModel = GridRowModel>({
@@ -37,6 +41,8 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
     onRowClick,
     onRowDoubleClick,
     onSelectionChange,
+    tabIndex = -1,
+    onFocus,
 }: ListViewRowProps<R>) {
     const id = rowId ?? row.id;
     const field = listViewColumn.field;
@@ -71,6 +77,11 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
             role="row"
             aria-rowindex={ariaRowIndex ?? rowIndex + 1}
             aria-selected={isSelected}
+            aria-level={rowMeta?.treeDepth !== undefined ? rowMeta.treeDepth + 1 : undefined}
+            aria-expanded={rowMeta?.hasChildren ? rowMeta.isExpanded === true : undefined}
+            data-rowindex={rowIndex}
+            tabIndex={tabIndex}
+            onFocus={onFocus ? (e) => { if (e.target === e.currentTarget) onFocus(rowIndex); } : undefined}
         >
             {checkboxSelection && (
                 <div className="ogx-list-view__checkbox" onClick={(e) => e.stopPropagation()}>
@@ -79,6 +90,8 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
                         checked={isSelected}
                         onChange={handleCheckboxChange}
                         aria-label={`Select row ${id}`}
+                        // Not a Tab stop of its own: the list is one Tab stop, Shift+Space selects the focused row.
+                        tabIndex={-1}
                     />
                 </div>
             )}

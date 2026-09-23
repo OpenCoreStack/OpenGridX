@@ -31,6 +31,15 @@
   background: var(--ogx-color-gray-50, #f8fafc);
 }
 
+/* Keyboard focus (roving tab stop between list rows). */
+.ogx-list-view__row:focus {
+  outline: none;
+}
+.ogx-list-view__row:focus-visible {
+  outline: 2px solid var(--ogx-color-primary);
+  outline-offset: -2px;
+}
+
 .ogx-list-view__row--selected {
   background: var(--ogx-selection-bg, rgba(59, 130, 246, 0.08));
 }

@@ -62,6 +62,10 @@ export interface GridListViewProps<R extends GridRowModel> {
     noRowsOverlay?: React.ReactNode;
     /** False when `slots.footer` replaces the pagination area. Defaults to true. */
     showPaginationControls?: boolean;
+    /** Whether rows can be selected (Shift+Space toggles the focused row). */
+    selectable?: boolean;
+    /** Expands / collapses a tree-data parent or group row (Enter, Space, Alt+ArrowRight / Alt+ArrowLeft). */
+    onToggleExpansion?: (id: GridRowId) => void;
 }
 
 const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
@@ -100,8 +104,64 @@ export function GridListView<R extends GridRowModel>({
     loadingOverlay,
     noRowsOverlay,
     showPaginationControls = true,
+    selectable = false,
+    onToggleExpansion,
 }: GridListViewProps<R>) {
     const PaginationComponent = paginationSlot || Pagination;
+
+    // Roving tab stop: the list is one Tab stop, on the last focused row (the first row until then,
+    // or when that row is no longer rendered).
+    const rowsRef = React.useRef<HTMLDivElement>(null);
+    const [focusedRowId, setFocusedRowId] = React.useState<GridRowId | null>(null);
+    const focusedIndex = focusedRowId === null ? -1 : allRenderableRows.findIndex(row => getRowId(row) === focusedRowId);
+    const tabStopIndex = focusedIndex === -1 ? 0 : focusedIndex;
+
+    const focusRow = (index: number) => {
+        const row = allRenderableRows[index];
+        if (!row) return;
+        setFocusedRowId(getRowId(row));
+        rowsRef.current?.querySelector<HTMLElement>(`:scope > [role="row"][data-rowindex="${index}"]`)?.focus();
+    };
+
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        const target = event.target as HTMLElement;
+        // Keys pressed in content rendered inside a row (inputs, buttons) belong to that content.
+        if (target.getAttribute('role') !== 'row' || target.parentElement !== rowsRef.current) return;
+        const index = Number(target.getAttribute('data-rowindex'));
+        const row = allRenderableRows[index];
+        if (!row) return;
+        const id = getRowId(row);
+        const last = allRenderableRows.length - 1;
+        const meta = rowMetaMap.get(id);
+        const canToggle = Boolean(meta?.hasChildren && onToggleExpansion);
+        if (event.altKey && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
+            event.preventDefault();
+            if (canToggle && (event.key === 'ArrowRight') !== (meta?.isExpanded === true)) onToggleExpansion?.(id);
+            return;
+        }
+        switch (event.key) {
+            case 'ArrowDown': event.preventDefault(); focusRow(Math.min(index + 1, last)); return;
+            case 'ArrowUp': event.preventDefault(); focusRow(Math.max(index - 1, 0)); return;
+            case 'Home': event.preventDefault(); focusRow(0); return;
+            case 'End': event.preventDefault(); focusRow(last); return;
+            case 'PageDown': event.preventDefault(); focusRow(Math.min(index + 10, last)); return;
+            case 'PageUp': event.preventDefault(); focusRow(Math.max(index - 10, 0)); return;
+            case 'Enter':
+            case ' ':
+                event.preventDefault();
+                if (event.key === ' ' && event.shiftKey) {
+                    // Synthetic group rows are not data, so they are not selectable.
+                    if (selectable && !meta?.isGroupRow) onSelectionChange(id, !selectedRowIds.has(id));
+                    return;
+                }
+                // A row with children (tree-data parent or group row) expands / collapses, as Enter does in
+                // the grid view; any other row acts as clicked (onRowClick and click selection).
+                if (canToggle) onToggleExpansion?.(id);
+                else onRowClick({ row, id, rowIndex: index });
+                return;
+            default:
+        }
+    };
 
     // Under server pagination only the current page is loaded; the server reports the total.
     const isServerPaged = paginationMode === 'server';
@@ -145,7 +205,7 @@ export function GridListView<R extends GridRowModel>({
                 </span>
             </div>
 
-            <div className="ogx-list-view__rows" onScroll={handleScroll}>
+            <div className="ogx-list-view__rows" onScroll={handleScroll} onKeyDown={handleKeyDown} ref={rowsRef}>
                 {allRenderableRows.length === 0 && loading ? (
                     // The grid's live region announces loading; the list shows no "No Data" meanwhile.
                     <div className="ogx-list-view__loading">
@@ -180,6 +240,8 @@ export function GridListView<R extends GridRowModel>({
                             onRowClick={(r) => onRowClick({ row: r, id, rowIndex: idx })}
                             onRowDoubleClick={onRowDoubleClick ? (r) => onRowDoubleClick({ row: r, id, rowIndex: idx }) : undefined}
                             onSelectionChange={onSelectionChange}
+                            tabIndex={idx === tabStopIndex ? 0 : -1}
+                            onFocus={(rowIndex) => setFocusedRowId(getRowId(allRenderableRows[rowIndex]))}
                         />
                         );
                     })
