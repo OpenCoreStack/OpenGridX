@@ -21,8 +21,8 @@ The main component for displaying and interacting with data.
 | `overscanRowCount` | `number` | `3` | Minimum rows rendered outside the visible viewport. The grid adapts this upward automatically based on scroll velocity — this prop sets the floor. |
 | `loading` | `boolean` | `false` | Shows a loading skeleton overlay. |
 | `checkboxSelection` | `boolean` | `false` | Enable row selection via checkboxes. |
-| `pagination` | `boolean` | `false` | Enable the bottom pagination bar. Ignored while `rowGroupingModel` is active (dev-mode warning). |
-| `paginationMode` | `'client' \| 'server' \| 'infinite'` | `'client'` | How to handle paging. |
+| `pagination` | `boolean` | `false` | Enable the bottom pagination bar. Ignored while `rowGroupingModel` is active (dev-mode warning) and with `paginationMode="infinite"`. |
+| `paginationMode` | `'client' \| 'server' \| 'infinite'` | `'client'` | How to handle paging. `'infinite'` appends rows from the `dataSource` as `paginationModel.page` grows and never shows a pager or slices rows (see [Infinite Scroll](features/infinite-scroll.md)). |
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). |
 | `onPaginationModelChange` | `(model: GridPaginationModel) => void` | — | Fired when page or page size changes. |
 | `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. The uncontrolled default page size is 100 when offered, else the first option. |
@@ -729,8 +729,8 @@ The object passed to `getRows` by the grid on every data fetch.
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `startRow` | `number` | Zero-based index of the first row to fetch (based on `page * pageSize`). |
-| `endRow` | `number` | Zero-based index of the last row to fetch (exclusive). |
+| `startRow` | `number` | Zero-based index of the first row to fetch. Server pagination: `page * pageSize`. Infinite scroll: the number of rows already loaded. Client pagination and tree children: `0`. |
+| `endRow` | `number` | Zero-based index just past the last row to fetch (exclusive), so `rows.slice(startRow, endRow)` is the requested range. Server pagination: `startRow + pageSize`. Infinite scroll: `(page + 1) * pageSize`. When the grid wants every row (client pagination, the children of a tree node) it is `Number.MAX_SAFE_INTEGER`. |
 | `sortModel` | `GridSortItem[]` | Active sort configuration. Empty array when no sort is applied. |
 | `filterModel` | `GridFilterModel` | Active filter state. Has empty `items` when no filters are applied. |
 | `groupKeys` | `string[]` | Path of grouping key values for the current group level (used in lazy-loaded tree/grouping). Empty array for the root level. |
@@ -809,7 +809,15 @@ export default function EmployeeGrid() {
 }
 ```
 
-**How the grid decides when to call `getRows`:** The hook fires (with a 300 ms debounce) whenever `paginationMode`, `sortingMode`, or `filterMode` is set to `'server'` AND a `dataSource` is provided. Any change to `sortModel`, `filterModel`, or `paginationModel` re-triggers the fetch. Stale responses from superseded requests are silently discarded — only the latest request updates the grid.
+**How the grid decides when to call `getRows`:** whenever a `dataSource` is provided, with a 300 ms debounce that collapses rapid changes into one request. The grid shows its loading state from the moment a request is scheduled, so the empty state never flashes up first.
+
+| `paginationMode` | Request | Refetches when |
+| :--- | :--- | :--- |
+| `'client'` (default) | Every row once (`startRow: 0`, `endRow: Number.MAX_SAFE_INTEGER`). The grid pages, and sorts/filters unless those modes are `'server'`. | A `'server'` sort or filter changes, or `getRows` changes. Page changes never refetch. |
+| `'server'` | One page. The response replaces the rows. | The page, page size, sort, filter or aggregation model changes, or `getRows` changes. |
+| `'infinite'` | The rows from the end of what is loaded up to the current page. Responses are appended; rows whose id is already loaded are skipped. | The page grows. A sort, filter, page-size or `getRows` change restarts the list at row 0 and reports page 0 through `onPaginationModelChange`; a smaller page reloads the list up to that page. |
+
+Models are compared by content, so inline `sortModel`/`filterModel`/`aggregationModel` objects and a `dataSource` object recreated with the same `getRows` function do not refetch. A response for parameters that have changed since (another page, sort, filter or `dataSource`, or a removed `dataSource`) is discarded. Fetched rows are keyed with `getRowId`. When `getRows` rejects, the error overlay shows the rejection's `message` (an `Error`, a string, or any object with a string `message`) and a **Retry** button that requests the rows again.
 
 ---
 

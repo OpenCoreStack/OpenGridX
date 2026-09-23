@@ -60,11 +60,18 @@ describe('normalizeSpan', () => {
 describe('useGridSpanning', () => {
     describe('no spans configured', () => {
         it('returns empty, stable caches and costs nothing for large grids', () => {
-            const rows = Array.from({ length: 100_000 }, (_, i) => ({ id: i }));
+            // Counts row reads instead of timing the hook: with no span callbacks it must not walk the
+            // rows at all (it used to build an entry for every cell, ~2 s at this size).
+            let rowReads = 0;
+            const rows = new Proxy(Array.from({ length: 100_000 }, (_, i) => ({ id: i })), {
+                get(target, key, receiver) {
+                    if (typeof key === 'string' && /^\d+$/.test(key)) rowReads++;
+                    return Reflect.get(target, key, receiver);
+                },
+            });
             const columns: GridColDef<TestRow>[] = Array.from({ length: 20 }, (_, i) => ({ field: `f${i}` }));
-            const t0 = performance.now();
             const { result, rerender } = renderHook(({ p }) => useGridSpanning(p), { initialProps: { p: params(rows, columns) } });
-            expect(performance.now() - t0).toBeLessThan(200);
+            expect(rowReads).toBe(0);
             expect(result.current.colspanMap.size).toBe(0);
             expect(result.current.rowSpanningCaches.spannedCells).toEqual({});
             const first = result.current;
