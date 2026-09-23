@@ -15,8 +15,8 @@ The main component for displaying and interacting with data.
 | `rows` | `GridRowModel[]` | `[]` | Array of data objects. |
 | `columns` | `GridColDef[]` | `[]` | Definitions for the columns. |
 | `getRowId` | `(row: GridRowModel) => GridRowId` | `row.id` | Returns a unique identifier for each row. It only keys the grid's internal store: rows reach `renderCell`, events, `apiRef` and `processRowUpdate` unchanged, and the id is never written to `row.id` (v3.0+). Pass it to export functions as `getRowId` when you export `selectedRows`. |
-| `rowHeight` | `number` | `52` | Height of each row in pixels. |
-| `headerHeight` | `number` | `56` | Height of the header row. |
+| `rowHeight` | `number` | `52` | Height of each row in pixels. Without it, an enclosing `DataGridThemeProvider`'s `grid.rowHeightStandard` applies (v3.0+). |
+| `headerHeight` | `number` | `56` | Height of the header row. Without it, the theme's `grid.headerHeight` applies (v3.0+). |
 | `autoHeight` | `boolean` | `false` | Adjust grid height to match row total. |
 | `overscanRowCount` | `number` | `3` | Minimum rows rendered outside the visible viewport. The grid adapts this upward automatically based on scroll velocity — this prop sets the floor. |
 | `loading` | `boolean` | `false` | Shows a loading skeleton overlay. |
@@ -28,7 +28,7 @@ The main component for displaying and interacting with data.
 | `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. The uncontrolled default page size is 100 when offered, else the first option. |
 | `rowCount` | `number` | — | Server total for `paginationMode="server"` when you fetch pages yourself (read on every render). With a `dataSource`, the response's `rowCount` is used and this is only the fallback before the first response. |
 | `height` | `number \| string` | `undefined` | Total height of the grid container. |
-| `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density. |
+| `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density: compact = the theme's `grid.rowHeightCompact` or 32 px, standard = `rowHeight`, comfortable = the theme's `grid.rowHeightComfortable` or 72 px. |
 | `initialState` | `GridInitialState` | `undefined` | Starting state (sort, filter, pagination, columns, density), read on mount. Seeds the grid's uncontrolled state; see [State Persistence](features/state-persistence.md). |
 | `slots` | `GridSlots` | `{}` | Custom component overrides: `toolbar`, `pagination`, `noRowsOverlay`, `loadingOverlay`, `footer`. See [Slots API](customization/slots-api.md). |
 | `slotProps` | `Record<string, unknown>` | `{}` | Props passed to custom slots. |
@@ -383,9 +383,14 @@ Every exporter's options also accept `getRowId?: (row) => GridRowId`. Pass the g
 Context provider for overriding the grid's visual system.
 
 #### `GridTheme` Object
-- **Colors**: `primary`, `secondary`, `header`, `border`, `rowHover`, `rowSelected`.
-- **Typography**: `fontFamily`, `fontSize`, `fontWeight`.
-- **Spacing**: `cellPadding`, `headerHeight`, `rowHeight`.
+- **`mode`**: `'light'` (default) or `'dark'`: the complete base palette the provider pins before applying the other keys (v3.0+).
+- **`colors`**: `primary`, `primaryDark`, `primaryLight`, `primaryFocus`, `secondary*`, `success`, `warning`, `error`, `info`, `white`, `black`, `gray` (`{ 50 … 900 }`). Toolbar, menu, selection and focus accents derive from `primary*` unless set directly.
+- **`typography`**: `fontFamily`, `fontFamilyMono`, `fontSizeXs` … `fontSizeXl`.
+- **`spacing`**: `xs` … `xxl`. **`borders`**: `widthThin/Medium/Thick`, `radiusSm` … `radiusXl`, `color`, `colorHover`. **`shadows`**: `sm` … `xl`.
+- **`grid`**: surfaces (`background`, `borderColor`, `headerBackground`, `headerText`, `headerHoverBackground`, `headerSortedBackground`, `rowText`, `rowHoverBackground`, `rowAlternateBackground`, `rowSelectedBackground`, `rowSelectedHoverBackground`, `cellFocusBorder`, `pinnedLeftShadow`, `pinnedRightShadow`, `checkboxBg`, `checkboxBorder`), sizing (`rowHeightCompact`, `rowHeightStandard`, `rowHeightComfortable`, `headerHeight` in px, read by the grid's layout; the `rowHeight` / `headerHeight` props win), `cellPaddingX`, `cellPaddingY`, `cellFontSize`, `headerFontSize`.
+- **`toolbar`**, **`overlays`**, **`scrollbar`** (`thumbColor`, `trackColor`, `size`), **`skeleton`** (`baseColor`, `highlightColor`), **`transitions`**.
+
+Presets: `darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compactTheme`. See [Theming](customization/theming.md).
 
 ---
 
@@ -491,7 +496,7 @@ const { pivotRows, pivotColumns, isValid } = usePivot(
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `pivotRows` | `GridRowModel[]` | One row per row-field combination (ids `0, 1, …`), then the Grand Total row (id `'__pivot_grand_total__'`). There is no Grand Total row when `rawRows` is empty. |
+| `pivotRows` | `GridRowModel[]` | One row per row-field combination (ids `'__pivot_row__:["value", …]'`, from its row-field values), then the Grand Total row (id `'__pivot_grand_total__'`). There is no Grand Total row when `rawRows` is empty. |
 | `pivotColumns` | `GridColDef[]` | Row-label columns (keeping the source column's formatter, renderer, type and alignment; `hideable: false`), then one value column per column key and value field. Value columns format aggregates like the footer. |
 | `colKeys` | `string[]` | The distinct column-field value combinations, ordered by value (numbers numerically, strings naturally, blanks last). `['']` when there are no column fields. |
 | `isValid` | `boolean` | `false` if the model has no usable row field or value field (fields on `groupable: false` columns and value fields whose function `availableAggregationFunctions` does not allow are skipped). |

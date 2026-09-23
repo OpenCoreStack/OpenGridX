@@ -43,7 +43,7 @@ When an edit ends, focus returns to the edited cell unless you moved it elsewher
 
 | Key | Action |
 | :--- | :--- |
-| **Enter** / **Space** | Sort the column (asc → desc → none). On the select-all header: select or clear all rows. |
+| **Enter** / **Space** | Sort the column (asc → desc → none), replacing the sort model; with `multiSort`, or with **Shift** held, the column is added to (or updated or removed from) the sort model instead, as a header click or shift-click does. On the select-all header: select or clear all rows. |
 | **Alt+ArrowDown** or **Ctrl+Enter** (Cmd+Enter) | Open the column menu. |
 | **ArrowDown** | Move to the first row. |
 
