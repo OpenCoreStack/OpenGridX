@@ -31,11 +31,14 @@
    ─────────────────────────────────────────────────────────────────────────── */
 .ogx-global-search--expanded {
     width: 220px;
-    border-color: var(--ogx-toolbar-input-focus-border, var(--ogx-color-primary, #3b82f6));
+    border-color: var(--ogx-toolbar-input-border, var(--ogx-color-gray-300, #cbd5e1));
     background: var(--ogx-toolbar-input-bg, var(--ogx-grid-background, #fff));
-    box-shadow: var(--ogx-toolbar-input-focus-shadow, 0 0 0 3px rgba(59, 130, 246, 0.12));
     cursor: default;
     overflow: hidden;
+}
+.ogx-global-search--expanded:focus-within {
+    border-color: var(--ogx-toolbar-input-focus-border, var(--ogx-color-primary, #3b82f6));
+    box-shadow: var(--ogx-toolbar-input-focus-shadow, 0 0 0 3px rgba(59, 130, 246, 0.12));
 }
 
 /* ─── Icon wrapper ────────────────────────────────────────────────────────── */
@@ -70,7 +73,7 @@
     background: transparent;
     font-family: var(--ogx-font-family, system-ui, sans-serif);
     font-size: var(--ogx-font-size-sm, 13px);
-    color: var(--ogx-grid-row-text, #1e293b);
+    color: var(--ogx-toolbar-input-text, var(--ogx-grid-row-text, #1e293b));
     outline: none;
     opacity: 0;
     pointer-events: none;

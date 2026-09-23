@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useSta
 import { useLayout } from '../../hooks/core/useLayout';
 import { useGridKeyboardNavigation } from '../../hooks/core/useGridKeyboardNavigation';
 import { useGridControlledState } from '../../hooks/core/useGridControlledState';
+import { useGridThemeDimensions } from '../../hooks/core/useGridThemeDimensions';
 import { useGridRowPipeline } from '../../hooks/core/useGridRowPipeline';
 import { useGridVirtualization } from '../../hooks/core/useGridVirtualization';
 import { useGridColumns } from '../../hooks/core/useGridColumns';
@@ -59,8 +60,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rows,
         columns,
         getRowId,
-        rowHeight = 52,
-        headerHeight = 56,
+        rowHeight: rowHeightProp,
+        headerHeight: headerHeightProp,
         autoHeight = false,
         density,
         checkboxSelection = false,
@@ -236,7 +237,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const hierarchyRowGroupingModel = isPivotActive ? defaultRowGroupingModel : rowGroupingModel;
     const isTreeData = treeData && !isPivotActive;
 
-    const effectiveRowHeight = effectiveDensity === 'compact' ? 32 : effectiveDensity === 'comfortable' ? 72 : rowHeight;
+    // Props, then the enclosing DataGridThemeProvider's heights, then the defaults (52 / 56).
+    const { rowHeight: effectiveRowHeight, headerHeight } = useGridThemeDimensions({
+        rowHeight: rowHeightProp, headerHeight: headerHeightProp, density: effectiveDensity,
+    });
 
     const activeRows = pivot.rows as unknown as R[];
     const baseColumns = pivot.columns as unknown as GridColDef<R>[];
