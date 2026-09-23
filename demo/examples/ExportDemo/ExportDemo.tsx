@@ -285,10 +285,11 @@ function ExportToolbar({ rows, columns, selectedRows, paginationModel, options, 
         const aggResult = getAgg();
         const aggModel = getAggModel();
         if (selectedRows && selectedRows.length > 0) {
-            const selectedData = rows.filter(row => selectedRows.includes(row.id));
-            if (format === 'csv') exportToCsv(selectedData, columns, { fileName: 'employees.csv', aggregationResult: aggResult, aggregationModel: aggModel });
-            else if (format === 'excel') exportToExcel(selectedData, columns, { fileName: 'employees.xls', sheetName: 'Employees', aggregationResult: aggResult, aggregationModel: aggModel });
-            else if (format === 'json') exportToJson(selectedData, columns, { fileName: 'employees.json', pretty: true, aggregationResult: aggResult, aggregationModel: aggModel });
+            // Passing selectedRows (instead of pre-filtered rows) lets the exporter recompute the totals over the selection.
+            const selection = { selectedRows, aggregationResult: aggResult, aggregationModel: aggModel };
+            if (format === 'csv') exportToCsv(rows, columns, { fileName: 'employees.csv', ...selection });
+            else if (format === 'excel') exportToExcel(rows, columns, { fileName: 'employees.xls', sheetName: 'Employees', ...selection });
+            else if (format === 'json') exportToJson(rows, columns, { fileName: 'employees.json', pretty: true, ...selection });
             else if (format === 'print') performPrint(rows, ' - Selected');
         } else {
             setExportFormat(format);
@@ -443,23 +444,24 @@ export default function ExportDemo() {
     const [showSelectionExportDialog, setShowSelectionExportDialog] = useState(false);
 
     const handleExportConfirm = (format: 'csv' | 'excel' | 'json' | 'print') => {
-        const selectedData = rows.filter(row => selectedRows.includes(row.id));
         const aggResult = apiRef.current?.getAggregationResult?.() || null;
         const aggModel = apiRef.current?.getAggregationModel?.() || null;
 
+        // The exporters pick the selected rows and recompute the totals over them.
         const options = {
+            selectedRows,
             aggregationResult: aggResult,
             aggregationModel: aggModel
         };
 
         if (format === 'csv') {
-            exportToCsv(selectedData, columns, { fileName: 'selected-employees.csv', ...options });
+            exportToCsv(rows, columns, { fileName: 'selected-employees.csv', ...options });
         } else if (format === 'excel') {
-            exportToExcel(selectedData, columns, { fileName: 'selected-employees.xls', sheetName: 'Selected', ...options });
+            exportToExcel(rows, columns, { fileName: 'selected-employees.xls', sheetName: 'Selected', ...options });
         } else if (format === 'json') {
-            exportToJson(selectedData, columns, { fileName: 'selected-employees.json', pretty: true, ...options });
+            exportToJson(rows, columns, { fileName: 'selected-employees.json', pretty: true, ...options });
         } else if (format === 'print') {
-            printGrid(selectedData, columns, { title: 'Selected Employees', ...options });
+            printGrid(rows, columns, { title: 'Selected Employees', ...options });
         }
         setShowSelectionExportDialog(false);
     };
