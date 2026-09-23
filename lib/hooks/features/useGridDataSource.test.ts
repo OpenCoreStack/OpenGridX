@@ -10,6 +10,7 @@ import type {
     GridGetRowsParams,
     GridGetRowsResponse,
     GridPaginationModel,
+    GridRowId,
     GridRowModel,
     GridSortItem,
 } from '../../types';
@@ -49,6 +50,8 @@ interface HarnessProps {
     filterMode?: 'client' | 'server';
     aggregationModel?: GridAggregationModel;
     onAggregationResults?: (results: GridAggregationResult) => void;
+    getRowId?: (row: Row) => GridRowId;
+    onPaginationModelChange?: (model: GridPaginationModel) => void;
 }
 
 interface SetRowsCall {
@@ -111,6 +114,16 @@ async function fail(request: PendingRequest, error: unknown) {
 
 function renderHarness(initialProps: HarnessProps) {
     return renderHook((props: HarnessProps) => useHarness(props), { initialProps });
+}
+
+/** Server pagination with rows 0..2 loaded (rowCount 3). */
+async function renderLoaded(dataSource: GridDataSource<Row>, requests: PendingRequest[], extra: Partial<HarnessProps> = {}) {
+    const hook = renderHarness({
+        dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server', ...extra,
+    });
+    await advance(DEBOUNCE_MS);
+    await settle(requests[0], { rows: makeRows(0, 3), rowCount: 3 });
+    return hook;
 }
 
 let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
@@ -210,15 +223,20 @@ describe('useGridDataSource — when requests are made', () => {
         expect(requests).toHaveLength(1);
     });
 
-    it('stops fetching automatically when every mode goes back to client', async () => {
+    it('loads every row once when every mode goes back to client, and no longer refetches on page changes', async () => {
         const { dataSource, requests } = createManualDataSource();
         const base = { dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER };
         const { rerender } = renderHarness({ ...base, paginationModel: PAGE_0, paginationMode: 'server' });
         await advance(DEBOUNCE_MS);
         await settle(requests[0], { rows: makeRows(0, 10) });
         rerender({ ...base, paginationModel: { page: 1, pageSize: 10 }, paginationMode: 'client' });
+        await advance(DEBOUNCE_MS);
+        expect(requests).toHaveLength(2);
+        expect(requests[1].params.startRow).toBe(0);
+        expect(requests[1].params.endRow).toBe(Number.MAX_SAFE_INTEGER);
+        rerender({ ...base, paginationModel: { page: 2, pageSize: 10 }, paginationMode: 'client' });
         await advance(1000);
-        expect(requests).toHaveLength(1);
+        expect(requests).toHaveLength(2);
     });
 
     it('fetchRows can be called imperatively even when no server mode is set', async () => {
@@ -680,33 +698,516 @@ describe('useGridDataSource — fetchChildren (server tree data)', () => {
 
     it('does not touch rows when the parent has no children', async () => {
         const { dataSource, requests } = createManualDataSource();
-        const { result } = renderHarness({ dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0 });
+        const { result } = await renderLoaded(dataSource, requests);
         let pending: Promise<void> | undefined;
         act(() => {
             pending = result.current.fetchChildren(1, ['a']);
         });
+        expect(result.current.loading).toBe(true);
         await act(async () => {
-            requests[0].resolve({ rows: [] });
+            requests[1].resolve({ rows: [] });
             await pending;
         });
-        expect(result.current.setRowsCalls).toEqual([]);
-        expect(result.current.loadingHistory).toEqual([true, false]);
+        expect(result.current.setRowsCalls).toHaveLength(1);
+        expect(result.current.loadingHistory).toEqual([true, false, true, false]);
     });
 
-    it('stores the error and clears loading when the children request fails', async () => {
+    it('reports a failed children request to onError, not as the grid-level error, and clears loading', async () => {
         const { dataSource, requests } = createManualDataSource();
-        const { result } = renderHarness({ dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0 });
+        const { result } = await renderLoaded(dataSource, requests);
+        const onError = vi.fn();
         let pending: Promise<void> | undefined;
         act(() => {
-            pending = result.current.fetchChildren(1, ['a']);
+            pending = result.current.fetchChildren(1, ['a'], onError);
         });
         const boom = new Error('children failed');
         await act(async () => {
-            requests[0].reject(boom);
+            requests[1].reject(boom);
             await pending;
         });
-        expect(result.current.error).toBe(boom);
+        expect(onError).toHaveBeenCalledWith(boom);
+        expect(result.current.error).toBeNull();
         expect(result.current.loading).toBe(false);
         expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to fetch children:', boom);
+    });
+
+    it('retries a children request that failed', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const { result } = await renderLoaded(dataSource, requests);
+        await act(async () => {
+            const pending = result.current.fetchChildren(0, ['r0']);
+            requests[1].reject(new Error('flaky'));
+            await pending;
+        });
+        await act(async () => {
+            const pending = result.current.fetchChildren(0, ['r0']);
+            requests[2].resolve({ rows: makeRows(100, 102) });
+            await pending;
+        });
+        expect(requests).toHaveLength(3);
+        expect(result.current.rows.map(r => r.id)).toEqual([0, 1, 2, 100, 101]);
+    });
+});
+
+describe('useGridDataSource — what each mode requests', () => {
+    it.each([
+        ['no server mode', {}],
+        ['sortingMode="server" with client pagination', { sortingMode: 'server' as const }],
+        ['filterMode="server" with client pagination', { filterMode: 'server' as const }],
+    ])('requests every row once with %s', async (_label, modes) => {
+        const { dataSource, requests } = createManualDataSource();
+        const base = { dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, ...modes };
+        const { result, rerender } = renderHarness({ ...base, paginationModel: { page: 1, pageSize: 10 } });
+        await advance(DEBOUNCE_MS);
+        expect(requests).toHaveLength(1);
+        expect(requests[0].params.startRow).toBe(0);
+        expect(requests[0].params.endRow).toBe(Number.MAX_SAFE_INTEGER);
+        await settle(requests[0], { rows: makeRows(0, 30), rowCount: 30 });
+        expect(result.current.rows).toHaveLength(30);
+
+        // The grid pages these rows itself: page and page-size changes do not refetch.
+        rerender({ ...base, paginationModel: { page: 2, pageSize: 10 } });
+        rerender({ ...base, paginationModel: { page: 0, pageSize: 25 } });
+        await advance(1000);
+        expect(requests).toHaveLength(1);
+    });
+
+    it('refetches every row when a server sort changes under client pagination', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const base = { dataSource, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, sortingMode: 'server' as const };
+        const { rerender } = renderHarness({ ...base, sortModel: EMPTY_SORT });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: makeRows(0, 30) });
+        rerender({ ...base, sortModel: [{ field: 'name', sort: 'desc' }] });
+        await advance(DEBOUNCE_MS);
+        expect(requests).toHaveLength(2);
+        expect(requests[1].params.sortModel).toEqual([{ field: 'name', sort: 'desc' }]);
+        expect(requests[1].params.endRow).toBe(Number.MAX_SAFE_INTEGER);
+    });
+
+    it('does not refetch for a client-side sort or filter change when nothing is server-side', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const base = { dataSource, paginationModel: PAGE_0 };
+        const { rerender } = renderHarness({ ...base, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: makeRows(0, 30) });
+        rerender({ ...base, sortModel: [{ field: 'name', sort: 'asc' }], filterModel: { items: [{ field: 'name', operator: 'contains', value: '1' }] } });
+        await advance(1000);
+        expect(requests).toHaveLength(1);
+    });
+});
+
+describe('useGridDataSource — identity-only changes', () => {
+    it('does not refetch when sort, filter, aggregation and pagination models are new objects with the same content', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const props = (): HarnessProps => ({
+            dataSource,
+            sortModel: [{ field: 'name', sort: 'asc' }],
+            filterModel: { items: [] },
+            aggregationModel: { id: 'sum' },
+            paginationModel: { page: 0, pageSize: 10 },
+            paginationMode: 'server',
+        });
+        const { rerender } = renderHarness(props());
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: makeRows(0, 10), rowCount: 100 });
+        rerender(props());
+        rerender(props());
+        await advance(1000);
+        expect(requests).toHaveLength(1);
+    });
+
+    it('does not refetch when the dataSource object is new but its getRows is the same', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const base = { sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server' as const };
+        const { rerender } = renderHarness({ ...base, dataSource: { getRows: dataSource.getRows } });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: makeRows(0, 10), rowCount: 100 });
+        rerender({ ...base, dataSource: { getRows: dataSource.getRows } });
+        await advance(1000);
+        expect(requests).toHaveLength(1);
+    });
+
+    it('keeps every loaded infinite page when re-rendered with equal inline models', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const props = (page: number): HarnessProps => ({
+            dataSource, sortModel: [], filterModel: { items: [] }, paginationModel: { page, pageSize: 10 }, paginationMode: 'infinite',
+        });
+        const { result, rerender } = renderHarness(props(0));
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: makeRows(0, 10) });
+        rerender(props(1));
+        await advance(DEBOUNCE_MS);
+        await settle(requests[1], { rows: makeRows(10, 20) });
+        rerender(props(1));
+        await advance(1000);
+        expect(requests).toHaveLength(2);
+        expect(result.current.rows.map(r => r.id)).toEqual(makeRows(0, 20).map(r => r.id));
+    });
+});
+
+describe('useGridDataSource — stale responses', () => {
+    it('ignores a response that arrives after the page changed, even during the next debounce', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const base = { dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationMode: 'server' as const };
+        const { result, rerender } = renderHarness({ ...base, paginationModel: PAGE_0 });
+        await advance(DEBOUNCE_MS);
+        rerender({ ...base, paginationModel: { page: 3, pageSize: 10 } });
+        await settle(requests[0], { rows: makeRows(0, 10), rowCount: 999 });
+        expect(result.current.rows).toEqual([]);
+        expect(result.current.rowCount).toBeNull();
+        expect(result.current.loading).toBe(true);
+
+        await advance(DEBOUNCE_MS);
+        await settle(requests[1], { rows: makeRows(30, 40), rowCount: 100 });
+        expect(result.current.rows.map(r => r.id)).toEqual(makeRows(30, 40).map(r => r.id));
+        expect(result.current.rowCount).toBe(100);
+        expect(result.current.loading).toBe(false);
+    });
+
+    it('ignores the response of a dataSource that has been removed, and clears loading', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const base = { sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server' as const };
+        const { result, rerender } = renderHarness({ ...base, dataSource });
+        await advance(DEBOUNCE_MS);
+        rerender({ ...base, dataSource: undefined });
+        expect(result.current.loading).toBe(false);
+        await settle(requests[0], { rows: makeRows(0, 10), rowCount: 99 });
+        expect(result.current.rows).toEqual([]);
+        expect(result.current.rowCount).toBeNull();
+    });
+
+    it('ignores the response of the previous dataSource while the new one is pending', async () => {
+        const a = createManualDataSource();
+        const b = createManualDataSource();
+        const base = { sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server' as const };
+        const { result, rerender } = renderHarness({ ...base, dataSource: a.dataSource });
+        await advance(DEBOUNCE_MS);
+        rerender({ ...base, dataSource: b.dataSource });
+        await advance(100);
+        await settle(a.requests[0], { rows: [{ id: 1, name: 'from-A' }], rowCount: 1 });
+        expect(result.current.rows).toEqual([]);
+        await advance(DEBOUNCE_MS);
+        await settle(b.requests[0], { rows: [{ id: 2, name: 'from-B' }], rowCount: 1 });
+        expect(result.current.rows.map(r => r.name)).toEqual(['from-B']);
+    });
+
+    it('drops responses that land after unmount', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const setRows = vi.fn();
+        const { unmount } = renderHook(() => useGridDataSource<Row>({
+            dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server',
+            setRows, setRowCount: vi.fn(), setDataSourceLoading: vi.fn(), setDataSourceError: vi.fn(),
+        }));
+        await advance(DEBOUNCE_MS);
+        unmount();
+        await act(async () => { requests[0].resolve({ rows: makeRows(0, 10) }); });
+        expect(setRows).not.toHaveBeenCalled();
+    });
+});
+
+describe('useGridDataSource — loading before the first request', () => {
+    it('is loading as soon as a request is scheduled, before the debounce elapses', () => {
+        const { dataSource } = createManualDataSource();
+        const { result } = renderHarness({ dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server' });
+        expect(result.current.loading).toBe(true);
+    });
+
+    it('stays loading across the debounce of a page change', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const base = { dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationMode: 'server' as const };
+        const { result, rerender } = renderHarness({ ...base, paginationModel: PAGE_0 });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: makeRows(0, 10), rowCount: 100 });
+        expect(result.current.loading).toBe(false);
+        rerender({ ...base, paginationModel: { page: 1, pageSize: 10 } });
+        expect(result.current.loading).toBe(true);
+    });
+
+    it('fetchRows skips the pending debounce and does not request twice', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const { result } = renderHarness({ dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server' });
+        act(() => { void result.current.fetchRows(); });
+        expect(requests).toHaveLength(1);
+        await advance(1000);
+        expect(requests).toHaveLength(1);
+    });
+});
+
+describe('useGridDataSource — getRowId', () => {
+    interface KeyedRow extends GridRowModel { key: string; name: string }
+    const byKey = (row: Row) => (row as unknown as KeyedRow).key;
+    const keyed = (keys: string[]) => keys.map(key => ({ key, name: key.toUpperCase() })) as unknown as Row[];
+
+    it('keys fetched rows by getRowId', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const { result } = renderHarness({
+            dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server', getRowId: byKey,
+        });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: keyed(['a', 'b', 'c']), rowCount: 3 });
+        expect(result.current.rows.map(byKey)).toEqual(['a', 'b', 'c']);
+        expect(result.current.rows.map(r => r.id)).toEqual(['a', 'b', 'c']);
+    });
+
+    it('skips children already loaded, compared by getRowId', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const { result } = renderHarness({
+            dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server', getRowId: byKey,
+        });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: keyed(['a', 'b']), rowCount: 2 });
+        await act(async () => {
+            const pending = result.current.fetchChildren('a', ['A']);
+            requests[1].resolve({ rows: keyed(['b', 'a1', 'a2']) });
+            await pending;
+        });
+        expect(result.current.rows.map(byKey)).toEqual(['a', 'b', 'a1', 'a2']);
+    });
+});
+
+describe('useGridDataSource — infinite scroll ranges', () => {
+    const base = (dataSource: GridDataSource<Row>) => ({
+        dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationMode: 'infinite' as const,
+    });
+    const pageModel = (page: number, pageSize = 10) => ({ paginationModel: { page, pageSize } });
+    const range = (r: PendingRequest) => `${r.params.startRow}-${r.params.endRow}`;
+    const resolveRange = (r: PendingRequest) => settle(r, { rows: makeRows(r.params.startRow, r.params.endRow) });
+
+    async function loadFirstPage() {
+        const { dataSource, requests } = createManualDataSource();
+        const hook = renderHarness({ ...base(dataSource), ...pageModel(0) });
+        await advance(DEBOUNCE_MS);
+        await resolveRange(requests[0]);
+        return { ...hook, dataSource, requests };
+    }
+
+    it('loads the pages skipped by two page changes inside one debounce window', async () => {
+        const { result, rerender, dataSource, requests } = await loadFirstPage();
+        rerender({ ...base(dataSource), ...pageModel(1) });
+        await advance(100);
+        rerender({ ...base(dataSource), ...pageModel(2) });
+        await advance(DEBOUNCE_MS);
+        expect(requests.map(range)).toEqual(['0-10', '10-30']);
+        await resolveRange(requests[1]);
+        expect(result.current.rows.map(r => r.id)).toEqual(makeRows(0, 30).map(r => r.id));
+        expect(result.current.loading).toBe(false);
+    });
+
+    it('keeps a page request that is in flight when the page moves on, then loads the rest', async () => {
+        const { result, rerender, dataSource, requests } = await loadFirstPage();
+        rerender({ ...base(dataSource), ...pageModel(1) });
+        await advance(DEBOUNCE_MS);
+        rerender({ ...base(dataSource), ...pageModel(2) });
+        await advance(DEBOUNCE_MS);
+        expect(requests.map(range)).toEqual(['0-10', '10-20']);
+        expect(result.current.loading).toBe(true);
+
+        await resolveRange(requests[1]);
+        expect(requests.map(range)).toEqual(['0-10', '10-20', '20-30']);
+        expect(result.current.loading).toBe(true);
+        await resolveRange(requests[2]);
+        expect(result.current.rows.map(r => r.id)).toEqual(makeRows(0, 30).map(r => r.id));
+        expect(result.current.loading).toBe(false);
+    });
+
+    it('stops at a short page (the end of the data) instead of requesting again', async () => {
+        const { result, rerender, dataSource, requests } = await loadFirstPage();
+        rerender({ ...base(dataSource), ...pageModel(1) });
+        await advance(DEBOUNCE_MS);
+        rerender({ ...base(dataSource), ...pageModel(2) });
+        await settle(requests[1], { rows: makeRows(10, 14) });
+        await advance(1000);
+        expect(requests.map(range)).toEqual(['0-10', '10-20']);
+        expect(result.current.rows).toHaveLength(14);
+        expect(result.current.loading).toBe(false);
+
+        // Scrolling on asks again from where the data ended.
+        rerender({ ...base(dataSource), ...pageModel(3) });
+        await advance(DEBOUNCE_MS);
+        expect(range(requests[2])).toBe('14-40');
+    });
+
+    it('does not append rows that are already loaded when pages overlap', async () => {
+        const { result, rerender, dataSource, requests } = await loadFirstPage();
+        rerender({ ...base(dataSource), ...pageModel(1) });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[1], { rows: makeRows(9, 19) });
+        const ids = result.current.rows.map(r => r.id);
+        expect(ids).toEqual(makeRows(0, 19).map(r => r.id));
+        expect(new Set(ids).size).toBe(ids.length);
+
+        // Offsets follow the server, not the deduplicated row count.
+        rerender({ ...base(dataSource), ...pageModel(2) });
+        await advance(DEBOUNCE_MS);
+        expect(range(requests[2])).toBe('20-30');
+    });
+
+    it('drops a repeated id within one response', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const { result } = renderHarness({ ...base(dataSource), ...pageModel(0) });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: [...makeRows(0, 3), { id: 1, name: 'again' }] });
+        expect(result.current.rows.map(r => r.name)).toEqual(['r0', 'r1', 'r2']);
+    });
+
+    it.each([
+        ['sort', { sortModel: [{ field: 'name', sort: 'desc' as const }] }],
+        ['filter', { filterModel: { items: [{ field: 'name', operator: 'contains', value: '1' }] } }],
+        ['page size', { paginationModel: { page: 3, pageSize: 20 } }],
+    ])('restarts from the first row and reports page 0 when the %s changes', async (_label, change) => {
+        const { dataSource, requests } = createManualDataSource();
+        const onPaginationModelChange = vi.fn();
+        const props = (page: number): HarnessProps => ({ ...base(dataSource), ...pageModel(page), onPaginationModelChange });
+        const { result, rerender } = renderHarness(props(0));
+        await advance(DEBOUNCE_MS);
+        await resolveRange(requests[0]);
+        for (const page of [1, 2, 3]) {
+            rerender(props(page));
+            await advance(DEBOUNCE_MS);
+            await resolveRange(requests[page]);
+        }
+        expect(result.current.rows).toHaveLength(40);
+
+        rerender({ ...props(3), ...change });
+        const pageSize = change.paginationModel?.pageSize ?? 10;
+        expect(onPaginationModelChange).toHaveBeenCalledWith({ page: 0, pageSize });
+        // A controlled consumer follows the reset.
+        rerender({ ...props(0), ...change, paginationModel: { page: 0, pageSize } });
+        await advance(DEBOUNCE_MS);
+        expect(requests).toHaveLength(5);
+        expect(range(requests[4])).toBe(`0-${pageSize}`);
+        await settle(requests[4], { rows: makeRows(500, 500 + pageSize) });
+        expect(result.current.rows.map(r => r.id)).toEqual(makeRows(500, 500 + pageSize).map(r => r.id));
+    });
+
+    it('drops an append that was in flight when the sort changed', async () => {
+        const { result, rerender, dataSource, requests } = await loadFirstPage();
+        rerender({ ...base(dataSource), ...pageModel(1) });
+        await advance(DEBOUNCE_MS);
+        const sorted: GridSortItem[] = [{ field: 'name', sort: 'desc' }];
+        rerender({ ...base(dataSource), ...pageModel(0), sortModel: sorted });
+        await resolveRange(requests[1]);
+        expect(result.current.rows.map(r => r.id)).toEqual(makeRows(0, 10).map(r => r.id));
+        await advance(DEBOUNCE_MS);
+        expect(range(requests[2])).toBe('0-10');
+        expect(requests[2].params.sortModel).toEqual(sorted);
+    });
+
+    it('does not report a page reset on the first load', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const onPaginationModelChange = vi.fn();
+        renderHarness({ ...base(dataSource), ...pageModel(2), onPaginationModelChange });
+        await advance(DEBOUNCE_MS);
+        expect(range(requests[0])).toBe('0-30');
+        expect(onPaginationModelChange).not.toHaveBeenCalled();
+    });
+
+    it('retries a failed range with fetchRows', async () => {
+        const { result, rerender, dataSource, requests } = await loadFirstPage();
+        rerender({ ...base(dataSource), ...pageModel(1) });
+        await advance(DEBOUNCE_MS);
+        await fail(requests[1], new Error('boom'));
+        expect(result.current.error).toBeInstanceOf(Error);
+        await act(async () => {
+            const pending = result.current.fetchRows();
+            await resolveRange(requests[2]);
+            await pending;
+        });
+        expect(range(requests[2])).toBe('10-20');
+        expect(result.current.error).toBeNull();
+        expect(result.current.rows).toHaveLength(20);
+    });
+});
+
+describe('useGridDataSource — children requests (server tree data)', () => {
+    it('asks for every child: endRow is Number.MAX_SAFE_INTEGER, with the aggregation model', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const { result } = await renderLoaded(dataSource, requests, { aggregationModel: { id: 'sum' } });
+        act(() => { void result.current.fetchChildren(0, ['r0']); });
+        expect(requests[1].params).toMatchObject({ startRow: 0, endRow: Number.MAX_SAFE_INTEGER, groupKeys: ['r0'], aggregationModel: { id: 'sum' } });
+        const children = makeRows(100, 103);
+        expect(children.slice(requests[1].params.startRow, requests[1].params.endRow)).toHaveLength(3);
+    });
+
+    it('keeps the server rowCount when children are appended', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const { result } = renderHarness({ dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server' });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: makeRows(0, 10), rowCount: 50 });
+        await act(async () => {
+            const pending = result.current.fetchChildren(0, ['r0']);
+            requests[1].resolve({ rows: makeRows(100, 102) });
+            await pending;
+        });
+        expect(result.current.rowCount).toBe(50);
+        expect(result.current.setRowsCalls.at(-1)).toEqual({ kind: 'updater', preserveRowCount: true });
+    });
+
+    it('does not request the same children twice while they are loading or loaded', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const { result } = await renderLoaded(dataSource, requests);
+        act(() => {
+            void result.current.fetchChildren(0, ['r0']);
+            void result.current.fetchChildren(0, ['r0']);
+        });
+        await settle(requests[1], { rows: makeRows(100, 102) });
+        act(() => { void result.current.fetchChildren(0, ['r0']); });
+        expect(requests).toHaveLength(2);
+    });
+
+    it('requests children again after the rows were replaced', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const base = { dataSource, filterModel: EMPTY_FILTER, paginationModel: PAGE_0, paginationMode: 'server' as const, sortingMode: 'server' as const };
+        const { result, rerender } = renderHarness({ ...base, sortModel: EMPTY_SORT });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: makeRows(0, 3), rowCount: 3 });
+        await act(async () => {
+            const pending = result.current.fetchChildren(0, ['r0']);
+            requests[1].resolve({ rows: makeRows(100, 102) });
+            await pending;
+        });
+        rerender({ ...base, sortModel: [{ field: 'name', sort: 'desc' }] });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[2], { rows: makeRows(0, 3), rowCount: 3 });
+        act(() => { void result.current.fetchChildren(0, ['r0']); });
+        expect(requests).toHaveLength(4);
+        expect(requests[3].params.groupKeys).toEqual(['r0']);
+    });
+
+    it('drops children that arrive after the rows were replaced by another page', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const base = { dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationMode: 'server' as const };
+        const { result, rerender } = renderHarness({ ...base, paginationModel: PAGE_0 });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: makeRows(0, 10), rowCount: 100 });
+        let children: Promise<void> | undefined;
+        act(() => { children = result.current.fetchChildren(1, ['r1']); });
+        rerender({ ...base, paginationModel: { page: 1, pageSize: 10 } });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[2], { rows: makeRows(10, 20), rowCount: 100 });
+        await act(async () => {
+            requests[1].resolve({ rows: [{ id: 999, name: 'child-of-r1' }] });
+            await children;
+        });
+        expect(result.current.rows.map(r => r.id)).toEqual(makeRows(10, 20).map(r => r.id));
+    });
+
+    it('stays loading while a page request is still in flight after the children land', async () => {
+        const { dataSource, requests } = createManualDataSource();
+        const base = { dataSource, sortModel: EMPTY_SORT, filterModel: EMPTY_FILTER, paginationMode: 'server' as const };
+        const { result, rerender } = renderHarness({ ...base, paginationModel: PAGE_0 });
+        await advance(DEBOUNCE_MS);
+        await settle(requests[0], { rows: makeRows(0, 10), rowCount: 100 });
+        rerender({ ...base, paginationModel: { page: 1, pageSize: 10 } });
+        await advance(DEBOUNCE_MS);
+        await act(async () => {
+            const pending = result.current.fetchChildren(0, ['r0']);
+            requests[2].resolve({ rows: [] });
+            await pending;
+        });
+        expect(result.current.loading).toBe(true);
+        await settle(requests[1], { rows: makeRows(10, 20), rowCount: 100 });
+        expect(result.current.loading).toBe(false);
     });
 });
