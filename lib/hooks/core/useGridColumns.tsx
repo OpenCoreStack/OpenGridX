@@ -75,11 +75,41 @@ export function useGridColumns<R extends GridRowModel>(
     } = params;
 
     // ── Column order ──────────────────────────────────────────────────────────
-    const [internalColumnOrder, setInternalColumnOrder] = useState<string[]>(
-        () => initialState?.columns?.columnOrder ?? activeColumns.map(col => col.field)
+    const naturalOrder = useMemo(() => activeColumns.map(col => col.field), [activeColumns]);
+
+    // null = the columns' own order, until the user reorders. Deriving it (instead of snapshotting the
+    // columns at mount) keeps it right when the grid mounts in pivot mode or the columns change.
+    const [storedColumnOrder, setStoredColumnOrder] = useState<string[] | null>(
+        () => initialState?.columns?.columnOrder ?? null
     );
 
-    const effectiveColumnOrder = columnOrder ?? internalColumnOrder;
+    // Generated pivot columns keep an order of their own, so pivoting never rewrites the user's column
+    // order, and a controlled `columnOrder` (which names source columns) does not apply to them. It
+    // resets whenever the generated column set changes.
+    const pivotColumnsKey = pivotMode ? naturalOrder.join('\u0000') : '';
+    const [pivotOrderState, setPivotOrderState] = useState<{ key: string; order: string[] } | null>(null);
+    const pivotColumnOrder = pivotOrderState && pivotOrderState.key === pivotColumnsKey ? pivotOrderState.order : naturalOrder;
+
+    const internalColumnOrder = storedColumnOrder ?? naturalOrder;
+    const effectiveColumnOrder = pivotMode ? pivotColumnOrder : (columnOrder ?? internalColumnOrder);
+
+    const setInternalColumnOrder = useCallback<React.Dispatch<React.SetStateAction<string[]>>>((action) => {
+        if (pivotMode) {
+            setPivotOrderState(prev => {
+                const base = prev && prev.key === pivotColumnsKey ? prev.order : naturalOrder;
+                return { key: pivotColumnsKey, order: typeof action === 'function' ? action(base) : action };
+            });
+            return;
+        }
+        setStoredColumnOrder(prev => (typeof action === 'function' ? action(prev ?? naturalOrder) : action));
+    }, [pivotMode, pivotColumnsKey, naturalOrder]);
+
+    // In pivot mode the row-label columns (marked hideable: false) always show: the pivot rows are
+    // labelled by them, and they share their field with the source column a visibility model may hide.
+    const isColumnShown = useCallback(
+        (col: GridColDef<R>) => (pivotMode && col.hideable === false) || columnVisibilityModel[col.field] !== false,
+        [pivotMode, columnVisibilityModel],
+    );
 
     // The expand toggle, indentation and group label go on the leftmost column actually
     // on screen, so hiding, reordering or pinning columns never strips group rows of them.
@@ -195,12 +225,6 @@ export function useGridColumns<R extends GridRowModel>(
         setColumns(activeColumns as unknown as GridColDef[]);
     }, [activeColumns, setColumns]);
 
-    useEffect(() => {
-        if (pivotMode) {
-            setInternalColumnOrder(activeColumns.map(col => col.field));
-        }
-    }, [pivotMode, activeColumns]);
-
     // ── Ordered / visible columns ─────────────────────────────────────────────
     const orderedColumns = useMemo<GridColDef<R>[]>(() => {
         if (disableColumnReorder) return effectiveColumns;
@@ -214,8 +238,8 @@ export function useGridColumns<R extends GridRowModel>(
     }, [effectiveColumns, effectiveColumnOrder, disableColumnReorder]);
 
     const visibleOrderedColumns = useMemo<GridColDef<R>[]>(
-        () => orderedColumns.filter(col => columnVisibilityModel[col.field] !== false),
-        [orderedColumns, columnVisibilityModel]
+        () => orderedColumns.filter(isColumnShown),
+        [orderedColumns, isColumnShown]
     );
 
     // ── Column reorder handlers ───────────────────────────────────────────────
@@ -226,9 +250,9 @@ export function useGridColumns<R extends GridRowModel>(
             const newOrder = [...effectiveColumnOrder];
             const [movedField] = newOrder.splice(oldIndex, 1);
             newOrder.splice(targetIndex, 0, movedField);
-            if (!columnOrder) setInternalColumnOrder(newOrder);
+            if (pivotMode || !columnOrder) setInternalColumnOrder(newOrder);
             onColumnOrderChange?.(reorderParams);
-        }, [effectiveColumnOrder, columnOrder, onColumnOrderChange]),
+        }, [effectiveColumnOrder, pivotMode, columnOrder, setInternalColumnOrder, onColumnOrderChange]),
         disableColumnReorder,
     });
 

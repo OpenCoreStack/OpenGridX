@@ -1,18 +1,31 @@
 import React, { useMemo } from 'react';
-import { formatAggregationValue } from '../../hooks/features/useAggregation';
-import type { GridColDef, GridAggregationModel, GridAggregationResult, GridColumnPinning } from '../../types';
+import { formatAggregateForColumn } from '../../utils/aggregation';
+import type { GridColDef, GridAggregationModel, GridAggregationResult, GridColumnPinning, GridRowModel } from '../../types';
 import { calculatePinnedPositions, isColumnPinned } from '../../utils/pinning';
 
+const SYSTEM_COLUMN_WIDTH = 48;
+
 interface GridAggregationFooterProps {
+    /**
+     * The columns exactly as the rows lay them out: visible only, pinned-left first and pinned-right
+     * last, with the horizontal-virtualization spacers (`virtualization.virtualColumns`).
+     */
     columns: GridColDef[];
     aggregationModel: GridAggregationModel;
     aggregationResult: GridAggregationResult;
+    /** User resize overrides, as passed to the rows. */
     columnWidths: Record<string, number>;
     rowHeight: number;
     checkboxSelection: boolean;
     hasDetailPanel: boolean;
     rowReordering: boolean;
+    pinCheckboxColumn?: boolean;
+    pinExpandColumn?: boolean;
     pinnedColumns?: GridColumnPinning;
+    /** A server aggregation request is in flight. */
+    loading?: boolean;
+    /** A row from the aggregated set, handed to column valueFormatters that read row data. */
+    sampleRow?: GridRowModel;
 }
 
 export function GridAggregationFooter({
@@ -24,41 +37,61 @@ export function GridAggregationFooter({
     checkboxSelection,
     hasDetailPanel,
     rowReordering,
+    pinCheckboxColumn = true,
+    pinExpandColumn = true,
     pinnedColumns,
+    loading = false,
+    sampleRow,
 }: GridAggregationFooterProps) {
-    // Compute sticky left/right pixel offsets for each pinned column.
-    // The footer always renders checkbox/detail/reorder spacers unconditionally,
-    // so treat pinCheckboxColumn and pinExpandColumn as always true.
+    // Same offsets as Row, so pinned totals sit exactly under their pinned body cells.
     const pinnedOffsets = useMemo(
         () => calculatePinnedPositions(
             columns,
             columnWidths,
             pinnedColumns,
             checkboxSelection,
-            true,
+            pinCheckboxColumn,
             hasDetailPanel,
-            true,
+            pinExpandColumn,
             rowReordering,
         ),
-        [columns, columnWidths, pinnedColumns, checkboxSelection, hasDetailPanel, rowReordering]
+        [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]
     );
 
     const lastLeftField  = pinnedColumns?.left?.[pinnedColumns.left.length - 1];
     const firstRightField = pinnedColumns?.right?.[0];
 
+    // System-column spacers stick exactly where Row sticks its drag handle, expand and checkbox cells.
+    const expandLeft = rowReordering ? SYSTEM_COLUMN_WIDTH : 0;
+    const checkboxLeft = expandLeft + (hasDetailPanel && pinExpandColumn ? SYSTEM_COLUMN_WIDTH : 0);
+    const spacer = (key: string, pinned: boolean, left: number) => (
+        <div
+            key={key}
+            className={`ogx__aggregation-spacer${pinned ? ' ogx__aggregation-spacer--pinned' : ''}`}
+            style={pinned ? { left } : undefined}
+            aria-hidden="true"
+        />
+    );
+
     return (
         <div
-            className="ogx__aggregation-footer"
+            className={`ogx__aggregation-footer${loading ? ' ogx__aggregation-footer--loading' : ''}`}
             role="row"
             aria-label="Aggregation totals"
             aria-live="polite"
+            aria-busy={loading || undefined}
             style={{ minHeight: `${rowHeight}px` }}
         >
-            {checkboxSelection && <div style={{ width: 48, flexShrink: 0 }} />}
-            {hasDetailPanel  && <div style={{ width: 48, flexShrink: 0 }} />}
-            {rowReordering   && <div style={{ width: 48, flexShrink: 0 }} />}
+            {rowReordering && spacer('__reorder_col__', true, 0)}
+            {hasDetailPanel && spacer('__expand_col__', pinExpandColumn, expandLeft)}
+            {checkboxSelection && spacer('__checkbox_col__', pinCheckboxColumn, checkboxLeft)}
 
             {columns.map((col) => {
+                if (col.isSpacer) {
+                    const width = typeof col.width === 'number' ? col.width : 0;
+                    return <div key={col.field} style={{ width, minWidth: width, flexShrink: 0 }} aria-hidden="true" />;
+                }
+
                 const fnName = (aggregationModel as Record<string, string>)[col.field];
                 const rawValue = aggregationResult[col.field];
                 const colWidth = columnWidths[col.field] ?? (typeof col.width === 'number' ? col.width : 120);
@@ -94,7 +127,7 @@ export function GridAggregationFooter({
                             <>
                                 <span className="ogx__aggregation-label">{fnName}</span>
                                 <span className="ogx__aggregation-value">
-                                    {formatAggregationValue(rawValue, fnName)}
+                                    {formatAggregateForColumn(rawValue, fnName, col, sampleRow)}
                                 </span>
                             </>
                         ) : null}

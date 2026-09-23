@@ -22,14 +22,16 @@ import { useRowGrouping } from '../../hooks/useRowGrouping';
 import { useGridEditing } from '../../hooks/features/useGridEditing';
 import { useGridSpanning } from '../../hooks/features/useGridSpanning';
 import { useGridDataSource } from '../../hooks/features/useGridDataSource';
-import { useAggregation } from '../../hooks/features/useAggregation';
-import { usePivot } from '../../hooks/features/usePivot';
+import { useAggregation, useServerAggregationResults } from '../../hooks/features/useAggregation';
+import { useGridPivot } from '../../hooks/features/useGridPivot';
+import { PIVOT_GRAND_TOTAL_ID } from '../../utils/pivot';
+import { isServerDrivenDataSource } from '../../utils/dataSource';
 import { useGridClipboard } from '../../hooks/features/useGridClipboard';
 import { GridListView } from './GridListView';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
-import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridAggregationResult, GridFilterModel, GridTreeNode, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
+import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridFilterModel, GridTreeNode, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
 
 const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
 
@@ -198,29 +200,42 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const onRowSelectionModelChange = propOnRowSelectionModelChange;
 
-    const pivot = usePivot(rows as GridRowModel[], columns as unknown as GridColDef[], currentPivotModel, pivotMode);
+    const pivot = useGridPivot({
+        rows: rows as GridRowModel[],
+        columns: columns as unknown as GridColDef[],
+        pivotMode,
+        pivotModel: currentPivotModel,
+        filterModel,
+        sortModel,
+        hasDataSource: Boolean(dataSource),
+        hierarchyRequested: treeData || rowGroupingModel.length > 0,
+    });
+    const isPivotActive = pivot.isActive;
+    // Pivot rows are already grouped by the pivot row fields; tree data and row grouping would regroup them.
+    const hierarchyRowGroupingModel = isPivotActive ? defaultRowGroupingModel : rowGroupingModel;
+    const isTreeData = treeData && !isPivotActive;
 
     const effectiveRowHeight = density === 'compact' ? 32 : density === 'comfortable' ? 72 : rowHeight;
 
-    const activeRows = (pivotMode && pivot.isValid ? pivot.pivotRows : rows) as unknown as R[];
-    const baseColumns = (pivotMode && pivot.isValid ? pivot.pivotColumns : columns) as unknown as GridColDef<R>[];
+    const activeRows = pivot.rows as unknown as R[];
+    const baseColumns = pivot.columns as unknown as GridColDef<R>[];
 
     // When groupingColDef is provided and row grouping is active, prepend a
     // dedicated synthetic __group__ column at position 0 (pinned-left).
-    const isRowGroupingActive = Boolean(propRowGroupingModel && propRowGroupingModel.length > 0);
+    const isRowGroupingActive = hierarchyRowGroupingModel.length > 0;
 
     // Auto-pin __group__ column to the left when groupingColDef is active.
     // Both values MUST be memoized: without useMemo they produce a new array/object
     // reference every render, which cascades through useRowGrouping's memos and
     // effects into an infinite setState loop (Maximum update depth exceeded).
     const effectivePinnedColumns = useMemo(() => (
-        (groupingColDef && isRowGroupingActive && !pivotMode)
+        (groupingColDef && isRowGroupingActive)
             ? { ...pinnedColumns, left: ['__group__', ...((pinnedColumns?.left ?? []).filter(f => f !== '__group__'))] }
             : pinnedColumns
-    ), [groupingColDef, isRowGroupingActive, pivotMode, pinnedColumns]);
+    ), [groupingColDef, isRowGroupingActive, pinnedColumns]);
 
     const activeColumns = useMemo(() => (
-        (groupingColDef && isRowGroupingActive && !pivotMode)
+        (groupingColDef && isRowGroupingActive)
             ? [
                 {
                     headerName: 'Group',
@@ -235,20 +250,18 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 ...baseColumns,
               ]
             : baseColumns
-    ), [groupingColDef, isRowGroupingActive, pivotMode, baseColumns]);
+    ), [groupingColDef, isRowGroupingActive, baseColumns]);
 
-    const [serverAggregationResults, setServerAggregationResults] = useState<GridAggregationResult | null>(null);
-
-    useEffect(() => {
-        setServerAggregationResults(null);
-    }, [aggregationModel]);
+    // getRows-provided totals, dropped as soon as the aggregation model they were computed for changes.
+    const [serverAggregationResults, setServerAggregationResults] = useServerAggregationResults(aggregationModel);
 
     const viewportRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<HTMLDivElement>(null);
 
     const defaultGetRowId = useCallback((row: R) => row.id, []);
-    const effectiveGetRowId = getRowId || defaultGetRowId;
+    // Pivot rows are synthetic and carry their own unique ids; a consumer getRowId cannot read them.
+    const effectiveGetRowId = (!isPivotActive && getRowId) || defaultGetRowId;
 
     // Normalize rows so every row has `id === getRowId(row)`.
     // createInitialState and SET_ROWS both key the internal store by row.id,
@@ -337,7 +350,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rows: effectiveRows,
         getRowId: effectiveGetRowId,
         getTreeDataPath,
-        treeData,
+        treeData: isTreeData,
         defaultGroupingExpansionDepth,
         filterModel,
 
@@ -353,7 +366,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rows: effectiveRows,
         getRowId: effectiveGetRowId,
         columns: activeColumns,
-        rowGroupingModel,
+        rowGroupingModel: hierarchyRowGroupingModel,
         aggregationModel,
         defaultGroupingExpansionDepth,
         filterModel,
@@ -377,8 +390,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         },
     });
 
-    const isTreeData = treeData;
-    const isRowGrouping = !!(rowGroupingModel && rowGroupingModel.length > 0);
+    const isRowGrouping = hierarchyRowGroupingModel.length > 0;
     const isHierarchyEnabled = isTreeData || isRowGrouping;
     const activeHierarchyHandlers = isTreeData ? treeDataHandlers : (isRowGrouping ? rowGroupingHandlers : null);
 
@@ -488,7 +500,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         columnOrder,
         onColumnOrderChange,
         disableColumnReorder,
-        pivotMode,
+        pivotMode: isPivotActive,
         checkboxSelection,
         hasDetailPanel,
         rowReordering,
@@ -512,9 +524,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         effectiveRows: effectiveRows as GridRowModel[],
         activeHierarchyHandlers: activeHierarchyHandlers as { getVisibleRows: () => GridRowModel[] } | null,
         filterMode,
-        filterModel,
+        filterModel: pivot.pipelineFilterModel,
         dataSource: dataSource as GridDataSource<GridRowModel> | undefined,
-        sortModel,
+        sortModel: pivot.pipelineSortModel,
         sortingMode,
         pagination,
         paginationMode,
@@ -550,18 +562,22 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         columnWidths
     );
 
-    const { aggregationResult } = useAggregation({
+    const { aggregationResult, isLoading: isAggregationLoading } = useAggregation({
         rows: dataRows,
         columns: activeColumns as unknown as GridColDef[],
         aggregationModel,
-        isServerSide: !!(dataSource && (paginationMode === 'server' || sortingMode === 'server')),
+        // Same rule useGridDataSource fetches by: when the server drives the rows, the grid only holds
+        // some of them, so client totals would be partial.
+        isServerSide: isServerDrivenDataSource({ dataSource, paginationMode, sortingMode, filterMode }),
         dataSource,
         filterModel,
         sortModel,
         serverAggregationResults,
     });
 
-    const hasAggregation = Object.keys(aggregationModel).length > 0;
+    // In pivot mode the pivot's own Grand Total row is the aggregate; aggregationModel keys name source
+    // fields that the pivot rows do not have.
+    const hasAggregation = Object.keys(aggregationModel).length > 0 && !isPivotActive;
 
     useEffect(() => {
         gridData.apiRef.current.getAggregationResult = () => hasAggregation ? aggregationResult : null;
@@ -639,19 +655,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         isLoading: state.dataSource.loading,
         pageSize: effectivePaginationModel.pageSize,
     });
-
-    // Merge layout-computed widths (which include flex resolution) with user-resize
-    // overrides. The footer and other consumers that receive `columnWidths` only get
-    // the resize-override map, which has no entry for flex columns that haven't been
-    // manually resized — causing them to fall back to the raw `col.width` prop instead
-    // of the actual rendered width.
-    const resolvedColumnWidths = useMemo(() => {
-        const result: Record<string, number> = {};
-        for (const col of [...layout.leftPinnedCols, ...layout.unpinnedColsWithWidth, ...layout.rightPinnedCols]) {
-            if (!col.isSpacer) result[col.field] = col.width;
-        }
-        return { ...result, ...columnWidths };
-    }, [layout.leftPinnedCols, layout.unpinnedColsWithWidth, layout.rightPinnedCols, columnWidths]);
 
     useEffect(() => {
         gridData.apiRef.current.scrollToIndexes = ({ rowIndex, colIndex }) => {
@@ -734,13 +737,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         let newSelection: GridRowId[] = [];
         if (isSelected) {
             newSelection = effectiveRows.map((row: GridRowModel) => row.id);
+            if (isPivotActive) newSelection = newSelection.filter(id => id !== PIVOT_GRAND_TOTAL_ID);
         }
 
         if (!isSelectionControlled) {
             setInternalRowSelectionModel(newSelection);
         }
         onRowSelectionModelChange?.(newSelection);
-    }, [effectiveRows, isSelectionControlled, onRowSelectionModelChange, setInternalRowSelectionModel]);
+    }, [effectiveRows, isPivotActive, isSelectionControlled, onRowSelectionModelChange, setInternalRowSelectionModel]);
 
     const handleSort = useCallback((field: string, direction: GridSortDirection) => {
         const newSortModel = direction ? [{ field, sort: direction }] : [];
@@ -1148,20 +1152,23 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             rowMetaMap={rowMetaMap}
                         />
 
-                        {/* Aggregation Footer Row — suppressed in pivot mode because pivot rows
-                             already contain pre-aggregated values with synthetic field keys
-                             (e.g. 'Q1\u001frevenue\u001fsum') that don't match aggregationModel keys. */}
-                        {hasAggregation && !pivotMode && (
+                        {/* Aggregation Footer Row — laid out from the same virtual columns as the rows, so
+                             hidden, pinned and scrolled columns line up. Off in pivot mode (hasAggregation). */}
+                        {hasAggregation && (
                             <GridAggregationFooter
-                                columns={orderedColumns as unknown as GridColDef[]}
+                                columns={virtualization.virtualColumns as unknown as GridColDef[]}
                                 aggregationModel={aggregationModel}
                                 aggregationResult={aggregationResult}
-                                columnWidths={resolvedColumnWidths}
+                                columnWidths={columnWidths}
                                 rowHeight={effectiveRowHeight}
                                 checkboxSelection={checkboxSelection}
                                 hasDetailPanel={hasDetailPanel}
                                 rowReordering={rowReordering}
+                                pinCheckboxColumn={pinCheckboxColumn}
+                                pinExpandColumn={pinExpandColumn}
                                 pinnedColumns={effectivePinnedColumns}
+                                loading={isAggregationLoading}
+                                sampleRow={dataRows[0] as GridRowModel | undefined}
                             />
                         )}
 
