@@ -26,6 +26,11 @@ function CloseIcon() {
     );
 }
 
+/** Search text reduced to its terms, so 'john  london ' and 'john london' are the same search. */
+function normalizeSearch(text: string): string {
+    return text.trim().split(/\s+/).filter(Boolean).join(' ');
+}
+
 export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', debounceMs = 250 }: GlobalSearchProps) {
     const [isExpanded, setIsExpanded] = useState(() => value.length > 0);
     // Fully uncontrolled: localValue is the single source of truth.
@@ -39,37 +44,22 @@ export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', 
     const lastEmittedRef = useRef(value);
     // Track the last incoming prop value to detect external resets
     const lastIncomingValueRef = useRef(value);
-    // Track whether input was focused BEFORE a re-render so we can restore it
-    const wasFocusedRef = useRef(false);
 
-    // ── Focus preservation across re-renders ─────────────────────────────────
-    // When the parent updates filterModel (triggered by our debounce), React
-    // re-renders the entire tree. Even though the input element stays mounted,
-    // the browser can lose focus during heavy reconciliation. We detect this
-    // via useLayoutEffect (runs synchronously after DOM mutations, before paint)
-    // and immediately restore focus without any visual flicker.
-    useLayoutEffect(() => {
-        if (wasFocusedRef.current && document.activeElement !== inputRef.current) {
-            inputRef.current?.focus();
-        }
-    });
+    // The input stays mounted across re-renders, so React keeps its focus; nothing here moves
+    // focus except the explicit expand and clear actions.
 
     // ── External reset detection ──────────────────────────────────────────────
     // Only responds when the PARENT programmatically changes the value
-    // (e.g. "Clear all filters" button) — not from our own typing.
+    // (e.g. "Clear all filters" button) — not from our own typing. The parent may hand back our
+    // own search with whitespace normalised (the toolbar splits it into terms), which is not a reset.
     useEffect(() => {
         if (value === lastIncomingValueRef.current) return;
         lastIncomingValueRef.current = value;
 
-        if (value !== lastEmittedRef.current) {
+        if (normalizeSearch(value) !== normalizeSearch(lastEmittedRef.current)) {
             setLocalValue(value);
             lastEmittedRef.current = value;
-            if (!value) {
-                wasFocusedRef.current = false;
-                setIsExpanded(false);
-            } else {
-                setIsExpanded(true);
-            }
+            setIsExpanded(value.length > 0);
         }
     }, [value]);
 
@@ -98,22 +88,19 @@ export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', 
     }, []);
 
     const handleFocus = useCallback(() => {
-        wasFocusedRef.current = true;
         setIsExpanded(true);
     }, []);
 
     // Blur: defer 150ms to allow focus to move within the container first
     // (e.g. clicking the clear button) before deciding to collapse.
     const handleBlur = useCallback(() => {
-        wasFocusedRef.current = false;
         setTimeout(() => {
             if (
                 containerRef.current &&
                 document.activeElement &&
                 containerRef.current.contains(document.activeElement)
             ) {
-                // Focus is still inside — mark as focused again and abort
-                wasFocusedRef.current = true;
+                // Focus is still inside the search box — keep it expanded
                 return;
             }
             if (!localValue) {
