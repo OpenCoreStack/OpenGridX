@@ -1,7 +1,7 @@
 import React from 'react';
 import { Row } from '../Row/Row';
 import { SkeletonRow } from '../SkeletonRow';
-import { isRowPinned } from '../../utils/pinning';
+import { resolveDetailPanelHeight } from '../../utils/detailPanel';
 import type {
     GridRowModel,
     GridRowId,
@@ -9,7 +9,6 @@ import type {
     GridRowParams,
     GridCellParams,
     GridColumnPinning,
-    GridRowPinning,
     GridDetailPanelParams,
     GridDetailPanelHeight,
     GridRowMeta,
@@ -38,7 +37,6 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     hasDetailPanel: boolean;
     rowReordering: boolean;
     rowHeight: number;
-    pinnedRows?: GridRowPinning;
     selectedRowIds: Set<GridRowId>;
     onRowClick: (params: GridRowParams<R>) => void;
     onRowDoubleClick?: (params: GridRowParams<R>) => void;
@@ -50,6 +48,8 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     getDetailPanelContent?: (params: GridDetailPanelParams<R>) => React.ReactNode;
     getDetailPanelHeight?: (params: GridDetailPanelParams<R>) => GridDetailPanelHeight;
     onDetailPanelToggle: (rowId: GridRowId) => void;
+    /** Receives the rendered height of `'auto'` detail panels. */
+    onDetailPanelHeightChange?: (rowId: GridRowId, height: number) => void;
     pinCheckboxColumn?: boolean;
     pinExpandColumn?: boolean;
     rowReorderHandlers: UseRowReorderReturn;
@@ -63,6 +63,8 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     sortedUnpinnedRowCount: number;
     infiniteScrollSkeletonCount: number;
     unpinnedRowsLength: number;
+    /** Last center row index in the render window: skeleton rows render only once it reaches the end of the data. */
+    lastRenderedRowIndex: number;
     rowMetaMap: Map<GridRowId, GridRowMeta>;
     loadingOverlay?: React.ReactNode;
 }
@@ -79,7 +81,6 @@ export function GridVirtualRows<R extends GridRowModel>({
     hasDetailPanel,
     rowReordering,
     rowHeight,
-    pinnedRows,
     selectedRowIds,
     onRowClick,
     onRowDoubleClick,
@@ -91,6 +92,7 @@ export function GridVirtualRows<R extends GridRowModel>({
     getDetailPanelContent,
     getDetailPanelHeight,
     onDetailPanelToggle,
+    onDetailPanelHeightChange,
     pinCheckboxColumn,
     pinExpandColumn,
     rowReorderHandlers,
@@ -104,6 +106,7 @@ export function GridVirtualRows<R extends GridRowModel>({
     sortedUnpinnedRowCount,
     infiniteScrollSkeletonCount,
     unpinnedRowsLength,
+    lastRenderedRowIndex,
     rowMetaMap,
     loadingOverlay,
 }: GridVirtualRowsProps<R>) {
@@ -123,11 +126,12 @@ export function GridVirtualRows<R extends GridRowModel>({
             })) as GridColDef<R>[];
         })();
 
-    const centerRows = visibleRows
-        .filter(({ row }) => !isRowPinned(row.id, pinnedRows))
-        .filter((item, index, self) =>
-            index === self.findIndex(t => t.row.id === item.row.id)
-        );
+    // Pinned rows render in GridPinnedRows; ids are already unique (useGridVisibleRows de-duplicates).
+    const centerRows = visibleRows.filter(item => !item.pinned);
+    // Placeholders stand in for the next page, after the last data row: only draw them once the
+    // render window reaches it, or they would follow the window into the middle of the data.
+    const showInfiniteSkeletons = paginationMode === 'infinite' && dataSourceLoading && sortedUnpinnedRowCount > 0
+        && lastRenderedRowIndex >= unpinnedRowsLength - 1;
 
     return (
         <div
@@ -168,11 +172,11 @@ export function GridVirtualRows<R extends GridRowModel>({
                             onSelectionChange={onSelectionChange}
                             columnWidths={columnWidths}
                             pinnedColumns={pinnedColumns}
-                            pinnedRows={pinnedRows}
                             hasDetailPanel={hasDetailPanel}
                             isDetailPanelExpanded={expandedRowIds.has(row.id)}
                             detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id: row.id, rowIndex: actualIndex }) : null}
-                            detailPanelHeight={getDetailPanelHeight?.({ row, id: row.id, rowIndex: actualIndex }) || 200}
+                            detailPanelHeight={resolveDetailPanelHeight(getDetailPanelHeight?.({ row, id: row.id, rowIndex: actualIndex }))}
+                            onDetailPanelHeightChange={onDetailPanelHeightChange}
                             onDetailPanelToggle={onDetailPanelToggle}
                             pinCheckboxColumn={pinCheckboxColumn}
                             pinExpandColumn={pinExpandColumn}
@@ -197,7 +201,7 @@ export function GridVirtualRows<R extends GridRowModel>({
                     ))
                 )}
 
-                {paginationMode === 'infinite' && dataSourceLoading && sortedUnpinnedRowCount > 0 && (
+                {showInfiniteSkeletons && (
                     <div className="ogx__skeleton-group">
                         {Array.from({ length: infiniteScrollSkeletonCount }).map((_, i) => (
                             <Row<R>

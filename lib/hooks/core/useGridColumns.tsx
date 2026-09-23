@@ -151,9 +151,11 @@ export function useGridColumns<R extends GridRowModel>(
         const orderIndex = new Map(effectiveColumnOrder.map((field, idx) => [field, idx]));
         const rank = (col: GridColDef<R>) => orderIndex.get(col.field) ?? activeColumns.indexOf(col);
         const ordered = disableColumnReorder ? activeColumns : [...activeColumns].sort((a, b) => rank(a) - rank(b));
+        // Left-pinned columns render in pinnedColumns.left order.
         const pinRank = (col: GridColDef<R>) => {
             const side = isColumnPinned(col.field, pinnedColumns);
-            return side === 'left' ? 0 : side === 'right' ? 2 : 1;
+            if (side === 'left') return (pinnedColumns?.left ?? []).indexOf(col.field) - (pinnedColumns?.left?.length ?? 0);
+            return side === 'right' ? 1 : 0;
         };
         const onScreen = ordered
             .filter(col => columnVisibilityModel[col.field] !== false)

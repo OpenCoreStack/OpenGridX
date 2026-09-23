@@ -18,6 +18,8 @@ export interface UseGridVisibleRowsParams<R extends GridRowModel> {
 export interface GridVisibleRow<R extends GridRowModel> {
     row: R;
     rowIndex: number;
+    /** Set on the rows of the top / bottom pinned sections, which render outside the scrolling rows. */
+    pinned?: 'top' | 'bottom';
 }
 
 export function useGridVisibleRows<R extends GridRowModel>(
@@ -37,10 +39,11 @@ export function useGridVisibleRows<R extends GridRowModel>(
         const centerRows = pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
         const topPinnedCount = pinnedTopRows.length;
 
-        const topPinned = pinnedTopRows.map((row, index) => ({ row, rowIndex: index }));
+        const topPinned = pinnedTopRows.map((row, index) => ({ row, rowIndex: index, pinned: 'top' as const }));
         const bottomPinned = pinnedBottomRows.map((row, index) => ({
             row,
             rowIndex: topPinnedCount + centerRows.length + index,
+            pinned: 'bottom' as const,
         }));
 
         // renderContext indices come from the unpinned-row layout, so they index centerRows directly.
@@ -54,7 +57,7 @@ export function useGridVisibleRows<R extends GridRowModel>(
                 rowIndex: topPinnedCount + centerStartIndex + index,
             }));
 
-        const combined = [...topPinned, ...centerVisible, ...bottomPinned];
+        const combined: GridVisibleRow<R>[] = [...topPinned, ...centerVisible, ...bottomPinned];
 
         // Deduplication guard: a row ID in both pinnedRows and rows would cause React key collisions
         const seenIds = new Set<GridRowId>();
