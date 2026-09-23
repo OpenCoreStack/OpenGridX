@@ -33,7 +33,13 @@ export default function ClipboardDemo() {
             return;
         }
 
-        await apiRef.current.copySelectedRows();
+        try {
+            // Rejects when the browser refuses the clipboard write.
+            await apiRef.current.copySelectedRows();
+        } catch {
+            alert('The browser blocked the clipboard write.');
+            return;
+        }
 
         setLastCopied(selectedIds.length);
         setTimeout(() => setLastCopied(null), 3000);

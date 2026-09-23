@@ -773,6 +773,11 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
   disableRowSelectionOnClick?: boolean;
   /** If true, the user can only select a single row at a time. */
   disableMultipleRowSelection?: boolean;
+  /**
+   * If true, Ctrl/Cmd+C does not copy the selected rows, so the page (or your own handler) owns
+   * the shortcut. `apiRef.current.copySelectedRows()` still works. Default: false.
+   */
+  disableClipboardCopy?: boolean;
 
   /** If true, a loading shimmer/skeleton is displayed. */
   loading?: boolean;
@@ -1068,9 +1073,11 @@ export interface GridApi {
   scrollToIndexes: (params: { rowIndex?: number; colIndex?: number }) => void;
 
   /**
-   * Programmatically copies all currently selected rows to the clipboard as TSV.
-   * Equivalent to the user pressing Ctrl+C / Cmd+C.
-   * @returns A Promise that resolves when the copy completes.
+   * Programmatically copies all currently selected rows to the clipboard as TSV: every selected
+   * row that passes the filter (other pages, collapsed groups and pinned rows included), with the
+   * visible columns in screen order. Equivalent to the user pressing Ctrl+C / Cmd+C.
+   * @returns A Promise that resolves when the text is written (or when no selected row was found,
+   * in which case nothing is written) and rejects when the clipboard write fails.
    */
   copySelectedRows: () => Promise<void>;
 }
