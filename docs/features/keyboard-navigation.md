@@ -45,6 +45,7 @@ When an edit ends, focus returns to the edited cell unless you moved it elsewher
 | :--- | :--- |
 | **Enter** / **Space** | Sort the column (asc → desc → none). On the select-all header: select or clear all rows. |
 | **Alt+ArrowDown** or **Ctrl+Enter** (Cmd+Enter) | Open the column menu. |
+| **Alt+ArrowRight** / **Alt+ArrowLeft** | Widen / narrow the column by 10px (with **Shift**: 50px). Not for `resizable: false` columns. |
 | **ArrowDown** | Move to the first row. |
 
 In the column menu, **ArrowUp** / **ArrowDown** / **Home** / **End** move between items, **Enter** / **Space** choose one, and **Escape** or **Tab** closes the menu. Focus returns to the column header.
