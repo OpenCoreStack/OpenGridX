@@ -26,6 +26,11 @@ export interface UseGridApiMethodsParams {
     onPaginationModelChange: (model: GridPaginationModel) => void;
 
     selectedRowIds: Set<GridRowId>;
+    /**
+     * A selection change made since the last commit (see useGridControlledState), or null. It
+     * wins over `selectedRowIds`, so the API is current inside onRowSelectionModelChange.
+     */
+    getPendingRowSelectionModel?: () => GridRowId[] | null;
     onRowSelectionModelChange: (model: GridRowId[]) => void;
     disableMultipleRowSelection: boolean;
 
@@ -94,13 +99,17 @@ export function useGridApiMethods(params: UseGridApiMethodsParams): void {
         api.setPage = (page) => setPaginationModel({ ...latest().paginationModel, page });
         api.setPageSize = (pageSize) => setPaginationModel({ ...latest().paginationModel, pageSize, page: 0 });
 
+        const currentSelection = (): Set<GridRowId> => {
+            const pending = latest().getPendingRowSelectionModel?.();
+            return pending ? new Set(pending) : latest().selectedRowIds;
+        };
         const setSelection = (ids: GridRowId[], isSelected: boolean) => {
-            const { selectedRowIds, disableMultipleRowSelection, onRowSelectionModelChange } = latest();
-            const next = nextSelectionForRows(selectedRowIds, ids, isSelected, disableMultipleRowSelection);
+            const { disableMultipleRowSelection, onRowSelectionModelChange } = latest();
+            const next = nextSelectionForRows(currentSelection(), ids, isSelected, disableMultipleRowSelection);
             latestRef.current = { ...latest(), selectedRowIds: new Set(next) };
             onRowSelectionModelChange(next);
         };
-        api.getSelectedRows = () => Array.from(latest().selectedRowIds);
+        api.getSelectedRows = () => Array.from(currentSelection());
         api.selectRow = (id, isSelected = true) => setSelection([id], isSelected);
         api.selectRows = (ids, isSelected = true) => setSelection(ids, isSelected);
 

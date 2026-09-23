@@ -59,6 +59,7 @@ The main component for displaying and interacting with data.
 | `onRowSelectionModelChange` | `(model: GridRowSelectionModel) => void` | — | Fired when the selection changes. |
 | `disableRowSelectionOnClick` | `boolean` | `false` | When `true`, clicking a row does not toggle its selection. |
 | `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time — by click, checkbox, Space or `apiRef` — and the header select-all checkbox is not shown. |
+| `disableClipboardCopy` | `boolean` | `false` | When `true`, Ctrl+C / Cmd+C does not copy the selected rows, so the page or your own handler owns the shortcut. `apiRef.current.copySelectedRows()` still works. See [Clipboard](features/clipboard.md). |
 
 #### Column Visibility
 
@@ -251,7 +252,7 @@ Access these methods via the `apiRef` prop.
 | `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
 | `getAllFilteredRows()` | `GridRowModel[]` | Get every row that passes the filter, sorted, regardless of pagination, including pinned rows. Under row grouping and tree data it returns the data rows (no group rows) in hierarchy order with every group expanded. Use for full-dataset exports. |
 | `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total), sorted and filtered like the screen. Collapsed groups are included with their rows, and subtotals are computed over each group's exported rows. Group-header and subtotal entries carry `groupLabel`, the label the grid shows (v3.0+). Returns `null` when row grouping is not active. |
-| `copySelectedRows()` | `Promise<void>` | Copy selected rows to clipboard as TSV. |
+| `copySelectedRows()` | `Promise<void>` | Copy every selected row that passes the filter (other pages, collapsed groups and pinned rows included) as TSV, with the visible columns in screen order. Resolves without writing when no selected row is found; rejects when the clipboard write fails. |
 
 ---
 
