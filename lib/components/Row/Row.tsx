@@ -42,6 +42,8 @@ function mergeColSpan<R extends GridRowModel>(
 
 export interface RowProps<R extends GridRowModel = GridRowModel> {
     row: R;
+    /** The row's id (from getRowId). Defaults to `row.id`; the grid always passes it. */
+    rowId?: GridRowId;
     columns: GridColDef<R>[];
     rowIndex: number;
     isSelected?: boolean;
@@ -93,6 +95,7 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
 export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     const {
         row,
+        rowId: rowIdProp,
         columns,
         rowIndex,
         isSelected = false,
@@ -135,6 +138,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         rowMeta
     } = props;
 
+    const id = rowIdProp ?? row.id;
     const checkboxId = useId();
     const expandCellRef = React.useRef<HTMLDivElement>(null);
     const checkboxCellRef = React.useRef<HTMLDivElement>(null);
@@ -169,16 +173,16 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     // Which cells may be edited is decided per cell below (resolveCellEditable), not per row:
     // tree-data parents are real rows and stay editable; synthetic group rows never are.
     const handleCellEditStart = React.useCallback((field: string, value: unknown) => {
-        onEditStart?.({ id: row.id, field, value });
-    }, [row.id, onEditStart]);
+        onEditStart?.({ id, field, value });
+    }, [id, onEditStart]);
 
     const handleCellValueChange = React.useCallback((field: string, newValue: unknown) => {
-        onEditCellValueChange?.({ id: row.id, field, value: newValue });
-    }, [onEditCellValueChange, row.id]);
+        onEditCellValueChange?.({ id, field, value: newValue });
+    }, [onEditCellValueChange, id]);
 
     const handleEditStopWrapper = React.useCallback((cancel?: boolean, field?: string) => {
-        onEditStop?.({ cancel, id: row.id, field });
-    }, [onEditStop, row.id]);
+        onEditStop?.({ cancel, id, field });
+    }, [onEditStop, id]);
 
     // ── Skeleton row (shown during infinite-scroll fetch) ─────────────────────
     if (row._isSkeleton) {
@@ -206,27 +210,27 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell, .ogx__cell--editing')) {
             return;
         }
-        onRowClick?.({ row, id: row.id, rowIndex });
+        onRowClick?.({ row, id, rowIndex });
     };
 
     const handleRowDoubleClick = (event: React.MouseEvent) => {
         if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell, .ogx__cell--editing')) {
             return;
         }
-        onRowDoubleClick?.({ row, id: row.id, rowIndex });
+        onRowDoubleClick?.({ row, id, rowIndex });
     };
 
     const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         event.stopPropagation();
-        onSelectionChange?.(row.id, event.target.checked);
+        onSelectionChange?.(id, event.target.checked);
     };
 
     const handleDetailPanelToggle = (event: React.MouseEvent) => {
         event.stopPropagation();
-        onDetailPanelToggle?.(row.id);
+        onDetailPanelToggle?.(id);
     };
 
-    const rowPinnedPosition = isRowPinned(row.id, pinnedRows);
+    const rowPinnedPosition = isRowPinned(id, pinnedRows);
     const isRowPinnedTop = rowPinnedPosition === 'top';
     const isRowPinnedBottom = rowPinnedPosition === 'bottom';
 
@@ -252,8 +256,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                 aria-rowindex={rowIndex + 1}
                 aria-selected={isSelected}
                 data-rowindex={rowIndex}
-                onDragOver={onDragOver ? onDragOver(row.id) : undefined}
-                onDrop={onDrop ? onDrop(row.id) : undefined}
+                onDragOver={onDragOver ? onDragOver(id) : undefined}
+                onDrop={onDrop ? onDrop(id) : undefined}
                 style={{
                     maxHeight: `${rowHeight}px`,
                     minHeight: `${rowHeight}px`,
@@ -273,7 +277,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             zIndex: SYSTEM_CELL_Z_INDEX
                         }}
                         draggable={true}
-                        onDragStart={onDragStart ? onDragStart(row.id) : undefined}
+                        onDragStart={onDragStart ? onDragStart(id) : undefined}
                         onDragEnd={onDragEnd}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -345,11 +349,11 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     >
                         <Checkbox
                             id={checkboxId}
-                            name={`ogx-select-row-${row.id}`}
+                            name={`ogx-select-row-${id}`}
                             checked={isSelected}
                             onChange={handleCheckboxChange}
                             onClick={(e) => e.stopPropagation()}
-                            aria-label={isSelected ? `Deselect row ${row.id}` : `Select row ${row.id}`}
+                            aria-label={isSelected ? `Deselect row ${id}` : `Select row ${id}`}
                             tabIndex={-1}
                             onMouseDown={(e) => e.preventDefault()}
                         />
@@ -377,11 +381,11 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         { row, field: colDef.field, value, colDef, rowIndex, colIndex, rowMeta },
                         isCellEditable
                     );
-                    const isEditing = editingCell?.id === row.id && editingCell?.field === colDef.field;
+                    const isEditing = editingCell?.id === id && editingCell?.field === colDef.field;
 
                     const cellValue = isEditing ? editingCell?.value : value;
 
-                    const storedColSpanInfo = colspanMap?.get(row.id)?.[colDef.field];
+                    const storedColSpanInfo = colspanMap?.get(id)?.[colDef.field];
                     const colSpanInfo = storedColSpanInfo && !storedColSpanInfo.spannedByColSpan && storedColSpanInfo.cellProps.colSpan > 1
                         ? mergeColSpan(columns, colIndex, storedColSpanInfo.cellProps.colSpan, columnWidths)
                         : storedColSpanInfo;
@@ -394,8 +398,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     const pinnedOffset = pinnedPosition ? pinnedPositions[offsetField] : undefined;
                     const isPinnedEdge = (pinnedPosition === 'left' && lastCoveredField === pinnedEdges.lastLeft)
                         || (pinnedPosition === 'right' && colDef.field === pinnedEdges.firstRight);
-                    const rowSpan = rowSpanningCaches?.spannedCells[row.id]?.[colDef.field];
-                    const isHiddenByRowSpan = rowSpanningCaches?.hiddenCells[row.id]?.[colDef.field] || false;
+                    const rowSpan = rowSpanningCaches?.spannedCells[id]?.[colDef.field];
+                    const isHiddenByRowSpan = rowSpanningCaches?.hiddenCells[id]?.[colDef.field] || false;
 
                     return (
                         <Cell
@@ -434,7 +438,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
             {hasDetailPanel && (
                 <DetailPanel
                     row={row}
-                    rowId={row.id}
+                    rowId={id}
                     rowIndex={rowIndex}
                     content={detailPanelContent}
                     height={detailPanelHeight}

@@ -50,7 +50,7 @@ When a cell edit is committed, the `processRowUpdate` callback is triggered.
 />
 ```
 
-`processRowUpdate` must return the row to store (or a Promise of it). The grid stores that row under the id of the row you edited, so a server response that lacks the grid's `id` field (for example with `getRowId={r => r.uid}`) is still applied. Returning nothing is a mistake the grid reports through `onProcessRowUpdateError` (or `console.error` in development when no handler is set); the editor stays open.
+`processRowUpdate` must return the row to store (or a Promise of it). The grid stores that row under the id of the row you edited, so a server response that lacks the key field (for example the `uid` read by `getRowId={r => r.uid}`) is still applied. The row is stored as returned: the grid never adds an `id` field to it (v3.0+). Returning nothing is a mistake the grid reports through `onProcessRowUpdateError` (or `console.error` in development when no handler is set); the editor stays open.
 
 ### Commit and cancel
 

@@ -158,13 +158,14 @@ export function GridVirtualRows<R extends GridRowModel>({
                         />
                     ))
                 ) : (
-                    centerRows.map(({ row, rowIndex: actualIndex }) => (
+                    centerRows.map(({ row, id, rowIndex: actualIndex }) => (
                         <Row<R>
-                            key={row.id}
+                            key={id}
                             row={row}
+                            rowId={id}
                             columns={virtualColumns}
                             rowIndex={actualIndex}
-                            isSelected={selectedRowIds.has(row.id)}
+                            isSelected={selectedRowIds.has(id)}
                             checkboxSelection={checkboxSelection}
                             onRowClick={onRowClick}
                             onRowDoubleClick={onRowDoubleClick}
@@ -173,9 +174,9 @@ export function GridVirtualRows<R extends GridRowModel>({
                             columnWidths={columnWidths}
                             pinnedColumns={pinnedColumns}
                             hasDetailPanel={hasDetailPanel}
-                            isDetailPanelExpanded={expandedRowIds.has(row.id)}
-                            detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id: row.id, rowIndex: actualIndex }) : null}
-                            detailPanelHeight={resolveDetailPanelHeight(getDetailPanelHeight?.({ row, id: row.id, rowIndex: actualIndex }))}
+                            isDetailPanelExpanded={expandedRowIds.has(id)}
+                            detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id: id, rowIndex: actualIndex }) : null}
+                            detailPanelHeight={resolveDetailPanelHeight(getDetailPanelHeight?.({ row, id: id, rowIndex: actualIndex }))}
                             onDetailPanelHeightChange={onDetailPanelHeightChange}
                             onDetailPanelToggle={onDetailPanelToggle}
                             pinCheckboxColumn={pinCheckboxColumn}
@@ -185,18 +186,18 @@ export function GridVirtualRows<R extends GridRowModel>({
                             onDragOver={rowReorderHandlers.onDragOver}
                             onDragEnd={rowReorderHandlers.onDragEnd}
                             onDrop={rowReorderHandlers.onDrop}
-                            isDragging={rowReorderHandlers.draggedRowId === row.id}
-                            isDragOver={rowReorderHandlers.dragOverRowId === row.id}
+                            isDragging={rowReorderHandlers.draggedRowId === id}
+                            isDragOver={rowReorderHandlers.dragOverRowId === id}
                             editingCell={editingHandlers.editingCell}
                             onEditStart={editingHandlers.startCellEdit}
                             onEditStop={editingHandlers.stopCellEdit}
                             onEditCellValueChange={editingHandlers.setEditCellValue}
                             isCellEditable={isCellEditable}
-                            focusedCellField={focusedCell != null && focusedCell.id === row.id ? focusedCell.field : null}
+                            focusedCellField={focusedCell != null && focusedCell.id === id ? focusedCell.field : null}
                             colspanMap={colspanMap}
                             rowSpanningCaches={rowSpanningCaches}
                             rowHeight={rowHeight}
-                            rowMeta={rowMetaMap.get(row.id)}
+                            rowMeta={rowMetaMap.get(id)}
                         />
                     ))
                 )}

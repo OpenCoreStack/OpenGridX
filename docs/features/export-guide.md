@@ -492,6 +492,8 @@ Every exporter follows the same rules (v3.0+):
 - **A non-empty selection takes precedence over `groupedRows`**: the selected rows are exported flat. (Before v3.0, CSV, basic Excel, JSON, print and PDF silently ignored the selection and exported every grouped row.) In `exportToExcelAdvanced`, `rows: 'selected'` sheets are flat and `rows: 'all'` sheets use `groupedRows`.
 - **Totals follow the exported rows.** The grid's `aggregationResult` covers all filtered rows; when a selection narrows the export, the totals row is recomputed over the selected rows with the grid's own aggregation functions (it needs `aggregationModel`). Without a selection, `aggregationResult` is written as given — if you pass a subset of rows yourself (e.g. the current page), pass totals computed for that subset.
 - Row selection is linear in the number of rows, so exporting "select all" on a large grid does not freeze the tab.
+- **With a custom `getRowId`, pass it as the `getRowId` option.** `selectedRows` holds the grid's ids, and since v3.0 the grid no longer copies them onto `row.id`, so without the option a row that keeps its id in another field (or whose `id` field is not the key) is not matched.
+- **`getGroupedExportRows()` exports every group**, collapsed or not, sorted and filtered like the screen; groups with no row left after the filter are omitted, and each subtotal is computed over the rows exported under it (v3.0+).
 
 ---
 

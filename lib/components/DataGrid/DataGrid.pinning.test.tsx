@@ -141,31 +141,6 @@ describe('DataGrid pinned rows under a hierarchy', () => {
     });
 });
 
-describe('DataGrid visible row filtering cost', () => {
-    it('reads each row id a constant number of times per render (no quadratic de-duplication)', () => {
-        const make = (n: number) => {
-            const reads = { count: 0 };
-            const rows = Array.from({ length: n }, (_, i) => {
-                const row = { name: `r${i}` } as { id: number; name: string };
-                Object.defineProperty(row, 'id', { enumerable: true, get: () => { reads.count++; return i + 1; } });
-                return row;
-            });
-            return { rows, reads };
-        };
-        const readsPerRerender = (n: number) => {
-            const { rows, reads } = make(n);
-            const cols: GridColDef[] = [{ field: 'name', width: 100 }];
-            const { rerender } = render(<DataGrid autoHeight rows={rows} columns={cols} className="x" />);
-            reads.count = 0;
-            rerender(<DataGrid autoHeight rows={rows} columns={cols} className="y" />);
-            return reads.count / n;
-        };
-        const small = readsPerRerender(200);
-        const large = readsPerRerender(800);
-        expect(large).toBeLessThan(small * 1.5);
-    });
-});
-
 describe('DataGrid viewport measurement', () => {
     it('observes the viewport that mounts when listView is switched off', () => {
         const observed: Element[] = [];

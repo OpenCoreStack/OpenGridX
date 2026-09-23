@@ -217,7 +217,8 @@ export function isRowPinned(
 
 export function getPinnedRowGroups<R extends GridRowModel = GridRowModel>(
     rows: R[],
-    pinnedRows?: GridRowPinning
+    pinnedRows?: GridRowPinning,
+    getRowId: (row: R) => GridRowId = (row) => row.id
 ): {
     top: R[];
     center: R[];
@@ -232,7 +233,7 @@ export function getPinnedRowGroups<R extends GridRowModel = GridRowModel>(
     }
 
     rows.forEach(row => {
-        const pinnedPosition = isRowPinned(row.id, pinnedRows);
+        const pinnedPosition = isRowPinned(getRowId(row), pinnedRows);
 
         if (pinnedPosition === 'top') {
             top.push(row);
@@ -245,16 +246,16 @@ export function getPinnedRowGroups<R extends GridRowModel = GridRowModel>(
 
     if (pinnedRows.top) {
         top.sort((a, b) => {
-            const aIndex = pinnedRows.top!.indexOf(a.id);
-            const bIndex = pinnedRows.top!.indexOf(b.id);
+            const aIndex = pinnedRows.top!.indexOf(getRowId(a));
+            const bIndex = pinnedRows.top!.indexOf(getRowId(b));
             return aIndex - bIndex;
         });
     }
 
     if (pinnedRows.bottom) {
         bottom.sort((a, b) => {
-            const aIndex = pinnedRows.bottom!.indexOf(a.id);
-            const bIndex = pinnedRows.bottom!.indexOf(b.id);
+            const aIndex = pinnedRows.bottom!.indexOf(getRowId(a));
+            const bIndex = pinnedRows.bottom!.indexOf(getRowId(b));
             return aIndex - bIndex;
         });
     }

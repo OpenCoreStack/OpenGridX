@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from 'react';
 import { useLayout } from '../../hooks/core/useLayout';
 import { useGridKeyboardNavigation } from '../../hooks/core/useGridKeyboardNavigation';
 import { useGridControlledState } from '../../hooks/core/useGridControlledState';
@@ -7,10 +7,15 @@ import { useGridVirtualization } from '../../hooks/core/useGridVirtualization';
 import { useGridColumns } from '../../hooks/core/useGridColumns';
 import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
 import { useGridScrollSync } from '../../hooks/core/useGridScrollSync';
+import { useGridViewportSize } from '../../hooks/core/useGridViewportSize';
+import { useDetailPanelHeights } from '../../hooks/features/useDetailPanelHeights';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings } from '../../hooks/core/useGridDevWarnings';
+import { useGridRowSelection } from '../../hooks/core/useGridRowSelection';
+import { useGridApiMethods } from '../../hooks/core/useGridApiMethods';
+import { buildGroupedExportRows } from '../../utils/grouping/groupedExportRows';
 import { useGridColumnLookup } from '../../hooks/core/useGridColumnLookup';
-import { scrollRowIntoView } from '../../utils/scroll';
+import { scrollRowIntoView, scrollColumnIntoView } from '../../utils/scroll';
 import { upsertSortItem } from '../../utils/sorting';
 import { GridAggregationFooter } from './GridAggregationFooter';
 import { GridEmptyState } from './GridEmptyState';
@@ -18,7 +23,6 @@ import { GridErrorOverlay } from './GridErrorOverlay';
 import { Header } from '../Header/Header';
 import { Pagination } from '../Pagination/Pagination';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
-import { useNormalizedRows } from '../../hooks/core/useNormalizedRows';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useTreeData } from '../../hooks/useTreeData';
 import { useRowGrouping } from '../../hooks/useRowGrouping';
@@ -37,7 +41,7 @@ import { GridListView } from './GridListView';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
-import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridFilterModel, GridTreeNode, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
+import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridTreeNode, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
 
 const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
 
@@ -135,9 +139,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const effectiveNoRowsLabel = localeText?.noRowsLabel ?? noRowsLabel;
 
     // Stable defaults
-    const defaultFilterModel: GridFilterModel = useMemo(() => ({ items: [] }), []);
-    const filterModel = (propFilterModel || defaultFilterModel) as GridFilterModel;
-
     const defaultRowGroupingModel = useMemo(() => [], []);
     const rowGroupingModel = propRowGroupingModel || defaultRowGroupingModel;
 
@@ -171,6 +172,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         initialState,
         sortModel: propSortModel,
         onSortModelChange,
+        filterModel: propFilterModel,
+        onFilterModelChange,
         aggregationModel: propAggregationModel,
         onAggregationModelChange,
         columnVisibilityModel: propColumnVisibilityModel,
@@ -181,14 +184,19 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onPivotModelChange,
         paginationModel,
         onPaginationModelChange,
+        pageSizeOptions,
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange: propOnRowSelectionModelChange,
+        density,
     });
 
     const {
         sortModel,
         isSortControlled,
         setInternalSortModel,
+        handleSortModelChange,
+        filterModel,
+        handleFilterModelChange,
         aggregationModel,
         handleAggregationModelChange,
         columnVisibilityModel,
@@ -200,11 +208,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         effectivePaginationModel,
         handlePaginationModelChange,
         selectedRowIds,
-        isSelectionControlled,
-        setInternalRowSelectionModel,
+        handleRowSelectionModelChange,
+        density: effectiveDensity,
     } = controlledState;
-
-    const onRowSelectionModelChange = propOnRowSelectionModelChange;
 
     const pivot = useGridPivot({
         rows: rows as GridRowModel[],
@@ -221,7 +227,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const hierarchyRowGroupingModel = isPivotActive ? defaultRowGroupingModel : rowGroupingModel;
     const isTreeData = treeData && !isPivotActive;
 
-    const effectiveRowHeight = density === 'compact' ? 32 : density === 'comfortable' ? 72 : rowHeight;
+    const effectiveRowHeight = effectiveDensity === 'compact' ? 32 : effectiveDensity === 'comfortable' ? 72 : rowHeight;
 
     const activeRows = pivot.rows as unknown as R[];
     const baseColumns = pivot.columns as unknown as GridColDef<R>[];
@@ -268,16 +274,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const contentRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<HTMLDivElement>(null);
 
+    // Rows are stored and handed to consumers untouched: getRowId only decides the internal
+    // key. Pivot rows are the grid's own and carry their own ids, so a getRowId written for
+    // the source rows does not apply to them.
     const defaultGetRowId = useCallback((row: R) => row.id, []);
-    // Pivot rows are synthetic and carry their own unique ids; a consumer getRowId cannot read them.
     const effectiveGetRowId = (!isPivotActive && getRowId) || defaultGetRowId;
-
-    // Normalize rows so every row has `id === getRowId(row)`.
-    // createInitialState and SET_ROWS both key the internal store by row.id,
-    // so rows without a native id field collide on undefined without this.
-    // When getRowId is the default (row) => row.id this is a no-op per row.
-    // Stable across renders with an inline getRowId, so it does not reset the store (and edits).
-    const normalizedRows = useNormalizedRows(activeRows, effectiveGetRowId);
 
     // Keyboard-mode flag: toggled via DOM classname — no React state needed
     // so the ring appears instantly without a re-render cycle.
@@ -303,11 +304,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     }, [treeData]);
 
     const gridData = useDataGrid({
-        rows: normalizedRows,
+        rows: activeRows,
+        getRowId: effectiveGetRowId,
         columns: activeColumns,
         rowHeight: effectiveRowHeight,
         headerHeight,
-        rowCount: propRowCount,
         columnVisibilityModel,
         initialState: props.initialState
     });
@@ -315,6 +316,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         state,
         apiRef,
         setRows,
+        replaceRow,
         setColumns,
         setDimensions,
         setDataSourceLoading,
@@ -322,9 +324,20 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         setRowCount
     } = gridData;
 
-    const { scrollTop, scrollLeft, overscanRows, handleScroll } = useGridScrollSync({ onRowsScrollEnd, overscanRowCount });
+    // The key of any row the grid renders: stored rows resolve through the store, and
+    // grid-made rows (group rows, skeletons, generated tree parents) through their own `id`.
+    const getRowIdOf = useCallback(
+        (row: GridRowModel): GridRowId => state.rows.idByRow.get(row) ?? row.id,
+        [state.rows.idByRow]
+    );
+    // Same resolver with a stable identity, for event handlers only (it reads the last
+    // committed store), so column definitions are not rebuilt on every rows change.
+    const getRowIdOfRef = useRef(getRowIdOf);
+    useLayoutEffect(() => { getRowIdOfRef.current = getRowIdOf; });
+    const getRowIdOfInEvents = useCallback((row: GridRowModel) => getRowIdOfRef.current(row), []);
 
-    useEffect(() => {
+    // Layout effect: the live API must be in place before the parent's layout effects run.
+    useLayoutEffect(() => {
         if (propApiRef) {
             propApiRef.current = apiRef.current;
         }
@@ -334,14 +347,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         selectedRowIds,
         columns: activeColumns as unknown as GridColDef[],
         getVisibleRows: () => apiRef.current.getVisibleRows(),
-        getRowId: effectiveGetRowId as unknown as (row: GridRowModel) => GridRowId,
+        getRowId: getRowIdOf,
     });
 
     // Expose on apiRef for programmatic use
     useEffect(() => {
         apiRef.current.copySelectedRows = copySelectedRows;
-        apiRef.current.getSelectedRows = () => Array.from(selectedRowIds);
-    }, [copySelectedRows, selectedRowIds, apiRef]);
+    }, [copySelectedRows, apiRef]);
 
     const isInternalLoading = state.dataSource.loading;
     const effectiveLoading = loading || isInternalLoading;
@@ -352,7 +364,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const treeDataHandlers = useTreeData({
         rows: effectiveRows,
-        getRowId: effectiveGetRowId,
+        getRowId: getRowIdOf,
         getTreeDataPath,
         treeData: isTreeData,
         defaultGroupingExpansionDepth,
@@ -369,7 +381,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const rowGroupingHandlers = useRowGrouping({
         rows: effectiveRows,
-        getRowId: effectiveGetRowId,
+        getRowId: getRowIdOf,
         columns: activeColumns,
         rowGroupingModel: hierarchyRowGroupingModel,
         aggregationModel,
@@ -382,20 +394,16 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const editingHandlers = useGridEditing({
         rows: effectiveRows,
-        getRowId: effectiveGetRowId,
+        getRowId: getRowIdOf,
         columns: activeColumns,
         processRowUpdate,
         onProcessRowUpdateError,
         onRowChange: (updatedRow, rowId) => {
-            // Dispatch a proper state update so React re-renders with the new row value.
-            // Match on the edited row's id: the row processRowUpdate returns may lack the normalised `id`.
-            const { dispatch } = gridData;
-            const storedRow = (updatedRow.id === rowId ? updatedRow : { ...updatedRow, id: rowId }) as R;
-            const currentRows = Array.from(gridData.state.rows.idRowsLookup.values());
-            const nextRows = currentRows.map(r =>
-                r.id === rowId ? storedRow : r
-            );
-            dispatch({ type: 'SET_ROWS', payload: nextRows });
+            // Replaces the edited row in the *current* store, under the edited row's id: this runs
+            // after an awaited processRowUpdate, by which time the rows prop (or a dataSource
+            // fetch) may have replaced the rows this render saw. The returned row is stored as is
+            // (the grid never writes an id onto it), even if it does not carry its key itself.
+            replaceRow(rowId, updatedRow);
         },
     });
 
@@ -410,37 +418,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     }, [isTreeData, treeDataHandlers.rowMetaMap, isRowGrouping, rowGroupingHandlers.rowMetaMap]);
 
     const pagination = propPagination && !isRowGrouping;
-
-    const handleRowClick = useCallback((params: GridRowParams<R>) => {
-        const { row, id } = params;
-
-        if (isHierarchyEnabled && rowMetaMap.get(row.id)?.hasChildren) {
-            activeHierarchyHandlers?.toggleExpansion(id);
-            return;
-        }
-
-        onRowClick?.(params);
-
-        if (!disableRowSelectionOnClick) {
-            let next: GridRowId[];
-            if (disableMultipleRowSelection) {
-                const alreadySelected = selectedRowIds.has(id as GridRowId);
-                next = alreadySelected ? [] : [id as GridRowId];
-            } else {
-                const newSelection = new Set(selectedRowIds);
-                if (newSelection.has(id as GridRowId)) {
-                    newSelection.delete(id as GridRowId);
-                } else {
-                    newSelection.add(id as GridRowId);
-                }
-                next = Array.from(newSelection);
-            }
-            if (!isSelectionControlled) {
-                setInternalRowSelectionModel(next);
-            }
-            onRowSelectionModelChange?.(next);
-        }
-    }, [isHierarchyEnabled, activeHierarchyHandlers, onRowClick, rowMetaMap, disableRowSelectionOnClick, disableMultipleRowSelection, selectedRowIds, isSelectionControlled, setInternalRowSelectionModel, onRowSelectionModelChange]);
 
     const dataSourceHandlers = useGridDataSource({
         dataSource,
@@ -466,9 +443,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     useEffect(() => {
         if (!dataSource) {
-            setRows(normalizedRows);
+            setRows(activeRows);
         }
-    }, [normalizedRows, setRows, dataSource]);
+    }, [activeRows, setRows, dataSource]);
 
     // ── Detail panel (hoisted — hasDetailPanel feeds into useGridColumns) ──────
     const hasDetailPanel = Boolean(getDetailPanelContent);
@@ -516,6 +493,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         initialState,
         setColumns,
         pinnedColumns: effectivePinnedColumns,
+        getRowId: getRowIdOfInEvents,
         aggregationModel,
         groupingRows: isRowGrouping ? rowGroupingHandlers.groupingRows : undefined,
     });
@@ -528,7 +506,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         columnWidths,
         effectiveColumnOrder,
         columnVisibilityModel,
-        pinnedColumns: effectivePinnedColumns,
+        pinnedColumns,
+        density: effectiveDensity,
     });
 
     const rowPipeline = useGridRowPipeline<GridRowModel>({
@@ -536,13 +515,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         activeHierarchyHandlers: activeHierarchyHandlers as { getVisibleRows: () => GridRowModel[] } | null,
         filterMode,
         filterModel: pivot.pipelineFilterModel,
-        dataSource: dataSource as GridDataSource<GridRowModel> | undefined,
         sortModel: pivot.pipelineSortModel,
         sortingMode,
         pagination,
         paginationMode,
         effectivePaginationModel,
         pinnedRows,
+        getRowId: getRowIdOf,
         isLoading: state.dataSource.loading,
         pageSize: effectivePaginationModel.pageSize,
         columnLookup,
@@ -555,15 +534,65 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const paginatedUnpinnedRows = rowPipeline.paginatedUnpinnedRows as R[];
     const allRenderableRows   = rowPipeline.allRenderableRows   as R[];
 
-    useEffect(() => {
-        gridData.apiRef.current.getVisibleRows = () => pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
-        gridData.apiRef.current.getAllFilteredRows = () => sortedUnpinnedRows;
-        gridData.apiRef.current.getVisibleColumns = () => effectiveColumns as unknown as GridColDef[];
-    }, [sortedUnpinnedRows, paginatedUnpinnedRows, pagination, effectiveColumns, gridData.apiRef]);
+    // What the pager pages through. Client: the filtered, unpinned rows (pinned rows show on
+    // every page). Server: the server total, from the dataSource response or the rowCount prop.
+    const paginationRowCount = paginationMode === 'server'
+        ? ((dataSource ? state.pagination.rowCount ?? propRowCount : propRowCount) ?? sortedUnpinnedRows.length)
+        : sortedUnpinnedRows.length;
+
+    // Select-all acts on, and the header checkbox reflects, the data rows that pass the
+    // filter: never rows hidden by it, synthetic group rows, the pivot grand total, or stale
+    // ids in the selection.
+    const selectableRowIds = useMemo(() => {
+        const ids = dataRows.map(getRowIdOf);
+        return isPivotActive ? ids.filter(id => id !== PIVOT_GRAND_TOTAL_ID) : ids;
+    }, [dataRows, getRowIdOf, isPivotActive]);
+    const rowSelection = useGridRowSelection({
+        selectedRowIds,
+        onSelectionModelChange: handleRowSelectionModelChange,
+        disableMultipleRowSelection,
+        selectableRowIds,
+    });
+
+    const handleRowClick = useCallback((params: GridRowParams<R>) => {
+        const { id } = params;
+
+        if (isHierarchyEnabled && rowMetaMap.get(id)?.hasChildren) {
+            activeHierarchyHandlers?.toggleExpansion(id);
+            return;
+        }
+
+        onRowClick?.(params);
+
+        if (!disableRowSelectionOnClick) {
+            rowSelection.clickRow(id);
+        }
+    }, [isHierarchyEnabled, activeHierarchyHandlers, onRowClick, rowMetaMap, disableRowSelectionOnClick, rowSelection]);
+
+    useGridApiMethods({
+        apiRef: gridData.apiRef,
+        sortModel,
+        multiSort,
+        onSortModelChange: handleSortModelChange,
+        filterModel,
+        onFilterModelChange: handleFilterModelChange,
+        paginationModel: effectivePaginationModel,
+        onPaginationModelChange: handlePaginationModelChange,
+        selectedRowIds,
+        onRowSelectionModelChange: handleRowSelectionModelChange,
+        disableMultipleRowSelection,
+        getVisibleRows: () => [...pinnedTopRows, ...(pagination ? paginatedUnpinnedRows : sortedUnpinnedRows), ...pinnedBottomRows],
+        getAllFilteredRows: () => {
+            const hierarchyRows = activeHierarchyHandlers?.getVisibleRows({ expandAll: true }) as R[] | null | undefined;
+            if (!hierarchyRows) return [...pinnedTopRows, ...sortedUnpinnedRows, ...pinnedBottomRows];
+            return hierarchyRows.filter(row => !rowMetaMap.get(getRowIdOf(row))?.isGroupRow);
+        },
+        visibleColumns: visibleOrderedColumns as unknown as GridColDef[],
+    });
 
     const rowReorderHandlers = useRowReorder({
         rows: pagination ? paginatedUnpinnedRows : sortedUnpinnedRows,
-        getRowId: (row) => row.id,
+        getRowId: getRowIdOf,
         onRowOrderChange,
         rowReordering
     });
@@ -590,53 +619,20 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         gridData.apiRef.current.getAggregationModel = () => hasAggregation ? aggregationModel : null;
         gridData.apiRef.current.getGroupedExportRows = (): GridGroupedExportRow[] | null => {
             if (!isRowGrouping) return null;
-            const { treeNodes, groupingRows } = rowGroupingHandlers;
-            const rowLookup = new Map<GridRowId, GridRowModel>();
-            sortedUnpinnedRows.forEach(r => rowLookup.set((r as GridRowModel).id as GridRowId, r as GridRowModel));
-
-            const result: GridGroupedExportRow[] = [];
-
-            const traverse = (ids: GridRowId[]) => {
-                ids.forEach(id => {
-                    const node = treeNodes.get(id);
-                    if (!node) return;
-                    const isGroup = Boolean(node.children && node.children.length > 0);
-                    if (isGroup) {
-                        result.push({
-                            type: 'group-header',
-                            depth: node.depth,
-                            groupField: node.groupingField,
-                            groupValue: node.groupingValue,
-                            groupLabel: node.label,
-                        });
-                        traverse(node.children!);
-                        if (hasAggregation && node.aggregatedValues) {
-                            result.push({
-                                type: 'group-subtotal',
-                                depth: node.depth,
-                                groupField: node.groupingField,
-                                groupValue: node.groupingValue,
-                                groupLabel: node.label,
-                                aggregatedValues: node.aggregatedValues,
-                            });
-                        }
-                    } else {
-                        const row = rowLookup.get(id) ?? groupingRows.get(id);
-                        if (row) {
-                            result.push({ type: 'leaf', depth: node.depth, row });
-                        }
-                    }
-                });
-            };
-
-            traverse(Array.from(treeNodes.keys()).filter(id => treeNodes.get(id)?.parentId === null));
-
-            if (hasAggregation && aggregationResult) {
-                result.push({ type: 'grand-total', depth: 0, aggregatedValues: aggregationResult });
-            }
-            return result;
+            // Every group expanded, filtered and sorted like the screen: collapsed groups still
+            // export their rows.
+            return buildGroupedExportRows<R>({
+                rows: (rowGroupingHandlers.getVisibleRows({ expandAll: true }) ?? []) as R[],
+                getRowId: getRowIdOf,
+                rowMetaMap,
+                columns: activeColumns,
+                aggregationModel,
+                aggregationResult: hasAggregation ? aggregationResult : null,
+            });
         };
-    }, [aggregationResult, aggregationModel, hasAggregation, gridData.apiRef, isRowGrouping, rowGroupingHandlers, sortedUnpinnedRows]);
+    }, [aggregationResult, aggregationModel, hasAggregation, gridData.apiRef, isRowGrouping, rowGroupingHandlers, rowMetaMap, activeColumns, getRowIdOf]);
+
+    const { detailPanelHeights, reportDetailPanelHeight } = useDetailPanelHeights();
 
     const layout = useLayout({
         rowHeight: effectiveRowHeight,
@@ -645,8 +641,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         sortedUnpinnedRows,
         expandedRowIds,
         getDetailPanelHeight,
+        detailPanelHeights,
         pinnedTopRowsLength: pinnedTopRows.length,
         pinnedBottomRowsLength: pinnedBottomRows.length,
+        pinnedTopRows,
+        pinnedBottomRows,
         visibleOrderedColumns,
         pinnedColumns: effectivePinnedColumns,
         columnWidths,
@@ -660,6 +659,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         paginationMode,
         isLoading: state.dataSource.loading,
         pageSize: effectivePaginationModel.pageSize,
+        getRowId: getRowIdOf,
     });
 
     const spanning = useGridSpanning<R>({
@@ -672,6 +672,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rightPinnedColumns: layout.rightPinnedCols,
         expandedRowIds: hasDetailPanel ? expandedRowIds : undefined,
         rowMetaMap,
+        getRowId: getRowIdOf,
     });
 
     // Rendered data columns with their layout-resolved widths, in render order (column group header rows).
@@ -694,20 +695,23 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 const allDataCols = [...layout.leftPinnedCols, ...layout.unpinnedColsWithWidth, ...layout.rightPinnedCols];
                 const targetCol = allDataCols[colIndex];
                 if (!targetCol) return;
-                const unpinnedIndex = layout.unpinnedColsWithWidth.findIndex(c => c.field === targetCol.field);
-                if (unpinnedIndex === -1) return; // pinned column — always visible, no scroll needed
-                const colLocalLeft = unpinnedIndex > 0 ? layout.unpinnedAccWidths[unpinnedIndex - 1] : 0;
-                const colLocalRight = layout.unpinnedAccWidths[unpinnedIndex] ?? colLocalLeft;
-                const colRight = layout.leftWidth + colLocalRight;
-                const { scrollLeft, clientWidth } = el;
-                if (colLocalLeft < scrollLeft) {
-                    el.scrollLeft = colLocalLeft;
-                } else if (colRight > scrollLeft + clientWidth) {
-                    el.scrollLeft = colRight - clientWidth;
-                }
+                // A pinned column (index -1) is always visible: nothing to scroll.
+                scrollColumnIntoView(el, layout.unpinnedColsWithWidth.findIndex(c => c.field === targetCol.field), layout);
             }
         };
     }, [layout, viewportRef, gridData.apiRef]);
+
+    const { scrollTop, scrollLeft, overscanRows, handleScroll, attachViewport } = useGridScrollSync({
+        onRowsScrollEnd, overscanRowCount, rowCount: layout.unpinnedRowsLength, autoHeight,
+    });
+    const observeViewportSize = useGridViewportSize(setDimensions);
+    // Callback ref: every viewport that mounts (list view switched off again) is measured and gets its scroll position back.
+    const setViewportElement = useCallback((el: HTMLDivElement | null) => {
+        viewportRef.current = el;
+        gridRef.current = el;
+        observeViewportSize(el);
+        attachViewport(el);
+    }, [observeViewportSize, attachViewport]);
 
     const virtualization = useGridVirtualization({
         layout,
@@ -725,50 +729,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     });
 
 
-    useEffect(() => {
-        if (!viewportRef.current) return;
-
-        const resizeObserver = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                const { width, height } = entry.contentRect;
-                setDimensions(width, height);
-            }
-        });
-
-        resizeObserver.observe(viewportRef.current);
-
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, [setDimensions]);
-
-    const handleSelectionChange = useCallback((rowId: GridRowId, isSelected: boolean) => {
-        const newSelection = new Set(selectedRowIds);
-        if (isSelected) {
-            newSelection.add(rowId);
-        } else {
-            newSelection.delete(rowId);
-        }
-        const newSelectionArray = Array.from(newSelection);
-
-        if (!isSelectionControlled) {
-            setInternalRowSelectionModel(newSelectionArray);
-        }
-        onRowSelectionModelChange?.(newSelectionArray);
-    }, [selectedRowIds, isSelectionControlled, onRowSelectionModelChange, setInternalRowSelectionModel]);
-
-    const handleSelectAll = useCallback((isSelected: boolean) => {
-        let newSelection: GridRowId[] = [];
-        if (isSelected) {
-            newSelection = effectiveRows.map((row: GridRowModel) => row.id);
-            if (isPivotActive) newSelection = newSelection.filter(id => id !== PIVOT_GRAND_TOTAL_ID);
-        }
-
-        if (!isSelectionControlled) {
-            setInternalRowSelectionModel(newSelection);
-        }
-        onRowSelectionModelChange?.(newSelection);
-    }, [effectiveRows, isPivotActive, isSelectionControlled, onRowSelectionModelChange, setInternalRowSelectionModel]);
+    // Row checkbox / Space key. Honors disableMultipleRowSelection like a row click does.
+    const handleSelectionChange = rowSelection.toggleRow;
 
     const handleSort = useCallback((field: string, direction: GridSortDirection) => {
         const newSortModel = direction ? [{ field, sort: direction }] : [];
@@ -805,17 +767,18 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         virtualization,
         viewportRef,
         pinnedTopRowCount: pinnedTopRows.length,
+        getRowId: getRowIdOf,
         rowMetaMap,
         getSpanOrigin: spanning.getSpanOrigin,
     });
 
     const handleCellClick = useCallback((params: GridCellParams<R>) => {
         setKeyboardMode(false);
-        setFocusedCell({ id: params.row.id, field: params.field });
+        setFocusedCell({ id: getRowIdOf(params.row), field: params.field });
 
         gridRef.current?.focus({ preventScroll: true });
         onCellClick?.(params);
-    }, [onCellClick, setKeyboardMode, setFocusedCell]);
+    }, [onCellClick, setKeyboardMode, setFocusedCell, getRowIdOf]);
 
     const prevEditingCellRef = useRef(editingHandlers.editingCell);
     useEffect(() => {
@@ -848,6 +811,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         paginatedUnpinnedRows,
         sortedUnpinnedRows,
         pagination,
+        getRowId: getRowIdOf,
     });
 
     const renderColumns = useGridSpanColumnWindow<R>({
@@ -866,10 +830,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         viewportHeight: state.dimensions.viewportHeight,
         renderedRowCount: visibleRows.length,
         totalRowCount: pinnedTopRows.length + (pagination ? paginatedUnpinnedRows.length : sortedUnpinnedRows.length) + pinnedBottomRows.length,
+        pinnedRowsIgnored: isHierarchyEnabled && Boolean(pinnedRows?.top?.length || pinnedRows?.bottom?.length),
+        scrollHeight: virtualization.totalHeight,
     });
 
-    const allSelected = rows.length > 0 && selectedRowIds.size === rows.length;
-    const someSelected = selectedRowIds.size > 0 && selectedRowIds.size < rows.length;
+    const { allSelected, someSelected } = rowSelection;
 
     // Header drag-reorder keeps a column inside its column group (and ungrouped columns outside groups).
     const headerReorderHandlers = useColumnGroupReorderGuard(columnGroupingModel, columnReorderHandlers);
@@ -896,7 +861,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 const newOrder = [...currentOrder];
                 newOrder.splice(fromIdx, 1);
                 newOrder.splice(toIdx, 0, fromField);
-                if (!columnOrder) setInternalColumnOrder(newOrder);
+                // A controlled columnOrder names source columns; generated pivot columns keep their own order.
+                if (isPivotActive || !columnOrder) setInternalColumnOrder(newOrder);
                 const col = effectiveColumns.find(c => c.field === fromField);
                 if (col) onColumnOrderChange?.({ oldIndex: fromIdx, targetIndex: toIdx, column: col as unknown as GridColDef });
             };
@@ -911,7 +877,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 onPivotModelChange: handlePivotModelChange,
             } : {}),
             filterModel,
-            onFilterModelChange,
+            onFilterModelChange: handleFilterModelChange,
             columnVisibilityModel,
             onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
             onColumnReorder: reorderHandler,
@@ -923,9 +889,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     }, [
         slots?.toolbar, disableColumnReorder, effectiveColumnOrder, orderedColumns, effectiveColumns,
         columnOrder, onColumnOrderChange, setInternalColumnOrder, gridData.apiRef,
-        columns, aggregationModel, handleAggregationModelChange, pivotMode,
+        columns, aggregationModel, handleAggregationModelChange, pivotMode, isPivotActive,
         propPivotModel, onPivotModelChange, currentPivotModel, handlePivotModelChange,
-        filterModel, onFilterModelChange, columnVisibilityModel,
+        filterModel, handleFilterModelChange, columnVisibilityModel,
         handleColumnVisibilityModelChange, columnsPanelOpen, slotProps?.toolbar, columnGroupingModel,
     ]);
 
@@ -963,7 +929,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     effectiveColumns={effectiveColumns}
                     columnVisibilityModel={columnVisibilityModel}
                     effectiveColumnOrder={effectiveColumnOrder}
-                    columnOrder={columnOrder}
+                    columnOrder={isPivotActive ? undefined : columnOrder}
                     disableColumnReorder={disableColumnReorder}
                     onClose={() => setColumnsPanelOpen(false)}
                     onColumnVisibilityChange={handleColumnVisibilityModelChange}
@@ -987,8 +953,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     rowHeight={effectiveRowHeight}
                     checkboxSelection={checkboxSelection}
                     paginationMode={paginationMode}
-                    dataSource={dataSource}
-                    serverRowCount={state.pagination.rowCount || 0}
+                    serverRowCount={paginationRowCount}
                     paginationSlot={slots?.pagination}
                     paginationSlotProps={slotProps?.pagination}
                     localeText={localeText ? {
@@ -1000,6 +965,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     onRowDoubleClick={onRowDoubleClick}
                     onSelectionChange={handleSelectionChange}
                     onPaginationModelChange={handlePaginationModelChange}
+                    getRowId={getRowIdOf}
                 />
             )}
 
@@ -1008,10 +974,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             ══════════════════════════════════════════════════════════════ */}
             {!listView && (
                 <div
-                    ref={(el) => {
-                        viewportRef.current = el;
-                        gridRef.current = el;
-                    }}
+                    ref={setViewportElement}
                     className="ogx__viewport"
                     onScroll={handleScroll}
                     role="grid"
@@ -1039,63 +1002,94 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                         }}
                         role="presentation"
                     >
-                        { }
-                        <Header
-                            columns={renderColumns}
-                            allColumns={renderedDataColumns}
-                            columnGroupingModel={columnGroupingModel}
-                            checkboxSelection={checkboxSelection}
-                            allSelected={allSelected}
-                            someSelected={someSelected}
-                            onSelectAll={handleSelectAll}
-                            sortModel={sortModel}
-                            onSort={handleSort}
-                            onSortAdd={handleSortAdd}
-                            multiSort={multiSort}
+                        {/* Header and top-pinned rows stick together, so pinned rows sit below every header row. */}
+                        <div className="ogx__sticky-top" role="presentation">
+                            <Header
+                                columns={renderColumns}
+                                allColumns={renderedDataColumns}
+                                columnGroupingModel={columnGroupingModel}
+                                checkboxSelection={checkboxSelection}
+                                allSelected={allSelected}
+                                someSelected={someSelected}
+                                onSelectAll={rowSelection.selectAll}
+                                sortModel={sortModel}
+                                onSort={handleSort}
+                                onSortAdd={handleSortAdd}
+                                multiSort={multiSort}
 
-                            onColumnResize={handleColumnResize}
-                            columnWidths={columnWidths}
-                            pinnedColumns={effectivePinnedColumns}
+                                onColumnResize={handleColumnResize}
+                                columnWidths={columnWidths}
+                                pinnedColumns={effectivePinnedColumns}
 
-                            focusedCell={focusedCell}
-                            onHeaderClick={(field) => {
-                                setFocusedCell({ id: 'HEADER', field });
-                                setKeyboardMode(false);
-                                gridRef.current?.focus({ preventScroll: true });
-                            }}
-                            onDragStart={headerReorderHandlers.onDragStart}
-                            onDragOver={headerReorderHandlers.onDragOver}
-                            onDragEnd={headerReorderHandlers.onDragEnd}
-                            onDrop={headerReorderHandlers.onDrop}
-                            draggedColumn={headerReorderHandlers.draggedColumn}
-                            dragOverColumn={headerReorderHandlers.dragOverColumn}
-                            rowReordering={rowReordering}
-                            hasDetailPanel={hasDetailPanel}
-                            pinCheckboxColumn={pinCheckboxColumn}
-                            pinExpandColumn={pinExpandColumn}
-                            aggregationModel={aggregationModel}
-                            onHideColumn={(field) => {
-                                handleColumnVisibilityModelChange({
-                                    ...columnVisibilityModel,
-                                    [field]: false,
-                                });
-                            }}
-                            onManageColumns={() => setColumnsPanelOpen(true)}
-                            onPinColumn={(field, side) => {
-                                const left = [...(pinnedColumns?.left ?? [])];
-                                const right = [...(pinnedColumns?.right ?? [])];
+                                focusedCell={focusedCell}
+                                onHeaderClick={(field) => {
+                                    setFocusedCell({ id: 'HEADER', field });
+                                    setKeyboardMode(false);
+                                    gridRef.current?.focus({ preventScroll: true });
+                                }}
+                                onDragStart={headerReorderHandlers.onDragStart}
+                                onDragOver={headerReorderHandlers.onDragOver}
+                                onDragEnd={headerReorderHandlers.onDragEnd}
+                                onDrop={headerReorderHandlers.onDrop}
+                                draggedColumn={headerReorderHandlers.draggedColumn}
+                                dragOverColumn={headerReorderHandlers.dragOverColumn}
+                                rowReordering={rowReordering}
+                                hasDetailPanel={hasDetailPanel}
+                                pinCheckboxColumn={pinCheckboxColumn}
+                                pinExpandColumn={pinExpandColumn}
+                                aggregationModel={aggregationModel}
+                                onHideColumn={(field) => {
+                                    handleColumnVisibilityModelChange({
+                                        ...columnVisibilityModel,
+                                        [field]: false,
+                                    });
+                                }}
+                                onManageColumns={() => setColumnsPanelOpen(true)}
+                                onPinColumn={(field, side) => {
+                                    const left = [...(pinnedColumns?.left ?? [])];
+                                    const right = [...(pinnedColumns?.right ?? [])];
 
-                                const cleanLeft = left.filter(f => f !== field);
-                                const cleanRight = right.filter(f => f !== field);
-                                if (side === 'left') {
-                                    handlePinnedColumnsChange({ left: [...cleanLeft, field], right: cleanRight });
-                                } else if (side === 'right') {
-                                    handlePinnedColumnsChange({ left: cleanLeft, right: [...cleanRight, field] });
-                                } else {
-                                    handlePinnedColumnsChange({ left: cleanLeft, right: cleanRight });
-                                }
-                            }}
-                        />
+                                    const cleanLeft = left.filter(f => f !== field);
+                                    const cleanRight = right.filter(f => f !== field);
+                                    if (side === 'left') {
+                                        handlePinnedColumnsChange({ left: [...cleanLeft, field], right: cleanRight });
+                                    } else if (side === 'right') {
+                                        handlePinnedColumnsChange({ left: cleanLeft, right: [...cleanRight, field] });
+                                    } else {
+                                        handlePinnedColumnsChange({ left: cleanLeft, right: cleanRight });
+                                    }
+                                }}
+                            />
+
+                            <GridPinnedRows<R>
+                                rows={pinnedTopRows}
+                                position="top"
+                                columns={renderColumns}
+                                selectedRowIds={selectedRowIds}
+                                checkboxSelection={checkboxSelection}
+                                onRowClick={handleRowClick}
+                                onRowDoubleClick={onRowDoubleClick}
+                                onCellClick={handleCellClick}
+                                onSelectionChange={handleSelectionChange}
+                                columnWidths={columnWidths}
+                                pinnedColumns={effectivePinnedColumns}
+                                pinnedRows={pinnedRows}
+                                hasDetailPanel={hasDetailPanel}
+                                expandedRowIds={expandedRowIds}
+                                getDetailPanelContent={getDetailPanelContent}
+                                getDetailPanelHeight={getDetailPanelHeight}
+                                onDetailPanelToggle={handleDetailPanelToggle}
+                                onDetailPanelHeightChange={reportDetailPanelHeight}
+                                pinCheckboxColumn={pinCheckboxColumn}
+                                pinExpandColumn={pinExpandColumn}
+                                focusedCell={focusedCell}
+                                colspanMap={spanning.colspanMap}
+                                rowSpanningCaches={spanning.rowSpanningCaches}
+                                rowHeight={effectiveRowHeight}
+                                rowMetaMap={rowMetaMap}
+                                getRowId={getRowIdOf}
+                            />
+                        </div>
 
                         {/* Empty State Overlay (Standard View) — showing after header */}
                         {!effectiveLoading && !state.dataSource.error && filteredRows.length === 0 && (
@@ -1105,33 +1099,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                 overlay={NoRowsOverlaySlot ? <NoRowsOverlaySlot {...slotProps?.noRowsOverlay} /> : undefined}
                             />
                         )}
-
-                        <GridPinnedRows<R>
-                            rows={pinnedTopRows}
-                            position="top"
-                            columns={renderColumns}
-                            selectedRowIds={selectedRowIds}
-                            checkboxSelection={checkboxSelection}
-                            onRowClick={handleRowClick}
-                            onRowDoubleClick={onRowDoubleClick}
-                            onCellClick={handleCellClick}
-                            onSelectionChange={handleSelectionChange}
-                            columnWidths={columnWidths}
-                            pinnedColumns={effectivePinnedColumns}
-                            pinnedRows={pinnedRows}
-                            hasDetailPanel={hasDetailPanel}
-                            expandedRowIds={expandedRowIds}
-                            getDetailPanelContent={getDetailPanelContent}
-                            getDetailPanelHeight={getDetailPanelHeight}
-                            onDetailPanelToggle={handleDetailPanelToggle}
-                            pinCheckboxColumn={pinCheckboxColumn}
-                            pinExpandColumn={pinExpandColumn}
-                            focusedCell={focusedCell}
-                            colspanMap={spanning.colspanMap}
-                            rowSpanningCaches={spanning.rowSpanningCaches}
-                            rowHeight={effectiveRowHeight}
-                            rowMetaMap={rowMetaMap}
-                        />
 
                         <GridVirtualRows<R>
                             virtualContainerHeight={virtualization.totalHeight - virtualization.pinnedTopHeight - virtualization.pinnedBottomHeight}
@@ -1145,7 +1112,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             hasDetailPanel={hasDetailPanel}
                             rowReordering={rowReordering}
                             rowHeight={effectiveRowHeight}
-                            pinnedRows={pinnedRows}
                             selectedRowIds={selectedRowIds}
                             onRowClick={handleRowClick}
                             onRowDoubleClick={onRowDoubleClick}
@@ -1157,6 +1123,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             getDetailPanelContent={getDetailPanelContent}
                             getDetailPanelHeight={getDetailPanelHeight}
                             onDetailPanelToggle={handleDetailPanelToggle}
+                            onDetailPanelHeightChange={reportDetailPanelHeight}
                             pinCheckboxColumn={pinCheckboxColumn}
                             pinExpandColumn={pinExpandColumn}
                             rowReorderHandlers={rowReorderHandlers}
@@ -1170,55 +1137,61 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             sortedUnpinnedRowCount={sortedUnpinnedRows.length}
                             infiniteScrollSkeletonCount={Math.min(effectivePaginationModel.pageSize, 20)}
                             unpinnedRowsLength={layout.unpinnedRowsLength}
+                            lastRenderedRowIndex={spanRowWindow.renderContext.lastRowIndex}
                             rowMetaMap={rowMetaMap}
                             loadingOverlay={LoadingOverlaySlot ? <LoadingOverlaySlot {...slotProps?.loadingOverlay} /> : undefined}
                         />
 
-                        <GridPinnedRows<R>
-                            rows={pinnedBottomRows}
-                            position="bottom"
-                            columns={renderColumns}
-                            selectedRowIds={selectedRowIds}
-                            checkboxSelection={checkboxSelection}
-                            onRowClick={handleRowClick}
-                            onRowDoubleClick={onRowDoubleClick}
-                            onCellClick={handleCellClick}
-                            onSelectionChange={handleSelectionChange}
-                            columnWidths={columnWidths}
-                            pinnedColumns={effectivePinnedColumns}
-                            pinnedRows={pinnedRows}
-                            hasDetailPanel={hasDetailPanel}
-                            expandedRowIds={expandedRowIds}
-                            getDetailPanelContent={getDetailPanelContent}
-                            getDetailPanelHeight={getDetailPanelHeight}
-                            onDetailPanelToggle={handleDetailPanelToggle}
-                            pinCheckboxColumn={pinCheckboxColumn}
-                            pinExpandColumn={pinExpandColumn}
-                            focusedCell={focusedCell}
-                            colspanMap={spanning.colspanMap}
-                            rowSpanningCaches={spanning.rowSpanningCaches}
-                            rowHeight={effectiveRowHeight}
-                            rowMetaMap={rowMetaMap}
-                        />
-
-                        {/* Aggregation Footer Row — laid out from the same virtual columns as the rows, so
-                             hidden, pinned and scrolled columns line up. Off in pivot mode (hasAggregation). */}
-                        {hasAggregation && (
-                            <GridAggregationFooter
-                                columns={virtualization.virtualColumns as unknown as GridColDef[]}
-                                aggregationModel={aggregationModel}
-                                aggregationResult={aggregationResult}
-                                columnWidths={columnWidths}
-                                rowHeight={effectiveRowHeight}
+                        {/* Bottom-pinned rows and the aggregation footer stick together, footer last. */}
+                        <div className="ogx__sticky-bottom" role="presentation">
+                            <GridPinnedRows<R>
+                                rows={pinnedBottomRows}
+                                position="bottom"
+                                columns={renderColumns}
+                                selectedRowIds={selectedRowIds}
                                 checkboxSelection={checkboxSelection}
+                                onRowClick={handleRowClick}
+                                onRowDoubleClick={onRowDoubleClick}
+                                onCellClick={handleCellClick}
+                                onSelectionChange={handleSelectionChange}
+                                columnWidths={columnWidths}
+                                pinnedColumns={effectivePinnedColumns}
+                                pinnedRows={pinnedRows}
                                 hasDetailPanel={hasDetailPanel}
-                                rowReordering={rowReordering}
+                                expandedRowIds={expandedRowIds}
+                                getDetailPanelContent={getDetailPanelContent}
+                                getDetailPanelHeight={getDetailPanelHeight}
+                                onDetailPanelToggle={handleDetailPanelToggle}
+                                onDetailPanelHeightChange={reportDetailPanelHeight}
                                 pinCheckboxColumn={pinCheckboxColumn}
                                 pinExpandColumn={pinExpandColumn}
-                                pinnedColumns={effectivePinnedColumns}
-                                loading={isAggregationLoading}
+                                focusedCell={focusedCell}
+                                colspanMap={spanning.colspanMap}
+                                rowSpanningCaches={spanning.rowSpanningCaches}
+                                rowHeight={effectiveRowHeight}
+                                rowMetaMap={rowMetaMap}
+                                getRowId={getRowIdOf}
                             />
-                        )}
+
+                            {/* Aggregation Footer Row — laid out from the same virtual columns as the rows, so
+                                 hidden, pinned and scrolled columns line up. Off in pivot mode (hasAggregation). */}
+                            {hasAggregation && (
+                                <GridAggregationFooter
+                                    columns={virtualization.virtualColumns as unknown as GridColDef[]}
+                                    aggregationModel={aggregationModel}
+                                    aggregationResult={aggregationResult}
+                                    columnWidths={columnWidths}
+                                    rowHeight={effectiveRowHeight}
+                                    checkboxSelection={checkboxSelection}
+                                    hasDetailPanel={hasDetailPanel}
+                                    rowReordering={rowReordering}
+                                    pinCheckboxColumn={pinCheckboxColumn}
+                                    pinExpandColumn={pinExpandColumn}
+                                    pinnedColumns={effectivePinnedColumns}
+                                    loading={isAggregationLoading}
+                                />
+                            )}
+                        </div>
 
                     </div>
                 </div>
@@ -1229,7 +1202,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     apiRef={gridData.apiRef}
                     aggregationModel={aggregationModel}
                     aggregationResult={hasAggregation ? aggregationResult : null}
-                    rowCount={dataRows.length}
+                    rowCount={paginationMode === 'server' ? paginationRowCount : dataRows.length}
                     pagination={pagination}
                     paginationModel={effectivePaginationModel}
                     pageSizeOptions={pageSizeOptions}
@@ -1244,7 +1217,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     <PaginationComponent
                         page={effectivePaginationModel.page}
                         pageSize={effectivePaginationModel.pageSize}
-                        rowCount={state.pagination.rowCount}
+                        rowCount={paginationRowCount}
                         pageSizeOptions={pageSizeOptions}
                         onPageChange={(newPage: number) => handlePaginationModelChange({ ...effectivePaginationModel, page: newPage })}
                         onPageSizeChange={(newPageSize: number) => handlePaginationModelChange({ ...effectivePaginationModel, pageSize: newPageSize, page: 0 })}

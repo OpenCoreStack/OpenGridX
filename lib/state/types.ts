@@ -45,4 +45,10 @@ export interface GridState {
   dataSource?: GridDataSourceState;
 }
 
-export type GridInitialState = GridState;
+/**
+ * The state the grid starts from. Every part is optional, including each column field, so a
+ * partial state such as `{ columns: { columnVisibilityModel: { age: false } } }` is valid.
+ */
+export interface GridInitialState extends Omit<GridState, 'columns'> {
+  columns?: Partial<GridColumnsState>;
+}

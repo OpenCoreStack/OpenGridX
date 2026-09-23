@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, cleanup, act, fireEvent } from '@testing-library/react';
 import type { ReactNode, RefObject } from 'react';
 import { DataGrid, useGridApiRef } from '../../index';
-import type { GridApi, GridColDef, GridColumnPinning, GridDataSource, GridGetRowsResponse, GridRowId, GridRowModel, GridSortModel } from '../../types';
+import type { GridApi, GridColDef, GridColumnPinning, GridDataSource, GridGetRowsResponse, GridRowId, GridRowModel, GridSortItem } from '../../types';
 
 // Real Chromium: scroll positions, ResizeObserver and element geometry need a layout engine.
 
@@ -256,8 +256,8 @@ describe('DataGrid scrolling in a real browser', () => {
         const TOTAL = 100;
         const rows = makeRows(TOTAL);
         const EMPTY: GridRowModel[] = [];
-        const SORT_NONE: GridSortModel = [];
-        const SORT_DESC: GridSortModel = [{ field: 'name', sort: 'desc' }];
+        const SORT_NONE: GridSortItem[] = [];
+        const SORT_DESC: GridSortItem[] = [{ field: 'name', sort: 'desc' }];
         const PAGE = { page: 0, pageSize: TOTAL };
         const skeletons = (c: HTMLElement) => Array.from(c.querySelectorAll<HTMLElement>('.ogx__skeleton-group .ogx__row--skeleton'));
 
@@ -266,7 +266,7 @@ describe('DataGrid scrolling in a real browser', () => {
                 .mockResolvedValueOnce({ rows } as GridGetRowsResponse)
                 .mockImplementation(() => new Promise<GridGetRowsResponse>(() => {})),
         });
-        const grid = (ds: GridDataSource, sortModel: GridSortModel) => (
+        const grid = (ds: GridDataSource, sortModel: GridSortItem[]) => (
             <Box><DataGrid rows={EMPTY} columns={[{ field: 'name', width: 200 }] as unknown as GridColDef[]} height="100%" dataSource={ds}
                 pagination={false} paginationMode="infinite" sortingMode="server" paginationModel={PAGE} sortModel={sortModel} /></Box>
         );

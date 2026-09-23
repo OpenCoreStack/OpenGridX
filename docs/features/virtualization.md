@@ -33,7 +33,7 @@ The grid calculates which rows are visible based on:
 - ✅ Renders ~15-25 rows regardless of total dataset size
 - ✅ Constant memory usage
 - ✅ Smooth 60fps scrolling
-- ✅ Supports millions of rows
+- ✅ Hundreds of thousands of rows. Browsers cap an element's height (about 17.9M px in Firefox, 33.5M px in Chrome and Safari), and the grid lays every row out at its real height, so rows below that cap cannot be scrolled to: about 340,000 rows at the default 52px `rowHeight` in Firefox, 645,000 in Chrome. For more rows use pagination or server-side / infinite loading. In development the grid warns when the content passes 17.8M px.
 
 ### Column Virtualization
 

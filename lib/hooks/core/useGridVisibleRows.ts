@@ -13,14 +13,20 @@ export interface UseGridVisibleRowsParams<R extends GridRowModel> {
     paginatedUnpinnedRows: R[];
     sortedUnpinnedRows: R[];
     pagination: boolean;
+    /** Resolves a row's id (rows are not guaranteed to carry it in `row.id`); defaults to `row.id`. */
+    getRowId?: (row: R) => GridRowId;
 }
 
 export interface GridVisibleRow<R extends GridRowModel> {
     row: R;
+    /** The row's id (getRowId), resolved once for everything that renders the row. */
+    id: GridRowId;
     rowIndex: number;
     /** Set on the rows of the top / bottom pinned sections, which render outside the scrolling rows. */
     pinned?: 'top' | 'bottom';
 }
+
+const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 
 export function useGridVisibleRows<R extends GridRowModel>(
     params: UseGridVisibleRowsParams<R>
@@ -32,6 +38,7 @@ export function useGridVisibleRows<R extends GridRowModel>(
         paginatedUnpinnedRows,
         sortedUnpinnedRows,
         pagination,
+        getRowId = defaultGetRowId,
     } = params;
 
     return useMemo<GridVisibleRow<R>[]>(() => {
@@ -39,9 +46,10 @@ export function useGridVisibleRows<R extends GridRowModel>(
         const centerRows = pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
         const topPinnedCount = pinnedTopRows.length;
 
-        const topPinned = pinnedTopRows.map((row, index) => ({ row, rowIndex: index, pinned: 'top' as const }));
+        const topPinned = pinnedTopRows.map((row, index) => ({ row, id: getRowId(row), rowIndex: index, pinned: 'top' as const }));
         const bottomPinned = pinnedBottomRows.map((row, index) => ({
             row,
+            id: getRowId(row),
             rowIndex: topPinnedCount + centerRows.length + index,
             pinned: 'bottom' as const,
         }));
@@ -54,6 +62,7 @@ export function useGridVisibleRows<R extends GridRowModel>(
             .slice(centerStartIndex, centerEndIndex)
             .map((row, index) => ({
                 row,
+                id: getRowId(row),
                 rowIndex: topPinnedCount + centerStartIndex + index,
             }));
 
@@ -62,9 +71,9 @@ export function useGridVisibleRows<R extends GridRowModel>(
         // Deduplication guard: a row ID in both pinnedRows and rows would cause React key collisions
         const seenIds = new Set<GridRowId>();
         return combined.filter(item => {
-            if (seenIds.has(item.row.id)) return false;
-            seenIds.add(item.row.id);
+            if (seenIds.has(item.id)) return false;
+            seenIds.add(item.id);
             return true;
         });
-    }, [renderContext, pinnedTopRows, pinnedBottomRows, paginatedUnpinnedRows, sortedUnpinnedRows, pagination]);
+    }, [renderContext, pinnedTopRows, pinnedBottomRows, paginatedUnpinnedRows, sortedUnpinnedRows, pagination, getRowId]);
 }

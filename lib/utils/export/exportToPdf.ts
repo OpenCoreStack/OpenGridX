@@ -168,6 +168,7 @@ export async function exportToPdf<R extends GridRowModel>(
         logoUrl,
         orientation = 'landscape',
         selectedRows,
+        getRowId,
         aggregationResult,
         aggregationModel,
         filterModel,
@@ -211,7 +212,7 @@ export async function exportToPdf<R extends GridRowModel>(
 
     const exportColumns = getExportColumns(columns);
     const useGrouped = shouldExportGrouped(groupedRows, selectedRows);
-    const rowsToExport = rowsForExport(rows, selectedRows);
+    const rowsToExport = rowsForExport(rows, selectedRows, getRowId);
 
     // --- Header block ---
     let startY = MARGIN;

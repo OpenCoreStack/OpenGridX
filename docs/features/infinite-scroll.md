@@ -80,7 +80,8 @@ export default function InfiniteScrollDemo() {
 
 ## Implementation Details
 
-*   **`onRowsScrollEnd`**: Triggered when `scrollHeight - scrollTop - clientHeight < threshold` (default 100px).
+*   **`onRowsScrollEnd`**: Fired once when the end of the rows comes within 100px of the viewport bottom (`scrollHeight - scrollTop - clientHeight < 100`). It is re-armed when the user scrolls out of that zone or the row count changes, so one scroll gesture loads one page. It also fires after the rows change when the end is already in view, so a first page that does not fill the viewport keeps loading until it does. Horizontal scrolling never fires it.
+*   **Loading placeholders**: the skeleton rows shown while the next page loads are drawn after the last loaded row, only when the user has scrolled to the end of the data.
 *   **Request Handling**: `useGridDataSource` includes logic to cancel stale requests if scrolling happens too quickly.
 *   **Appending vs Replacing**: 
     *   In `infinite` mode, rows fetched for **new pages** are appended.
