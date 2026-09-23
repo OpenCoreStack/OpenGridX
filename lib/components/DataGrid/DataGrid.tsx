@@ -28,6 +28,7 @@ import { useGridSpanRowWindow, useGridSpanColumnWindow } from '../../hooks/featu
 import { useColumnGroupReorderGuard } from '../../hooks/features/useColumnGroupReorderGuard';
 import { canReorderWithinColumnGroups, getColumnGroupDepth } from '../../utils/columnGroups';
 import { useGridDataSource } from '../../hooks/features/useGridDataSource';
+import { useTreeDataLazyLoading } from '../../hooks/features/useTreeDataLazyLoading';
 import { useAggregation, useServerAggregationResults } from '../../hooks/features/useAggregation';
 import { useGridPivot } from '../../hooks/features/useGridPivot';
 import { PIVOT_GRAND_TOTAL_ID } from '../../utils/pivot';
@@ -37,7 +38,7 @@ import { GridListView } from './GridListView';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
-import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridFilterModel, GridTreeNode, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
+import type { DataGridProps, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridDataSource, GridFilterModel, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
 
 const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
 
@@ -219,7 +220,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const isPivotActive = pivot.isActive;
     // Pivot rows are already grouped by the pivot row fields; tree data and row grouping would regroup them.
     const hierarchyRowGroupingModel = isPivotActive ? defaultRowGroupingModel : rowGroupingModel;
-    const isTreeData = treeData && !isPivotActive;
+    const isTreeDataRequested = treeData && !isPivotActive;
+    // Without getTreeDataPath there is no tree to build: the rows are shown flat (useTreeData warns).
+    const isTreeData = isTreeDataRequested && Boolean(getTreeDataPath);
 
     const effectiveRowHeight = density === 'compact' ? 32 : density === 'comfortable' ? 72 : rowHeight;
 
@@ -285,23 +288,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         containerRef.current?.classList.toggle('ogx--kb', on);
     }, []);
 
-    const dataSourceRef = useRef<GridDataSource<R> | undefined>(dataSource);
-    dataSourceRef.current = dataSource;
-
-    const fetchChildrenRef = useRef<((parentId: GridRowId, groupKeys: string[]) => Promise<void>) | null>(null);
-    const treeDataRef = useRef<ReturnType<typeof useTreeData> | null>(null);
-
-    const handleNodeExpansion = useCallback((node: GridTreeNode) => {
-        if (dataSourceRef.current && treeData) {
-
-            if ((node.serverChildrenCount ?? 0) > 0 && (node.children ?? []).length === 0) {
-
-                const groupKeys = treeDataRef.current?.getNodePath(node.id) || [node.groupingKey];
-                fetchChildrenRef.current?.(node.id, groupKeys);
-            }
-        }
-    }, [treeData]);
-
     const gridData = useDataGrid({
         rows: normalizedRows,
         columns: activeColumns,
@@ -354,18 +340,15 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rows: effectiveRows,
         getRowId: effectiveGetRowId,
         getTreeDataPath,
-        treeData: isTreeData,
+        treeData: isTreeDataRequested,
         defaultGroupingExpansionDepth,
         filterModel,
 
         sortModel,
-        onRowExpansionChange: handleNodeExpansion,
         columnLookup,
+        filterMode,
+        sortingMode,
     });
-
-    useEffect(() => {
-        treeDataRef.current = treeDataHandlers;
-    }, [treeDataHandlers]);
 
     const rowGroupingHandlers = useRowGrouping({
         rows: effectiveRows,
@@ -378,6 +361,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         sortModel,
         getAggregationPosition,
         columnLookup,
+        filterMode,
+        sortingMode,
     });
 
     const editingHandlers = useGridEditing({
@@ -414,8 +399,11 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const handleRowClick = useCallback((params: GridRowParams<R>) => {
         const { row, id } = params;
 
-        if (isHierarchyEnabled && rowMetaMap.get(row.id)?.hasChildren) {
-            activeHierarchyHandlers?.toggleExpansion(id);
+        // Synthetic group rows toggle on click and are never selected. Tree-data parents are real rows:
+        // they fire onRowClick and select like any row, and expand through their chevron.
+        const rowMeta = isHierarchyEnabled ? rowMetaMap.get(row.id) : undefined;
+        if (rowMeta?.isGroupRow) {
+            if (rowMeta.hasChildren) activeHierarchyHandlers?.toggleExpansion(id);
             return;
         }
 
@@ -458,11 +446,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onAggregationResults: setServerAggregationResults,
     });
 
-    useEffect(() => {
-        if (dataSourceHandlers.fetchChildren) {
-            fetchChildrenRef.current = dataSourceHandlers.fetchChildren;
-        }
-    }, [dataSourceHandlers.fetchChildren]);
+    // Lazy server tree: fetch the children of expanded nodes, also after a re-fetch replaces the rows.
+    useTreeDataLazyLoading({
+        enabled: isTreeData && Boolean(dataSource),
+        treeNodes: treeDataHandlers.treeNodes,
+        isGroupExpanded: treeDataHandlers.isGroupExpanded,
+        getNodePath: treeDataHandlers.getNodePath,
+        fetchChildren: dataSourceHandlers.fetchChildren,
+    });
 
     useEffect(() => {
         if (!dataSource) {
@@ -476,6 +467,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const expandedRowIds = controlledExpandedRowIds ?? internalExpandedRowIds;
 
     const handleDetailPanelToggle = useCallback((rowId: GridRowId) => {
+        // Synthetic group / subtotal rows have no detail panel (keyboard Space on the expand cell lands here too).
+        if (rowMetaMap.get(rowId)?.isGroupRow) return;
         const newExpandedRowIds = new Set(expandedRowIds);
         if (newExpandedRowIds.has(rowId)) {
             newExpandedRowIds.delete(rowId);
@@ -486,11 +479,12 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             setInternalExpandedRowIds(newExpandedRowIds);
         }
         onDetailPanelExpandedRowIdsChange?.(newExpandedRowIds);
-    }, [expandedRowIds, controlledExpandedRowIds, onDetailPanelExpandedRowIdsChange]);
+    }, [rowMetaMap, expandedRowIds, controlledExpandedRowIds, onDetailPanelExpandedRowIdsChange]);
 
     // ── Column management ─────────────────────────────────────────────────────
     const {
         effectiveColumns,
+        hierarchyField,
         orderedColumns,
         visibleOrderedColumns,
         navigationColumns,
@@ -533,7 +527,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const rowPipeline = useGridRowPipeline<GridRowModel>({
         effectiveRows: effectiveRows as GridRowModel[],
-        activeHierarchyHandlers: activeHierarchyHandlers as { getVisibleRows: () => GridRowModel[] } | null,
+        activeHierarchyHandlers: activeHierarchyHandlers as { getVisibleRows: (labelField?: string) => GridRowModel[] | null } | null,
         filterMode,
         filterModel: pivot.pipelineFilterModel,
         dataSource: dataSource as GridDataSource<GridRowModel> | undefined,
@@ -546,6 +540,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         isLoading: state.dataSource.loading,
         pageSize: effectivePaginationModel.pageSize,
         columnLookup,
+        hierarchyField,
     });
     const filteredRows        = rowPipeline.filteredRows        as R[];
     const dataRows            = rowPipeline.dataRows            as R[];
@@ -610,7 +605,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                             groupLabel: node.label,
                         });
                         traverse(node.children!);
-                        if (hasAggregation && node.aggregatedValues) {
+                        // A group whose getAggregationPosition is null shows no aggregates, so it exports no subtotal.
+                        if (hasAggregation && node.aggregatedValues && rowGroupingHandlers.aggregationPositions.get(id) !== null) {
                             result.push({
                                 type: 'group-subtotal',
                                 depth: node.depth,
@@ -631,7 +627,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
             traverse(Array.from(treeNodes.keys()).filter(id => treeNodes.get(id)?.parentId === null));
 
-            if (hasAggregation && aggregationResult) {
+            if (hasAggregation && aggregationResult && rowGroupingHandlers.rootAggregationPosition !== null) {
                 result.push({ type: 'grand-total', depth: 0, aggregatedValues: aggregationResult });
             }
             return result;
@@ -645,6 +641,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         sortedUnpinnedRows,
         expandedRowIds,
         getDetailPanelHeight,
+        rowMetaMap,
         pinnedTopRowsLength: pinnedTopRows.length,
         pinnedBottomRowsLength: pinnedBottomRows.length,
         visibleOrderedColumns,
@@ -743,6 +740,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     }, [setDimensions]);
 
     const handleSelectionChange = useCallback((rowId: GridRowId, isSelected: boolean) => {
+        // Synthetic group / subtotal rows are not data: their ids never enter the selection model.
+        if (rowMetaMap.get(rowId)?.isGroupRow) return;
         const newSelection = new Set(selectedRowIds);
         if (isSelected) {
             newSelection.add(rowId);
@@ -755,7 +754,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             setInternalRowSelectionModel(newSelectionArray);
         }
         onRowSelectionModelChange?.(newSelectionArray);
-    }, [selectedRowIds, isSelectionControlled, onRowSelectionModelChange, setInternalRowSelectionModel]);
+    }, [rowMetaMap, selectedRowIds, isSelectionControlled, onRowSelectionModelChange, setInternalRowSelectionModel]);
 
     const handleSelectAll = useCallback((isSelected: boolean) => {
         let newSelection: GridRowId[] = [];
@@ -868,8 +867,21 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         totalRowCount: pinnedTopRows.length + (pagination ? paginatedUnpinnedRows.length : sortedUnpinnedRows.length) + pinnedBottomRows.length,
     });
 
-    const allSelected = rows.length > 0 && selectedRowIds.size === rows.length;
-    const someSelected = selectedRowIds.size > 0 && selectedRowIds.size < rows.length;
+    // Header checkbox state by membership: how many of the grid's own rows are selected (ids in the
+    // selection model that match no row, such as rows removed since, do not count).
+    // The pivot Grand Total row is not selectable (handleSelectAll leaves it out).
+    const { selectableRowCount, selectedRowCount } = useMemo(() => {
+        let selectable = 0;
+        let selected = 0;
+        for (const row of effectiveRows) {
+            if (isPivotActive && row.id === PIVOT_GRAND_TOTAL_ID) continue;
+            selectable++;
+            if (selectedRowIds.has(row.id)) selected++;
+        }
+        return { selectableRowCount: selectable, selectedRowCount: selected };
+    }, [effectiveRows, isPivotActive, selectedRowIds]);
+    const allSelected = selectableRowCount > 0 && selectedRowCount === selectableRowCount;
+    const someSelected = selectedRowCount > 0 && selectedRowCount < selectableRowCount;
 
     // Header drag-reorder keeps a column inside its column group (and ungrouped columns outside groups).
     const headerReorderHandlers = useColumnGroupReorderGuard(columnGroupingModel, columnReorderHandlers);
@@ -1203,7 +1215,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
                         {/* Aggregation Footer Row — laid out from the same virtual columns as the rows, so
                              hidden, pinned and scrolled columns line up. Off in pivot mode (hasAggregation). */}
-                        {hasAggregation && (
+                        {hasAggregation && rowGroupingHandlers.rootAggregationPosition !== null && (
                             <GridAggregationFooter
                                 columns={virtualization.virtualColumns as unknown as GridColDef[]}
                                 aggregationModel={aggregationModel}

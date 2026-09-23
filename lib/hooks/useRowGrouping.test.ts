@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useRowGrouping } from './useRowGrouping';
+import { buildColumnLookup } from '../utils/columnLookup';
+import type { GridColDef, GridRowModel, GridRowMeta, GridTreeNode } from '../types';
 
 const ROWS = [
     { id: 1, dept: 'Engineering', name: 'Alice' },
@@ -296,3 +298,186 @@ describe('useRowGrouping — expansion state', () => {
 });
 
 const SORT_DESC = [{ field: 'name', sort: 'desc' as const }];
+
+type SaleRow = GridRowModel & { id: number; region: unknown; team: string; amount: number; first?: string; last?: string };
+const saleId = (r: SaleRow) => r.id;
+const groupMetasOf = (map: Map<unknown, GridRowMeta>) =>
+    [...map.values()].filter(meta => meta.isGroupRow && !meta.isGroupFooter);
+
+describe('useRowGrouping — groupable: false keeps the other levels at their depth', () => {
+    const columns: GridColDef<SaleRow>[] = [{ field: 'region', groupable: false }, { field: 'team' }, { field: 'amount' }];
+    const rows: SaleRow[] = [
+        { id: 1, region: 'EU', team: 'Alpha', amount: 1 },
+        { id: 2, region: 'US', team: 'Alpha', amount: 2 },
+        { id: 3, region: 'EU', team: 'Beta', amount: 3 },
+    ];
+
+    it('groups as if the skipped field was not in the model', () => {
+        const { result } = renderHook(() => useRowGrouping({ rows, getRowId: saleId, columns, rowGroupingModel: ['region', 'team'], defaultGroupingExpansionDepth: 1 }));
+        const top = [...result.current.treeNodes.values()].filter(n => n.parentId === null);
+        expect(top.map(n => [n.groupingField, n.depth])).toEqual([['team', 0], ['team', 0]]);
+        // defaultGroupingExpansionDepth=1 expands the top level, so the leaves (depth 1) are visible.
+        expect((result.current.getVisibleRows() ?? []).map(r => r.id)).toContain(1);
+        expect(result.current.rowMetaMap.get(1)?.treeDepth).toBe(1);
+    });
+});
+
+describe('useRowGrouping — group values', () => {
+    it('keeps values with the same text in separate groups (null / "null", 1 / "1", true / "true")', () => {
+        const rows: SaleRow[] = [
+            { id: 1, region: null, team: 't', amount: 1 },
+            { id: 2, region: 'null', team: 't', amount: 2 },
+            { id: 3, region: 1, team: 't', amount: 3 },
+            { id: 4, region: '1', team: 't', amount: 4 },
+            { id: 5, region: true, team: 't', amount: 5 },
+            { id: 6, region: 'true', team: 't', amount: 6 },
+        ];
+        const { result } = renderHook(() => useRowGrouping({ rows, getRowId: saleId, rowGroupingModel: ['region'], aggregationModel: { amount: 'sum' } }));
+        const groups = [...result.current.treeNodes.values()].filter(n => n.children && n.children.length > 0);
+        expect(groups.map(g => g.groupingValue)).toEqual([null, 'null', 1, '1', true, 'true']);
+        expect(groups.map(g => g.aggregatedValues?.amount)).toEqual([1, 2, 3, 4, 5, 6]);
+        expect(new Set(groups.map(g => g.id)).size).toBe(6);
+    });
+
+    it('puts equal dates in one group', () => {
+        const rows: SaleRow[] = [
+            { id: 1, region: new Date(2024, 0, 1), team: 't', amount: 1 },
+            { id: 2, region: new Date(2024, 0, 1), team: 't', amount: 2 },
+        ];
+        const { result } = renderHook(() => useRowGrouping({ rows, getRowId: saleId, rowGroupingModel: ['region'] }));
+        expect(groupMetasOf(result.current.rowMetaMap)).toHaveLength(1);
+    });
+
+    it('groups a computed column by its valueGetter value', () => {
+        const columns: GridColDef<SaleRow>[] = [
+            { field: 'full', valueGetter: ({ row }) => [row.first, row.last].join(' ') },
+            { field: 'amount' },
+        ];
+        const rows: SaleRow[] = [
+            { id: 1, region: 'x', team: 't', amount: 1, first: 'Ann', last: 'Lee' },
+            { id: 2, region: 'x', team: 't', amount: 2, first: 'Bob', last: 'Ray' },
+        ];
+        const { result } = renderHook(() => useRowGrouping({ rows, getRowId: saleId, columns, rowGroupingModel: ['full'] }));
+        expect(groupMetasOf(result.current.rowMetaMap).map(m => m.groupLabel)).toEqual(['full: Ann Lee', 'full: Bob Ray']);
+    });
+});
+
+describe('useRowGrouping — the filter', () => {
+    const rows: SaleRow[] = [
+        { id: 1, region: 'N', team: 'a', amount: 100 },
+        { id: 2, region: 'N', team: 'b', amount: 5 },
+        { id: 3, region: 'S', team: 'b', amount: 7 },
+    ];
+    const filterModel = { items: [{ field: 'team', operator: 'equals' as const, value: 'a' }] };
+
+    it('aggregates and counts only the leaves that pass it, and drops groups with none', () => {
+        const { result } = renderHook(() => useRowGrouping({ rows, getRowId: saleId, rowGroupingModel: ['region'], aggregationModel: { amount: 'sum' }, filterModel, defaultGroupingExpansionDepth: -1 }));
+        const visible = result.current.getVisibleRows() ?? [];
+        expect(visible.map(r => r.id)).toEqual([visible[0].id, 1]);
+        expect(visible[0].amount).toBe(100);
+        expect(result.current.rowMetaMap.get(visible[0].id)?.descendantCount).toBe(1);
+        expect(groupMetasOf(result.current.rowMetaMap)).toHaveLength(1);
+    });
+
+    it("builds the groups from the rows as they are with filterMode 'server'", () => {
+        const { result } = renderHook(() => useRowGrouping({ rows, getRowId: saleId, rowGroupingModel: ['region'], filterModel, filterMode: 'server', defaultGroupingExpansionDepth: -1 }));
+        expect((result.current.getVisibleRows() ?? []).filter(r => typeof r.id === 'number').map(r => r.id)).toEqual([1, 2, 3]);
+    });
+});
+
+describe('useRowGrouping — sorting', () => {
+    const rows: SaleRow[] = [
+        { id: 1, region: 'South', team: 'b', amount: 1 },
+        { id: 2, region: 'North', team: 'a', amount: 2 },
+    ];
+    const columnLookup = buildColumnLookup([{ field: 'team' }, { field: 'region' }, { field: 'amount', type: 'number' }]);
+    const groupValues = (visible: SaleRow[] | null) => (visible ?? []).filter(r => typeof r.id === 'string').map(r => r.region);
+
+    it('orders groups by their grouping value when sorting by the column that shows the labels', () => {
+        const { result } = renderHook(() => useRowGrouping({ rows, getRowId: saleId, rowGroupingModel: ['region'], sortModel: [{ field: 'team', sort: 'asc' }], columnLookup }));
+        expect(groupValues(result.current.getVisibleRows('team'))).toEqual(['North', 'South']);
+        // Without a label column, 'team' is a column the groups have no value for: first-appearance order.
+        expect(groupValues(result.current.getVisibleRows())).toEqual(['South', 'North']);
+    });
+
+    it('orders groups by their aggregate when sorting by an aggregated column', () => {
+        const { result } = renderHook(() => useRowGrouping({ rows, getRowId: saleId, rowGroupingModel: ['region'], aggregationModel: { amount: 'sum' }, sortModel: [{ field: 'amount', sort: 'desc' }], columnLookup }));
+        expect(groupValues(result.current.getVisibleRows())).toEqual(['North', 'South']);
+    });
+
+    it("keeps the server's order with sortingMode 'server'", () => {
+        const { result } = renderHook(() => useRowGrouping({ rows, getRowId: saleId, rowGroupingModel: ['region'], sortModel: [{ field: 'region', sort: 'asc' }], sortingMode: 'server', columnLookup }));
+        expect(groupValues(result.current.getVisibleRows())).toEqual(['South', 'North']);
+    });
+});
+
+describe('useRowGrouping — getAggregationPosition', () => {
+    const rows: SaleRow[] = [
+        { id: 1, region: 'A', team: 'x', amount: 10 },
+        { id: 2, region: 'A', team: 'y', amount: 20 },
+        { id: 3, region: 'B', team: 'z', amount: 5 },
+    ];
+    type Position = 'inline' | 'footer' | null;
+    const mount = (getAggregationPosition: (node: GridTreeNode | null) => Position, defaultGroupingExpansionDepth = -1) =>
+        renderHook(() => useRowGrouping({ rows, getRowId: saleId, rowGroupingModel: ['region'], aggregationModel: { amount: 'sum' }, defaultGroupingExpansionDepth, getAggregationPosition }));
+
+    it('is called for every group with its expansion state, and once with null for the grand total', () => {
+        const spy = vi.fn((node: GridTreeNode | null): Position => (node === null ? 'footer' : 'inline'));
+        const { result } = mount(spy);
+        expect(spy).toHaveBeenCalledWith(null);
+        expect(spy).toHaveBeenCalledWith(expect.objectContaining({ groupingValue: 'A', isExpanded: true }));
+        expect(spy).toHaveBeenCalledWith(expect.objectContaining({ groupingValue: 'B', isExpanded: true }));
+        expect(result.current.rootAggregationPosition).toBe('footer');
+    });
+
+    it('null hides the group aggregates and the grand total', () => {
+        const { result } = mount(() => null);
+        const groups = (result.current.getVisibleRows() ?? []).filter(r => typeof r.id === 'string');
+        expect(groups.map(r => r.amount)).toEqual([undefined, undefined]);
+        expect(result.current.rootAggregationPosition).toBeNull();
+    });
+
+    it("'footer' moves the aggregates to a subtotal row after the group's children", () => {
+        const { result } = mount(() => 'footer');
+        const visible = result.current.getVisibleRows() ?? [];
+        const kinds = visible.map(r => {
+            const meta = result.current.rowMetaMap.get(r.id);
+            if (meta?.isGroupFooter) return 'footer:' + String(r.amount);
+            if (meta?.isGroupRow) return 'group:' + String(r.amount ?? '-');
+            return 'leaf:' + String(r.id);
+        });
+        expect(kinds).toEqual(['group:-', 'leaf:1', 'leaf:2', 'footer:30', 'group:-', 'leaf:3', 'footer:5']);
+        expect(result.current.rowMetaMap.get(visible[3].id)).toMatchObject({ isGroupRow: true, isGroupFooter: true, hasChildren: false, treeDepth: 1, groupingValue: 'A' });
+    });
+
+    it("'footer' keeps the aggregates on the group row while the group is collapsed", () => {
+        const { result } = mount(() => 'footer', 0);
+        const visible = result.current.getVisibleRows() ?? [];
+        expect(visible.map(r => r.amount)).toEqual([30, 5]);
+    });
+
+    it('an inline callback does not rebuild the rows on every render', () => {
+        const { result, rerender } = renderHook(() => useRowGrouping({
+            rows, getRowId: saleId, rowGroupingModel: ['region'], aggregationModel: { amount: 'sum' },
+            getAggregationPosition: (node) => (node === null ? 'footer' : 'inline'),
+        }));
+        const before = result.current.getVisibleRows;
+        rerender();
+        expect(result.current.getVisibleRows).toBe(before);
+    });
+});
+
+describe('useRowGrouping — models passed inline', () => {
+    it('does not rebuild the groups when an equal rowGroupingModel or aggregationModel is passed again', () => {
+        const formatter = vi.fn(({ value }: { field: string; value: unknown }) => String(value));
+        const columns: GridColDef<SaleRow>[] = [{ field: 'region', groupingValueFormatter: formatter }, { field: 'amount' }];
+        const rows: SaleRow[] = [{ id: 1, region: 'A', team: 'x', amount: 1 }];
+        const { result, rerender } = renderHook(() => useRowGrouping({ rows, getRowId: saleId, columns, rowGroupingModel: ['region'], aggregationModel: { amount: 'sum' } }));
+        const calls = formatter.mock.calls.length;
+        const treeNodes = result.current.treeNodes;
+        rerender();
+        rerender();
+        expect(formatter.mock.calls.length).toBe(calls);
+        expect(result.current.treeNodes).toBe(treeNodes);
+    });
+});

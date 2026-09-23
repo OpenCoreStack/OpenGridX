@@ -88,8 +88,8 @@ export function GridPinnedRows<R extends GridRowModel>({
                     pinnedRows={pinnedRows}
                     hasDetailPanel={hasDetailPanel}
                     isDetailPanelExpanded={expandedRowIds.has(row.id)}
-                    detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id: row.id, rowIndex: index }) : null}
-                    detailPanelHeight={getDetailPanelHeight?.({ row, id: row.id, rowIndex: index }) || 200}
+                    detailPanelContent={getDetailPanelContent && !rowMetaMap.get(row.id)?.isGroupRow ? getDetailPanelContent({ row, id: row.id, rowIndex: index }) : null}
+                    detailPanelHeight={(rowMetaMap.get(row.id)?.isGroupRow ? undefined : getDetailPanelHeight?.({ row, id: row.id, rowIndex: index })) || 200}
                     onDetailPanelToggle={onDetailPanelToggle}
                     pinCheckboxColumn={pinCheckboxColumn}
                     pinExpandColumn={pinExpandColumn}

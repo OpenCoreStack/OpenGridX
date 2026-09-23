@@ -156,6 +156,9 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     }, [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]);
 
     const isGroupRow = rowMeta?.hasChildren === true;
+    // Group rows, subtotal rows and auto-created tree parents: not data, so no selection or detail panel.
+    const isSyntheticRow = rowMeta?.isGroupRow === true;
+    const showDetailPanel = hasDetailPanel && !isSyntheticRow;
 
     // Which cells may be edited is decided per cell below (resolveCellEditable), not per row:
     // tree-data parents are real rows and stay editable; synthetic group rows never are.
@@ -230,7 +233,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         isRowPinnedBottom && 'ogx__row--pinned-bottom',
         isDragging && 'ogx__row--dragging',
         isDragOver && 'ogx__row--drag-over',
-        isGroupRow && 'ogx__row--group'
+        isGroupRow && 'ogx__row--group',
+        rowMeta?.isGroupFooter && 'ogx__row--group-footer'
     ].filter(Boolean).join(' ');
 
     return (
@@ -279,8 +283,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             } ${focusedCellField === '__expand_col__' ? 'ogx__cell--focused' : ''} ${(focusedCellField === '__expand_col__' && isFocusVisible) ? 'ogx__cell--focus-visible' : ''
                             }`}
                         role="gridcell"
-                        aria-label={isDetailPanelExpanded ? 'Collapse row details' : 'Expand row details'}
-                        aria-expanded={isDetailPanelExpanded}
+                        aria-label={showDetailPanel ? (isDetailPanelExpanded ? 'Collapse row details' : 'Expand row details') : undefined}
+                        aria-expanded={showDetailPanel ? isDetailPanelExpanded : undefined}
                         style={{
                             position: pinExpandColumn ? 'sticky' : undefined,
                             left: pinExpandColumn ? (rowReordering ? 48 : 0) : undefined,
@@ -300,11 +304,13 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             });
                         }}
                     >
-                        <ExpandIcon
-                            isExpanded={isDetailPanelExpanded}
-                            onClick={handleDetailPanelToggle}
-                            variant="plus-minus"
-                        />
+                        {showDetailPanel && (
+                            <ExpandIcon
+                                isExpanded={isDetailPanelExpanded}
+                                onClick={handleDetailPanelToggle}
+                                variant="plus-minus"
+                            />
+                        )}
                     </div>
                 )}
 
@@ -334,16 +340,18 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             });
                         }}
                     >
-                        <Checkbox
-                            id={checkboxId}
-                            name={`ogx-select-row-${row.id}`}
-                            checked={isSelected}
-                            onChange={handleCheckboxChange}
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label={isSelected ? `Deselect row ${row.id}` : `Select row ${row.id}`}
-                            tabIndex={-1}
-                            onMouseDown={(e) => e.preventDefault()}
-                        />
+                        {!isSyntheticRow && (
+                            <Checkbox
+                                id={checkboxId}
+                                name={`ogx-select-row-${row.id}`}
+                                checked={isSelected}
+                                onChange={handleCheckboxChange}
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label={isSelected ? `Deselect row ${row.id}` : `Select row ${row.id}`}
+                                tabIndex={-1}
+                                onMouseDown={(e) => e.preventDefault()}
+                            />
+                        )}
                     </div>
                 )}
 
@@ -358,7 +366,20 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             />
                         );
                     }
-                    const value = getCellValue(row, colDef);
+                    // A synthetic row holds its grouping value and aggregates under the column fields; a
+                    // valueGetter written for data rows would recompute (or crash) from fields it lacks.
+                    // A valueGetter that throws is contained to its cell.
+                    let value: unknown;
+                    let valueError: unknown;
+                    if (isSyntheticRow) {
+                        value = row[colDef.field];
+                    } else {
+                        try {
+                            value = getCellValue(row, colDef);
+                        } catch (error) {
+                            valueError = error ?? new Error('valueGetter failed');
+                        }
+                    }
 
                     const effectiveWidth = columnWidths[colDef.field] ?? colDef.width;
 
@@ -411,13 +432,14 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             rowSpan={rowSpan}
                             isHiddenByRowSpan={isHiddenByRowSpan}
                             rowMeta={rowMeta}
+                            valueError={valueError}
                         />
                     );
                 })}
             </div>
 
             { }
-            {hasDetailPanel && (
+            {showDetailPanel && (
                 <DetailPanel
                     row={row}
                     rowId={row.id}

@@ -11,10 +11,13 @@ import type {
     GridColDef
 } from '../types';
 import { createRowFilter } from '../utils/filtering';
-import { compareValues } from '../utils/sorting';
+import { sortItemsBySortModel, type GridSortValue } from '../utils/sorting';
 import { getCellValue } from '../utils/values';
 import type { GridColumnLookup } from '../utils/columnLookup';
 import { computeAggregations } from '../utils/aggregation';
+
+/** Where a group's aggregates are shown: on the group row, on a subtotal row after its children, or not at all. */
+export type GridGroupAggregationPosition = 'inline' | 'footer' | null;
 
 export interface UseRowGroupingParams<R extends GridRowModel> {
     rows: R[];
@@ -25,15 +28,18 @@ export interface UseRowGroupingParams<R extends GridRowModel> {
     defaultGroupingExpansionDepth?: number;
     filterModel?: GridFilterModel;
     sortModel?: GridSortItem[];
-    getAggregationPosition?: (groupNode: GridTreeNode | null) => 'inline' | 'footer' | null;
+    getAggregationPosition?: (groupNode: GridTreeNode | null) => GridGroupAggregationPosition;
     /** Column definitions, so filter and sort read leaf cells through valueGetter and use the column type. */
     columnLookup?: GridColumnLookup;
+    /** 'server': the rows arrive filtered, so the groups are built from them as they are. */
+    filterMode?: 'client' | 'server';
+    /** 'server': the rows arrive sorted, so groups and leaves keep the order the server sent them in. */
+    sortingMode?: 'client' | 'server';
 }
 
-const defaultGetAggregationPosition = (groupNode: GridTreeNode | null): 'inline' | 'footer' | null => {
-
-    return groupNode?.depth === -1 ? 'footer' : 'inline';
-};
+// Group rows show their aggregates inline; the grand total (null) is the grid's footer row.
+const defaultGetAggregationPosition = (groupNode: GridTreeNode | null): GridGroupAggregationPosition =>
+    groupNode === null ? 'footer' : 'inline';
 
 // Stable empty defaults — module-level constants prevent new object identity
 // on every render, which would otherwise invalidate useMemo deps and cause
@@ -42,10 +48,64 @@ const EMPTY_ROW_GROUPING_MODEL: GridRowGroupingModel = [];
 const EMPTY_AGGREGATION_MODEL: GridAggregationModel = {};
 const EMPTY_OVERRIDES: Map<GridRowId, boolean> = new Map();
 
+const FIELD_SEPARATOR = '\u001f';
+
 interface ExpansionOverrides {
     configKey: string;
     overrides: Map<GridRowId, boolean>;
 }
+
+/**
+ * The bucket key of a grouping value. Distinct values never share a key, so `null` and `'null'`,
+ * `1` and `'1'`, `true` and `'true'` are separate groups; equal dates share one. Strings keep their
+ * own text, so the group ids of string values stay readable.
+ */
+function groupKeyOf(value: unknown): string {
+    if (typeof value === 'string') return value;
+    if (value === null) return `${FIELD_SEPARATOR}null`;
+    if (value === undefined) return `${FIELD_SEPARATOR}undefined`;
+    if (value instanceof Date) return `${FIELD_SEPARATOR}date:${value.getTime()}`;
+    if (typeof value === 'object') {
+        try {
+            return `${FIELD_SEPARATOR}object:${JSON.stringify(value)}`;
+        } catch {
+            return `${FIELD_SEPARATOR}object:${String(value)}`;
+        }
+    }
+    return `${FIELD_SEPARATOR}${typeof value}:${String(value)}`;
+}
+
+const groupIdOf = (field: string, key: string, parentId: GridRowId | null): string =>
+    `auto-group-${field}-${key}-${parentId ?? 'root'}`;
+
+/** The id of the subtotal row shown after a group's children when its aggregates are in 'footer' position. */
+const footerIdOf = (groupId: GridRowId): string => `${groupId}${FIELD_SEPARATOR}footer`;
+
+interface GroupRowVariants<R> {
+    /** The group row carrying its aggregates. */
+    inline: R;
+    /** The group row without aggregates ('footer' and null positions). */
+    bare: R;
+    /** The subtotal row, when there is an aggregation model. */
+    footer: R | null;
+}
+
+interface GroupingBuild<R extends GridRowModel> {
+    treeNodes: Map<GridRowId, GridTreeNode>;
+    rootIds: GridRowId[];
+    groupIds: GridRowId[];
+    groupRowVariants: Map<GridRowId, GroupRowVariants<R>>;
+    /** Synthetic rows by id: every group row (with its aggregates) and every subtotal row. */
+    groupingRows: Map<GridRowId, R>;
+    /** The leaf rows in the tree, by id. */
+    rowLookup: Map<GridRowId, R>;
+}
+
+const encodePosition = (position: GridGroupAggregationPosition): string =>
+    position === 'footer' ? 'f' : position === null ? 'n' : 'i';
+
+const decodePosition = (code: string | undefined): GridGroupAggregationPosition =>
+    code === 'f' ? 'footer' : code === 'n' ? null : 'inline';
 
 export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingParams<R>) {
     const {
@@ -58,8 +118,24 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
         filterModel,
         sortModel,
         getAggregationPosition = defaultGetAggregationPosition,
-        columnLookup
+        columnLookup,
+        filterMode = 'client',
+        sortingMode = 'client',
     } = params;
+
+    // Keyed by value, so an inline `rowGroupingModel={['region']}` or aggregation model does not
+    // rebuild (and re-aggregate) every group on each parent render.
+    const requestedModelKey = rowGroupingModel.join(FIELD_SEPARATOR);
+    const requestedModel = useMemo<GridRowGroupingModel>(
+        () => (requestedModelKey === '' ? [] : requestedModelKey.split(FIELD_SEPARATOR)),
+        [requestedModelKey]
+    );
+    const aggregationModelKey = JSON.stringify(Object.entries(aggregationModel));
+    const stableAggregationModel = useMemo<GridAggregationModel>(
+        () => Object.fromEntries(JSON.parse(aggregationModelKey) as Array<[string, string]>),
+        [aggregationModelKey]
+    );
+    const hasAggregation = Object.keys(stableAggregationModel).length > 0;
 
     const columnsLookup = useMemo(() => {
         const map = new Map<string, GridColDef<R>>();
@@ -67,39 +143,52 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
         return map;
     }, [columns]);
 
+    const isActive = requestedModel.length > 0;
+
+    // Fields with `groupable: false` are dropped before building, so the remaining levels keep their
+    // depths (indent, defaultGroupingExpansionDepth and export depth) as if the field was never listed.
+    const groupingFields = useMemo(
+        () => requestedModel.filter(field => columnsLookup.get(field)?.groupable !== false),
+        [requestedModel, columnsLookup]
+    );
+    const groupingFieldsKey = groupingFields.join(FIELD_SEPARATOR);
+
     // User expand/collapse choices are stored as overrides on top of the depth-based
     // default, keyed by the grouping config. Rebuilding the tree (row edits, new rows
     // arrays) keeps them because group ids are deterministic; changing the grouping
     // config itself discards them.
-    const configKey = `${rowGroupingModel.join('\u001f')}|${defaultGroupingExpansionDepth}`;
+    const configKey = `${groupingFieldsKey}|${defaultGroupingExpansionDepth}`;
     const [expansionState, setExpansionState] = useState<ExpansionOverrides>(() => ({
         configKey,
         overrides: new Map(),
     }));
     const overrides = expansionState.configKey === configKey ? expansionState.overrides : EMPTY_OVERRIDES;
 
-    const { treeNodes, rootIds, groupingRows } = useMemo(() => {
-        const treeNodes = new Map<GridRowId, GridTreeNode>();
-        const groupingRows = new Map<GridRowId, R>();
-        const rootIds: GridRowId[] = [];
+    // Groups are built from the rows that pass the filter, so group subtotals, the "(n)" counts and the
+    // set of groups all describe what is shown. With filterMode 'server' the rows already are the result.
+    const leafRows = useMemo<R[]>(() => {
+        if (!isActive || filterMode === 'server') return rows;
+        const rowFilter = createRowFilter(filterModel, columnLookup);
+        return rowFilter ? rows.filter(row => rowFilter(row)) : rows;
+    }, [isActive, rows, filterMode, filterModel, columnLookup]);
 
-        if (rowGroupingModel.length === 0) {
-            return { treeNodes, rootIds, groupingRows };
+    const build = useMemo<GroupingBuild<R>>(() => {
+        const treeNodes = new Map<GridRowId, GridTreeNode>();
+        const rootIds: GridRowId[] = [];
+        const groupIds: GridRowId[] = [];
+        const groupRowVariants = new Map<GridRowId, GroupRowVariants<R>>();
+        const groupingRows = new Map<GridRowId, R>();
+        const rowLookup = new Map<GridRowId, R>();
+
+        if (!isActive) {
+            return { treeNodes, rootIds, groupIds, groupRowVariants, groupingRows, rowLookup };
         }
 
-        const getGroupId = (field: string, value: unknown, parentId: GridRowId | null) => {
-            return `auto-group-${field}-${value}-${parentId || 'root'}`;
-        };
-
-        const groupRows = (
-            currentRows: R[], 
-            depth: number, 
-            parentId: GridRowId | null
-        ) => {
-            if (depth >= rowGroupingModel.length) {
-
+        const groupRows = (currentRows: R[], depth: number, parentId: GridRowId | null): GridRowId[] => {
+            if (depth >= groupingFields.length) {
                 return currentRows.map(row => {
                     const id = getRowId(row);
+                    rowLookup.set(id, row);
                     treeNodes.set(id, {
                         id,
                         parentId,
@@ -111,84 +200,68 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                 });
             }
 
-            const field = rowGroupingModel[depth];
-
-            // Skip fields where the column has explicitly opted out of grouping.
+            const field = groupingFields[depth];
             const colDef = columnsLookup.get(field);
-            if (colDef && colDef.groupable === false) {
-                return groupRows(currentRows, depth + 1, parentId);
+
+            // Bucket by the value the cell shows (through valueGetter), keyed so distinct values stay apart.
+            const buckets = new Map<string, { value: unknown; rows: R[] }>();
+            for (const row of currentRows) {
+                const value = getCellValue(row, field, colDef as GridColDef | undefined);
+                const key = groupKeyOf(value);
+                let bucket = buckets.get(key);
+                if (!bucket) {
+                    bucket = { value, rows: [] };
+                    buckets.set(key, bucket);
+                }
+                bucket.rows.push(row);
             }
 
-            const groups = new Map<string, R[]>();
-
-            // Group current rows by value of the current field
-            currentRows.forEach(row => {
-                const value = row[field];
-                const key = String(value); // reliable map key
-                if (!groups.has(key)) {
-                    groups.set(key, []);
-                }
-                groups.get(key)!.push(row);
-            });
-
-            const groupIds: GridRowId[] = [];
-
-            // Create group rows
-            groups.forEach((groupRowsList, key) => {
-                // Use the raw value from the first row of the group for the groupingValue
-                const firstRow = groupRowsList[0];
-                const rawValue = firstRow[field];
-
-                const groupId = getGroupId(field, key, parentId);
+            const ids: GridRowId[] = [];
+            buckets.forEach((bucket, key) => {
+                const groupId = groupIdOf(field, key, parentId);
+                ids.push(groupId);
                 groupIds.push(groupId);
 
-                // Calculate Aggregations for this group
-                const aggregatedValues: Record<string, unknown> =
-                    computeAggregations(groupRowsList, aggregationModel, columnsLookup, 'useRowGrouping');
+                // Aggregated over this group's (filtered) leaf rows.
+                const aggregatedValues: Record<string, unknown> = hasAggregation
+                    ? computeAggregations(bucket.rows, stableAggregationModel, columnsLookup, 'useRowGrouping')
+                    : {};
 
-                const groupRow = {
-                    [field]: rawValue,
-                    ...aggregatedValues,
-                    id: groupId
-                } as unknown as R;
-
-                groupingRows.set(groupId, groupRow);
+                const inline = { [field]: bucket.value, ...aggregatedValues, id: groupId } as unknown as R;
+                const bare = { [field]: bucket.value, id: groupId } as unknown as R;
+                const footer = hasAggregation
+                    ? ({ ...aggregatedValues, id: footerIdOf(groupId) } as unknown as R)
+                    : null;
+                groupRowVariants.set(groupId, { inline, bare, footer });
+                groupingRows.set(groupId, inline);
+                if (footer) groupingRows.set(footer.id, footer);
 
                 const treeNode: GridTreeNode = {
                     id: groupId,
                     parentId,
                     depth,
-                    groupingKey: key,
+                    groupingKey: String(bucket.value),
                     groupingField: field,
-                    groupingValue: rawValue,
+                    groupingValue: bucket.value,
                     aggregatedValues,
                     isExpanded: false,
-                    children: [], 
+                    children: [],
                     label: colDef?.groupingValueFormatter
-                        ? colDef.groupingValueFormatter({ field, value: rawValue })
-                        : `${field}: ${String(rawValue)}` 
+                        ? colDef.groupingValueFormatter({ field, value: bucket.value })
+                        : `${field}: ${String(bucket.value)}`,
+                    descendantCount: bucket.rows.length,
                 };
-
-                treeNode.aggregationPosition = getAggregationPosition(treeNode);
-
                 treeNodes.set(groupId, treeNode);
-
-                const childrenIds = groupRows(groupRowsList, depth + 1, groupId);
-                treeNodes.get(groupId)!.children = childrenIds;
-
-                const descendantCount = groupRowsList.length;
-                treeNodes.get(groupId)!.descendantCount = descendantCount;
+                treeNode.children = groupRows(bucket.rows, depth + 1, groupId);
             });
-
-            return groupIds;
+            return ids;
         };
 
-        const topLevelIds = groupRows(rows, 0, null);
-        rootIds.push(...topLevelIds);
+        rootIds.push(...groupRows(leafRows, 0, null));
+        return { treeNodes, rootIds, groupIds, groupRowVariants, groupingRows, rowLookup };
+    }, [isActive, leafRows, groupingFields, hasAggregation, stableAggregationModel, getRowId, columnsLookup]);
 
-        return { treeNodes, rootIds, groupingRows };
-
-    }, [rows, rowGroupingModel, aggregationModel, getRowId, getAggregationPosition, columnsLookup]);
+    const { treeNodes, rootIds, groupIds, groupRowVariants, groupingRows, rowLookup } = build;
 
     const isDefaultExpanded = useCallback((node: GridTreeNode | undefined) => (
         Boolean(node?.children && node.children.length > 0) &&
@@ -218,104 +291,126 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
         return expandedGroupIds.has(id);
     }, [expandedGroupIds]);
 
-    const getVisibleRows = useCallback(() => {
-        if (rowGroupingModel.length === 0) return null;
+    // getAggregationPosition runs once per group per render (it receives the group's current
+    // expansion state), but only its answers are memoized on, so an inline callback does not
+    // rebuild the rows or the row metadata.
+    const positionsKey = hasAggregation
+        ? groupIds.map(id => {
+            const node = treeNodes.get(id);
+            return node ? encodePosition(getAggregationPosition({ ...node, isExpanded: expandedGroupIds.has(id) })) : 'i';
+        }).join('')
+        : '';
+    const aggregationPositions = useMemo<Map<GridRowId, GridGroupAggregationPosition>>(() => {
+        const map = new Map<GridRowId, GridGroupAggregationPosition>();
+        groupIds.forEach((id, index) => map.set(id, decodePosition(positionsKey[index])));
+        return map;
+    }, [groupIds, positionsKey]);
+
+    /** Where the grand total goes: `null` hides the grid's aggregation footer. */
+    const rootAggregationPosition: GridGroupAggregationPosition = hasAggregation ? getAggregationPosition(null) : 'footer';
+
+    const isClientSort = sortingMode !== 'server' && Boolean(sortModel && sortModel.length > 0);
+
+    /**
+     * The rows to render, in order. `labelField` is the column that shows the group labels: sorting
+     * by it orders the groups by their grouping value (a group row has no value of its own there).
+     */
+    const getVisibleRows = useCallback((labelField?: string): R[] | null => {
+        if (!isActive) return null;
+
+        const activeSortModel = isClientSort && sortModel ? sortModel : [];
+
+        const readSortValue = (id: GridRowId, sortItem: GridSortItem): GridSortValue => {
+            const node = treeNodes.get(id);
+            if (node && groupRowVariants.has(id)) {
+                const groupingField = node.groupingField ?? '';
+                if (sortItem.field === groupingField || sortItem.field === labelField) {
+                    return { value: node.groupingValue, type: columnLookup?.byField.get(groupingField)?.type };
+                }
+                if (node.aggregatedValues && Object.prototype.hasOwnProperty.call(node.aggregatedValues, sortItem.field)) {
+                    return { value: node.aggregatedValues[sortItem.field], type: columnLookup?.byField.get(sortItem.field)?.type };
+                }
+                return { value: undefined };
+            }
+            const row = rowLookup.get(id);
+            const colDef = columnLookup?.byField.get(sortItem.field);
+            return { value: row ? getCellValue(row, sortItem.field, colDef) : undefined, type: colDef?.type };
+        };
 
         const result: R[] = [];
         const seenIds = new Set<GridRowId>();
 
-        const rowLookup = new Map<GridRowId, R>();
-        rows.forEach(r => rowLookup.set(getRowId(r), r));
+        const traverse = (ids: readonly GridRowId[]) => {
+            const ordered = activeSortModel.length > 0 ? sortItemsBySortModel(ids, activeSortModel, readSortValue) : ids;
+            for (const id of ordered) {
+                if (seenIds.has(id)) continue;
+                seenIds.add(id);
 
-        // Compiled once per pass, not once per row.
-        const rowFilter = createRowFilter(filterModel, columnLookup);
-
-        const doesNodeMatchFilter = (nodeId: GridRowId): boolean => {
-            const node = treeNodes.get(nodeId);
-            if (!node) return false;
-
-            if (!node.children || node.children.length === 0) {
-
-                const row = rowLookup.get(nodeId);
-                if (!row) return false;
-
-                return rowFilter ? rowFilter(row) : true;
-            }
-
-            return node.children.some(childId => doesNodeMatchFilter(childId));
-        };
-
-        const traverse = (ids: GridRowId[]) => {
-
-            // Copy before sorting: ids may be node.children / rootIds from the memoized tree.
-            const visibleIds = filterModel ? ids.filter(doesNodeMatchFilter) : [...ids];
-
-            if (sortModel && sortModel.length > 0) {
-                visibleIds.sort((aId, bId) => {
-                    const rowA = groupingRows.get(aId) || rowLookup.get(aId);
-                    const rowB = groupingRows.get(bId) || rowLookup.get(bId);
-
-                    if (!rowA || !rowB) return 0;
-
-                    for (const sortItem of sortModel) {
-                        const colDef = columnLookup?.byField.get(sortItem.field);
-                        // Group rows are synthetic and already hold their grouped / aggregated
-                        // values; leaf rows are read through the column's valueGetter.
-                        const valA = groupingRows.has(aId) ? rowA[sortItem.field] : getCellValue(rowA, sortItem.field, colDef);
-                        const valB = groupingRows.has(bId) ? rowB[sortItem.field] : getCellValue(rowB, sortItem.field, colDef);
-                        const compareResult = compareValues(valA, valB, sortItem.sort, colDef?.type);
-                        if (compareResult !== 0) return compareResult;
-                    }
-                    return 0;
-                });
-            }
-
-            visibleIds.forEach(id => {
-                if (seenIds.has(id)) return; 
+                const variants = groupRowVariants.get(id);
+                if (!variants) {
+                    // Hierarchy info travels in rowMetaMap; the consumer's row object is passed through unchanged.
+                    const row = rowLookup.get(id);
+                    if (row) result.push(row);
+                    continue;
+                }
 
                 const node = treeNodes.get(id);
-                const isGroup = node?.children && node.children.length > 0;
+                const isExpanded = expandedGroupIds.has(id);
+                // null is a position ("hidden"), so no `??` default here.
+                const position = aggregationPositions.has(id) ? aggregationPositions.get(id) ?? null : 'inline';
+                // 'footer' moves the aggregates below the children; while collapsed there is no
+                // subtotal row, so they stay on the group row instead of disappearing.
+                const showInline = position === 'inline' || (position === 'footer' && !isExpanded);
+                result.push(showInline ? variants.inline : variants.bare);
 
-                const row = isGroup ? groupingRows.get(id) : rowLookup.get(id);
-
-                if (row && node) {
-                     seenIds.add(id);
-
-                    // Hierarchy info travels in rowMetaMap; the consumer's row object is passed through unchanged.
-                    result.push(row);
-
-                    if (expandedGroupIds.has(id) && isGroup) {
-                        traverse(node.children!);
-                    }
+                if (isExpanded && node?.children) {
+                    traverse(node.children);
+                    if (position === 'footer' && variants.footer) result.push(variants.footer);
                 }
-            });
+            }
         };
 
         traverse(rootIds);
-
         return result;
-
-    }, [rows, getRowId, treeNodes, rootIds, groupingRows, filterModel, sortModel, expandedGroupIds, rowGroupingModel, columnLookup]);
+    }, [isActive, isClientSort, sortModel, treeNodes, groupRowVariants, rowLookup, columnLookup, expandedGroupIds, aggregationPositions, rootIds]);
 
     const getNode = useCallback((id: GridRowId) => treeNodes.get(id), [treeNodes]);
 
     const rowMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
         const map = new Map<GridRowId, GridRowMeta>();
         treeNodes.forEach((node, id) => {
-            const isGroup = Boolean(node.children && node.children.length > 0);
-            map.set(id, {
-                hasChildren: isGroup,
+            const variants = groupRowVariants.get(id);
+            if (!variants) {
+                map.set(id, {
+                    hasChildren: false,
+                    treeDepth: node.depth,
+                    isGroupRow: false,
+                });
+                return;
+            }
+            const groupMeta: GridRowMeta = {
+                hasChildren: true,
                 treeDepth: node.depth,
                 groupingField: node.groupingField,
                 groupingValue: node.groupingValue,
                 groupLabel: node.label,
                 descendantCount: node.descendantCount,
-                isGroupRow: isGroup,
-                isExpanded: isGroup ? expandedGroupIds.has(id) : undefined,
-            });
+                isGroupRow: true,
+                isExpanded: expandedGroupIds.has(id),
+            };
+            map.set(id, groupMeta);
+            if (variants.footer && aggregationPositions.get(id) === 'footer') {
+                map.set(variants.footer.id, {
+                    ...groupMeta,
+                    hasChildren: false,
+                    treeDepth: node.depth + 1,
+                    isExpanded: undefined,
+                    isGroupFooter: true,
+                });
+            }
         });
         return map;
-    }, [treeNodes, expandedGroupIds]);
+    }, [treeNodes, groupRowVariants, expandedGroupIds, aggregationPositions]);
 
     return useMemo(() => ({
         treeNodes,
@@ -325,5 +420,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
         getVisibleRows,
         getNode,
         rowMetaMap,
-    }), [treeNodes, groupingRows, toggleExpansion, isGroupExpanded, getVisibleRows, getNode, rowMetaMap]);
+        aggregationPositions,
+        rootAggregationPosition,
+    }), [treeNodes, groupingRows, toggleExpansion, isGroupExpanded, getVisibleRows, getNode, rowMetaMap, aggregationPositions, rootAggregationPosition]);
 }

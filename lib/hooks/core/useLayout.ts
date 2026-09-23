@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { GridColDef, GridRowModel, GridRowId, GridColumnPinning, GridDetailPanelHeight } from '../../types';
+import type { GridColDef, GridRowModel, GridRowId, GridColumnPinning, GridDetailPanelHeight, GridRowMeta } from '../../types';
 import { isColumnPinned } from '../../utils/pinning';
 
 export interface UseLayoutParams<R extends GridRowModel> {
@@ -9,6 +9,8 @@ export interface UseLayoutParams<R extends GridRowModel> {
     sortedUnpinnedRows: R[];
     expandedRowIds: Set<GridRowId>;
     getDetailPanelHeight?: (params: { row: R; id: GridRowId; rowIndex: number }) => GridDetailPanelHeight;
+    /** Hierarchy metadata: synthetic group / subtotal rows never have a detail panel. */
+    rowMetaMap?: Map<GridRowId, GridRowMeta>;
     pinnedTopRowsLength: number;
     pinnedBottomRowsLength: number;
     visibleOrderedColumns: GridColDef<R>[];
@@ -70,6 +72,7 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
         sortedUnpinnedRows,
         expandedRowIds,
         getDetailPanelHeight,
+        rowMetaMap,
         pinnedTopRowsLength,
         pinnedBottomRowsLength,
         visibleOrderedColumns,
@@ -89,7 +92,7 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
 
         const rowHeights = unpinnedRows.map((row, index) => {
             let height = rowHeight;
-            if (expandedRowIds.has(row.id)) {
+            if (expandedRowIds.has(row.id) && !rowMetaMap?.get(row.id)?.isGroupRow) {
                 const detailHeight = getDetailPanelHeight?.({ row, id: row.id, rowIndex: pinnedTopRowsLength + index }) ?? 200;
                 height += typeof detailHeight === 'number' ? detailHeight : parseInt(String(detailHeight), 10) || 200;
             }
@@ -332,6 +335,7 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
         sortedUnpinnedRows,
         expandedRowIds,
         getDetailPanelHeight,
+        rowMetaMap,
         pinnedTopRowsLength,
         pinnedBottomRowsLength,
         visibleOrderedColumns,

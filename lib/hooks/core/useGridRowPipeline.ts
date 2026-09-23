@@ -6,7 +6,8 @@ import type { GridColumnLookup } from '../../utils/columnLookup';
 import type { GridRowModel, GridFilterModel, GridSortItem, GridPaginationModel, GridRowPinning, GridDataSource } from '../../types';
 
 interface HierarchyHandlers<R extends GridRowModel> {
-    getVisibleRows: () => R[];
+    /** `labelField` is the column showing the hierarchy, so sorting by it can order group rows by their labels. */
+    getVisibleRows: (labelField?: string) => R[] | null;
 }
 
 export interface UseGridRowPipelineParams<R extends GridRowModel> {
@@ -29,6 +30,8 @@ export interface UseGridRowPipelineParams<R extends GridRowModel> {
      * the visible, filterable columns. Without it, `row[field]` is read directly.
      */
     columnLookup?: GridColumnLookup;
+    /** Tree data / row grouping: the column that shows the expand toggle and group labels. */
+    hierarchyField?: string;
 }
 
 export interface GridRowPipelineResult<R extends GridRowModel> {
@@ -66,13 +69,14 @@ export function useGridRowPipeline<R extends GridRowModel>(
         isLoading,
         pageSize,
         columnLookup,
+        hierarchyField,
     } = params;
 
     const filteredRows = useMemo<R[]>(() => {
-        if (activeHierarchyHandlers) return (activeHierarchyHandlers.getVisibleRows() || []) as R[];
+        if (activeHierarchyHandlers) return (activeHierarchyHandlers.getVisibleRows(hierarchyField) || []) as R[];
         if (filterMode === 'server' && dataSource) return effectiveRows;
         return filterRows(effectiveRows, filterModel, columnLookup) as R[];
-    }, [effectiveRows, filterModel, activeHierarchyHandlers, filterMode, dataSource, columnLookup]);
+    }, [effectiveRows, filterModel, activeHierarchyHandlers, hierarchyField, filterMode, dataSource, columnLookup]);
 
     const dataRows = useMemo<R[]>(() => {
         if (!activeHierarchyHandlers) return filteredRows;
@@ -98,8 +102,9 @@ export function useGridRowPipeline<R extends GridRowModel>(
         return sortedUnpinnedRows.slice(start, start + effectivePaginationModel.pageSize);
     }, [sortedUnpinnedRows, pagination, effectivePaginationModel.page, effectivePaginationModel.pageSize, paginationMode, dataSource]);
 
+    // What keyboard navigation walks: the rendered rows. With tree data and pagination that is the
+    // current page, the same as a flat grid (hierarchy modes have no pinned rows).
     const allRenderableRows = useMemo<R[]>(() => {
-        if (activeHierarchyHandlers) return unpinnedRows;
         const centerRows = pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
         const base = [...pinnedTopRows, ...centerRows, ...pinnedBottomRows];
 
@@ -115,7 +120,7 @@ export function useGridRowPipeline<R extends GridRowModel>(
         return base;
     }, [
         pinnedTopRows, paginatedUnpinnedRows, sortedUnpinnedRows, pinnedBottomRows,
-        pagination, activeHierarchyHandlers, unpinnedRows, paginationMode, isLoading, pageSize,
+        pagination, paginationMode, isLoading, pageSize,
     ]);
 
     return {
