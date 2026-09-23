@@ -24,10 +24,12 @@ export interface CellProps<R extends GridRowModel = GridRowModel> {
     isFocused?: boolean;
     isFocusVisible?: boolean;
 
+    /** Whether this cell may enter edit mode (column, row and `isCellEditable` already resolved). */
     isEditable?: boolean;
     isEditing?: boolean;
     onEditStart?: () => void;
-    onEditStop?: (cancel?: boolean) => void;
+    /** Ends this cell's edit. `field` identifies the cell, so a late call cannot end another cell's edit. */
+    onEditStop?: (cancel?: boolean, field?: string) => void;
     onValueChange?: (newValue: unknown) => void;
 
     colSpanInfo?: CellColSpanInfo;
@@ -98,6 +100,10 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         return colDef.cellClassName;
     }, [colDef, value, formattedValue, row, rowIndex, colIndex, rowMeta]);
 
+    const field = colDef.field;
+    const handleCommit = React.useCallback(() => { onEditStop?.(false, field); }, [onEditStop, field]);
+    const handleCancel = React.useCallback(() => { onEditStop?.(true, field); }, [onEditStop, field]);
+
     const cellRef = React.useRef<HTMLDivElement>(null);
 
     React.useLayoutEffect(() => {
@@ -106,15 +112,47 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         }
     }, [isFocused]);
 
+    // A cell that unmounts while editing (scrolled out of the render window, filtered or paged away)
+    // gets no blur, so its edit would be left open with no editor. Commit it instead, as blur would.
+    // Deferred to a microtask so React StrictMode's simulated unmount + remount does not commit.
+    const editorMountedRef = React.useRef(false);
+    React.useEffect(() => {
+        if (!isEditing || !onEditStop) return;
+        editorMountedRef.current = true;
+        return () => {
+            editorMountedRef.current = false;
+            queueMicrotask(() => {
+                if (!editorMountedRef.current) onEditStop(false, field);
+            });
+        };
+    }, [isEditing, onEditStop, field]);
+
     if (colSpanInfo?.spannedByColSpan) {
         return null;
     }
 
+    const colSpan = colSpanInfo?.cellProps.colSpan ?? 1;
+    const isColSpanOrigin = colSpan > 1;
+    // A merged cell takes the summed widths of the columns it covers (computed by Row from the
+    // resolved layout widths); the origin column's own min/max width does not apply to it.
+    const cellWidth = (isColSpanOrigin ? colSpanInfo?.cellProps.width : undefined) ?? width ?? colDef.width ?? 100;
+    const sizeStyle: React.CSSProperties = {
+        width: 'var(--width)',
+        '--width': typeof cellWidth === 'number' ? `${cellWidth}px` : cellWidth,
+        flexGrow: (isColSpanOrigin ? colSpanInfo?.cellProps.flexGrow : undefined) ?? colDef.flex ?? 0,
+        flexShrink: 0,
+        flexBasis: 'auto',
+        boxSizing: 'border-box',
+        minWidth: isColSpanOrigin ? undefined : colDef.minWidth,
+        maxWidth: isColSpanOrigin ? undefined : colDef.maxWidth,
+    } as React.CSSProperties;
+
     if (isHiddenByRowSpan) {
+        // Keeps the covered column's slot so the rest of the row stays under its headers.
         return (
             <div
                 className="ogx__cell ogx__cell--hidden"
-                style={{ width: width ?? colDef.width ?? 100 }}
+                style={sizeStyle}
                 role="presentation"
                 data-field={colDef.field}
                 data-colindex={colIndex}
@@ -123,6 +161,9 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
     }
 
     const handleClick = (e: React.MouseEvent) => {
+        // Clicks inside an open editor (placing the caret, opening a select) belong to the editor:
+        // treating them as cell clicks would move focus to the grid and commit the edit.
+        if (isEditing) return;
         if (onCellClick) {
             onCellClick({
                 row,
@@ -136,16 +177,18 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         onClick?.(e);
     };
 
-    const handleDoubleClick = (e: React.MouseEvent) => {
-        if (isEditable && (onEditStart || onCellEditStart)) {
-            e.stopPropagation();
-            if (onCellEditStart) {
-                onCellEditStart(colDef.field, value);
-            } else {
-                onEditStart?.();
-            }
+    // The double-click is left to bubble so the row's onRowDoubleClick still fires.
+    const handleDoubleClick = () => {
+        // Double-clicking inside an open editor (to select a word) must not restart the edit.
+        if (isEditing || !isEditable) return;
+        if (onCellEditStart) {
+            onCellEditStart(colDef.field, value);
+        } else {
+            onEditStart?.();
         }
     };
+
+    const renderEditCell = colDef.renderEditCell;
 
     const isPinned = pinnedPosition !== null && pinnedPosition !== undefined;
 
@@ -163,19 +206,10 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         resolvedCellClassName
     ].filter(Boolean).join(' ');
 
-    const colSpan = colSpanInfo?.cellProps?.colSpan || 1;
     const rowSpan = rowSpanProp || 1;
-    const cellWidth = colSpanInfo?.cellProps?.width ?? width ?? colDef.width ?? 100;
 
     const style: React.CSSProperties = {
-        width: 'var(--width)',
-        '--width': typeof cellWidth === 'number' ? `${cellWidth}px` : cellWidth,
-        flexGrow: colDef.flex ?? 0,
-        flexShrink: 0,
-        flexBasis: colDef.flex ? 'auto' : 'auto',
-        boxSizing: 'border-box',
-        minWidth: colDef.minWidth,
-        maxWidth: colDef.maxWidth,
+        ...sizeStyle,
         position: isPinned ? 'sticky' : undefined,
         zIndex: colDef.zIndex ?? (isPinned ? 3 : undefined),
         padding: isEditing ? 0 : undefined
@@ -215,28 +249,37 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         >
             <div className="ogx__cell-content">
                 {isEditing && (onCellValueChange || onValueChange) && onEditStop ? (
-                    colDef.renderEditCell ? (
-                        colDef.renderEditCell({
-                            value,
-                            formattedValue,
-                            row,
-                            field: colDef.field,
-                            colDef,
-                            rowIndex,
-                            colIndex,
-                            rowMeta,
-                        })
+                    renderEditCell ? (
+                        <CellErrorBoundary
+                            field={colDef.field}
+                            resetKey={row}
+                            renderFn={() => renderEditCell({
+                                value,
+                                formattedValue,
+                                row,
+                                field: colDef.field,
+                                colDef,
+                                rowIndex,
+                                colIndex,
+                                rowMeta,
+                                onValueChange: handleValueChange,
+                                onCommit: handleCommit,
+                                onCancel: handleCancel,
+                            })}
+                        />
                     ) : (
                         <GridEditInputCell
                             value={value}
+                            formattedValue={formattedValue}
                             row={row}
                             field={colDef.field}
                             colDef={colDef as unknown as GridColDef}
                             rowIndex={rowIndex}
                             colIndex={colIndex}
+                            rowMeta={rowMeta}
                             onValueChange={handleValueChange}
-                            onCommit={() => onEditStop()}
-                            onCancel={() => onEditStop(true)}
+                            onCommit={handleCommit}
+                            onCancel={handleCancel}
                         />
                     )
                 ) : colDef.renderCell ? (

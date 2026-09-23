@@ -35,10 +35,10 @@ The main component for displaying and interacting with data.
 | `filterModel` | `GridFilterModel` | `undefined` | Active filters. |
 | `sortModel` | `GridSortItem[]` | `undefined` | Active sorting. |
 | `onRowClick` | `(params: GridRowParams) => void` | — | Fired when a row is clicked. |
-| `onRowDoubleClick` | `(params: GridRowParams) => void` | — | Fired when a row is double-clicked (v2.1+). Also fires for group rows; not fired on the checkbox, expand icon, drag handle or an open editor. |
-| `onCellClick` | `(params: GridCellParams) => void` | — | Fired when a cell is clicked. |
+| `onRowDoubleClick` | `(params: GridRowParams) => void` | — | Fired when a row is double-clicked (v2.1+). Also fires for group rows, and (v3.0+) for the double-click that opens an editor on an editable cell; not fired on the checkbox, expand icon, drag handle or inside an open editor. |
+| `onCellClick` | `(params: GridCellParams) => void` | — | Fired when a cell is clicked. Not fired for clicks inside an open editor (v3.0+). |
 | `onStateChange` | `(state: GridState) => void` | — | Fired on any internal state update. |
-| `processRowUpdate` | `(new, old) => R \| Promise<R>` | — | Fired after a cell edit is committed. |
+| `processRowUpdate` | `(new, old) => R \| Promise<R>` | — | Called once per committed cell edit (Enter, Tab, blur, or the editor's cell leaving the grid). Return the row to store, or a Promise of it; the editor stays open until the Promise settles. Returning nothing is reported through `onProcessRowUpdateError`. See [Editing](features/editing-reordering.md#commit-and-cancel). |
 | `dataSource` | `GridDataSource` | — | Remote data provider interface. |
 
 #### Sorting, Filtering & Pagination
@@ -91,8 +91,8 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `isCellEditable` | `(params: GridCellParams) => boolean` | — | Per-cell predicate. Return `false` to make a specific cell read-only even when the column has `editable: true`. |
-| `onProcessRowUpdateError` | `(error: unknown) => void` | — | Fired if `processRowUpdate` throws or returns a rejected Promise. Use to display validation errors or restore the previous row value. |
+| `isCellEditable` | `(params: GridCellParams) => boolean` | — | Per-cell predicate. Return `false` to make a specific cell read-only even when the column has `editable: true`. Applies to double-click, Enter, Tab stops and `aria-readonly` (v3.0+). It can only restrict: a column without `editable: true` is never editable. A predicate that throws counts as `false`. |
+| `onProcessRowUpdateError` | `(error: unknown) => void` | — | Fired if `processRowUpdate` (or `valueSetter`) throws, returns a rejected Promise, or returns something that is not a row. The editor stays open with the pending value. Use to display validation errors. |
 
 #### Master-Detail
 
@@ -296,7 +296,8 @@ Defines the behavior and appearance of a single column.
 | :--- | :--- | :--- | :--- |
 | `type` | `'string' \| 'number' \| 'date' \| 'boolean' \| 'singleSelect' \| 'image'` | `'string'` | Data type — determines default filter operators and cell formatting. |
 | `valueOptions` | `Array<string \| number \| { value: unknown; label: string }>` | — | Allowed values for `type: 'singleSelect'` — the filter panel offers them as a (multi-)select, and the edit cell uses them. |
-| `valueGetter` | `(params: GridValueGetterParams) => unknown` | — | Derive a computed value from the row object. Runs before `valueFormatter` and `renderCell`. Client-side sorting, column filters and the quick filter use this value. |
+| `valueGetter` | `(params: GridValueGetterParams) => unknown` | — | Derive a computed value from the row object. Runs before `valueFormatter` and `renderCell`. Client-side sorting, column filters and the quick filter use this value, and editors start from it (double-click and Enter alike). |
+| `valueSetter` | `(params: GridValueSetterParams) => R` | — | v3.0+. Maps an edited value back onto the row (`{ value, row, field }` → updated row) when an edit is committed. Needed for editable `valueGetter` columns; without it the commit writes `row[field]` and a development warning is logged. |
 | `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format the value into a display string (e.g. currency, dates). Does not affect editing, sorting or column filters; the quick filter also searches the formatted text. |
 
 #### Rendering
@@ -305,20 +306,22 @@ Defines the behavior and appearance of a single column.
 | :--- | :--- | :--- |
 | `renderCell` | `(params: GridRenderCellParams) => ReactNode` | Fully custom cell renderer. Receives `value`, `formattedValue` (v2.1+, the `valueFormatter` output), `row`, `field`, `colDef`, `rowIndex`, `colIndex`, `rowMeta`. |
 | `renderHeader` | `(params: GridRenderHeaderParams) => ReactNode` | Custom header cell renderer. Use for icons, sort indicators, or rich headers. |
-| `renderEditCell` | `(params: GridRenderCellParams) => ReactNode` | Custom editor rendered when the cell enters edit mode. Requires `editable: true`. |
+| `renderEditCell` | `(params: GridRenderEditCellParams) => ReactNode` | Custom editor rendered when the cell enters edit mode. Requires `editable: true`. Receives the `renderCell` params (with `value` = the pending value) plus `onValueChange(value)`, `onCommit()` and `onCancel()` (v3.0+). Errors it throws are contained to the cell. |
 
 #### Editing
 
 | Property | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `editable` | `boolean` | `false` | Enables inline cell editing. Commit is handled by `DataGrid.processRowUpdate`. |
+| `editable` | `boolean` | `false` | Enables inline cell editing (double-click or Enter). Commit is handled by `DataGrid.processRowUpdate`. Row-grouping group rows and auto-generated tree ancestors are never editable; tree-data parent rows are. |
 
 #### Spanning
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `colSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of columns this cell merges horizontally. |
-| `rowSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of rows this cell merges vertically. |
+| `colSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of columns this cell merges horizontally: the origin plus the next visible columns in render order, clamped to the end of its pinned section. `params.value` is the `valueGetter` result. |
+| `rowSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of rows this cell merges vertically, clamped to the end of its row section (top-pinned, scrolling or bottom-pinned rows) and to the first row with an expanded detail panel. |
+
+Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative values mean no span. A span function that throws is treated as `1` (with a development warning). With both set, the origin covers the whole `colSpan × rowSpan` rectangle. See [Cell Spanning](features/cell-spanning.md).
 
 #### Styling
 
@@ -641,6 +644,24 @@ Passed to `onCellClick` and `isCellEditable`.
 | `colDef` | `GridColDef<R>` | The column definition. |
 | `rowIndex` | `number` | Zero-based row index in the visible dataset. |
 | `colIndex` | `number` | Zero-based column index. |
+
+### `GridRenderEditCellParams<R>`
+Passed to `renderEditCell` (v3.0+). Everything in `GridRenderCellParams` (`value` is the pending, uncommitted value), plus:
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `onValueChange` | `(value: unknown) => void` | Updates the pending value. Nothing is saved until `onCommit`. |
+| `onCommit` | `() => void` | Commits the pending value through `processRowUpdate` and leaves edit mode. |
+| `onCancel` | `() => void` | Discards the pending value and leaves edit mode. |
+
+### `GridValueSetterParams<R>`
+Passed to `valueSetter` (v3.0+).
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `value` | `unknown` | The committed value from the editor. |
+| `row` | `R` | The row as it was before the edit. |
+| `field` | `string` | The column field name. |
 
 ### `GridColumnOrderChangeParams`
 Passed to `onColumnOrderChange`.
@@ -1191,7 +1212,15 @@ export default function GroupedHeadersGrid() {
 }
 ```
 
-The grid renders two header rows: the spanning group row on top, and the regular per-column header row below. Groups that are not referenced in `columnGroupingModel` are rendered without a spanning header.
+The grid renders one group header row per nesting level above the regular per-column header row. Columns that are not referenced in `columnGroupingModel` get an empty filler cell in the group rows.
+
+Group rows follow the columns as they are rendered:
+
+- **Order, visibility and pinning** — a group covers its visible member columns in their current order. A group whose members are not adjacent (or that spans a pinned-section boundary) renders one group cell per run of adjacent members. Group cells over pinned columns are sticky, so they stay above their columns on horizontal scroll.
+- **Widths** — a group cell is exactly as wide as its member columns, including flex, `auto` and percentage widths and manual resizes.
+- **`headerClassName`** — added to the group cell's class list (next to `ogx-col-group-cell` and `ogx-col-group-cell--group`).
+- **Column reordering** — header drag and the toolbar / columns-panel reorder keep groups intact: a column can only be moved onto a column of the same innermost group, and an ungrouped column only onto another ungrouped column.
+- **Accessibility** — group cells are `role="columnheader"` with `aria-colspan` (visible member columns) and `aria-colindex`; filler cells are `aria-hidden`. The grid's `aria-rowcount` includes the group header rows.
 
 ---
 
