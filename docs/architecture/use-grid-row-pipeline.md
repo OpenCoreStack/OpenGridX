@@ -17,21 +17,27 @@ Before this hook existed, the five `useMemo` stages lived inline in `DataGrid.ts
 ```
 effectiveRows
    │
-   ▼ filterRows (client) / getVisibleRows (hierarchy) / passthrough (server)
+   ▼ filterRows (client) / getVisibleRows (hierarchy) / passthrough (filterMode='server')
 filteredRows
    │
    ▼ getPinnedRowGroups
 pinnedTopRows, unpinnedRows, pinnedBottomRows
    │
-   ▼ sortRows (client) / passthrough (server / hierarchy)
+   ▼ sortRows (client) / passthrough (sortingMode='server' / hierarchy)
 sortedUnpinnedRows
    │
-   ▼ slice [page * pageSize, (page+1) * pageSize]  — skipped when pagination=false or server
+   ▼ slice [page * pageSize, (page+1) * pageSize]  — skipped when pagination=false or paginationMode='server'
 paginatedUnpinnedRows
    │
    ▼ [...pinnedTop, ...center, ...pinnedBottom] + optional skeleton rows
 allRenderableRows   ← consumed by viewport
 ```
+
+**Server modes do not need a `dataSource`.** `filterMode`, `sortingMode` and `paginationMode` set to
+`'server'` mean the rows already arrived filtered, sorted or paged, whether a `dataSource` fetched
+them or the consumer did (for example from `onPaginationModelChange`). Before v3.0 the passthrough
+applied only when a `dataSource` was also set, so a consumer-fetched page was sliced again (page 2
+rendered empty) and server results were re-filtered and re-sorted with client rules.
 
 ---
 
@@ -43,13 +49,13 @@ interface UseGridRowPipelineParams<R extends GridRowModel> {
     activeHierarchyHandlers: { getVisibleRows: () => R[] } | null;
     filterMode: 'client' | 'server';
     filterModel: GridFilterModel;
-    dataSource?: GridDataSource<R>;
     sortModel: GridSortItem[];
     sortingMode: 'client' | 'server';
     pagination: boolean;                      // must be true to enable slicing
     paginationMode: 'client' | 'server' | 'infinite';
     effectivePaginationModel: GridPaginationModel;
     pinnedRows?: GridRowPinning;              // { top: GridRowId[], bottom: GridRowId[] }
+    getRowId?: (row: R) => GridRowId;         // resolves ids for pinnedRows; rows are not required to carry `id`
     isLoading: boolean;
     pageSize: number;
 }
@@ -64,6 +70,7 @@ interface UseGridRowPipelineParams<R extends GridRowModel> {
 ```ts
 interface GridRowPipelineResult<R extends GridRowModel> {
     filteredRows: R[];
+    dataRows: R[];               // filtered data rows, independent of hierarchy expansion
     pinnedTopRows: R[];
     unpinnedRows: R[];
     pinnedBottomRows: R[];
@@ -73,7 +80,7 @@ interface GridRowPipelineResult<R extends GridRowModel> {
 }
 ```
 
-All intermediate results are returned so features like the row count badge or aggregation can read `filteredRows.length` without re-deriving it.
+All intermediate results are returned so features like the row count badge or aggregation can read them without re-deriving them. The client pager counts `sortedUnpinnedRows` (filtered, pinned rows excluded, since pinned rows show on every page); select-all acts on `dataRows`.
 
 ---
 

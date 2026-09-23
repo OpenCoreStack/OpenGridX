@@ -7,6 +7,7 @@ Manages a horizontal collection of cells. Includes support for selection, expans
 | Prop | Type | Description |
 | :--- | :--- | :--- |
 | `row` | `GridRowModel` | The data object for this row. |
+| `rowId` | `GridRowId` | The row's id (from the grid's `getRowId`). Defaults to `row.id`; the grid always passes it (v3.0+). |
 | `columns` | `GridColDef[]` | Columns currently visible in the viewport. |
 | `rowIndex` | `number` | Index used for virtualization and alternating colors. |
 | `isSelected` | `boolean` | Checkbox / Selection state. |

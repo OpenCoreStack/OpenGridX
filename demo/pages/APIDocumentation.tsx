@@ -5,7 +5,7 @@ export default function APIDocumentation() {
         // Core Data
         { name: 'rows', type: 'GridRowModel[]', default: '[]', desc: 'Array of data objects to display.' },
         { name: 'columns', type: 'GridColDef[]', default: '[]', desc: 'Column definitions controlling display, sorting, and editing.' },
-        { name: 'getRowId', type: '(row: GridRowModel) => GridRowId', default: 'row.id', desc: 'Returns a unique identifier for each row.' },
+        { name: 'getRowId', type: '(row: GridRowModel) => GridRowId', default: 'row.id', desc: 'Returns a unique identifier for each row. Only keys the internal store; rows are never copied or given an id.' },
         // Layout
         { name: 'height', type: 'number', default: 'undefined', desc: 'Fixed height in pixels. Overrides a parent container height.' },
         { name: 'rowHeight', type: 'number', default: '52', desc: 'Height of each row in pixels.' },
@@ -23,7 +23,7 @@ export default function APIDocumentation() {
         { name: 'pagination', type: 'boolean', default: 'false', desc: 'Enable the bottom pagination bar.' },
         { name: 'paginationMode', type: "'client' | 'server' | 'infinite'", default: "'client'", desc: 'Controls whether paging is handled locally or server-side.' },
         { name: 'paginationModel', type: 'GridPaginationModel', default: '{page:0, pageSize:100}', desc: 'Current page index and page size.' },
-        { name: 'rowCount', type: 'number', default: '—', desc: 'Total row count for server-side pagination.' },
+        { name: 'rowCount', type: 'number', default: '—', desc: 'Server total for paginationMode="server" when you fetch pages yourself (a dataSource response rowCount wins).' },
         { name: 'pageSizeOptions', type: 'number[]', default: '[10,25,50,100]', desc: 'Available page size choices.' },
         // Sorting & Filtering
         { name: 'sortModel', type: 'GridSortItem[]', default: 'undefined', desc: 'Controlled sort state.' },
@@ -64,7 +64,7 @@ export default function APIDocumentation() {
         // Events
         { name: 'onRowClick', type: '(params: GridRowParams) => void', default: '—', desc: 'Fired when a row is clicked.' },
         { name: 'onCellClick', type: '(params: GridCellParams) => void', default: '—', desc: 'Fired when a cell is clicked.' },
-        { name: 'onStateChange', type: '(state: GridState) => void', default: '—', desc: 'Fired on every internal state change (sort, filter, page, columns).' },
+        { name: 'onStateChange', type: '(state: GridState) => void', default: '—', desc: 'Fired on mount and whenever the sort, filter, pagination, column or density state changes value.' },
         { name: 'onRowsScrollEnd', type: '() => void', default: '—', desc: 'Fired when the user scrolls to the bottom of the grid.' },
         { name: 'onColumnOrderChange', type: '(params) => void', default: '—', desc: 'Fired after a column is reordered by drag.' },
         { name: 'onRowOrderChange', type: '(params) => void', default: '—', desc: 'Fired after a row is reordered (rowReordering must be true).' },
@@ -73,14 +73,14 @@ export default function APIDocumentation() {
     const apiRefMethods = [
         { method: 'getRow(id)', return: 'GridRowModel | null', desc: 'Get row data by ID.' },
         { method: 'getAllRows()', return: 'GridRowModel[]', desc: 'Get all loaded rows.' },
-        { method: 'getVisibleRows()', return: 'GridRowModel[]', desc: 'Get filtered/sorted rows.' },
+        { method: 'getVisibleRows()', return: 'GridRowModel[]', desc: 'Get the rows on screen: pinned rows plus the current page (or all filtered rows).' },
         { method: 'getColumn(field)', return: 'GridColDef | null', desc: 'Get column definition.' },
-        { method: 'getVisibleColumns()', return: 'GridColDef[]', desc: 'Get visible columns.' },
+        { method: 'getVisibleColumns()', return: 'GridColDef[]', desc: 'Get the columns on screen, in display order.' },
         { method: 'selectRow(id, isSelected)', return: 'void', desc: 'Set row selection.' },
         { method: 'getSelectedRows()', return: 'GridRowId[]', desc: 'Get selected row IDs.' },
-        { method: 'sortColumn(field, dir)', return: 'void', desc: 'Programmatically sort.' },
-        { method: 'setFilterModel(model)', return: 'void', desc: 'Programmatically set filters.' },
-        { method: 'setPage(page)', return: 'void', desc: 'Change current page.' },
+        { method: 'sortColumn(field, dir)', return: 'void', desc: 'Sort like a header click; fires onSortModelChange.' },
+        { method: 'setFilterModel(model)', return: 'void', desc: 'Set filters; fires onFilterModelChange.' },
+        { method: 'setPage(page)', return: 'void', desc: 'Change current page; fires onPaginationModelChange.' },
         { method: 'scrollToIndexes(params)', return: 'void', desc: 'Scroll to specific index.' },
     ];
 

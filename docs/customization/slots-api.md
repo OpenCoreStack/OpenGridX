@@ -45,7 +45,7 @@ Replace the default pagination component.
 {
   page: number;                    // Current page (0-based)
   pageSize: number;                // Current page size
-  rowCount: number;                // Total number of rows
+  rowCount: number;                // Rows being paged: filtered, unpinned rows; the server total in paginationMode="server"
   pageSizeOptions: number[];       // Available page sizes
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
@@ -121,7 +121,7 @@ Replace the entire footer section below the grid, including the default paginati
   apiRef: React.MutableRefObject<GridApi>;
   aggregationModel: GridAggregationModel;
   aggregationResult: GridAggregationResult | null;  // null when no aggregationModel
-  rowCount: number;              // filtered rows (leaf rows when grouping)
+  rowCount: number;              // filtered rows (leaf rows when grouping); the server total in paginationMode="server"
   pagination: boolean;           // effective: false while row grouping is active
   paginationModel: GridPaginationModel;
   pageSizeOptions: number[];

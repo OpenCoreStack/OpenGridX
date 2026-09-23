@@ -25,8 +25,19 @@ Simply define your columns with `filterable: true` (which is the default).
 />
 ```
 
+The filter model can be controlled (`filterModel` + `onFilterModelChange`) or left to the grid. Uncontrolled, the grid keeps its own filter model: the toolbar search and filter panel (`slots={{ toolbar: GridToolbar }}`) and `apiRef.current.setFilterModel()` change it, `onFilterModelChange` reports each change, and `initialState.filter.filterModel` sets the starting filter (which is how [state persistence](./state-persistence.md) restores it).
+
+```tsx
+<DataGrid
+  rows={rows}
+  columns={columns}
+  slots={{ toolbar: GridToolbar }}          // search + filters work without any filter props
+  initialState={{ filter: { filterModel: { items: [{ field: 'age', operator: '>', value: 30 }] } } }}
+/>
+```
+
 ### Server-Side Filtering
-Set `filterMode="server"` and handle the request in your `dataSource`.
+Set `filterMode="server"` and handle the request in your `dataSource`. The grid does not re-filter the rows it receives. Without a `dataSource`, fetch the filtered rows yourself from `onFilterModelChange` and pass them as `rows`.
 
 ```tsx
 <DataGrid

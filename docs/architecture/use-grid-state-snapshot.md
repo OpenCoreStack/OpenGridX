@@ -1,6 +1,6 @@
 # `useGridStateSnapshot`
 
-Internal hook. Fires the `onStateChange` callback whenever any tracked grid state changes — sorting, filtering, pagination, or column configuration. Packages the current state into a `GridState` snapshot and delivers it to the caller.
+Internal hook. Fires the `onStateChange` callback whenever the *value* of any tracked grid state changes — sorting, filtering, pagination, column configuration or density. Packages the current state into a `GridState` snapshot and delivers it to the caller.
 
 **File:** `lib/hooks/core/useGridStateSnapshot.ts`
 
@@ -23,7 +23,8 @@ interface UseGridStateSnapshotParams {
     columnWidths: Record<string, number>;
     effectiveColumnOrder: string[];
     columnVisibilityModel: Record<string, boolean>;
-    pinnedColumns: GridColumnPinning;
+    pinnedColumns: GridColumnPinning;   // the user's pins, not the grid's effective pins
+    density: 'compact' | 'standard' | 'comfortable';
 }
 ```
 
@@ -50,10 +51,19 @@ The hook assembles a `GridState` object on every tracked change:
         columnVisibilityModel,
         pinnedColumns,
     },
+    density: { density },
 }
 ```
 
+Grid-owned columns never appear in it: the synthetic `__group__` column (added when `groupingColDef` is set under row grouping) is removed from `columnOrder`, `pinnedColumns`, `columnWidths` and `columnVisibilityModel`, so the persisted state only names the consumer's own columns.
+
 This matches the `GridState` interface from `lib/state/types.ts` and is the same structure accepted by `initialState` / `GridInitialState` — so a caller can persist the snapshot and restore it directly.
+
+---
+
+## Fires on value changes, not identity changes
+
+Inline model props (`filterModel={{ items: [] }}`, `paginationModel={{ page, pageSize }}`) get a new identity on every parent render. The hook keeps the JSON of the last emitted snapshot in a ref and skips `onStateChange` when the new snapshot serialises the same (the snapshot holds only plain data). Without this, an `onStateChange` that stores the state in the parent re-renders the parent, which creates new inline props, which fires `onStateChange` again — an endless loop.
 
 ---
 

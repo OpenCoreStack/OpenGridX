@@ -77,6 +77,7 @@ await exportToPdf(
 | `logoUrl` | `string` | — | Data URI or URL for a logo image (requires `title`) |
 | `orientation` | `'portrait' \| 'landscape'` | `'landscape'` | Page orientation |
 | `selectedRows` | `(string \| number)[]` | — | Export only rows with these IDs. Takes precedence over `groupedRows`; the footer totals are recomputed over the selected rows (v3.0+) |
+| `getRowId` | `(row) => GridRowId` | `row.id` | The grid's `getRowId`, when it has one, so `selectedRows` match rows that keep their id in another field (v3.0+) |
 | `aggregationResult` | `Record<string, unknown>` | — | From `apiRef.current.getAggregationResult()` |
 | `aggregationModel` | `GridAggregationModel` | — | From `apiRef.current.getAggregationModel()` |
 | `filterModel` | `GridFilterModel` | — | From `apiRef.current.getFilterModel()`. Summarised under the title (see below) |
@@ -141,4 +142,4 @@ Ensure `logoUrl` is a data URI (base64-encoded) or an absolute URL that is CORS-
 
 ## Exporting unfiltered data
 
-`getVisibleRows()` returns only rows that pass the current filter. Use `getAllRows()` if you want to export all data regardless of active filters.
+`getVisibleRows()` returns the rows on screen: those that pass the current filter, only the current page when pagination is on, plus pinned rows. `getAllFilteredRows()` returns every filtered row regardless of pagination (and, under grouping or tree data, of expansion). Use `getAllRows()` if you want to export all data regardless of active filters. `getVisibleColumns()` returns the columns on screen, in display order.

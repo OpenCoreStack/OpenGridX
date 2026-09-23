@@ -14,7 +14,7 @@ The main component for displaying and interacting with data.
 | :--- | :--- | :--- | :--- |
 | `rows` | `GridRowModel[]` | `[]` | Array of data objects. |
 | `columns` | `GridColDef[]` | `[]` | Definitions for the columns. |
-| `getRowId` | `(row: GridRowModel) => GridRowId` | `row.id` | Returns a unique identifier for each row. |
+| `getRowId` | `(row: GridRowModel) => GridRowId` | `row.id` | Returns a unique identifier for each row. It only keys the grid's internal store: rows reach `renderCell`, events, `apiRef` and `processRowUpdate` unchanged, and the id is never written to `row.id` (v3.0+). Pass it to export functions as `getRowId` when you export `selectedRows`. |
 | `rowHeight` | `number` | `52` | Height of each row in pixels. |
 | `headerHeight` | `number` | `56` | Height of the header row. |
 | `autoHeight` | `boolean` | `false` | Adjust grid height to match row total. |
@@ -25,19 +25,19 @@ The main component for displaying and interacting with data.
 | `paginationMode` | `'client' \| 'server' \| 'infinite'` | `'client'` | How to handle paging. |
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). |
 | `onPaginationModelChange` | `(model: GridPaginationModel) => void` | — | Fired when page or page size changes. |
-| `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. |
-| `rowCount` | `number` | — | Total rows (required for server-side paging). |
+| `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. The uncontrolled default page size is 100 when offered, else the first option. |
+| `rowCount` | `number` | — | Server total for `paginationMode="server"` when you fetch pages yourself (read on every render). With a `dataSource`, the response's `rowCount` is used and this is only the fallback before the first response. |
 | `height` | `number \| string` | `undefined` | Total height of the grid container. |
 | `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density. |
-| `initialState` | `GridInitialState` | `undefined` | Starting state for sorting, filters, etc. |
+| `initialState` | `GridInitialState` | `undefined` | Starting state (sort, filter, pagination, columns, density), read on mount. Seeds the grid's uncontrolled state; see [State Persistence](features/state-persistence.md). |
 | `slots` | `GridSlots` | `{}` | Custom component overrides: `toolbar`, `pagination`, `noRowsOverlay`, `loadingOverlay`, `footer`. See [Slots API](customization/slots-api.md). |
 | `slotProps` | `Record<string, unknown>` | `{}` | Props passed to custom slots. |
-| `filterModel` | `GridFilterModel` | `undefined` | Active filters. |
+| `filterModel` | `GridFilterModel` | `undefined` | Active filters (controlled). Omit it to let the grid keep its own filter state, seeded from `initialState.filter` and changed by the toolbar or `apiRef.setFilterModel` (v3.0+). |
 | `sortModel` | `GridSortItem[]` | `undefined` | Active sorting. |
 | `onRowClick` | `(params: GridRowParams) => void` | — | Fired when a row is clicked. |
 | `onRowDoubleClick` | `(params: GridRowParams) => void` | — | Fired when a row is double-clicked (v2.1+). Also fires for group rows; not fired on the checkbox, expand icon, drag handle or an open editor. |
 | `onCellClick` | `(params: GridCellParams) => void` | — | Fired when a cell is clicked. |
-| `onStateChange` | `(state: GridState) => void` | — | Fired on any internal state update. |
+| `onStateChange` | `(state: GridState) => void` | — | Fired on mount and whenever the value of the sort, filter, pagination, column or density state changes (not on re-renders with equal props). |
 | `processRowUpdate` | `(new, old) => R \| Promise<R>` | — | Fired after a cell edit is committed. |
 | `dataSource` | `GridDataSource` | — | Remote data provider interface. |
 
@@ -45,8 +45,8 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `sortingMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles sorting. The grid calls `onSortModelChange` but does not re-sort rows locally. |
-| `filterMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles filtering. The grid calls `onFilterModelChange` but does not re-filter rows locally. |
+| `sortingMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles sorting. The grid calls `onSortModelChange` but does not re-sort rows locally, with or without a `dataSource` (v3.0+). |
+| `filterMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles filtering. The grid calls `onFilterModelChange` but does not re-filter rows locally, with or without a `dataSource` (v3.0+). |
 | `multiSort` | `boolean` | `false` | When `true`, clicking any sortable column header appends/cycles it in the sort model instead of replacing it — no Shift key required. Shift+click always appends regardless of this prop. |
 | `onSortModelChange` | `(model: GridSortItem[]) => void` | — | Fired when the active sort model changes. |
 | `onFilterModelChange` | `(model: GridFilterModel) => void` | — | Fired when the active filter model changes. |
@@ -58,7 +58,7 @@ The main component for displaying and interacting with data.
 | `rowSelectionModel` | `GridRowSelectionModel` | `[]` | Controlled selection state — array of selected row IDs. |
 | `onRowSelectionModelChange` | `(model: GridRowSelectionModel) => void` | — | Fired when the selection changes. |
 | `disableRowSelectionOnClick` | `boolean` | `false` | When `true`, clicking a row does not toggle its selection. |
-| `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time. |
+| `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time — by click, checkbox, Space or `apiRef` — and the header select-all checkbox is not shown. |
 
 #### Column Visibility
 
@@ -185,8 +185,8 @@ The built-in toolbar component. Mount it via `slots={{ toolbar: GridToolbar }}`.
 | `onAggregationModelChange` | `(model: GridAggregationModel) => void` | — | Called when the user changes aggregation settings. |
 | `pivotModel` | `GridPivotModel` | — | Current pivot configuration. Presence of this prop renders the Pivot button. |
 | `onPivotModelChange` | `(model: GridPivotModel) => void` | — | Called when the user changes pivot settings. |
-| `filterModel` | `GridFilterModel` | — | Current filter model. Presence of this prop renders the search bar and Filter button. |
-| `onFilterModelChange` | `(model: GridFilterModel) => void` | — | Called when the user changes filters or the quick-search value. |
+| `filterModel` | `GridFilterModel` | — | Current filter model. |
+| `onFilterModelChange` | `(model: GridFilterModel) => void` | — | Called when the user changes filters or the quick-search value. Its presence renders the search bar and Filter button; the grid always injects it when the toolbar is mounted via `slots` (v3.0+). |
 | `columnVisibilityModel` | `Record<string, boolean>` | `{}` | Current column visibility map. |
 | `onColumnVisibilityModelChange` | `(model: Record<string, boolean>) => void` | — | Called when the user shows or hides a column. Presence renders the Columns button. |
 | `onColumnReorder` | `(from: string, to: string) => void` | — | Called when the user drags a column in the Columns panel. |
@@ -230,26 +230,26 @@ Access these methods via the `apiRef` prop.
 
 | Method | Return | Description |
 | :--- | :--- | :--- |
-| `getRow(id)` | `GridRowModel \| null` | Get row data by ID. |
+| `getRow(id)` | `GridRowModel \| null` | Get row data by ID (your row object, unchanged). |
 | `getAllRows()` | `GridRowModel[]` | Get all loaded rows. |
-| `getVisibleRows()` | `GridRowModel[]` | Get rows after filtering/sorting. |
+| `getVisibleRows()` | `GridRowModel[]` | Get the rows on screen after filtering/sorting: pinned-top rows, the current page (or all rows without pagination), pinned-bottom rows. Under row grouping and tree data this is the visible hierarchy, group rows included. |
 | `getColumn(field)` | `GridColDef \| null` | Get column definition by field. |
-| `getVisibleColumns()` | `GridColDef[]` | Get currently visible columns. |
-| `selectRow(id, isSelected)` | `void` | Set selection for a single row. |
-| `selectRows(ids, isSelected)`| `void` | Set selection for multiple rows. |
+| `getVisibleColumns()` | `GridColDef[]` | Get the columns on screen, in display order (hidden columns excluded). |
+| `selectRow(id, isSelected = true)` | `void` | Set selection for a single row. Fires `onRowSelectionModelChange`. |
+| `selectRows(ids, isSelected = true)`| `void` | Set selection for multiple rows. With `disableMultipleRowSelection`, selecting keeps only the last id. |
 | `getSelectedRows()` | `GridRowId[]` | Get IDs of all selected rows. |
-| `sortColumn(field, dir)` | `void` | Programmatically sort a column. |
-| `getSortModel()` | `GridSortItem[]` | Get active sorting state. |
-| `setFilterModel(model)` | `void` | Programmatically set filters. |
-| `getFilterModel()` | `GridFilterModel` | Get the current filter model. |
-| `setPage(page)` | `void` | Change current page (0-indexed). |
-| `setPageSize(pageSize)` | `void` | Change the current page size. |
+| `sortColumn(field, dir)` | `void` | Sort like a header click: replaces the sort model (or, with `multiSort`, updates/appends that field); `null` removes the field. Fires `onSortModelChange`. |
+| `getSortModel()` | `GridSortItem[]` | Get the sort model the grid is using (controlled or not). |
+| `setFilterModel(model)` | `void` | Set filters. Fires `onFilterModelChange`; with a controlled `filterModel`, update the prop from it. |
+| `getFilterModel()` | `GridFilterModel` | Get the filter model the grid is using (controlled or not). |
+| `setPage(page)` | `void` | Change current page (0-indexed). Fires `onPaginationModelChange`. |
+| `setPageSize(pageSize)` | `void` | Change the page size and go to page 0. Fires `onPaginationModelChange`. |
 | `scrollToIndexes(params)` | `void` | Scroll to specific row/column index. |
 | `getAllColumns()` | `GridColDef[]` | Get all defined columns. |
 | `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results. |
 | `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
-| `getAllFilteredRows()` | `GridRowModel[]` | Get all filtered+sorted rows regardless of the current pagination window. Use for full-dataset exports. |
-| `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total). Group-header and subtotal entries carry `groupLabel`, the label the grid shows (v3.0+). Returns `null` when row grouping is not active. |
+| `getAllFilteredRows()` | `GridRowModel[]` | Get every row that passes the filter, sorted, regardless of pagination, including pinned rows. Under row grouping and tree data it returns the data rows (no group rows) in hierarchy order with every group expanded. Use for full-dataset exports. |
+| `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total), sorted and filtered like the screen. Collapsed groups are included with their rows, and subtotals are computed over each group's exported rows. Group-header and subtotal entries carry `groupLabel`, the label the grid shows (v3.0+). Returns `null` when row grouping is not active. |
 | `copySelectedRows()` | `Promise<void>` | Copy selected rows to clipboard as TSV. |
 
 ---
@@ -358,6 +358,8 @@ Defines the behavior and appearance of a single column.
 
 In every exporter, a non-empty `selectedRows` takes precedence over `groupedRows` (the selected rows are exported flat) and the totals are recomputed over the selected rows (v3.0+). See the [Export Guide](features/export-guide.md#selection-grouping-and-totals).
 
+Every exporter's options also accept `getRowId?: (row) => GridRowId`. Pass the grid's `getRowId` when you use one: `selectedRows` holds those ids, and since v3.0 the grid no longer copies them onto `row.id`.
+
 ---
 
 ## 🧩 Standalone Components
@@ -385,6 +387,8 @@ Context provider for overriding the grid's visual system.
 ### `useGridApiRef()`
 
 Creates a typed ref to pass to the `apiRef` prop. Gives you imperative access to the grid after mount.
+
+`apiRef.current` is never `null`: until the grid mounts it holds an API whose methods do nothing and whose getters return empty values. The grid installs the live API in a layout effect, so it is ready in your own `useLayoutEffect` / `useEffect` and in event handlers (v3.0+).
 
 ```tsx
 import { useGridApiRef } from '@opencorestack/opengridx';
@@ -545,7 +549,9 @@ const { initialState, onStateChange, clearState } = useGridStateStorage({
 | :--- | :--- | :--- |
 | `initialState` | `GridState \| undefined` | Restored state from storage — pass to `DataGrid.initialState`. |
 | `onStateChange` | `(state: GridState) => void` | Callback to pass to `DataGrid.onStateChange`. |
-| `clearState` | `() => void` | Removes the saved state from storage. |
+| `clearState` | `() => void` | Removes the saved state from storage and cancels a pending write. |
+
+If the key can change while the grid stays mounted, remount the grid with it (`<DataGrid key={storageKey} … />`): the grid reads `initialState` only on mount. When the browser blocks storage, the hook falls back to no persistence.
 
 ---
 
@@ -921,10 +927,12 @@ const filterModel: GridFilterModel = {
 
 ## 💾 `GridInitialState` and `GridState`
 
-`GridInitialState` is a type alias for `GridState`. Pass it to `initialState` to restore persisted grid state on mount (e.g. from `localStorage`). Each key corresponds to a feature slice — all are optional.
+`GridInitialState` is `GridState` with every column field optional as well. Pass it to `initialState` to restore persisted grid state on mount (e.g. from `localStorage`). Each key corresponds to a feature slice — all are optional. A `GridState` from `onStateChange` is a valid `GridInitialState`.
 
 ```typescript
-type GridInitialState = GridState;
+interface GridInitialState extends Omit<GridState, 'columns'> {
+  columns?: Partial<GridColumnsState>; // e.g. { columnVisibilityModel: { age: false } }
+}
 
 interface GridState {
   sorting?:    GridSortingState;
@@ -1258,6 +1266,7 @@ interface PdfExportOptions {
     logoUrl?: string;
     orientation?: 'portrait' | 'landscape';
     selectedRows?: (string | number)[];
+    getRowId?: (row: GridRowModel) => GridRowId; // v3.0+
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     filterModel?: GridFilterModel | null;
@@ -1277,6 +1286,7 @@ interface PdfExportOptions {
 | `logoUrl` | `string` | — | Data URI or URL for a logo image (requires `title`) |
 | `orientation` | `'portrait' \| 'landscape'` | `'landscape'` | Page orientation |
 | `selectedRows` | `(string \| number)[]` | — | Export only rows with these IDs. Takes precedence over `groupedRows`; footer totals are recomputed over the selection (v3.0+) |
+| `getRowId` | `(row) => GridRowId` | `row.id` | The grid's `getRowId`, to match `selectedRows` against rows that keep their id elsewhere (v3.0+) |
 | `aggregationResult` | `Record<string, unknown>` | — | From `apiRef.current.getAggregationResult()` |
 | `aggregationModel` | `GridAggregationModel` | — | From `apiRef.current.getAggregationModel()` |
 | `filterModel` | `GridFilterModel` | — | From `apiRef.current.getFilterModel()`. Nested groups, the logic operator and quick-search terms are summarised; rules without a value are skipped |
