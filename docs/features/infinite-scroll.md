@@ -5,78 +5,84 @@ The OpenGridX DataGrid supports infinite scrolling (lazy loading), allowing you 
 ## Concept
 
 When infinite scroll is enabled, the grid:
-1.  Disables client-side slicing (pagination in the UI).
-2.  Uses `paginationModel` internally to track the current page and page size.
+1.  Shows no pager and never slices the loaded rows (`pagination` is ignored).
+2.  Uses `paginationModel.page` and `pageSize` to decide how many rows should be loaded: `(page + 1) * pageSize`.
 3.  Triggers `onRowsScrollEnd` when the user scrolls near the bottom of the grid, signaling that more data should be fetched.
-4.  Data is typically **appended** to the existing rows, rather than replacing them.
+4.  **Appends** each response to the rows already loaded. Your `getRows` only returns the requested range.
 
 ## Usage
 
 To enable infinite scrolling:
 
-1.  Set `pagination={false}` to disable UI pagination controls.
+1.  Pass a `dataSource` whose `getRows` returns the rows in `[startRow, endRow)`.
 2.  Set `paginationMode="infinite"`.
-3.  Implement `onRowsScrollEnd` to update your data fetching logic/state (e.g., increment page number).
-4.  Ensure your `dataSource` manages the loaded rows correctly (usually appending).
+3.  Control `paginationModel` and advance `page` in `onRowsScrollEnd`. The grid does not advance the page on its own.
+4.  Set `sortingMode="server"` / `filterMode="server"` if `getRows` applies `sortModel` / `filterModel`.
 
 ```tsx
-import { DataGrid, GridDataSource } from '@opencorestack/opengridx';
+import { useCallback, useMemo, useState } from 'react';
+import {
+    DataGrid,
+    type GridColDef,
+    type GridDataSource,
+    type GridPaginationModel,
+} from '@opencorestack/opengridx';
+import '@opencorestack/opengridx/styles';
 
-// ... setup columns and mockApi ...
+type Person = {
+    id: number;
+    name: string;
+};
+
+const columns: GridColDef<Person>[] = [
+    { field: 'id', headerName: 'ID', width: 90 },
+    { field: 'name', headerName: 'Name', width: 200, sortable: true },
+];
+
+// With a dataSource the grid owns the loaded rows; `rows` only seeds the store.
+const NO_ROWS: Person[] = [];
+
+declare function fetchPeople(params: {
+    startRow: number;
+    endRow: number;
+    sort?: { field: string; sort: 'asc' | 'desc' };
+}): Promise<{ rows: Person[]; total: number }>;
 
 export default function InfiniteScrollDemo() {
-    const [paginationModel, setPaginationModel] = useState({
+    const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
         page: 0,
-        pageSize: 50
+        pageSize: 50,
     });
-    const [loading, setLoading] = useState(false);
-    const [allRows, setAllRows] = useState([]);
 
-    const dataSource: GridDataSource = useMemo(() => ({
-        getRows: async (params) => {
-            setLoading(true);
-            try {
-                // Fetch NEXT batch of rows from server
-                const response = await mockApi.getRows(params);
-                
-                // CRITICAL: Append new rows to existing rows
-                // (Or ensure response.rows contains ONLY new rows and parent handles appending)
-                return response;
-            } finally {
-                setLoading(false);
-            }
-        }
+    const dataSource = useMemo<GridDataSource<Person>>(() => ({
+        getRows: async ({ startRow, endRow, sortModel }) => {
+            // Return ONLY the requested range; the grid appends it to what is loaded.
+            const { rows, total } = await fetchPeople({ startRow, endRow, sort: sortModel[0] });
+            return { rows, rowCount: total };
+        },
     }), []);
 
     const handleScrollEnd = useCallback(() => {
-        if (!loading) {
-            // Increment page to fetch next batch
-            setPaginationModel(prev => ({
-                ...prev,
-                page: prev.page + 1
-            }));
-        }
-    }, [loading]);
+        setPaginationModel(prev => ({ ...prev, page: prev.page + 1 }));
+    }, []);
 
     return (
         <DataGrid
-            rows={[]} // Rows managed by dataSource
+            rows={NO_ROWS}
             columns={columns}
             dataSource={dataSource}
-            
-            // KEY PROPS FOR INFINITE SCROLL
-            pagination={false} 
             paginationMode="infinite"
             sortingMode="server"
-            
             paginationModel={paginationModel}
             onPaginationModelChange={setPaginationModel}
-            
             onRowsScrollEnd={handleScrollEnd}
+            height={400}
         />
     );
 }
 ```
+
+The grid needs a bounded height (here `height={400}`) and the stylesheet import; without either the viewport never scrolls, every loaded row renders, and `onRowsScrollEnd` keeps firing until the whole dataset is loaded.
 
 ## Implementation Details
 

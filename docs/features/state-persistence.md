@@ -10,6 +10,8 @@ You can pre-configure the grid status on mount using the `initialState` prop. Ev
 
 ```tsx
 <DataGrid
+  rows={rows}
+  columns={columns}
   initialState={{
     sorting: {
       sortModel: [{ field: 'name', sort: 'asc' }]
@@ -37,14 +39,18 @@ OpenGridX provides a built-in hook to simplify `localStorage` persistence.
 import { DataGrid, useGridStateStorage } from '@opencorestack/opengridx';
 
 export default function MyGrid() {
-  const { initialState, onStateChange } = useGridStateStorage('my-app-storage-key');
+  const { initialState, onStateChange, clearState } = useGridStateStorage('my-app-storage-key');
 
   return (
-    <DataGrid
-      initialState={initialState}
-      onStateChange={onStateChange}
-      // ...
-    />
+    <>
+      <button type="button" onClick={clearState}>Forget saved layout</button>
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        initialState={initialState}
+        onStateChange={onStateChange}
+      />
+    </>
   );
 }
 ```
@@ -60,7 +66,7 @@ Options (pass an object instead of the key string):
 | `include` | `(keyof GridState)[]` | all | Only persist these parts, e.g. `['sorting', 'columns']`. |
 | `storage` | `{ getItem, setItem, removeItem }` | `window.localStorage` | Any Storage-like object (e.g. `sessionStorage`). |
 
-`clearState()` removes the saved state and cancels any pending write, so the old state is not written back afterwards.
+`clearState()` removes the saved state and cancels any pending write, so the old state is not written back afterwards. It does not reset the mounted grid, and the grid's next state change is saved again; remount the grid (for example with a new `key`) to start from defaults.
 
 ### Changing the key
 
@@ -70,7 +76,7 @@ The grid reads `initialState` only when it mounts. If the key can change while t
 const storageKey = `grid-${userId}`;
 const { initialState, onStateChange } = useGridStateStorage(storageKey);
 
-<DataGrid key={storageKey} initialState={initialState} onStateChange={onStateChange} />
+<DataGrid key={storageKey} rows={rows} columns={columns} initialState={initialState} onStateChange={onStateChange} />
 ```
 
 Without the remount the grid keeps its current state, and its next change is saved under the new key.
@@ -83,6 +89,8 @@ Use the `onStateChange` callback to listen for modifications to the grid state a
 
 ```tsx
 <DataGrid
+  rows={rows}
+  columns={columns}
   onStateChange={(state) => {
     localStorage.setItem('grid-state', JSON.stringify(state));
   }}

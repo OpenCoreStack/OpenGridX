@@ -19,6 +19,8 @@ OpenGridX provides various ways for users to select one or multiple rows.
 ### Enable Checkbox Selection
 ```tsx
 <DataGrid
+  rows={rows}
+  columns={columns}
   checkboxSelection
   pinCheckboxColumn // Optional: keeps checkbox on the left during horizontal scroll
 />
@@ -31,6 +33,8 @@ Use the `rowSelectionModel` to control the selection state from your parent comp
 const [selection, setSelection] = useState<GridRowId[]>([]);
 
 <DataGrid
+  rows={rows}
+  columns={columns}
   rowSelectionModel={selection}
   onRowSelectionModelChange={(newSelection) => setSelection(newSelection)}
 />
@@ -42,6 +46,8 @@ Use `disableRowSelectionOnClick` to prevent clicking a row from changing the sel
 
 ```tsx
 <DataGrid
+  rows={rows}
+  columns={columns}
   checkboxSelection
   disableRowSelectionOnClick
 />
@@ -53,6 +59,8 @@ Use `disableMultipleRowSelection` to cap selection to one row at a time. Clickin
 
 ```tsx
 <DataGrid
+  rows={rows}
+  columns={columns}
   disableMultipleRowSelection
   onRowSelectionModelChange={(model) => console.log('selected:', model)}
 />
@@ -101,17 +109,25 @@ Synthetic group rows (row grouping) are never selected from the keyboard. The gr
 ## 🖱️ Interaction Callbacks
 
 ### `onRowClick`
-Fired when a row is clicked (even if selection is disabled on click).
-```typescript
-onRowClick: (params: GridRowParams) => {
-  console.log('Row clicked:', params.id, params.row);
-}
+Fired when a row is clicked, or Enter is pressed on one of its non-editable cells, even if selection is disabled on click. It is not fired for synthetic row-grouping group rows (a click toggles them instead).
+```tsx
+<DataGrid
+  rows={rows}
+  columns={columns}
+  onRowClick={(params: GridRowParams) => {
+    console.log('Row clicked:', params.id, params.row);
+  }}
+/>
 ```
 
 ### `onCellClick`
 Fired when a specific cell is clicked.
-```typescript
-onCellClick: (params: GridCellParams) => {
-  console.log('Cell clicked:', params.field, params.value);
-}
+```tsx
+<DataGrid
+  rows={rows}
+  columns={columns}
+  onCellClick={(params: GridCellParams) => {
+    console.log('Cell clicked:', params.field, params.value);
+  }}
+/>
 ```

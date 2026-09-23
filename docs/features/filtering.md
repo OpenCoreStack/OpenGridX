@@ -3,7 +3,7 @@
 OpenGridX provides a robust filtering system with support for both client-side and server-side operations.
 
 ## 📑 Overview
-- **Quick Filter**: Search across all visible columns simultaneously.
+- **Quick Filter**: Search across all visible, filterable columns at once.
 - **Column Filters**: Specific operators for different data types (string, number, date, etc.).
 - **Multi-Filter Groups**: Support for `AND`/`OR` logic operators.
 - **Server-Side Filtering**: Offload complex queries to your backend.
@@ -41,6 +41,8 @@ Set `filterMode="server"` and handle the request in your `dataSource`. The grid 
 
 ```tsx
 <DataGrid
+  rows={[]}
+  columns={columns}
   filterMode="server"
   onFilterModelChange={(model) => console.log('Current Filters:', model)}
   dataSource={{
@@ -110,6 +112,8 @@ The filter panel is accessible through the built-in `GridToolbar`. To use your o
 
 ```tsx
 <DataGrid
+  rows={rows}
+  columns={columns}
   slots={{
     toolbar: MyCustomToolbar
   }}

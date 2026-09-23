@@ -30,7 +30,7 @@ Spans are computed from the grid **as it is rendered**, so they follow the curre
 | **Master-detail** | A row span ends at a row whose detail panel is expanded, so the merged cell never covers the panel. |
 | **Virtualization** | The render window is widened so a span is never cut: the row whose cell starts a visible row span, and the column that starts a visible column span, are always rendered. |
 | **Column resizing, flex and percentage widths** | A merged cell is exactly as wide as the columns it covers, using their resolved widths. The origin column's own `minWidth` / `maxWidth` do not apply to the merged cell. Resizing never recomputes the spans. |
-| **Keyboard navigation** | Arrow keys move over a merged area in one step and land on its origin cell; covered cells are never focused. Tab skips covered cells. |
+| **Keyboard navigation** | Arrow keys move over a merged area in one step and land on its origin cell; covered cells are never focused. While editing, Tab skips covered cells (outside edit mode Tab leaves the grid). |
 | **Infinite scrolling** | The loading placeholder rows are never passed to `colSpan` / `rowSpan`. |
 
 Spans on columns whose values change with sorting still work, but the merged areas move with the rows. For summary rows that must stay in place, disable sorting on the spanning column (`sortable: false`) or use [Row Pinning](./pinning.md).
@@ -98,7 +98,7 @@ const columns: GridColDef<Row>[] = [
             if (params.row.isTotal) {
                 return <strong>Total: {params.row.name}</strong>;
             }
-            return params.value;
+            return params.formattedValue;
         }
     },
     {
@@ -116,7 +116,13 @@ const columns: GridColDef<Row>[] = [
 ### Basic Usage
 
 ```tsx
-const columns: GridColDef<Row>[] = [
+interface ItemRow {
+    id: number;
+    category: string;
+    item: string;
+}
+
+const columns: GridColDef<ItemRow>[] = [
     {
         field: 'category',
         headerName: 'Category',
@@ -135,18 +141,18 @@ const columns: GridColDef<Row>[] = [
 ### Dynamic Row Spanning
 
 ```tsx
-const columns: GridColDef<Row>[] = [
+// `rows: ItemRow[]` is the array passed to the grid, sorted by category.
+const columns: GridColDef<ItemRow>[] = [
     {
         field: 'category',
         headerName: 'Category',
         width: 150,
         // Dynamic row span based on data
         rowSpan: (params) => {
-            // Calculate how many rows this category spans
-            const categoryRows = rows.filter(
-                r => r.category === params.row.category
-            );
-            return categoryRows.length;
+            // Start a span at the first row of each category; the rest are covered by it
+            const index = rows.findIndex(r => r.category === params.row.category);
+            if (rows[index].id !== params.row.id) return 1;
+            return rows.filter(r => r.category === params.row.category).length;
         }
     },
     {
@@ -168,7 +174,13 @@ You can use both `colSpan` and `rowSpan` together. The origin cell then covers t
 - A `colSpan` stops before a cell that a `rowSpan` from a row above already covers.
 
 ```tsx
-const columns: GridColDef<Row>[] = [
+interface SectionRow {
+    id: number;
+    header: string;
+    isHeader?: boolean;
+}
+
+const columns: GridColDef<SectionRow>[] = [
     {
         field: 'header',
         headerName: 'Header',
@@ -184,11 +196,11 @@ const columns: GridColDef<Row>[] = [
                         textAlign: 'center',
                         padding: '20px'
                     }}>
-                        {params.value}
+                        {params.formattedValue}
                     </div>
                 );
             }
-            return params.value;
+            return params.formattedValue;
         }
     }
 ];
@@ -267,7 +279,7 @@ export default function SalesReport() {
                 if (params.row.isSubtotal) {
                     return <em>{params.row.region} Subtotal</em>;
                 }
-                return params.value;
+                return params.formattedValue;
             }
         },
         {
@@ -280,35 +292,35 @@ export default function SalesReport() {
             headerName: 'Q1',
             width: 120,
             type: 'number',
-            valueFormatter: ({ value }) => `$${value.toLocaleString()}`
+            valueFormatter: ({ value }) => `$${(value as number).toLocaleString()}`
         },
         {
             field: 'q2',
             headerName: 'Q2',
             width: 120,
             type: 'number',
-            valueFormatter: ({ value }) => `$${value.toLocaleString()}`
+            valueFormatter: ({ value }) => `$${(value as number).toLocaleString()}`
         },
         {
             field: 'q3',
             headerName: 'Q3',
             width: 120,
             type: 'number',
-            valueFormatter: ({ value }) => `$${value.toLocaleString()}`
+            valueFormatter: ({ value }) => `$${(value as number).toLocaleString()}`
         },
         {
             field: 'q4',
             headerName: 'Q4',
             width: 120,
             type: 'number',
-            valueFormatter: ({ value }) => `$${value.toLocaleString()}`
+            valueFormatter: ({ value }) => `$${(value as number).toLocaleString()}`
         },
         {
             field: 'total',
             headerName: 'Total',
             width: 140,
             type: 'number',
-            valueFormatter: ({ value }) => value ? `$${value.toLocaleString()}` : ''
+            valueFormatter: ({ value }) => (value == null ? '' : `$${(value as number).toLocaleString()}`)
         }
     ];
 
@@ -362,7 +374,7 @@ Defines how many rows a cell should span.
 rowSpan: 2
 
 // Dynamic spanning
-rowSpan: (params) => params.row.categorySize || 1
+rowSpan: (params) => (params.row.categorySize as number | undefined) ?? 1
 ```
 
 ### GridRenderCellParams
@@ -372,6 +384,7 @@ Parameters passed to the `colSpan` and `rowSpan` functions:
 ```tsx
 interface GridRenderCellParams<R> {
     value: unknown;        // Cell value: the valueGetter result when the column has one
+    formattedValue?: string; // The valueFormatter result (or String(value)); render this, not `value`
     row: R;                // Complete row data
     field: string;         // Column field name
     colDef: GridColDef<R>; // Column definition
@@ -406,11 +419,11 @@ Spanned cells can be styled using custom `renderCell`:
                     fontSize: '1.2em',
                     borderBottom: '2px solid #1976d2'
                 }}>
-                    {params.value}
+                    {params.formattedValue}
                 </div>
             );
         }
-        return params.value;
+        return params.formattedValue;
     }
 }
 ```
@@ -457,5 +470,5 @@ Cells covered by a column span are not rendered. Cells covered by a row span ren
 
 - [Row Pinning](./pinning.md)
 - [Column Pinning](./pinning.md)
-- [Custom Cell Rendering](./cell.md)
+- [Custom Cell Rendering](../components/cell.md)
 - [Aggregation](./aggregation-pivot.md)

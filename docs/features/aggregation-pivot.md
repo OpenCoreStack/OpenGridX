@@ -49,6 +49,8 @@ If the server provides neither `aggregationResults` nor `getAggregations`, the f
 
 ```tsx
 <DataGrid
+  rows={rows}
+  columns={columns}
   aggregationModel={model}
   rowGroupingModel={['department']}
   // Subtotal rows below expanded groups, inline values on collapsed ones, and the grand total.
@@ -75,10 +77,14 @@ const pivotModel: GridPivotModel = {
 };
 
 <DataGrid
+  rows={rows}
+  columns={columns}
   pivotMode={true}
   pivotModel={pivotModel}
 />
 ```
+
+`aggFn` is a `GridPivotAggFn`: `'sum' | 'avg' | 'count' | 'min' | 'max'`. `unique` is available to `aggregationModel`, but not to pivot value fields.
 
 ### Key Concepts
 - **Row Fields**: These become the static vertical axis of your pivot table.
@@ -93,7 +99,7 @@ The generated value columns are named `<field>␟<aggFn>` (for example `'salary\
 - **Sorting** orders the pivot data rows. The Grand Total row always stays last.
 - **Pivot row ids** are derived from the row-field values (`'__pivot_row__:["Eng"]'`, `'__pivot_row__:["North","Q1"]'` for two row fields), so they never collide with source row ids and stay the same for the same group when the data changes (v3.0+; they were `0, 1, …`).
 - **Grand Total** is the last row (id `'__pivot_grand_total__'`). It totals the pivot rows shown, recomputed from the raw values (an average is the average of all underlying values, not of the row averages). It is not selected by the header select-all checkbox. When no source row is left, there is no Grand Total row and the no-rows overlay is shown; the value columns stay.
-- **Row ids.** Pivot rows carry their own ids (`0, 1, 2, …` and the Grand Total id). Your `getRowId` is not applied to them.
+- **Row ids.** Pivot rows carry their own ids (the `'__pivot_row__:…'` ids above and the Grand Total id). Your `getRowId` is not applied to them.
 - **Groups** are formed by each value's displayed string, as in row grouping, so `1` and `'1'` are one group. `null`, `undefined` and `''` form one blank group, labelled `null`.
 
 ### Generated columns

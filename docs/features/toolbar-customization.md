@@ -19,10 +19,6 @@ import {
 <DataGrid
   rows={rows}
   columns={columns}
-  filterModel={filterModel}
-  onFilterModelChange={setFilterModel}
-  columnVisibilityModel={columnVisibilityModel}
-  onColumnVisibilityModelChange={setColumnVisibilityModel}
   slots={{ toolbar: GridToolbar }}
   slotProps={{
     toolbar: {
@@ -38,6 +34,19 @@ import {
   }}
 />
 ```
+
+When the toolbar is mounted through `slots.toolbar`, the grid passes it the filter, column-visibility, aggregation and column-order state and handlers itself, so search, Filters, Columns and Summaries work without any controlled props (v3.0+: the search box and Filters button no longer need `filterModel` / `onFilterModelChange`). Pass `filterModel` + `onFilterModelChange` (and the other controlled pairs) only when you want to own that state.
+
+### Which buttons appear
+
+`GridToolbar` renders a control only when it has the handler it needs. Under `slots.toolbar` the grid supplies these, except for pivot:
+
+| Control | Shown when |
+| :--- | :--- |
+| Search + Filters | `onFilterModelChange` is present (always under `slots.toolbar`) |
+| Columns | `onColumnVisibilityModelChange` is present (always under `slots.toolbar`) |
+| Pivot | `onPivotModelChange` is present (under `slots.toolbar`: when `pivotMode`, `pivotModel` or `onPivotModelChange` is set on the grid) |
+| Summaries | `onAggregationModelChange` is present (always under `slots.toolbar`; a standalone `<GridToolbar>` without it shows no Summaries button, v3.0+) |
 
 ---
 
@@ -75,7 +84,7 @@ interface ToolbarQuickFilterRenderProps {
 }
 ```
 
-Both types are exported from the package:
+Both types are exported from the package. `slotProps.toolbar` is typed as `Record<string, unknown>`, so annotate render-prop parameters with these types (an unannotated `(props) => …` is an implicit `any` under `strict`):
 
 ```ts
 import type { ToolbarButtonRenderProps, ToolbarQuickFilterRenderProps } from '@opencorestack/opengridx';
@@ -104,7 +113,7 @@ function MySearchBar({ value, onChange }: ToolbarQuickFilterRenderProps) {
 
 slotProps={{
   toolbar: {
-    renderQuickFilter: (props) => <MySearchBar {...props} />,
+    renderQuickFilter: (props: ToolbarQuickFilterRenderProps) => <MySearchBar {...props} />,
   },
 }}
 ```
@@ -126,7 +135,7 @@ function MyFilterBtn({ onClick, isOpen, activeCount }: ToolbarButtonRenderProps)
 
 slotProps={{
   toolbar: {
-    renderFilterButton: (props) => <MyFilterBtn {...props} />,
+    renderFilterButton: (props: ToolbarButtonRenderProps) => <MyFilterBtn {...props} />,
   },
 }}
 ```
@@ -144,7 +153,7 @@ const apiRef = useGridApiRef();
   slotProps={{
     toolbar: {
       renderExportButton: () => (
-        <button onClick={() => exportToCsv(apiRef.current.getAllRows(), columns, { fileName: 'export.csv' })}>
+        <button onClick={() => exportToCsv(apiRef.current.getAllFilteredRows(), apiRef.current.getVisibleColumns(), { fileName: 'export.csv' })}>
           Export CSV
         </button>
       ),
@@ -158,11 +167,11 @@ const apiRef = useGridApiRef();
 ```tsx
 slotProps={{
   toolbar: {
-    renderQuickFilter:       (props) => <MySearch {...props} />,
-    renderColumnsButton:     (props) => <MyColumnsBtn {...props} />,
-    renderFilterButton:      (props) => <MyFilterBtn {...props} />,
-    renderAggregationButton: (props) => <MyAggBtn {...props} />,
-    renderExportButton:      ()      => <MyExportBtn />,
+    renderQuickFilter:       (props: ToolbarQuickFilterRenderProps) => <MySearch {...props} />,
+    renderColumnsButton:     (props: ToolbarButtonRenderProps)      => <MyColumnsBtn {...props} />,
+    renderFilterButton:      (props: ToolbarButtonRenderProps)      => <MyFilterBtn {...props} />,
+    renderAggregationButton: (props: ToolbarButtonRenderProps)      => <MyAggBtn {...props} />,
+    renderExportButton:      ()                                     => <MyExportBtn />,
   },
 }}
 ```
@@ -201,5 +210,5 @@ These built-in features are unaffected regardless of which render props you prov
 - Column panel content (drag-to-reorder, show/hide toggles)
 - Filter panel content (operators, values, logic operator)
 - Aggregation panel content (per-column function pills)
-- Pivot panel (if `onPivotModelChange` is wired)
+- Pivot panel (when the Pivot button is shown, see above)
 - `children` / `rightContent` slot behaviour

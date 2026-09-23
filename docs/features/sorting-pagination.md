@@ -1,6 +1,6 @@
 # 🔢 Sorting & Pagination
 
-Efficiently naviagte and organize through large datasets using OpenGridX's sorting and pagination engines.
+Efficiently navigate and organize through large datasets using OpenGridX's sorting and pagination engines.
 
 ---
 
@@ -50,12 +50,16 @@ Each active sort column shows a numbered priority badge (`1`, `2`, `3`…) next 
 
 ```tsx
 // Controlled multi-sort — set programmatically or drive from UI with multiSort:
+const [sortModel, setSortModel] = useState<GridSortItem[]>([
+  { field: 'department', sort: 'asc' },
+  { field: 'salary', sort: 'desc' },
+]);
+
 <DataGrid
+  rows={rows}
+  columns={columns}
   multiSort
-  sortModel={[
-    { field: 'department', sort: 'asc' },
-    { field: 'salary', sort: 'desc' },
-  ]}
+  sortModel={sortModel}
   onSortModelChange={setSortModel}
 />
 ```
@@ -76,10 +80,23 @@ OpenGridX supports standard page-based pagination and infinite scrolling.
 
 ### Usage
 ```tsx
+// Uncontrolled: the grid keeps the page; initialState sets where it starts
 <DataGrid
+  rows={rows}
+  columns={columns}
   pagination
-  paginationModel={{ page: 0, pageSize: 10 }}
   pageSizeOptions={[5, 10, 20, 50]}
+  initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
+/>
+
+// Controlled: pass onPaginationModelChange too, or the pager cannot change page
+const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
+<DataGrid
+  rows={rows}
+  columns={columns}
+  pagination
+  paginationModel={paginationModel}
+  onPaginationModelChange={setPaginationModel}
 />
 ```
 
@@ -104,6 +121,7 @@ const { rows, total } = usePageQuery(paginationModel); // your data fetching
 
 <DataGrid
   rows={rows}               // only the current page
+  columns={columns}
   pagination
   paginationMode="server"
   rowCount={total}          // total rows on the server
@@ -131,7 +149,7 @@ const { rows, total } = usePageQuery(paginationModel); // your data fetching
 ## ⚡ Infinite Scrolling
 For a more modern experience, use infinite scroll combined with virtualization.
 
-1. Set `paginationMode="infinite"`.
-2. Implement `onRowsScrollEnd` or use the `dataSource.getRows` method to fetch data as the user scrolls.
+1. Set `paginationMode="infinite"` and pass a `dataSource`.
+2. Advance `paginationModel.page` from `onRowsScrollEnd`; the grid requests the next rows from `dataSource.getRows` and appends them. The pager is not shown and rows are not sliced.
 
-📖 **[Full Infinite Scroll Guide](docs/features/infinite-scroll.md)**
+📖 **[Full Infinite Scroll Guide](./infinite-scroll.md)**

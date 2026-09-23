@@ -6,17 +6,17 @@ OpenGridX provides multiple ways to handle data loading, from initial shimmers t
 
 ## 🦴 Skeleton Loading
 
-The grid features a smart skeleton loader that automatically calculates the number of columns and rows needed to fill the viewport.
+While `loading` is true and there are no rows to show, the grid body shows ten animated skeleton rows laid out with the current columns.
 
 ### Usage
 ```tsx
-<DataGrid loading={true} />
+<DataGrid rows={[]} columns={columns} loading />
 ```
 
 ### Features
-- **Dynamic Calculation**: Skeletons match the current column widths and configuration.
+- **Column-aware**: Skeleton cells use the current column widths, plus the checkbox, detail-panel and drag-handle columns when those are enabled. With no columns yet, placeholder columns fill the width.
 - **Shimmer Animation**: Uses a CSS-optimized animation for a premium feel.
-- **Auto-Fill**: Fills the entire visible height if `rows` are empty.
+- **Custom overlay**: Pass `slots.loadingOverlay` to render your own component instead of the skeleton rows.
 
 ---
 
@@ -24,34 +24,25 @@ The grid features a smart skeleton loader that automatically calculates the numb
 
 For large datasets, use the `paginationMode="infinite"` to load data as the user scrolls.
 
-- **Trigger**: Fired when the user scrolls near the bottom of the grid.
+- **Trigger**: `onRowsScrollEnd` fires when the user scrolls near the bottom; advance `paginationModel.page` there and the `dataSource` loads the next rows.
 - **Feedback**: Displays skeleton rows at the bottom while new data is being fetched.
 - **Guide**: See [Infinite Scroll Guide](./infinite-scroll.md) for full implementation details.
 
 ---
 
-## 💤 Lazy Loading (Viewport)
-
-Unlike infinite scroll which appends data to the end, Lazy Loading fetches specific chunks based on the user's current scroll position (viewport).
-
-- **Benefit**: Best for datasets with millions of records where users might "jump" to the middle of the scrollbar.
-- **Implementation**: Managed via the `GridDataSource` and `rowCount` props.
-
----
-
 ## 🔍 Global Search (Quick Filter)
 
-Quickly filter the entire dataset across all visible columns. This is managed via the `GridToolbar`.
+Quickly filter the rows across all visible, filterable columns. The search box is part of `GridToolbar`.
 
 ### Basic Setup
 
-Add the toolbar and wire a filter model — the toolbar's search bar activates automatically when `onFilterModelChange` is wired:
+Add the toolbar. The search box filters the grid on its own; pass `filterModel` / `onFilterModelChange` only when you want to control or observe the filter:
 
 ```tsx
 <DataGrid
+  rows={rows}
+  columns={columns}
   slots={{ toolbar: GridToolbar }}
-  filterModel={filterModel}
-  onFilterModelChange={setFilterModel}
 />
 ```
 
@@ -60,6 +51,8 @@ You can also control the search value externally via the `filterModel`. Each ent
 
 ```tsx
 <DataGrid
+  rows={rows}
+  columns={columns}
   filterModel={{
     items: [],
     quickFilterValues: ['john', 'london']

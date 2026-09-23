@@ -17,7 +17,7 @@ Virtualization is a technique that dramatically improves performance when workin
 The grid calculates which rows are visible based on:
 - Current scroll position
 - Viewport height
-- Row height (fixed or variable)
+- Row height (the fixed `rowHeight`, plus the height of any expanded detail panels)
 - Overscan buffer (adaptive, minimum `overscanRowCount`, default 3 rows)
 
 ```tsx
@@ -33,11 +33,21 @@ The grid calculates which rows are visible based on:
 - ✅ Renders ~15-25 rows regardless of total dataset size
 - ✅ Constant memory usage
 - ✅ Smooth 60fps scrolling
-- ✅ Hundreds of thousands of rows. Browsers cap an element's height (about 17.9M px in Firefox, 33.5M px in Chrome and Safari), and the grid lays every row out at its real height, so rows below that cap cannot be scrolled to: about 340,000 rows at the default 52px `rowHeight` in Firefox, 645,000 in Chrome. For more rows use pagination or server-side / infinite loading. In development the grid warns when the content passes 17.8M px.
+- ⚠️ Not millions of rows. Browsers cap an element's height (33,554,432px in Chromium, about 17.9M px in Firefox) and the grid does no scroll scaling: it lays every row out at its real height, so rows past the cap cannot be scrolled to. The limit is roughly `33,554,432 / rowHeight` rows in Chromium (about 645,000 at the default 52px), and about half that in Firefox (about 340,000). Beyond that, use pagination, or server-side paging / infinite scroll. In development the grid warns when the content passes 17.8M px.
 
 ### Column Virtualization
 
 Unpinned columns are virtualized horizontally: only the columns in view plus 6 on each side are rendered, with spacer cells standing in for the rest. Pinned columns are always rendered.
+
+### Import the stylesheet
+
+Virtualization depends on the grid's CSS. Import it once in your app:
+
+```tsx
+import '@opencorestack/opengridx/styles';
+```
+
+Without the stylesheet the viewport does not scroll, so the grid renders every row.
 
 ### The grid needs a bounded height
 
@@ -81,7 +91,7 @@ Pagination can hide this problem, because a paginated grid only has one page of 
 
 ### Row Height
 
-The grid supports both fixed and variable row heights:
+Every data row has the same height. There is no per-row height callback; the only rows of a different height are expanded detail panels (see below).
 
 ```tsx
 // Fixed row height (default: 52px)
@@ -231,8 +241,9 @@ You should see console logs only for visible rows + overscan buffer.
 ## Known Limitations
 
 1. **Unbounded containers** - Virtualization needs a bounded viewport height (see above)
-2. **Dynamic row heights** - Requires full dataset scan for accurate scroll calculations
-3. **Horizontal scrolling** - May show brief flicker with very wide grids
+2. **Browser height cap** - Rows past roughly `33,554,432 / rowHeight` (Chromium; less in Firefox) cannot be scrolled to (see above)
+3. **Uniform row heights** - Only detail panels vary the height; cumulative heights are recomputed over all rows when panels change
+4. **Horizontal scrolling** - May show brief flicker with very wide grids
 
 ## Future Improvements
 
@@ -247,9 +258,9 @@ You should see console logs only for visible rows + overscan buffer.
 |---------|--------------|----------------|
 | Row virtualization | ✅ Yes | ✅ Yes |
 | Column virtualization | ✅ Yes (unpinned columns) | ✅ Yes (Pro) |
-| Variable row heights | ✅ Yes | ✅ Yes |
+| Variable row heights | Detail panels only | ✅ Yes |
 | Overscan buffer | 3–30 rows (adaptive, velocity-based) | 3-8 rows (adaptive) |
-| Max recommended rows | 100,000+ | 100,000+ |
+| Max scrollable rows | ~645,000 at 52px in Chromium (browser height cap) | — |
 
 ## Related Documentation
 

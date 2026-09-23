@@ -13,15 +13,18 @@ npm install jspdf jspdf-autotable
 ## Basic Usage
 
 ```tsx
-import { exportToPdf, useGridApiRef } from '@opencorestack/opengridx';
+import {
+    DataGrid, GridToolbar, exportToPdf, useGridApiRef,
+    type GridColDef, type GridRowModel,
+} from '@opencorestack/opengridx';
 
-function MyGrid() {
+function MyGrid({ rows, columns }: { rows: GridRowModel[]; columns: GridColDef[] }) {
     const apiRef = useGridApiRef();
 
     const handleExport = async () => {
         await exportToPdf(
-            apiRef.current.getVisibleRows(),
-            apiRef.current.getVisibleColumns(),
+            apiRef.current.getAllFilteredRows(),  // every row passing the filter, all pages
+            apiRef.current.getVisibleColumns(),   // on-screen columns, in display order
             { fileName: 'my-report', title: 'Sales Report' }
         );
     };
@@ -31,14 +34,13 @@ function MyGrid() {
             apiRef={apiRef}
             rows={rows}
             columns={columns}
-            slots={{
-                toolbar: () => (
-                    <GridToolbar
-                        renderExportButton={() => (
-                            <button onClick={handleExport}>Export PDF</button>
-                        )}
-                    />
-                ),
+            slots={{ toolbar: GridToolbar }}
+            slotProps={{
+                toolbar: {
+                    renderExportButton: () => (
+                        <button onClick={handleExport}>Export PDF</button>
+                    ),
+                },
             }}
         />
     );
@@ -49,7 +51,7 @@ function MyGrid() {
 
 ```tsx
 await exportToPdf(
-    apiRef.current.getVisibleRows(),
+    apiRef.current.getAllFilteredRows(),
     apiRef.current.getVisibleColumns(),
     {
         fileName: 'employee-report',
@@ -142,4 +144,4 @@ Ensure `logoUrl` is a data URI (base64-encoded) or an absolute URL that is CORS-
 
 ## Exporting unfiltered data
 
-`getVisibleRows()` returns the rows on screen: those that pass the current filter, only the current page when pagination is on, plus pinned rows. `getAllFilteredRows()` returns every filtered row regardless of pagination (and, under grouping or tree data, of expansion). Use `getAllRows()` if you want to export all data regardless of active filters. `getVisibleColumns()` returns the columns on screen, in display order.
+`getVisibleRows()` returns the rows on screen: those that pass the current filter, only the current page when pagination is on, plus pinned rows. `getAllFilteredRows()` returns every filtered row regardless of pagination (and, under grouping or tree data, of expansion), in the grid's sort order with top- and bottom-pinned rows first and last; it is the right source for a full export. Use `getAllRows()` if you want to export all data regardless of active filters. `getVisibleColumns()` returns the columns on screen (hidden columns omitted), in display order. `getFilterModel()` returns the live filter model, including filters applied from the toolbar or filter panel.

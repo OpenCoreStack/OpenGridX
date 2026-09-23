@@ -6,7 +6,7 @@ Display supplementary information for a row in an expandable panel without leavi
 
 ## 🛠️ Basic Implementation
 
-To enable detail panels, provided two main props: `getDetailPanelContent` and `getDetailPanelHeight`.
+To enable detail panels, provide two main props: `getDetailPanelContent` and `getDetailPanelHeight`.
 
 ```tsx
 <DataGrid
@@ -14,8 +14,8 @@ To enable detail panels, provided two main props: `getDetailPanelContent` and `g
   columns={columns}
   getDetailPanelContent={(params) => (
     <div style={{ padding: '20px' }}>
-      <h3>Details for {params.row.name}</h3>
-      <p>{params.row.description}</p>
+      <h3>Details for {String(params.row.name)}</h3>
+      <p>{String(params.row.description)}</p>
     </div>
   )}
   getDetailPanelHeight={() => 'auto'} // or a fixed number
@@ -31,7 +31,9 @@ To enable detail panels, provided two main props: `getDetailPanelContent` and `g
 You can manage which rows are expanded by using the `detailPanelExpandedRowIds` and `onDetailPanelExpandedRowIdsChange` props.
 
 ```tsx
-const [expandedIds, setExpandedIds] = useState(new Set());
+import type { GridRowId } from '@opencorestack/opengridx';
+
+const [expandedIds, setExpandedIds] = useState<Set<GridRowId>>(new Set());
 
 <DataGrid
   detailPanelExpandedRowIds={expandedIds}
@@ -45,7 +47,7 @@ const [expandedIds, setExpandedIds] = useState(new Set());
 
 - **Expansion Column**: A `+` icon is automatically added to the start of the row.
 - **Pinning**: The expansion column can be pinned using `pinExpandColumn={true}`. This ensures the expansion trigger is always visible even when scrolling horizontally.
-- **Height**: `getDetailPanelHeight` returns a pixel height (default `200`, a fixed-height scroll box) or `'auto'`. An `'auto'` panel is measured when it renders and whenever its content resizes, and the rows below are laid out at the measured height. Until a panel has rendered once, 200px is reserved for it.
+- **Height**: `getDetailPanelHeight` returns a pixel height (a fixed-height scroll box; `0` renders a 0px panel) or `'auto'`. Without the prop every panel is 200px. An `'auto'` panel is measured when it renders and whenever its content resizes, and the rows below are laid out at the measured height. Until a panel has rendered once, 200px is reserved for it.
 - **Virtualization**: The grid engine accounts for variable row heights when detail panels are open, including panels on pinned rows (keyboard navigation and `scrollToIndexes` keep rows clear of an expanded bottom-pinned panel).
 
 ## ⌨️ Keyboard & Accessibility
