@@ -22,6 +22,26 @@
   animation: ogx-tooltip-in-bottom 0.15s ease-out;
 }
 
+.ogx-tooltip--left {
+  transform: translate(-100%, -50%);
+  animation: ogx-tooltip-in-left 0.15s ease-out;
+}
+
+.ogx-tooltip--right {
+  transform: translate(0, -50%);
+  animation: ogx-tooltip-in-right 0.15s ease-out;
+}
+
+@keyframes ogx-tooltip-in-left {
+  from { opacity: 0; transform: translate(-95%, -50%) scale(0.98); }
+  to   { opacity: 1; transform: translate(-100%, -50%) scale(1); }
+}
+
+@keyframes ogx-tooltip-in-right {
+  from { opacity: 0; transform: translate(4px, -50%) scale(0.98); }
+  to   { opacity: 1; transform: translate(0, -50%) scale(1); }
+}
+
 @keyframes ogx-tooltip-in-top {
   from { opacity: 0; transform: translate(-50%, -95%) scale(0.98); }
   to   { opacity: 1; transform: translate(-50%, -100%) scale(1); }

@@ -19,10 +19,12 @@ Columns can be pinned to the left or right edges of the grid. Pinned columns rem
 ```
 
 ### Column Configuration
-Individual columns can be marked as non-pinnable:
+Individual columns can be marked as non-pinnable. Their column menu has no pin actions:
 ```typescript
 { field: 'id', pinnable: false }
 ```
+
+`pinnable: false` only affects the UI; a column listed in `pinnedColumns` is still pinned.
 
 ---
 
