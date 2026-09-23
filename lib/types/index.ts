@@ -845,7 +845,7 @@ export interface DataGridProps<R extends GridRowModel = GridRowModel> {
    * function identity stable (module scope or useCallback); a new function rebuilds the tree.
    */
   getTreeDataPath?: (row: R) => string[];
-  /** Optional override for the grouping column. */
+  /** Adds a dedicated grouping column (`field: '__group__'`, pinned left) under row grouping or tree data, configured by these fields. */
   groupingColDef?: GridColDef<R>;
   /** Initial expansion depth for Tree Data. */
   defaultGroupingExpansionDepth?: number;

@@ -218,26 +218,29 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const activeRows = pivot.rows as unknown as R[];
     const baseColumns = pivot.columns as unknown as GridColDef<R>[];
 
-    // When groupingColDef is provided and row grouping is active, prepend a
+    // When groupingColDef is provided and row grouping or tree data is active, prepend a
     // dedicated synthetic __group__ column at position 0 (pinned-left).
     const isRowGroupingActive = hierarchyRowGroupingModel.length > 0;
+    const hasGroupingColumn = Boolean(groupingColDef) && (isRowGroupingActive || isTreeData);
 
     // Auto-pin __group__ column to the left when groupingColDef is active.
     // Both values MUST be memoized: without useMemo they produce a new array/object
     // reference every render, which cascades through useRowGrouping's memos and
     // effects into an infinite setState loop (Maximum update depth exceeded).
     const effectivePinnedColumns = useMemo(() => (
-        (groupingColDef && isRowGroupingActive)
+        hasGroupingColumn
             ? { ...pinnedColumns, left: ['__group__', ...((pinnedColumns?.left ?? []).filter(f => f !== '__group__'))] }
             : pinnedColumns
-    ), [groupingColDef, isRowGroupingActive, pinnedColumns]);
+    ), [hasGroupingColumn, pinnedColumns]);
 
     const activeColumns = useMemo(() => (
-        (groupingColDef && isRowGroupingActive)
+        hasGroupingColumn
             ? [
                 {
                     headerName: 'Group',
                     width: 220,
+                    // Tree data: a row's own entry in the hierarchy is the last segment of its path.
+                    ...(isTreeData && getTreeDataPath ? { valueGetter: ({ row }: { row: R }) => { const path = getTreeDataPath(row); return path[path.length - 1]; } } : {}),
                     ...groupingColDef,
                     field: '__group__',
                     hideable: false,
@@ -249,7 +252,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 ...baseColumns,
               ]
             : baseColumns
-    ), [groupingColDef, isRowGroupingActive, baseColumns]);
+    ), [groupingColDef, hasGroupingColumn, isTreeData, getTreeDataPath, baseColumns]);
 
     const columnLookup = useGridColumnLookup(activeColumns, columnVisibilityModel);
 
