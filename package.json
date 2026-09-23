@@ -42,7 +42,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --project tsconfig.build.json && vite build",
-    "build:lib": "tsc --project tsconfig.build.json && vite build --config vite.config.lib.js && cp lib/styles/opengridx.css.d.ts dist/opengridx.css.d.ts",
+    "build:lib": "tsc --project tsconfig.build.json && vite build --config vite.config.lib.js && cp lib/styles/opengridx.css.d.ts dist/opengridx.css.d.ts && node scripts/check-bundle.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run --project unit",
