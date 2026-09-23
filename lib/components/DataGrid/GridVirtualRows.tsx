@@ -22,7 +22,7 @@ import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/us
 interface RowEditingHandlers {
     editingCell: GridEditingState['editingCell'];
     startCellEdit: (params: { id: GridRowId; field: string; value: unknown }) => void;
-    stopCellEdit: (params?: { cancel?: boolean }) => void;
+    stopCellEdit: (params?: { cancel?: boolean; id?: GridRowId; field?: string }) => void;
     setEditCellValue: (params: { id: GridRowId; field: string; value: unknown }) => void;
 }
 
@@ -54,6 +54,7 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     pinExpandColumn?: boolean;
     rowReorderHandlers: UseRowReorderReturn;
     editingHandlers: RowEditingHandlers;
+    isCellEditable?: (params: GridCellParams<R>) => boolean;
     focusedCell: { id: GridRowId; field: string } | null;
     colspanMap?: Map<GridRowId, Record<string, CellColSpanInfo>>;
     rowSpanningCaches?: RowSpanningCaches;
@@ -94,6 +95,7 @@ export function GridVirtualRows<R extends GridRowModel>({
     pinExpandColumn,
     rowReorderHandlers,
     editingHandlers,
+    isCellEditable,
     focusedCell,
     colspanMap,
     rowSpanningCaches,
@@ -122,9 +124,9 @@ export function GridVirtualRows<R extends GridRowModel>({
         })();
 
     const centerRows = visibleRows
-        .filter(({ row }) => !isRowPinned(row.id, pinnedRows))
+        .filter(({ id }) => !isRowPinned(id, pinnedRows))
         .filter((item, index, self) =>
-            index === self.findIndex(t => t.row.id === item.row.id)
+            index === self.findIndex(t => t.id === item.id)
         );
 
     return (
@@ -152,13 +154,14 @@ export function GridVirtualRows<R extends GridRowModel>({
                         />
                     ))
                 ) : (
-                    centerRows.map(({ row, rowIndex: actualIndex }) => (
+                    centerRows.map(({ row, id, rowIndex: actualIndex }) => (
                         <Row<R>
-                            key={row.id}
+                            key={id}
                             row={row}
+                            rowId={id}
                             columns={virtualColumns}
                             rowIndex={actualIndex}
-                            isSelected={selectedRowIds.has(row.id)}
+                            isSelected={selectedRowIds.has(id)}
                             checkboxSelection={checkboxSelection}
                             onRowClick={onRowClick}
                             onRowDoubleClick={onRowDoubleClick}
@@ -168,9 +171,9 @@ export function GridVirtualRows<R extends GridRowModel>({
                             pinnedColumns={pinnedColumns}
                             pinnedRows={pinnedRows}
                             hasDetailPanel={hasDetailPanel}
-                            isDetailPanelExpanded={expandedRowIds.has(row.id)}
-                            detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id: row.id, rowIndex: actualIndex }) : null}
-                            detailPanelHeight={getDetailPanelHeight?.({ row, id: row.id, rowIndex: actualIndex }) || 200}
+                            isDetailPanelExpanded={expandedRowIds.has(id)}
+                            detailPanelContent={getDetailPanelContent ? getDetailPanelContent({ row, id, rowIndex: actualIndex }) : null}
+                            detailPanelHeight={getDetailPanelHeight?.({ row, id, rowIndex: actualIndex }) || 200}
                             onDetailPanelToggle={onDetailPanelToggle}
                             pinCheckboxColumn={pinCheckboxColumn}
                             pinExpandColumn={pinExpandColumn}
@@ -179,17 +182,18 @@ export function GridVirtualRows<R extends GridRowModel>({
                             onDragOver={rowReorderHandlers.onDragOver}
                             onDragEnd={rowReorderHandlers.onDragEnd}
                             onDrop={rowReorderHandlers.onDrop}
-                            isDragging={rowReorderHandlers.draggedRowId === row.id}
-                            isDragOver={rowReorderHandlers.dragOverRowId === row.id}
+                            isDragging={rowReorderHandlers.draggedRowId === id}
+                            isDragOver={rowReorderHandlers.dragOverRowId === id}
                             editingCell={editingHandlers.editingCell}
                             onEditStart={editingHandlers.startCellEdit}
                             onEditStop={editingHandlers.stopCellEdit}
                             onEditCellValueChange={editingHandlers.setEditCellValue}
-                            focusedCellField={focusedCell != null && focusedCell.id === row.id ? focusedCell.field : null}
+                            isCellEditable={isCellEditable}
+                            focusedCellField={focusedCell != null && focusedCell.id === id ? focusedCell.field : null}
                             colspanMap={colspanMap}
                             rowSpanningCaches={rowSpanningCaches}
                             rowHeight={rowHeight}
-                            rowMeta={rowMetaMap.get(row.id)}
+                            rowMeta={rowMetaMap.get(id)}
                         />
                     ))
                 )}

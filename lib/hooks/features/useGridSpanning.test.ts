@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useGridSpanning } from './useGridSpanning';
-import type { CellColSpanInfo } from './useGridSpanning';
-import type { GridColDef, GridRenderCellParams, GridRowModel } from '../../types';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { useGridSpanning, normalizeSpan } from './useGridSpanning';
+import type { UseGridSpanningParams } from './useGridSpanning';
+import type { GridColDef, GridRenderCellParams, GridRowId, GridRowModel } from '../../types';
 
 interface TestRow extends GridRowModel {
     id: number | string;
@@ -13,410 +13,243 @@ interface TestRow extends GridRowModel {
     k?: string;
 }
 
-const NO_WIDTHS: Record<string, number> = {};
-
-function originProps(info: CellColSpanInfo | undefined): { colSpan: number; width: number } | undefined {
-    if (!info || info.spannedByColSpan) return undefined;
-    return info.cellProps;
-}
-
 function makeRows(count: number): TestRow[] {
     return Array.from({ length: count }, (_, i) => ({ id: i + 1, a: `a${i + 1}`, b: `b${i + 1}`, c: `c${i + 1}` }));
 }
 
+type Params = UseGridSpanningParams<TestRow>;
+const NO_ROWS: TestRow[] = [];
+const NO_COLUMNS: GridColDef<TestRow>[] = [];
+
+/** Unpinned columns only, center rows only, unless overridden. */
+function params(rows: TestRow[], columns: GridColDef<TestRow>[], overrides: Partial<Params> = {}): Params {
+    return {
+        pinnedTopRows: NO_ROWS,
+        centerRows: rows,
+        pinnedBottomRows: NO_ROWS,
+        columns,
+        leftPinnedColumns: NO_COLUMNS,
+        unpinnedColumns: columns,
+        rightPinnedColumns: NO_COLUMNS,
+        ...overrides,
+    };
+}
+
+const colSpanOf = (result: ReturnType<typeof useGridSpanning>, rowId: GridRowId, field: string) => {
+    const info = result.colspanMap.get(rowId)?.[field];
+    if (!info) return undefined;
+    return info.spannedByColSpan ? 'covered' : info.cellProps.colSpan;
+};
+
+afterEach(() => { vi.restoreAllMocks(); });
+
+describe('normalizeSpan', () => {
+    it('floors fractions, treats Infinity as "to the end" and everything else invalid as 1', () => {
+        expect(normalizeSpan(3)).toBe(3);
+        expect(normalizeSpan(2.9)).toBe(2);
+        expect(normalizeSpan(0)).toBe(1);
+        expect(normalizeSpan(-4)).toBe(1);
+        expect(normalizeSpan(Number.NaN)).toBe(1);
+        expect(normalizeSpan(-Infinity)).toBe(1);
+        expect(normalizeSpan(undefined)).toBe(1);
+        expect(normalizeSpan('2')).toBe(1);
+        expect(normalizeSpan(Infinity)).toBe(Number.MAX_SAFE_INTEGER);
+    });
+});
+
 describe('useGridSpanning', () => {
-    describe('initial state', () => {
-        it('returns empty caches for empty rows and columns', () => {
-            const rows: TestRow[] = [];
-            const cols: GridColDef<TestRow>[] = [];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
+    describe('no spans configured', () => {
+        it('returns empty, stable caches and costs nothing for large grids', () => {
+            const rows = Array.from({ length: 100_000 }, (_, i) => ({ id: i }));
+            const columns: GridColDef<TestRow>[] = Array.from({ length: 20 }, (_, i) => ({ field: `f${i}` }));
+            const t0 = performance.now();
+            const { result, rerender } = renderHook(({ p }) => useGridSpanning(p), { initialProps: { p: params(rows, columns) } });
+            expect(performance.now() - t0).toBeLessThan(200);
             expect(result.current.colspanMap.size).toBe(0);
-            expect(result.current.getSpannedCells()).toEqual({});
-            expect(result.current.getHiddenCells()).toEqual({});
-            expect(result.current.getHiddenCellOriginMap()).toEqual({});
-            expect(result.current.rowSpanningState.processedRange).toEqual({ firstRowIndex: 0, lastRowIndex: 0 });
+            expect(result.current.rowSpanningCaches.spannedCells).toEqual({});
+            const first = result.current;
+            rerender({ p: params([...rows], columns) });
+            expect(result.current).toBe(first);
+        });
+    });
+
+    describe('column spanning', () => {
+        it('only stores span origins and covered cells', () => {
+            const cols: GridColDef<TestRow>[] = [{ field: 'a', colSpan: 2 }, { field: 'b' }, { field: 'c' }];
+            const { result } = renderHook(() => useGridSpanning(params(makeRows(1), cols)));
+            expect(result.current.colspanMap.get(1)).toEqual({
+                a: { spannedByColSpan: false, cellProps: { colSpan: 2 } },
+                b: { spannedByColSpan: true, leftVisibleCellIndex: 0, rightVisibleCellIndex: 1 },
+            });
+            expect(result.current.getSpanOrigin(1, 'b')).toEqual({ rowId: 1, field: 'a' });
+            expect(result.current.getSpanOrigin(1, 'a')).toBeNull();
+            expect(result.current.getSpanOrigin(1, 'c')).toBeNull();
         });
 
-        it('returns an empty colspan map when there are rows but no columns', () => {
+        it('evaluates a colSpan function per row with the valueGetter value, row index and rendered column index', () => {
+            const rows: TestRow[] = [{ id: 1, a: 'total', b: 'x' }, { id: 2, a: 'item', b: 'y' }];
+            const spanFn = vi.fn((p: GridRenderCellParams<TestRow>) => (p.value === 'TOTAL' ? 2 : 1));
+            const left: GridColDef<TestRow>[] = [{ field: 'k' }];
+            const cols: GridColDef<TestRow>[] = [{ field: 'a', valueGetter: ({ row }) => String(row.a).toUpperCase(), colSpan: spanFn }, { field: 'b' }];
+            const { result } = renderHook(() => useGridSpanning(params(rows, [...left, ...cols], { leftPinnedColumns: left, unpinnedColumns: cols })));
+            expect(colSpanOf(result.current, 1, 'a')).toBe(2);
+            expect(colSpanOf(result.current, 2, 'a')).toBeUndefined();
+            expect(spanFn.mock.calls[0][0]).toMatchObject({ field: 'a', value: 'TOTAL', rowIndex: 0, colIndex: 1 });
+            expect(spanFn.mock.calls[1][0]).toMatchObject({ value: 'ITEM', rowIndex: 1, colIndex: 1 });
+        });
+
+        it('does not evaluate the colSpan of a covered column', () => {
+            const covered = vi.fn(() => 2);
+            const cols: GridColDef<TestRow>[] = [{ field: 'a', colSpan: 2 }, { field: 'b', colSpan: covered }, { field: 'c' }];
+            const { result } = renderHook(() => useGridSpanning(params(makeRows(1), cols)));
+            expect(covered).not.toHaveBeenCalled();
+            expect(colSpanOf(result.current, 1, 'c')).toBeUndefined();
+        });
+
+        it('clamps a colSpan to the end of its pinned section', () => {
+            const left: GridColDef<TestRow>[] = [{ field: 'a', colSpan: 5 }, { field: 'b' }];
+            const center: GridColDef<TestRow>[] = [{ field: 'c', colSpan: 9 }, { field: 'd' }];
+            const { result } = renderHook(() =>
+                useGridSpanning(params(makeRows(1), [...left, ...center], { leftPinnedColumns: left, unpinnedColumns: center })),
+            );
+            expect(colSpanOf(result.current, 1, 'a')).toBe(2);
+            expect(colSpanOf(result.current, 1, 'b')).toBe('covered');
+            expect(colSpanOf(result.current, 1, 'c')).toBe(2);
+            expect(colSpanOf(result.current, 1, 'd')).toBe('covered');
+            // Unpinned ranges are reported in unpinned index space.
+            expect(result.current.getUnpinnedColSpanRanges(1)).toEqual([0, 1]);
+        });
+
+        it('normalises huge, infinite, NaN and fractional values without looping over them', () => {
+            const rows = makeRows(4);
+            const values = [Infinity, 5e9, Number.NaN, 1.9];
+            const cols: GridColDef<TestRow>[] = [{ field: 'a', colSpan: ({ rowIndex }) => values[rowIndex] }, { field: 'b' }, { field: 'c' }];
+            const t0 = performance.now();
+            const { result } = renderHook(() => useGridSpanning(params(rows, cols)));
+            expect(performance.now() - t0).toBeLessThan(200);
+            expect([1, 2, 3, 4].map(id => colSpanOf(result.current, id, 'a'))).toEqual([3, 3, undefined, undefined]);
+        });
+
+        it('does not recompute when only the column widths change', () => {
+            const spanFn = vi.fn(() => 2);
+            const cols: GridColDef<TestRow>[] = [{ field: 'a', colSpan: spanFn }, { field: 'b' }];
             const rows = makeRows(3);
-            const cols: GridColDef<TestRow>[] = [];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(result.current.colspanMap.size).toBe(0);
-            expect(result.current.rowSpanningState.processedRange).toEqual({ firstRowIndex: 0, lastRowIndex: 3 });
+            const { rerender } = renderHook(({ p }) => useGridSpanning(p), { initialProps: { p: params(rows, cols) } });
+            const calls = spanFn.mock.calls.length;
+            // The layout rebuilds its column arrays with new widths on every resize tick.
+            rerender({ p: params(rows, cols, { unpinnedColumns: cols.map(c => ({ ...c, width: 300 })) }) });
+            expect(spanFn.mock.calls.length).toBe(calls);
         });
     });
 
-    describe('column spanning (colSpan)', () => {
-        it('records a single-column entry for every cell when no colSpan is configured', () => {
-            const rows = makeRows(2);
-            const cols: GridColDef<TestRow>[] = [{ field: 'a', width: 120 }, { field: 'b', width: 80 }];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(result.current.colspanMap.size).toBe(2);
-            expect(result.current.getCellColSpanInfo(1, 'a')).toEqual({
-                spannedByColSpan: false,
-                cellProps: { colSpan: 1, width: 120 },
-            });
-            expect(result.current.getCellColSpanInfo(2, 'b')).toEqual({
-                spannedByColSpan: false,
-                cellProps: { colSpan: 1, width: 80 },
-            });
-        });
-
-        it('resolves width from columnWidths first, then numeric colDef.width, then 100', () => {
-            const rows = makeRows(1);
-            const cols: GridColDef<TestRow>[] = [
-                { field: 'a', width: 120 },
-                { field: 'b', width: 80 },
-                { field: 'c' },
-            ];
-            const widths: Record<string, number> = { a: 200 };
-            const { result } = renderHook(() => useGridSpanning(rows, cols, widths));
-
-            expect(originProps(result.current.getCellColSpanInfo(1, 'a'))?.width).toBe(200);
-            expect(originProps(result.current.getCellColSpanInfo(1, 'b'))?.width).toBe(80);
-            expect(originProps(result.current.getCellColSpanInfo(1, 'c'))?.width).toBe(100);
-        });
-
-        it('a static colSpan merges the following columns and sums their widths', () => {
-            const rows = makeRows(1);
-            const cols: GridColDef<TestRow>[] = [
-                { field: 'a', width: 100, colSpan: 2 },
-                { field: 'b', width: 70 },
-                { field: 'c', width: 90 },
-            ];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(result.current.getCellColSpanInfo(1, 'a')).toEqual({
-                spannedByColSpan: false,
-                cellProps: { colSpan: 2, width: 170 },
-            });
-            expect(result.current.getCellColSpanInfo(1, 'b')).toEqual({
-                spannedByColSpan: true,
-                leftVisibleCellIndex: 0,
-                rightVisibleCellIndex: 1,
-            });
-            // The column after the span is processed as a normal origin cell.
-            expect(result.current.getCellColSpanInfo(1, 'c')).toEqual({
-                spannedByColSpan: false,
-                cellProps: { colSpan: 1, width: 90 },
-            });
-        });
-
-        it('uses columnWidths overrides for covered columns when summing the span width', () => {
-            const rows = makeRows(1);
-            const cols: GridColDef<TestRow>[] = [
-                { field: 'a', width: 100, colSpan: 3 },
-                { field: 'b', width: 70 },
-                { field: 'c', width: 90 },
-            ];
-            const widths: Record<string, number> = { b: 30 };
-            const { result } = renderHook(() => useGridSpanning(rows, cols, widths));
-
-            expect(originProps(result.current.getCellColSpanInfo(1, 'a'))).toEqual({ colSpan: 3, width: 220 });
-            const covered = result.current.getCellColSpanInfo(1, 'c');
-            expect(covered?.spannedByColSpan).toBe(true);
-        });
-
-        it('a colSpan function is evaluated per row with row, field, raw value, rowIndex and colIndex', () => {
-            const rows: TestRow[] = [
-                { id: 1, a: 'total', b: 'x' },
-                { id: 2, a: 'item', b: 'y' },
-            ];
-            const spanFn = vi.fn((params: GridRenderCellParams<TestRow>) => (params.row.a === 'total' ? 2 : 1));
-            const cols: GridColDef<TestRow>[] = [
-                { field: 'a', width: 100, colSpan: spanFn },
-                { field: 'b', width: 50 },
-            ];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(originProps(result.current.getCellColSpanInfo(1, 'a'))).toEqual({ colSpan: 2, width: 150 });
-            expect(result.current.getCellColSpanInfo(1, 'b')?.spannedByColSpan).toBe(true);
-            expect(originProps(result.current.getCellColSpanInfo(2, 'a'))).toEqual({ colSpan: 1, width: 100 });
-            expect(originProps(result.current.getCellColSpanInfo(2, 'b'))).toEqual({ colSpan: 1, width: 50 });
-
-            const firstCall = spanFn.mock.calls.find(([p]) => p.row.id === 1)?.[0];
-            expect(firstCall).toMatchObject({ field: 'a', value: 'total', rowIndex: 0, colIndex: 0 });
-            const secondCall = spanFn.mock.calls.find(([p]) => p.row.id === 2)?.[0];
-            expect(secondCall).toMatchObject({ field: 'a', value: 'item', rowIndex: 1, colIndex: 0 });
-        });
-
-        it('treats colSpan values of 1, 0 and negative numbers as a single column', () => {
-            const rows = makeRows(1);
-            const cols: GridColDef<TestRow>[] = [
-                { field: 'a', width: 10, colSpan: 1 },
-                { field: 'b', width: 20, colSpan: 0 },
-                { field: 'c', width: 30, colSpan: -3 },
-            ];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(originProps(result.current.getCellColSpanInfo(1, 'a'))).toEqual({ colSpan: 1, width: 10 });
-            expect(originProps(result.current.getCellColSpanInfo(1, 'b'))).toEqual({ colSpan: 1, width: 20 });
-            expect(originProps(result.current.getCellColSpanInfo(1, 'c'))).toEqual({ colSpan: 1, width: 30 });
-        });
-
-        it('a colSpan past the last column only sums existing columns and clamps rightVisibleCellIndex', () => {
-            const rows = makeRows(1);
-            const cols: GridColDef<TestRow>[] = [
-                { field: 'a', width: 50 },
-                { field: 'b', width: 70, colSpan: 5 },
-                { field: 'c', width: 30 },
-            ];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(originProps(result.current.getCellColSpanInfo(1, 'b'))?.width).toBe(100);
-            expect(result.current.getCellColSpanInfo(1, 'c')).toEqual({
-                spannedByColSpan: true,
-                leftVisibleCellIndex: 1,
-                rightVisibleCellIndex: 2,
-            });
-            expect(originProps(result.current.getCellColSpanInfo(1, 'a'))).toEqual({ colSpan: 1, width: 50 });
-        });
-
-        it('does not evaluate the colSpan of a column that is covered by an earlier span', () => {
-            const rows = makeRows(1);
-            const coveredSpan = vi.fn(() => 2);
-            const cols: GridColDef<TestRow>[] = [
-                { field: 'a', width: 10, colSpan: 2 },
-                { field: 'b', width: 10, colSpan: coveredSpan },
-                { field: 'c', width: 10 },
-            ];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(coveredSpan).not.toHaveBeenCalled();
-            expect(result.current.getCellColSpanInfo(1, 'b')?.spannedByColSpan).toBe(true);
-            expect(originProps(result.current.getCellColSpanInfo(1, 'c'))).toEqual({ colSpan: 1, width: 10 });
-        });
-
-        it('keys entries by row id, including string ids', () => {
-            const rows: TestRow[] = [{ id: 'r-1', a: 'x' }, { id: 'r-2', a: 'y' }];
-            const cols: GridColDef<TestRow>[] = [{ field: 'a', width: 40 }];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(originProps(result.current.getCellColSpanInfo('r-1', 'a'))).toEqual({ colSpan: 1, width: 40 });
-            expect(result.current.getCellColSpanInfo('missing', 'a')).toBeUndefined();
-            expect(result.current.getCellColSpanInfo('r-1', 'missing')).toBeUndefined();
-        });
-
-        it('recomputes when columnWidths change', () => {
-            const rows = makeRows(1);
-            const cols: GridColDef<TestRow>[] = [{ field: 'a', width: 100, colSpan: 2 }, { field: 'b', width: 50 }];
-            const { result, rerender } = renderHook(
-                ({ widths }) => useGridSpanning(rows, cols, widths),
-                { initialProps: { widths: NO_WIDTHS } },
-            );
-            expect(originProps(result.current.getCellColSpanInfo(1, 'a'))?.width).toBe(150);
-
-            rerender({ widths: { b: 80 } });
-            expect(originProps(result.current.getCellColSpanInfo(1, 'a'))?.width).toBe(180);
-        });
-
-        it('drops entries for rows that are no longer present', () => {
-            const cols: GridColDef<TestRow>[] = [{ field: 'a', width: 10 }];
-            const { result, rerender } = renderHook(
-                ({ rows }) => useGridSpanning(rows, cols, NO_WIDTHS),
-                { initialProps: { rows: makeRows(3) } },
-            );
-            expect(result.current.colspanMap.size).toBe(3);
-
-            rerender({ rows: makeRows(1) });
-            expect(result.current.colspanMap.size).toBe(1);
-            expect(result.current.getCellColSpanInfo(3, 'a')).toBeUndefined();
-        });
-
-        it('resetColSpan clears the colspan map', () => {
-            const rows = makeRows(2);
-            const cols: GridColDef<TestRow>[] = [{ field: 'a', width: 10 }];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-            expect(result.current.colspanMap.size).toBe(2);
-
-            act(() => { result.current.resetColSpan(); });
-            expect(result.current.colspanMap.size).toBe(0);
-            expect(result.current.getCellColSpanInfo(1, 'a')).toBeUndefined();
-        });
-
-        it('calculateColSpan computes a column range for one row and keeps other rows', () => {
-            const rows = makeRows(2);
-            const cols: GridColDef<TestRow>[] = [
-                { field: 'a', width: 10 },
-                { field: 'b', width: 20, colSpan: 2 },
-                { field: 'c', width: 30 },
-            ];
-            // calculateColSpan reads widths from columnWidths only (falls back to 100).
-            const widths: Record<string, number> = { a: 10, b: 20, c: 30 };
-            const { result } = renderHook(() => useGridSpanning(rows, cols, widths));
-            act(() => { result.current.resetColSpan(); });
-
-            act(() => { result.current.calculateColSpan(1, rows[0], 0, 1, 3); });
-
-            expect(result.current.getCellColSpanInfo(1, 'a')).toBeUndefined();
-            expect(originProps(result.current.getCellColSpanInfo(1, 'b'))).toEqual({ colSpan: 2, width: 50 });
-            expect(result.current.getCellColSpanInfo(1, 'c')?.spannedByColSpan).toBe(true);
-            expect(result.current.getCellColSpanInfo(2, 'b')).toBeUndefined();
-        });
-    });
-
-    describe('row spanning (rowSpan)', () => {
-        it('a static rowSpan hides the following rows and records the origin index', () => {
-            const rows = makeRows(5);
+    describe('row spanning', () => {
+        it('a static rowSpan hides the following rows and records the origin', () => {
             const cols: GridColDef<TestRow>[] = [{ field: 'a', rowSpan: 2 }, { field: 'b' }];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            // rows 1,3,5 are origins; 2,4 are hidden
-            expect(result.current.getSpannedCells()).toEqual({ 1: { a: 2 }, 3: { a: 2 }, 5: { a: 2 } });
-            expect(result.current.getHiddenCells()).toEqual({ 2: { a: true }, 4: { a: true } });
-            expect(result.current.getHiddenCellOriginMap()).toEqual({ 1: { a: 0 }, 3: { a: 2 } });
-            expect(result.current.rowSpanningState.processedRange).toEqual({ firstRowIndex: 0, lastRowIndex: 5 });
+            const { result } = renderHook(() => useGridSpanning(params(makeRows(5), cols)));
+            const { spannedCells, hiddenCells, hiddenCellOriginMap } = result.current.rowSpanningCaches;
+            // Rows 1 and 3 are origins; row 5 is the last row, so its span is clamped to 1.
+            expect(spannedCells).toEqual({ 1: { a: 2 }, 3: { a: 2 } });
+            expect(hiddenCells).toEqual({ 2: { a: true }, 4: { a: true } });
+            expect(hiddenCellOriginMap).toEqual({ 2: { a: 1 }, 4: { a: 3 } });
+            expect(result.current.getSpanOrigin(4, 'a')).toEqual({ rowId: 3, field: 'a' });
+            expect(result.current.getCenterRowSpanStart(3)).toBe(2);
+            expect(result.current.getCenterRowSpanStart(2)).toBe(2);
         });
 
-        it('a rowSpan function receives the valueGetter value and the row index', () => {
-            const rows: TestRow[] = [
-                { id: 1, k: 'x' },
-                { id: 2, k: 'x' },
-                { id: 3, k: 'y' },
-            ];
-            const spanFn = vi.fn((params: GridRenderCellParams<TestRow>) => (params.value === 'X!' ? 2 : 1));
-            const cols: GridColDef<TestRow>[] = [
-                {
-                    field: 'k',
-                    valueGetter: ({ row }) => `${String(row.k).toUpperCase()}!`,
-                    rowSpan: spanFn,
-                },
-            ];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(result.current.getSpannedCells()).toEqual({ 1: { k: 2 } });
-            expect(result.current.getHiddenCells()).toEqual({ 2: { k: true } });
-
-            const first = spanFn.mock.calls[0]?.[0];
-            expect(first).toMatchObject({ field: 'k', value: 'X!', rowIndex: 0, colIndex: 0 });
-            // Row 2 is covered, so its rowSpan function is not evaluated.
+        it('passes the valueGetter value and skips rows that are covered', () => {
+            const rows: TestRow[] = [{ id: 1, k: 'x' }, { id: 2, k: 'x' }, { id: 3, k: 'y' }];
+            const spanFn = vi.fn((p: GridRenderCellParams<TestRow>) => (p.value === 'X!' ? 2 : 1));
+            const cols: GridColDef<TestRow>[] = [{ field: 'k', valueGetter: ({ row }) => `${String(row.k).toUpperCase()}!`, rowSpan: spanFn }];
+            const { result } = renderHook(() => useGridSpanning(params(rows, cols)));
+            expect(result.current.rowSpanningCaches.spannedCells).toEqual({ 1: { k: 2 } });
             expect(spanFn.mock.calls.map(([p]) => p.row.id)).toEqual([1, 3]);
-            expect(spanFn.mock.calls[1]?.[0]).toMatchObject({ value: 'Y!', rowIndex: 2 });
         });
 
-        it('computes independent spans per column', () => {
-            const rows = makeRows(3);
-            const cols: GridColDef<TestRow>[] = [
-                { field: 'a', rowSpan: 3 },
-                { field: 'b' },
-                { field: 'c', rowSpan: ({ rowIndex }) => (rowIndex === 1 ? 2 : 1) },
-            ];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(result.current.getSpannedCells()).toEqual({ 1: { a: 3 }, 2: { c: 2 } });
-            expect(result.current.getHiddenCells()).toEqual({ 2: { a: true }, 3: { a: true, c: true } });
-            expect(result.current.getHiddenCellOriginMap()).toEqual({ 1: { a: 0 }, 2: { a: 0, c: 1 } });
+        it('clamps a rowSpan to the rows left in its section', () => {
+            const cols: GridColDef<TestRow>[] = [{ field: 'a', rowSpan: ({ rowIndex }) => (rowIndex === 1 ? 1e9 : 1) }];
+            const t0 = performance.now();
+            const { result } = renderHook(() => useGridSpanning(params(makeRows(3), cols)));
+            expect(performance.now() - t0).toBeLessThan(200);
+            expect(result.current.rowSpanningCaches.spannedCells).toEqual({ 2: { a: 2 } });
         });
 
-        it('a rowSpan of 1, 0 or a negative number does not span', () => {
-            const rows = makeRows(3);
-            const cols: GridColDef<TestRow>[] = [
-                { field: 'a', rowSpan: 1 },
-                { field: 'b', rowSpan: () => 0 },
-                { field: 'c', rowSpan: () => -2 },
-            ];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(result.current.getSpannedCells()).toEqual({});
-            expect(result.current.getHiddenCells()).toEqual({});
+        it('computes each row section on its own, with rowIndex counted across sections', () => {
+            const [top, c1, c2, bottom] = makeRows(4);
+            const spanFn = vi.fn<(p: GridRenderCellParams<TestRow>) => number>(() => 2);
+            const cols: GridColDef<TestRow>[] = [{ field: 'a', rowSpan: spanFn }];
+            const { result } = renderHook(() => useGridSpanning(params([c1, c2], cols, { pinnedTopRows: [top], pinnedBottomRows: [bottom] })));
+            expect(result.current.rowSpanningCaches.spannedCells).toEqual({ 2: { a: 2 } });
+            expect(result.current.rowSpanningCaches.hiddenCells).toEqual({ 3: { a: true } });
+            expect(spanFn.mock.calls.map(([p]) => [p.row.id, p.rowIndex])).toEqual([[1, 0], [2, 1], [4, 3]]);
         });
 
-        it('a rowSpan past the last row only hides rows that exist', () => {
-            const rows = makeRows(2);
-            const cols: GridColDef<TestRow>[] = [{ field: 'a', rowSpan: ({ rowIndex }) => (rowIndex === 1 ? 4 : 1) }];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(result.current.getHiddenCells()).toEqual({});
-            expect(result.current.getHiddenCellOriginMap()).toEqual({});
+        it('ends a span at a row whose detail panel is expanded', () => {
+            const cols: GridColDef<TestRow>[] = [{ field: 'a', rowSpan: ({ rowIndex }) => (rowIndex === 0 ? 4 : 1) }];
+            const { result } = renderHook(() => useGridSpanning(params(makeRows(5), cols, { expandedRowIds: new Set([2]) })));
+            expect(result.current.rowSpanningCaches.spannedCells).toEqual({ 1: { a: 2 } });
+            expect(result.current.rowSpanningCaches.hiddenCells).toEqual({ 2: { a: true } });
         });
 
-        it('recomputes spans against the new row order after sorting', () => {
+        it('recomputes against the new row order', () => {
             const cols: GridColDef<TestRow>[] = [{ field: 'a', rowSpan: ({ rowIndex }) => (rowIndex === 0 ? 2 : 1) }];
             const rows = makeRows(3);
-            const { result, rerender } = renderHook(
-                ({ r }) => useGridSpanning(r, cols, NO_WIDTHS),
-                { initialProps: { r: rows } },
-            );
-            expect(result.current.getHiddenCells()).toEqual({ 2: { a: true } });
-
+            const { result, rerender } = renderHook(({ r }) => useGridSpanning(params(r, cols)), { initialProps: { r: rows } });
+            expect(result.current.rowSpanningCaches.hiddenCells).toEqual({ 2: { a: true } });
             rerender({ r: [...rows].reverse() });
-            expect(result.current.getSpannedCells()).toEqual({ 3: { a: 2 } });
-            expect(result.current.getHiddenCells()).toEqual({ 2: { a: true } });
-            expect(result.current.getHiddenCellOriginMap()).toEqual({ 1: { a: 0 } });
+            expect(result.current.rowSpanningCaches.spannedCells).toEqual({ 3: { a: 2 } });
+            expect(result.current.rowSpanningCaches.hiddenCells).toEqual({ 2: { a: true } });
         });
 
-        it('clears spans when rows are filtered down to nothing', () => {
-            const cols: GridColDef<TestRow>[] = [{ field: 'a', rowSpan: 2 }];
-            const { result, rerender } = renderHook(
-                ({ r }) => useGridSpanning(r, cols, NO_WIDTHS),
-                { initialProps: { r: makeRows(4) } },
-            );
-            expect(Object.keys(result.current.getSpannedCells())).toHaveLength(2);
-
-            rerender({ r: [] });
-            expect(result.current.getSpannedCells()).toEqual({});
-            expect(result.current.getHiddenCells()).toEqual({});
-            expect(result.current.rowSpanningState.processedRange).toEqual({ firstRowIndex: 0, lastRowIndex: 0 });
-        });
-
-        it('resetRowSpan clears the row spanning caches', () => {
-            const rows = makeRows(2);
-            const cols: GridColDef<TestRow>[] = [{ field: 'a', rowSpan: 2 }];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-            expect(result.current.getSpannedCells()).toEqual({ 1: { a: 2 } });
-
-            act(() => { result.current.resetRowSpan(); });
-            expect(result.current.getSpannedCells()).toEqual({});
-            expect(result.current.getHiddenCells()).toEqual({});
-            expect(result.current.getHiddenCellOriginMap()).toEqual({});
-            expect(result.current.rowSpanningState.processedRange).toEqual({ firstRowIndex: 0, lastRowIndex: 0 });
-        });
-
-        it('calculateRowSpan only processes the requested range and does not hide rows past its end', () => {
-            const rows = makeRows(6);
-            const cols: GridColDef<TestRow>[] = [{ field: 'a', rowSpan: 2 }];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            act(() => { result.current.calculateRowSpan(2, 5); });
-
-            expect(result.current.getSpannedCells()).toEqual({ 3: { a: 2 }, 5: { a: 2 } });
-            // Row 6 (index 5) is outside the processed range, so it is not hidden.
-            expect(result.current.getHiddenCells()).toEqual({ 4: { a: true } });
-            expect(result.current.getHiddenCellOriginMap()).toEqual({ 3: { a: 2 } });
-            expect(result.current.rowSpanningState.processedRange).toEqual({ firstRowIndex: 2, lastRowIndex: 5 });
-        });
-
-        it('rowSpan and colSpan caches are independent', () => {
-            const rows = makeRows(2);
-            const cols: GridColDef<TestRow>[] = [
-                { field: 'a', width: 10, rowSpan: 2, colSpan: 2 },
-                { field: 'b', width: 20 },
-            ];
-            const { result } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-
-            expect(originProps(result.current.getCellColSpanInfo(1, 'a'))).toEqual({ colSpan: 2, width: 30 });
-            expect(result.current.getCellColSpanInfo(1, 'b')?.spannedByColSpan).toBe(true);
-            expect(result.current.getSpannedCells()).toEqual({ 1: { a: 2 } });
-            expect(result.current.getHiddenCells()).toEqual({ 2: { a: true } });
+        it('skips infinite-scroll skeleton rows', () => {
+            const spanFn = vi.fn<(p: GridRenderCellParams<TestRow>) => number>(() => 1);
+            const rows = [...makeRows(2), { id: '__skeleton_0__', _isSkeleton: true }] as TestRow[];
+            renderHook(() => useGridSpanning(params(rows, [{ field: 'a', colSpan: spanFn, rowSpan: spanFn }])));
+            expect(spanFn.mock.calls.every(([p]) => !p.row._isSkeleton)).toBe(true);
         });
     });
 
-    describe('getter identity', () => {
-        it('getters are stable across re-renders with the same inputs', () => {
-            const rows = makeRows(2);
-            const cols: GridColDef<TestRow>[] = [{ field: 'a', rowSpan: 2 }];
-            const { result, rerender } = renderHook(() => useGridSpanning(rows, cols, NO_WIDTHS));
-            const first = result.current;
-
-            rerender();
-            expect(result.current.getSpannedCells).toBe(first.getSpannedCells);
-            expect(result.current.getHiddenCells).toBe(first.getHiddenCells);
-            expect(result.current.getCellColSpanInfo).toBe(first.getCellColSpanInfo);
-            expect(result.current.resetColSpan).toBe(first.resetColSpan);
-            expect(result.current.resetRowSpan).toBe(first.resetRowSpan);
+    describe('combined spans', () => {
+        it('an origin with colSpan and rowSpan covers the whole rectangle', () => {
+            const cols: GridColDef<TestRow>[] = [
+                { field: 'a', colSpan: ({ rowIndex }) => (rowIndex === 0 ? 2 : 1), rowSpan: ({ rowIndex }) => (rowIndex === 0 ? 2 : 1) },
+                { field: 'b' },
+                { field: 'c' },
+            ];
+            const { result } = renderHook(() => useGridSpanning(params(makeRows(3), cols)));
+            expect(result.current.rowSpanningCaches.hiddenCells).toEqual({ 2: { a: true, b: true } });
+            expect(result.current.getSpanOrigin(2, 'b')).toEqual({ rowId: 1, field: 'a' });
         });
+
+        it('a cell hidden by a row span is not evaluated as a colSpan origin', () => {
+            const spanFn = vi.fn<(p: GridRenderCellParams<TestRow>) => number>(() => 2);
+            const cols: GridColDef<TestRow>[] = [{ field: 'a', colSpan: spanFn, rowSpan: ({ rowIndex }) => (rowIndex === 0 ? 2 : 1) }, { field: 'b' }, { field: 'c' }];
+            const { result } = renderHook(() => useGridSpanning(params(makeRows(3), cols)));
+            expect(spanFn.mock.calls.map(([p]) => p.row.id)).toEqual([1, 3]);
+            expect(result.current.colspanMap.get(2)).toBeUndefined();
+            expect(result.current.rowSpanningCaches.hiddenCells).toEqual({ 2: { a: true, b: true } });
+        });
+
+        it('a colSpan-covered cell is not a rowSpan origin, and a colSpan stops at a cell covered from above', () => {
+            const cols: GridColDef<TestRow>[] = [
+                { field: 'a', colSpan: ({ rowIndex }) => (rowIndex === 1 ? 3 : rowIndex === 2 ? 2 : 1) },
+                { field: 'b', rowSpan: ({ rowIndex }) => (rowIndex <= 2 ? 2 : 1) },
+                { field: 'c' },
+            ];
+            const { result } = renderHook(() => useGridSpanning(params(makeRows(4), cols)));
+            // Row 1: b spans rows 1-2. Row 2: a's colSpan 3 stops at the hidden b.
+            expect(colSpanOf(result.current, 2, 'a')).toBeUndefined();
+            expect(result.current.rowSpanningCaches.hiddenCells[2]).toEqual({ b: true });
+            // Row 3: a covers b, so b is not evaluated as a rowSpan origin there.
+            expect(colSpanOf(result.current, 3, 'b')).toBe('covered');
+            expect(result.current.rowSpanningCaches.spannedCells[3]).toBeUndefined();
+        });
+    });
+
+    it('treats a throwing callback as span 1 and warns once per column', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const cols: GridColDef<TestRow>[] = [{ field: 'a', colSpan: () => { throw new Error('boom'); } }, { field: 'b' }];
+        const { result } = renderHook(() => useGridSpanning(params(makeRows(3), cols)));
+        expect(result.current.colspanMap.size).toBe(0);
+        expect(warn).toHaveBeenCalledTimes(1);
     });
 });

@@ -14,7 +14,7 @@ The main component for displaying and interacting with data.
 | :--- | :--- | :--- | :--- |
 | `rows` | `GridRowModel[]` | `[]` | Array of data objects. |
 | `columns` | `GridColDef[]` | `[]` | Definitions for the columns. |
-| `getRowId` | `(row: GridRowModel) => GridRowId` | `row.id` | Returns a unique identifier for each row. |
+| `getRowId` | `(row: GridRowModel) => GridRowId` | `row.id` | Returns a unique identifier for each row. It only keys the grid's internal store: rows reach `renderCell`, events, `apiRef` and `processRowUpdate` unchanged, and the id is never written to `row.id` (v3.0+). Pass it to export functions as `getRowId` when you export `selectedRows`. |
 | `rowHeight` | `number` | `52` | Height of each row in pixels. |
 | `headerHeight` | `number` | `56` | Height of the header row. |
 | `autoHeight` | `boolean` | `false` | Adjust grid height to match row total. |
@@ -25,28 +25,28 @@ The main component for displaying and interacting with data.
 | `paginationMode` | `'client' \| 'server' \| 'infinite'` | `'client'` | How to handle paging. |
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). |
 | `onPaginationModelChange` | `(model: GridPaginationModel) => void` | — | Fired when page or page size changes. |
-| `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. |
-| `rowCount` | `number` | — | Total rows (required for server-side paging). |
+| `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. The uncontrolled default page size is 100 when offered, else the first option. |
+| `rowCount` | `number` | — | Server total for `paginationMode="server"` when you fetch pages yourself (read on every render). With a `dataSource`, the response's `rowCount` is used and this is only the fallback before the first response. |
 | `height` | `number \| string` | `undefined` | Total height of the grid container. |
 | `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density. |
-| `initialState` | `GridInitialState` | `undefined` | Starting state for sorting, filters, etc. |
+| `initialState` | `GridInitialState` | `undefined` | Starting state (sort, filter, pagination, columns, density), read on mount. Seeds the grid's uncontrolled state; see [State Persistence](features/state-persistence.md). |
 | `slots` | `GridSlots` | `{}` | Custom component overrides: `toolbar`, `pagination`, `noRowsOverlay`, `loadingOverlay`, `footer`. See [Slots API](customization/slots-api.md). |
 | `slotProps` | `Record<string, unknown>` | `{}` | Props passed to custom slots. |
-| `filterModel` | `GridFilterModel` | `undefined` | Active filters. |
+| `filterModel` | `GridFilterModel` | `undefined` | Active filters (controlled). Omit it to let the grid keep its own filter state, seeded from `initialState.filter` and changed by the toolbar or `apiRef.setFilterModel` (v3.0+). |
 | `sortModel` | `GridSortItem[]` | `undefined` | Active sorting. |
 | `onRowClick` | `(params: GridRowParams) => void` | — | Fired when a row is clicked. |
-| `onRowDoubleClick` | `(params: GridRowParams) => void` | — | Fired when a row is double-clicked (v2.1+). Also fires for group rows; not fired on the checkbox, expand icon, drag handle or an open editor. |
-| `onCellClick` | `(params: GridCellParams) => void` | — | Fired when a cell is clicked. |
-| `onStateChange` | `(state: GridState) => void` | — | Fired on any internal state update. |
-| `processRowUpdate` | `(new, old) => R \| Promise<R>` | — | Fired after a cell edit is committed. |
+| `onRowDoubleClick` | `(params: GridRowParams) => void` | — | Fired when a row is double-clicked (v2.1+). Also fires for group rows, and (v3.0+) for the double-click that opens an editor on an editable cell; not fired on the checkbox, expand icon, drag handle or inside an open editor. |
+| `onCellClick` | `(params: GridCellParams) => void` | — | Fired when a cell is clicked. Not fired for clicks inside an open editor (v3.0+). |
+| `onStateChange` | `(state: GridState) => void` | — | Fired on mount and whenever the value of the sort, filter, pagination, column or density state changes (not on re-renders with equal props). |
+| `processRowUpdate` | `(new, old) => R \| Promise<R>` | — | Called once per committed cell edit (Enter, Tab, blur, or the editor's cell leaving the grid). Return the row to store, or a Promise of it; the editor stays open until the Promise settles. Returning nothing is reported through `onProcessRowUpdateError`. See [Editing](features/editing-reordering.md#commit-and-cancel). |
 | `dataSource` | `GridDataSource` | — | Remote data provider interface. |
 
 #### Sorting, Filtering & Pagination
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `sortingMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles sorting. The grid calls `onSortModelChange` but does not re-sort rows locally. |
-| `filterMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles filtering. The grid calls `onFilterModelChange` but does not re-filter rows locally. |
+| `sortingMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles sorting. The grid calls `onSortModelChange` but does not re-sort rows locally, with or without a `dataSource` (v3.0+). |
+| `filterMode` | `'client' \| 'server'` | `'client'` | Set to `'server'` when your backend handles filtering. The grid calls `onFilterModelChange` but does not re-filter rows locally, with or without a `dataSource` (v3.0+). |
 | `multiSort` | `boolean` | `false` | When `true`, clicking any sortable column header appends/cycles it in the sort model instead of replacing it — no Shift key required. Shift+click always appends regardless of this prop. |
 | `onSortModelChange` | `(model: GridSortItem[]) => void` | — | Fired when the active sort model changes. |
 | `onFilterModelChange` | `(model: GridFilterModel) => void` | — | Fired when the active filter model changes. |
@@ -58,7 +58,7 @@ The main component for displaying and interacting with data.
 | `rowSelectionModel` | `GridRowSelectionModel` | `[]` | Controlled selection state — array of selected row IDs. |
 | `onRowSelectionModelChange` | `(model: GridRowSelectionModel) => void` | — | Fired when the selection changes. |
 | `disableRowSelectionOnClick` | `boolean` | `false` | When `true`, clicking a row does not toggle its selection. |
-| `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time. |
+| `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time — by click, checkbox, Space or `apiRef` — and the header select-all checkbox is not shown. |
 
 #### Column Visibility
 
@@ -91,8 +91,8 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `isCellEditable` | `(params: GridCellParams) => boolean` | — | Per-cell predicate. Return `false` to make a specific cell read-only even when the column has `editable: true`. |
-| `onProcessRowUpdateError` | `(error: unknown) => void` | — | Fired if `processRowUpdate` throws or returns a rejected Promise. Use to display validation errors or restore the previous row value. |
+| `isCellEditable` | `(params: GridCellParams) => boolean` | — | Per-cell predicate. Return `false` to make a specific cell read-only even when the column has `editable: true`. Applies to double-click, Enter, Tab stops and `aria-readonly` (v3.0+). It can only restrict: a column without `editable: true` is never editable. A predicate that throws counts as `false`. |
+| `onProcessRowUpdateError` | `(error: unknown) => void` | — | Fired if `processRowUpdate` (or `valueSetter`) throws, returns a rejected Promise, or returns something that is not a row. The editor stays open with the pending value. Use to display validation errors. |
 
 #### Master-Detail
 
@@ -125,7 +125,7 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `pivotMode` | `boolean` | `false` | Switches the grid to multidimensional Pivot Mode. |
+| `pivotMode` | `boolean` | `false` | Switches the grid to multidimensional Pivot Mode (client-side: ignored when a `dataSource` is set; tree data and row grouping are turned off while pivoting). See [Aggregation & Pivot](features/aggregation-pivot.md#-pivot-mode). |
 | `pivotModel` | `GridPivotModel` | — | Controlled pivot configuration (row fields, column fields, value fields). |
 | `onPivotModelChange` | `(model: GridPivotModel) => void` | — | Fired when the pivot model changes. |
 
@@ -182,11 +182,11 @@ The built-in toolbar component. Mount it via `slots={{ toolbar: GridToolbar }}`.
 | `columns` | `GridColDef[]` | `[]` | Column definitions — injected automatically when used via `slots`. |
 | `baseColumns` | `GridColDef[]` | — | Pre-pivot columns shown in the Pivot panel instead of synthetic pivot columns. |
 | `aggregationModel` | `GridAggregationModel` | `{}` | Current aggregation configuration. |
-| `onAggregationModelChange` | `(model: GridAggregationModel) => void` | — | Called when the user changes aggregation settings. Presence of this prop renders the Summaries button (not passed by `DataGrid` in pivot mode). |
+| `onAggregationModelChange` | `(model: GridAggregationModel) => void` | — | Called when the user changes aggregation settings. Presence of this prop renders the Summaries button. |
 | `pivotModel` | `GridPivotModel` | — | Current pivot configuration. Presence of this prop renders the Pivot button. |
 | `onPivotModelChange` | `(model: GridPivotModel) => void` | — | Called when the user changes pivot settings. |
-| `filterModel` | `GridFilterModel` | — | Current filter model. Presence of this prop renders the search bar and Filter button. |
-| `onFilterModelChange` | `(model: GridFilterModel) => void` | — | Called when the user changes filters or the quick-search value. |
+| `filterModel` | `GridFilterModel` | — | Current filter model. |
+| `onFilterModelChange` | `(model: GridFilterModel) => void` | — | Called when the user changes filters or the quick-search value. Its presence renders the search bar and Filter button; the grid always injects it when the toolbar is mounted via `slots` (v3.0+). |
 | `columnVisibilityModel` | `Record<string, boolean>` | `{}` | Current column visibility map. |
 | `onColumnVisibilityModelChange` | `(model: Record<string, boolean>) => void` | — | Called when the user shows or hides a column. Presence renders the Columns button. |
 | `onColumnReorder` | `(from: string, to: string) => void` | — | Called when the user drags a column in the Columns panel. |
@@ -230,26 +230,26 @@ Access these methods via the `apiRef` prop.
 
 | Method | Return | Description |
 | :--- | :--- | :--- |
-| `getRow(id)` | `GridRowModel \| null` | Get row data by ID. |
+| `getRow(id)` | `GridRowModel \| null` | Get row data by ID (your row object, unchanged). |
 | `getAllRows()` | `GridRowModel[]` | Get all loaded rows. |
-| `getVisibleRows()` | `GridRowModel[]` | Get rows after filtering/sorting. |
+| `getVisibleRows()` | `GridRowModel[]` | Get the rows on screen after filtering/sorting: pinned-top rows, the current page (or all rows without pagination), pinned-bottom rows. Under row grouping and tree data this is the visible hierarchy, group rows included. |
 | `getColumn(field)` | `GridColDef \| null` | Get column definition by field. |
-| `getVisibleColumns()` | `GridColDef[]` | Get currently visible columns. |
-| `selectRow(id, isSelected)` | `void` | Set selection for a single row. |
-| `selectRows(ids, isSelected)`| `void` | Set selection for multiple rows. |
+| `getVisibleColumns()` | `GridColDef[]` | Get the columns on screen, in display order (hidden columns excluded). |
+| `selectRow(id, isSelected = true)` | `void` | Set selection for a single row. Fires `onRowSelectionModelChange`. |
+| `selectRows(ids, isSelected = true)`| `void` | Set selection for multiple rows. With `disableMultipleRowSelection`, selecting keeps only the last id. |
 | `getSelectedRows()` | `GridRowId[]` | Get IDs of all selected rows. |
-| `sortColumn(field, dir)` | `void` | Programmatically sort a column. |
-| `getSortModel()` | `GridSortItem[]` | Get active sorting state. |
-| `setFilterModel(model)` | `void` | Programmatically set filters. |
-| `getFilterModel()` | `GridFilterModel` | Get the current filter model. |
-| `setPage(page)` | `void` | Change current page (0-indexed). |
-| `setPageSize(pageSize)` | `void` | Change the current page size. |
+| `sortColumn(field, dir)` | `void` | Sort like a header click: replaces the sort model (or, with `multiSort`, updates/appends that field); `null` removes the field. Fires `onSortModelChange`. |
+| `getSortModel()` | `GridSortItem[]` | Get the sort model the grid is using (controlled or not). |
+| `setFilterModel(model)` | `void` | Set filters. Fires `onFilterModelChange`; with a controlled `filterModel`, update the prop from it. |
+| `getFilterModel()` | `GridFilterModel` | Get the filter model the grid is using (controlled or not). |
+| `setPage(page)` | `void` | Change current page (0-indexed). Fires `onPaginationModelChange`. |
+| `setPageSize(pageSize)` | `void` | Change the page size and go to page 0. Fires `onPaginationModelChange`. |
 | `scrollToIndexes(params)` | `void` | Scroll to specific row/column index. |
 | `getAllColumns()` | `GridColDef[]` | Get all defined columns. |
-| `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results. |
+| `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results (`null` without an `aggregationModel`, and in pivot mode). |
 | `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
-| `getAllFilteredRows()` | `GridRowModel[]` | Get all filtered+sorted rows regardless of the current pagination window. Use for full-dataset exports. |
-| `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total). Group-header and subtotal entries carry `groupLabel`, the label the grid shows (v3.0+). Returns `null` when row grouping is not active. |
+| `getAllFilteredRows()` | `GridRowModel[]` | Get every row that passes the filter, sorted, regardless of pagination, including pinned rows. Under row grouping and tree data it returns the data rows (no group rows) in hierarchy order with every group expanded. Use for full-dataset exports. |
+| `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total), sorted and filtered like the screen. Collapsed groups are included with their rows, and subtotals are computed over each group's exported rows. Group-header and subtotal entries carry `groupLabel`, the label the grid shows (v3.0+). Returns `null` when row grouping is not active. |
 | `copySelectedRows()` | `Promise<void>` | Copy selected rows to clipboard as TSV. |
 
 ---
@@ -296,7 +296,8 @@ Defines the behavior and appearance of a single column.
 | :--- | :--- | :--- | :--- |
 | `type` | `'string' \| 'number' \| 'date' \| 'boolean' \| 'singleSelect' \| 'image'` | `'string'` | Data type — determines default filter operators and cell formatting. |
 | `valueOptions` | `Array<string \| number \| { value: unknown; label: string }>` | — | Allowed values for `type: 'singleSelect'` — the filter panel offers them as a (multi-)select, and the edit cell uses them. |
-| `valueGetter` | `(params: GridValueGetterParams) => unknown` | — | Derive a computed value from the row object. Runs before `valueFormatter` and `renderCell`. Client-side sorting, column filters and the quick filter use this value. |
+| `valueGetter` | `(params: GridValueGetterParams) => unknown` | — | Derive a computed value from the row object. Runs before `valueFormatter` and `renderCell`. Client-side sorting, column filters and the quick filter use this value, and editors start from it (double-click and Enter alike). |
+| `valueSetter` | `(params: GridValueSetterParams) => R` | — | v3.0+. Maps an edited value back onto the row (`{ value, row, field }` → updated row) when an edit is committed. Needed for editable `valueGetter` columns; without it the commit writes `row[field]` and a development warning is logged. |
 | `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format the value into a display string (e.g. currency, dates). Does not affect editing, sorting or column filters; the quick filter also searches the formatted text. |
 
 #### Rendering
@@ -305,20 +306,22 @@ Defines the behavior and appearance of a single column.
 | :--- | :--- | :--- |
 | `renderCell` | `(params: GridRenderCellParams) => ReactNode` | Fully custom cell renderer. Receives `value`, `formattedValue` (v2.1+, the `valueFormatter` output), `row`, `field`, `colDef`, `rowIndex`, `colIndex`, `rowMeta`. |
 | `renderHeader` | `(params: GridRenderHeaderParams) => ReactNode` | Custom header cell renderer. Use for icons, sort indicators, or rich headers. |
-| `renderEditCell` | `(params: GridRenderCellParams) => ReactNode` | Custom editor rendered when the cell enters edit mode. Requires `editable: true`. |
+| `renderEditCell` | `(params: GridRenderEditCellParams) => ReactNode` | Custom editor rendered when the cell enters edit mode. Requires `editable: true`. Receives the `renderCell` params (with `value` = the pending value) plus `onValueChange(value)`, `onCommit()` and `onCancel()` (v3.0+). Errors it throws are contained to the cell. |
 
 #### Editing
 
 | Property | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `editable` | `boolean` | `false` | Enables inline cell editing. Commit is handled by `DataGrid.processRowUpdate`. |
+| `editable` | `boolean` | `false` | Enables inline cell editing (double-click or Enter). Commit is handled by `DataGrid.processRowUpdate`. Row-grouping group rows and auto-generated tree ancestors are never editable; tree-data parent rows are. |
 
 #### Spanning
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `colSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of columns this cell merges horizontally. |
-| `rowSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of rows this cell merges vertically. |
+| `colSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of columns this cell merges horizontally: the origin plus the next visible columns in render order, clamped to the end of its pinned section. `params.value` is the `valueGetter` result. |
+| `rowSpan` | `number \| ((params: GridRenderCellParams) => number)` | Number of rows this cell merges vertically, clamped to the end of its row section (top-pinned, scrolling or bottom-pinned rows) and to the first row with an expanded detail panel. |
+
+Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative values mean no span. A span function that throws is treated as `1` (with a development warning). With both set, the origin covers the whole `colSpan × rowSpan` rectangle. See [Cell Spanning](features/cell-spanning.md).
 
 #### Styling
 
@@ -338,10 +341,10 @@ Defines the behavior and appearance of a single column.
 | `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. `false` removes the pin actions from its column menu. |
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header kebab/context menu. |
 | `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, PDF and Print exports (including their subtotals and totals). |
-| `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`. |
+| `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`, or used as a pivot row or column field (the pivot panel does not offer it). |
 | `groupingValueFormatter` | `(params: { field: string; value: unknown }) => string` | — | Custom formatter for group-header labels when this column is the active grouping field. Falls back to `"field: value"` when omitted. |
-| `aggregable` | `boolean` | `true` | Allow this column to be aggregated. |
-| `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are computed and available for this column (e.g. `['sum', 'avg']`). The toolbar's Summaries panel offers only these (plus `none`). Functions outside this list are skipped even if set in `aggregationModel`. |
+| `aggregable` | `boolean` | `true` | Allow this column to be aggregated. `false` keeps it out of the toolbar's Summaries panel and out of the pivot panel's value fields. |
+| `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are computed and available for this column (e.g. `['sum', 'avg']`). Functions outside this list are skipped even if set in `aggregationModel` or a pivot value field, the toolbar's Summaries panel and the pivot panel offer only these. |
 
 ---
 
@@ -357,6 +360,8 @@ Defines the behavior and appearance of a single column.
 | `printGrid(rows, cols, title \| options)` | `Promise<void>` | Opens browser print dialog. |
 
 In every exporter, a non-empty `selectedRows` takes precedence over `groupedRows` (the selected rows are exported flat) and the totals are recomputed over the selected rows (v3.0+). See the [Export Guide](features/export-guide.md#selection-grouping-and-totals).
+
+Every exporter's options also accept `getRowId?: (row) => GridRowId`. Pass the grid's `getRowId` when you use one: `selectedRows` holds those ids, and since v3.0 the grid no longer copies them onto `row.id`.
 
 ---
 
@@ -385,6 +390,8 @@ Context provider for overriding the grid's visual system.
 ### `useGridApiRef()`
 
 Creates a typed ref to pass to the `apiRef` prop. Gives you imperative access to the grid after mount.
+
+`apiRef.current` is never `null`: until the grid mounts it holds an API whose methods do nothing and whose getters return empty values. The grid installs the live API in a layout effect, so it is ready in your own `useLayoutEffect` / `useEffect` and in event handlers (v3.0+).
 
 ```tsx
 import { useGridApiRef } from '@opencorestack/opengridx';
@@ -421,10 +428,10 @@ const { aggregationResult, isLoading } = useAggregation({
 
 | Param | Type | Description |
 | :--- | :--- | :--- |
-| `rows` | `GridRowModel[]` | The rows to aggregate. |
+| `rows` | `GridRowModel[]` | The rows to aggregate (already filtered: the hook aggregates every row it is given). |
 | `aggregationModel` | `GridAggregationModel` | Map of `field → aggFn` (e.g. `{ salary: 'sum' }`). |
-| `isServerSide` | `boolean` | If `true`, skips client computation and uses `serverAggregationResults`. |
-| `filterModel` | `GridFilterModel` | Optional — restricts aggregation to filtered rows. |
+| `isServerSide` | `boolean` | If `true`, skips client computation and uses `serverAggregationResults`, else the result of `dataSource.getAggregations`. The grid sets it whenever a `dataSource` drives the rows (server or infinite pagination, server sorting or server filtering). |
+| `filterModel` | `GridFilterModel` | Optional — sent to `dataSource.getAggregations`. It does not filter `rows`. |
 | `sortModel` | `GridSortItem[]` | Optional — used when `dataSource` is provided. |
 | `dataSource` | `GridDataSource` | Optional — server-side data adapter for async aggregation. |
 | `serverAggregationResults` | `GridAggregationResult \| null` | Pre-fetched results when `isServerSide: true`. |
@@ -434,8 +441,8 @@ const { aggregationResult, isLoading } = useAggregation({
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `aggregationResult` | `GridAggregationResult` | Map of `field → computed value`. |
-| `isLoading` | `boolean` | `true` while a server-side fetch is in progress. |
-| `error` | `unknown` | Set if the server-side fetch threw. |
+| `isLoading` | `boolean` | `true` while the `getAggregations` request for the current model, filter and sort is pending. |
+| `error` | `unknown` | Set if the request for the current model, filter and sort failed. |
 
 **Built-in aggregation functions:** `sum`, `avg`, `min`, `max`, `count`, `unique`
 
@@ -445,7 +452,7 @@ You can also use `formatAggregationValue(value, fnName)` to produce a display st
 
 ### `usePivot(rawRows, rawCols, model, enabled)`
 
-Headless hook that transforms a flat dataset into pivot rows and pivot column definitions. Pass the output directly to `<DataGrid rows={} columns={} />` when `pivotMode` is active.
+Headless hook that transforms a flat dataset into pivot rows and pivot column definitions, with the same engine `<DataGrid pivotMode />` uses. Use it to pivot outside the grid (charts, custom exports). To show a pivot in the grid, prefer `pivotMode`: it also filters the source rows, keeps the Grand Total row last when sorting and leaves it out of select-all, which a grid given `pivotRows` as plain rows does not do.
 
 ```tsx
 import { usePivot } from '@opencorestack/opengridx';
@@ -480,10 +487,10 @@ const { pivotRows, pivotColumns, isValid } = usePivot(
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `pivotRows` | `GridRowModel[]` | Transformed rows ready for the grid. |
-| `pivotColumns` | `GridColDef[]` | Generated column definitions for each pivot key. |
-| `colKeys` | `string[]` | The distinct column pivot values used. |
-| `isValid` | `boolean` | `false` if the model is incomplete (e.g. no `rowFields` or `valueFields`). |
+| `pivotRows` | `GridRowModel[]` | One row per row-field combination (ids `0, 1, …`), then the Grand Total row (id `'__pivot_grand_total__'`). There is no Grand Total row when `rawRows` is empty. |
+| `pivotColumns` | `GridColDef[]` | Row-label columns (keeping the source column's formatter, renderer, type and alignment; `hideable: false`), then one value column per column key and value field. Value columns format aggregates like the footer. |
+| `colKeys` | `string[]` | The distinct column-field value combinations, ordered by value (numbers numerically, strings naturally, blanks last). `['']` when there are no column fields. |
+| `isValid` | `boolean` | `false` if the model has no usable row field or value field (fields on `groupable: false` columns and value fields whose function `availableAggregationFunctions` does not allow are skipped). |
 
 #### `GridPivotModel`
 
@@ -545,7 +552,9 @@ const { initialState, onStateChange, clearState } = useGridStateStorage({
 | :--- | :--- | :--- |
 | `initialState` | `GridState \| undefined` | Restored state from storage — pass to `DataGrid.initialState`. |
 | `onStateChange` | `(state: GridState) => void` | Callback to pass to `DataGrid.onStateChange`. |
-| `clearState` | `() => void` | Removes the saved state from storage. |
+| `clearState` | `() => void` | Removes the saved state from storage and cancels a pending write. |
+
+If the key can change while the grid stays mounted, remount the grid with it (`<DataGrid key={storageKey} … />`): the grid reads `initialState` only on mount. When the browser blocks storage, the hook falls back to no persistence.
 
 ---
 
@@ -641,6 +650,24 @@ Passed to `onCellClick` and `isCellEditable`.
 | `colDef` | `GridColDef<R>` | The column definition. |
 | `rowIndex` | `number` | Zero-based row index in the visible dataset. |
 | `colIndex` | `number` | Zero-based column index. |
+
+### `GridRenderEditCellParams<R>`
+Passed to `renderEditCell` (v3.0+). Everything in `GridRenderCellParams` (`value` is the pending, uncommitted value), plus:
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `onValueChange` | `(value: unknown) => void` | Updates the pending value. Nothing is saved until `onCommit`. |
+| `onCommit` | `() => void` | Commits the pending value through `processRowUpdate` and leaves edit mode. |
+| `onCancel` | `() => void` | Discards the pending value and leaves edit mode. |
+
+### `GridValueSetterParams<R>`
+Passed to `valueSetter` (v3.0+).
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `value` | `unknown` | The committed value from the editor. |
+| `row` | `R` | The row as it was before the edit. |
+| `field` | `string` | The column field name. |
 
 ### `GridColumnOrderChangeParams`
 Passed to `onColumnOrderChange`.
@@ -933,10 +960,12 @@ const filterModel: GridFilterModel = {
 
 ## 💾 `GridInitialState` and `GridState`
 
-`GridInitialState` is a type alias for `GridState`. Pass it to `initialState` to restore persisted grid state on mount (e.g. from `localStorage`). Each key corresponds to a feature slice — all are optional.
+`GridInitialState` is `GridState` with every column field optional as well. Pass it to `initialState` to restore persisted grid state on mount (e.g. from `localStorage`). Each key corresponds to a feature slice — all are optional. A `GridState` from `onStateChange` is a valid `GridInitialState`.
 
 ```typescript
-type GridInitialState = GridState;
+interface GridInitialState extends Omit<GridState, 'columns'> {
+  columns?: Partial<GridColumnsState>; // e.g. { columnVisibilityModel: { age: false } }
+}
 
 interface GridState {
   sorting?:    GridSortingState;
@@ -1191,7 +1220,15 @@ export default function GroupedHeadersGrid() {
 }
 ```
 
-The grid renders two header rows: the spanning group row on top, and the regular per-column header row below. Groups that are not referenced in `columnGroupingModel` are rendered without a spanning header.
+The grid renders one group header row per nesting level above the regular per-column header row. Columns that are not referenced in `columnGroupingModel` get an empty filler cell in the group rows.
+
+Group rows follow the columns as they are rendered:
+
+- **Order, visibility and pinning** — a group covers its visible member columns in their current order. A group whose members are not adjacent (or that spans a pinned-section boundary) renders one group cell per run of adjacent members. Group cells over pinned columns are sticky, so they stay above their columns on horizontal scroll.
+- **Widths** — a group cell is exactly as wide as its member columns, including flex, `auto` and percentage widths and manual resizes.
+- **`headerClassName`** — added to the group cell's class list (next to `ogx-col-group-cell` and `ogx-col-group-cell--group`).
+- **Column reordering** — header drag and the toolbar / columns-panel reorder keep groups intact: a column can only be moved onto a column of the same innermost group, and an ungrouped column only onto another ungrouped column.
+- **Accessibility** — group cells are `role="columnheader"` with `aria-colspan` (visible member columns) and `aria-colindex`; filler cells are `aria-hidden`. The grid's `aria-rowcount` includes the group header rows.
 
 ---
 
@@ -1270,6 +1307,7 @@ interface PdfExportOptions {
     logoUrl?: string;
     orientation?: 'portrait' | 'landscape';
     selectedRows?: (string | number)[];
+    getRowId?: (row: GridRowModel) => GridRowId; // v3.0+
     aggregationResult?: Record<string, unknown> | null;
     aggregationModel?: GridAggregationModel | null;
     filterModel?: GridFilterModel | null;
@@ -1289,6 +1327,7 @@ interface PdfExportOptions {
 | `logoUrl` | `string` | — | Data URI or URL for a logo image (requires `title`) |
 | `orientation` | `'portrait' \| 'landscape'` | `'landscape'` | Page orientation |
 | `selectedRows` | `(string \| number)[]` | — | Export only rows with these IDs. Takes precedence over `groupedRows`; footer totals are recomputed over the selection (v3.0+) |
+| `getRowId` | `(row) => GridRowId` | `row.id` | The grid's `getRowId`, to match `selectedRows` against rows that keep their id elsewhere (v3.0+) |
 | `aggregationResult` | `Record<string, unknown>` | — | From `apiRef.current.getAggregationResult()` |
 | `aggregationModel` | `GridAggregationModel` | — | From `apiRef.current.getAggregationModel()` |
 | `filterModel` | `GridFilterModel` | — | From `apiRef.current.getFilterModel()`. Nested groups, the logic operator and quick-search terms are summarised; rules without a value are skipped |

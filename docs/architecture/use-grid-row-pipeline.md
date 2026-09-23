@@ -17,21 +17,27 @@ Before this hook existed, the five `useMemo` stages lived inline in `DataGrid.ts
 ```
 effectiveRows
    │
-   ▼ filterRows (client) / getVisibleRows (hierarchy) / passthrough (server)
+   ▼ filterRows (client) / getVisibleRows (hierarchy) / passthrough (filterMode='server')
 filteredRows
    │
    ▼ getPinnedRowGroups
 pinnedTopRows, unpinnedRows, pinnedBottomRows
    │
-   ▼ sortRows (client) / passthrough (server / hierarchy)
+   ▼ sortRows (client) / passthrough (sortingMode='server' / hierarchy)
 sortedUnpinnedRows
    │
-   ▼ slice [currentPage * pageSize, (currentPage+1) * pageSize]  — skipped when pagination=false or server
+   ▼ slice [currentPage * pageSize, (currentPage+1) * pageSize]  — skipped when pagination=false or paginationMode='server'
 paginatedUnpinnedRows
    │
    ▼ [...pinnedTop, ...center, ...pinnedBottom]
 allRenderableRows   ← the rows the grid view and the list view render
 ```
+
+**Server modes do not need a `dataSource`.** `filterMode`, `sortingMode` and `paginationMode` set to
+`'server'` mean the rows already arrived filtered, sorted or paged, whether a `dataSource` fetched
+them or the consumer did (for example from `onPaginationModelChange`). Before v3.0 the passthrough
+applied only when a `dataSource` was also set, so a consumer-fetched page was sliced again (page 2
+rendered empty) and server results were re-filtered and re-sorted with client rules.
 
 ---
 
@@ -43,13 +49,13 @@ interface UseGridRowPipelineParams<R extends GridRowModel> {
     activeHierarchyHandlers: { getVisibleRows: () => R[] } | null;
     filterMode: 'client' | 'server';
     filterModel: GridFilterModel;
-    dataSource?: GridDataSource<R>;
     sortModel: GridSortItem[];
     sortingMode: 'client' | 'server';
     pagination: boolean;                      // must be true to enable slicing
     paginationMode: 'client' | 'server' | 'infinite';
     effectivePaginationModel: GridPaginationModel;
     pinnedRows?: GridRowPinning;              // { top: GridRowId[], bottom: GridRowId[] }
+    getRowId?: (row: R) => GridRowId;         // resolves ids for pinnedRows; rows are not required to carry `id`
     columnLookup?: GridColumnLookup;          // from useGridColumnLookup(activeColumns, columnVisibilityModel)
 }
 ```
@@ -65,6 +71,7 @@ interface UseGridRowPipelineParams<R extends GridRowModel> {
 ```ts
 interface GridRowPipelineResult<R extends GridRowModel> {
     filteredRows: R[];
+    dataRows: R[];               // filtered data rows, independent of hierarchy expansion
     pinnedTopRows: R[];
     unpinnedRows: R[];
     pinnedBottomRows: R[];
@@ -75,13 +82,13 @@ interface GridRowPipelineResult<R extends GridRowModel> {
 }
 ```
 
-All intermediate results are returned so features like the row count badge or aggregation can read `filteredRows.length` without re-deriving it.
+All intermediate results are returned so features like the row count badge or aggregation can read them without re-deriving them. The client pager counts `sortedUnpinnedRows` (filtered, pinned rows excluded, since pinned rows show on every page); select-all acts on `dataRows`.
 
 ---
 
 ## Page clamping
 
-When the grid pages client-side, the slice uses `currentPage`: `effectivePaginationModel.page` clamped to `0 … pageCount - 1`, where `pageCount = ceil(sortedUnpinnedRows.length / pageSize)` (at least 1). A page size below 1 is treated as 1 (`lib/utils/pagination`). So when the rows shrink (new `rows`, a filter, collapsed tree nodes) and the requested page is past the end, the last page is shown instead of an empty body. Under server pagination (`paginationMode="server"` with a `dataSource`) `currentPage` is the requested page, because the server owns the page count.
+When the grid pages client-side, the slice uses `currentPage`: `effectivePaginationModel.page` clamped to `0 … pageCount - 1`, where `pageCount = ceil(sortedUnpinnedRows.length / pageSize)` (at least 1). A page size below 1 is treated as 1 (`lib/utils/pagination`). So when the rows shrink (new `rows`, a filter, collapsed tree nodes) and the requested page is past the end, the last page is shown instead of an empty body. Under server pagination (`paginationMode="server"`) `currentPage` is the requested page, because the server owns the page count.
 
 `DataGrid` passes `currentPage` to the pager and calls `useGridPageCorrection`, which reports the corrected model through `onPaginationModelChange` (and stores it when uncontrolled) once rows are present and nothing is loading. A restored page is therefore not thrown away before the rows arrive.
 

@@ -4,6 +4,8 @@ import type { GridColDef, GridRowModel, GridRowId, GridRowMeta, GridListViewColD
 
 export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
     row: R;
+    /** The row's id (from getRowId). Defaults to `row.id`. */
+    rowId?: GridRowId;
     /** Index of the row among the rendered rows; passed to renderCell and the row callbacks. */
     rowIndex: number;
     /** 1-based position of the row in the whole data set. Defaults to rowIndex + 1. */
@@ -23,6 +25,7 @@ export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
 
 export function ListViewRow<R extends GridRowModel = GridRowModel>({
     row,
+    rowId,
     rowIndex,
     ariaRowIndex,
     listViewColumn,
@@ -35,6 +38,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
     onRowDoubleClick,
     onSelectionChange,
 }: ListViewRowProps<R>) {
+    const id = rowId ?? row.id;
     const field = listViewColumn.field;
     // Same value and formatting as a grid cell for this field (Cell.tsx).
     const value = getCellValue(row, field, gridColumn as GridColDef | undefined);
@@ -55,7 +59,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
 
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         e.stopPropagation();
-        onSelectionChange?.(row.id, e.target.checked);
+        onSelectionChange?.(id, e.target.checked);
     };
 
     return (
@@ -74,7 +78,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
                         type="checkbox"
                         checked={isSelected}
                         onChange={handleCheckboxChange}
-                        aria-label={`Select row ${row.id}`}
+                        aria-label={`Select row ${id}`}
                     />
                 </div>
             )}

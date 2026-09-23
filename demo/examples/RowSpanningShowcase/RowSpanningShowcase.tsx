@@ -496,21 +496,20 @@ export default function RowSpanningShowcase() {
             <WeeklyTimetableExample />
 
             <div className="spanning-info-box">
-                <strong>⚠️ Important: Feature Compatibility with Row Spanning</strong>
+                <strong>How row spans interact with other features</strong>
                 <p>
-                    When using <code>rowSpan</code>, some features may be pointless or may not work as expected.
-                    To avoid a confusing grid layout, consider <strong>disabling the following features</strong> for any columns affected by <code>rowSpan</code>:
+                    Spans are computed from the rows as they are rendered, so they follow the current sort, filter and page:
                 </p>
                 <ul>
-                    <li><strong>Sorting</strong> - Set <code>sortable: false</code> (all examples above disable this)</li>
-                    <li><strong>Filtering</strong> - Avoid using filters on spanned columns</li>
-                    <li><strong>Column Reorder</strong> - Reordering can break the spanning logic</li>
-                    <li><strong>Hiding Columns</strong> - Hidden columns can cause misalignment</li>
-                    <li><strong>Column Pinning</strong> - Pinning spanned columns may cause layout issues</li>
+                    <li><strong>Sorting &amp; filtering</strong> - Spans are recomputed for the new row order. The examples above precompute their span counts for a fixed order, so they set <code>sortable: false</code></li>
+                    <li><strong>Pinned rows</strong> - A span never reaches from a pinned row into the scrolling rows, or the other way</li>
+                    <li><strong>Master-detail</strong> - A span ends at a row whose detail panel is expanded</li>
+                    <li><strong>Virtual scrolling</strong> - The merged cell stays visible while any part of it is on screen</li>
+                    <li><strong>Hidden &amp; pinned columns</strong> - A span with <code>colSpan</code> covers visible columns only and stops at its pinned section</li>
                 </ul>
                 <p style={{ fontSize: '0.95em', fontStyle: 'italic' }}>
-                    💡 <strong>Best Practice:</strong> Use row spanning primarily for display purposes in read-only grids
-                    or tables where interactive features are not required. For dynamic hierarchical data, consider using the Tree Data feature instead.
+                    💡 <strong>Best Practice:</strong> Keep row spans short: while a span is on screen, every row from its origin down is rendered.
+                    For large dynamic hierarchies, consider the Tree Data or Row Grouping features instead.
                 </p>
             </div>
         </DocsLayout>

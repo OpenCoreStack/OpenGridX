@@ -129,14 +129,21 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
 
   /** Function to compute a cell value from raw row data. */
   valueGetter?: (params: GridValueGetterParams<R>) => unknown;
+  /**
+   * Maps an edited value back onto the row when an edit is committed; return the updated row.
+   * Needed for editable columns with a `valueGetter`, whose value is not stored in `row[field]`.
+   * Without it the commit writes `row[field] = value`.
+   * @since v3.0
+   */
+  valueSetter?: (params: GridValueSetterParams<R>) => R;
   /** Function to format a value into a human-readable string. */
   valueFormatter?: (params: GridValueFormatterParams<R>) => string;
   /** Custom component or element to render in the cell. */
   renderCell?: (params: GridRenderCellParams<R>) => React.ReactNode;
   /** Custom component or element to render in the header. */
   renderHeader?: (params: GridRenderHeaderParams) => React.ReactNode;
-  /** Component to render when the cell is in edit mode. */
-  renderEditCell?: (params: GridRenderCellParams<R>) => React.ReactNode;
+  /** Component to render when the cell is in edit mode. Receives `onValueChange`, `onCommit` and `onCancel`. */
+  renderEditCell?: (params: GridRenderEditCellParams<R>) => React.ReactNode;
   /** If true, the cell's value can be modified by the user. */
   editable?: boolean;
   /** Optional stacking order (CSS z-index). */
@@ -144,9 +151,18 @@ export interface GridColDef<R extends GridRowModel = GridRowModel> {
   /** If true, the column kebab/hamburger menu is disabled. */
   disableColumnMenu?: boolean;
 
-  /** Number of columns this cell should occupy horizontally. */
+  /**
+   * Number of columns this cell should occupy horizontally: the origin plus the next visible columns
+   * in render order, clamped to the end of the origin's pinned section. Fractions are floored,
+   * `Infinity` means "to the end", and NaN / values below 1 mean no span. `params.value` is the
+   * `valueGetter` result. A function that throws is treated as 1.
+   */
   colSpan?: number | ((params: GridRenderCellParams<R>) => number);
-  /** Number of rows this cell should occupy vertically. */
+  /**
+   * Number of rows this cell should occupy vertically, clamped to the end of its row section
+   * (top-pinned, scrolling or bottom-pinned rows) and to the first row with an expanded detail
+   * panel. Normalised like `colSpan`. With both set, the origin covers the whole rectangle.
+   */
   rowSpan?: number | ((params: GridRenderCellParams<R>) => number);
 
   /**
@@ -198,7 +214,7 @@ export interface GridColumnGroup {
   groupId: string;
   /** Text displayed in the group header cell. */
   headerName: string;
-  /** Optional override for the header cell background color. */
+  /** CSS class(es) added to this group's header cell(s). */
   headerClassName?: string;
   /**
    * Either an array of column field strings (leaf group)
@@ -218,6 +234,19 @@ export interface GridValueGetterParams<R extends GridRowModel = GridRowModel> {
   field: string;
   /** The raw value from the row object. */
   value: unknown;
+}
+
+/**
+ * Parameters passed to the `valueSetter` function.
+ * @since v3.0
+ */
+export interface GridValueSetterParams<R extends GridRowModel = GridRowModel> {
+  /** The committed value from the editor. */
+  value: unknown;
+  /** The row as it was before the edit. */
+  row: R;
+  /** The field name. */
+  field: string;
 }
 
 /** Parameters passed to the `valueFormatter` function. */
@@ -254,6 +283,19 @@ export interface GridRenderCellParams<R extends GridRowModel = GridRowModel> {
    * @since v1.1
    */
   rowMeta?: GridRowMeta;
+}
+
+/**
+ * Parameters passed to `renderEditCell`. `value` is the pending (uncommitted) value.
+ * @since v3.0
+ */
+export interface GridRenderEditCellParams<R extends GridRowModel = GridRowModel> extends GridRenderCellParams<R> {
+  /** Updates the pending value. Call it on every change; nothing is saved until `onCommit`. */
+  onValueChange: (value: unknown) => void;
+  /** Commits the pending value (runs `processRowUpdate`) and leaves edit mode. */
+  onCommit: () => void;
+  /** Discards the pending value and leaves edit mode. */
+  onCancel: () => void;
 }
 
 export interface GridRenderHeaderParams {
@@ -358,6 +400,12 @@ export interface PdfExportOptions {
    * are recomputed over the selected rows.
    */
   selectedRows?: (string | number)[];
+
+  /**
+   * The grid's `getRowId`, when it has one: `selectedRows` holds those ids, and the grid does not
+   * copy them onto `row.id` (v3.0+). Defaults to `row.id`.
+   */
+  getRowId?: (row: GridRowModel) => GridRowId;
 
   /**
    * Aggregation result from apiRef.current.getAggregationResult().
@@ -572,25 +620,18 @@ export interface GridInternalState {
   rows: {
     idRowsLookup: Map<GridRowId, GridRowModel>;
     allRows: GridRowId[];
-  };
-  sorting: {
-    sortModel: GridSortItem[];
-  };
-  filter: {
-    filterModel: GridFilterModel;
+    /** Row object → its getRowId() key. Rows are stored untouched, so this is how ids are resolved. */
+    idByRow: Map<GridRowModel, GridRowId>;
   };
   pagination: {
-    paginationModel: GridPaginationModel;
-    rowCount: number;
+    /** Server-reported total (dataSource responses); undefined until one arrives. */
+    rowCount?: number;
   };
   columns: {
     all: GridColDef[];
     lookup: Map<string, GridColDef>;
     orderedFields: string[];
     columnVisibilityModel: GridColumnVisibilityModel;
-  };
-  selection: {
-    selectedRows: Set<GridRowId>;
   };
   pinning: {
     pinnedColumns: GridPinnedColumns;

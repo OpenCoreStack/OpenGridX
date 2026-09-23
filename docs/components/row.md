@@ -7,6 +7,7 @@ Manages a horizontal collection of cells. Includes support for selection, expans
 | Prop | Type | Description |
 | :--- | :--- | :--- |
 | `row` | `GridRowModel` | The data object for this row. |
+| `rowId` | `GridRowId` | The row's id (from the grid's `getRowId`). Defaults to `row.id`; the grid always passes it (v3.0+). |
 | `columns` | `GridColDef[]` | Columns currently visible in the viewport. |
 | `rowIndex` | `number` | Index used for virtualization and alternating colors. |
 | `isSelected` | `boolean` | Checkbox / Selection state. |
@@ -15,6 +16,7 @@ Manages a horizontal collection of cells. Includes support for selection, expans
 | `isDetailPanelExpanded` | `boolean` | Current expansion state. |
 | `rowReordering` | `boolean` | Enables the drag handle for reordering rows. |
 | `rowHeight` | `number` | Height in pixels (default: 52). |
+| `isCellEditable` | `(params: GridCellParams) => boolean` | Per-cell editability predicate, combined with `colDef.editable` and the row's `rowMeta` to decide each cell's `isEditable`. |
 
 ## 📐 Row Pinning
 

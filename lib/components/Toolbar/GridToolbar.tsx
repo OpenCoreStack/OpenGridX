@@ -546,9 +546,13 @@ export function GridToolbar({
         || currentPivotModel.columnFields.length > 0
         || currentPivotModel.valueFields.length > 0;
 
+    // aggregationModel keys name source columns, so generated pivot columns (absent from baseColumns)
+    // are never offered: a summary on them would do nothing and leave a stray key in the model.
+    const baseFields = baseColumns ? new Set(baseColumns.map((c) => c.field)) : null;
     const aggregableColumns = columns.filter(
         (c) => c.aggregable !== false && (c.type === 'number' || c.aggregable === true)
             && getAggregationFunctions(c).length > 0
+            && (!baseFields || baseFields.has(c.field))
     );
 
     const activeCount = Object.keys(aggregationModel).filter(

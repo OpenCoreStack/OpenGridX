@@ -7,6 +7,7 @@ Manages the column headers, sorting triggers, column resizing, and column groupi
 | Prop | Type | Description |
 | :--- | :--- | :--- |
 | `columns` | `GridColDef[]` | Column definitions for the visible viewport. |
+| `allColumns` | `GridColDef[]` | Every rendered data column in render order (left-pinned, unpinned, right-pinned) with its resolved `width`. Column group rows are laid out over these. Defaults to `columns`. |
 | `columnGroupingModel` | `GridColumnGroupingModel` | Hierarchy for multi-level header spanning. |
 | `sortModel` | `GridSortModel` | Current sorting state for highlight and icons. |
 | `onSort` | `(field, direction) => void` | Callback triggered on a plain click — replaces the sort model with a single key. |
@@ -18,7 +19,7 @@ Manages the column headers, sorting triggers, column resizing, and column groupi
 
 ## 📐 Column Grouping
 
-The `<Header />` dynamically calculates the nesting depth of your `columnGroupingModel` and renders additional [Column Group Headers](column-group-header.md) above the main column headers.
+The `<Header />` dynamically calculates the nesting depth of your `columnGroupingModel` and renders one group row per level above the main column headers. Group cells are sized from `allColumns`, so they match their member columns' resolved widths; cells over pinned columns are sticky. See [Column Group Headers](../API_REFERENCE.md#️-column-group-headers) for the full behaviour.
 
 ```tsx
 const columnGroupingModel = [

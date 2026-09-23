@@ -81,16 +81,21 @@ Client-side filtering, sorting, and pagination load the full dataset into JS. Fo
 
 ```tsx
 <DataGrid
-    rows={rows}
+    rows={pageRows}            // the current page, already filtered and sorted by the server
     columns={columns}
-    filteringMode="server"
+    filterMode="server"
     sortingMode="server"
+    pagination
     paginationMode="server"
+    rowCount={totalRows}       // server total
+    paginationModel={paginationModel}
     onFilterModelChange={fetchFiltered}
     onSortModelChange={fetchSorted}
     onPaginationModelChange={fetchPage}
 />
 ```
+
+In server modes the grid shows `rows` as given: it does not re-filter, re-sort or slice them (v3.0+; earlier versions did unless a `dataSource` was set).
 
 Or use the `dataSource` prop with `useGridDataSource` for a unified data-fetching abstraction.
 

@@ -52,21 +52,6 @@ describe('GridToolbar — Summaries panel', () => {
         render(<GridToolbar columns={[{ field: 'price', type: 'number' }]} />);
         expect(screen.queryByLabelText('Configure summaries')).toBeNull();
     });
-
-    it('is not offered in pivot mode, where summaries have no effect', () => {
-        const cols: GridColDef[] = [
-            { field: 'region', headerName: 'Region' },
-            { field: 'amount', headerName: 'Amount', type: 'number' },
-        ];
-        const rows: GridRowModel[] = [{ id: 1, region: 'N', amount: 1 }, { id: 2, region: 'S', amount: 2 }];
-        render(
-            <DataGrid rows={rows} columns={cols} pivotMode
-                pivotModel={{ rowFields: ['region'], columnFields: [], valueFields: [{ field: 'amount', aggFn: 'sum' }] }}
-                slots={{ toolbar: GridToolbar as never }} />
-        );
-        expect(screen.getByLabelText('Configure pivot')).toBeTruthy();
-        expect(screen.queryByLabelText('Configure summaries')).toBeNull();
-    });
 });
 
 describe('GridToolbar — Columns panel', () => {

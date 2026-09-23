@@ -12,8 +12,9 @@ The atomic unit of the grid. Handles rendering, formatting, editing, and selecti
 | `rowIndex` | `number` | 0-indexed position in the current view. |
 | `isSelected` | `boolean` | Whether the parent row is selected. |
 | `isFocused` | `boolean` | Whether the cell has keyboard focus. |
-| `isEditable` | `boolean` | Enables inline editing for this cell. |
-| `isEditing` | `boolean` | Whether the cell is currently in edit mode. |
+| `isEditable` | `boolean` | Whether this cell may enter edit mode. `<Row />` resolves it per cell from `colDef.editable`, the row (synthetic group rows are never editable) and `isCellEditable`; it also drives `aria-readonly`. |
+| `isEditing` | `boolean` | Whether the cell is currently in edit mode. While editing, clicks and double-clicks inside the cell belong to the editor and are not handled as cell clicks. |
+| `onEditStop` | `(cancel?: boolean, field?: string) => void` | Ends this cell's edit (commit, or discard when `cancel` is true). The cell passes its own `field` so a late call cannot end another cell's edit. Also called (commit) when the cell unmounts while editing. |
 | `width` | `number` | Calculated width including resizing and flex. |
 | `pinnedPosition` | `'left' \| 'right' \| null` | Sticky positioning state. |
 
@@ -45,7 +46,7 @@ const columns: GridColDef[] = [
 
 ## 🛡️ Error containment
 
-Custom `renderCell` callbacks are wrapped in a `CellErrorBoundary`. If a renderCell throws during render, that single cell shows a `⚠` indicator (CSS class `ogx__cell-error`) with the error message as a tooltip. The rest of the grid continues rendering normally.
+Custom `renderCell` and `renderEditCell` callbacks are wrapped in a `CellErrorBoundary`. If a renderCell throws during render, that single cell shows a `⚠` indicator (CSS class `ogx__cell-error`) with the error message as a tooltip. The rest of the grid continues rendering normally.
 
 Default cell display (no `renderCell`) does not go through the boundary — it cannot throw.
 

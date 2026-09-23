@@ -83,23 +83,38 @@ OpenGridX supports standard page-based pagination and infinite scrolling.
 />
 ```
 
+The pager counts the rows being paged: the rows that pass the filter, excluding pinned rows (pinned rows show on every page).
+
+Without `paginationModel` or `initialState.pagination`, the page size is 100 when `pageSizeOptions` offers it and otherwise the first option, so the rows-per-page select always matches the rows shown.
+
 ### When the rows shrink
 If the current page ends up past the last page (new `rows`, a filter, collapsed tree nodes), the grid shows the last page and reports the corrected model through `onPaginationModelChange`, so Previous and Next continue from the page on screen. The correction waits until rows are present and nothing is loading, so a restored page (for example from `initialState.pagination`) survives an initially empty `rows` array. Under server pagination the server's `rowCount` decides; the grid does not clamp.
 
 ### Page sizes outside `pageSizeOptions`
-When the page size in use is not one of `pageSizeOptions` (for example the default `pageSize` of 100 with `pageSizeOptions={[10, 25, 50]}`), the rows-per-page select adds it as an extra option, so it shows the size actually used. A page size below 1 is treated as 1.
+When the page size in use is not one of `pageSizeOptions` (for example a controlled `paginationModel={{ page: 0, pageSize: 20 }}` with `pageSizeOptions={[10, 25, 50]}`), the rows-per-page select adds it as an extra option, so it shows the size actually used. A page size below 1 is treated as 1.
 
 ### Server-Side Pagination
-When using `paginationMode="server"`, you must provide the `rowCount` and handle page changes in your `dataSource`.
+With `paginationMode="server"` the grid does not slice rows: `rows` is the current page. There are two ways to supply it.
+
+**Fetch the page yourself** — control `paginationModel`, pass the page's rows and the server total as `rowCount`. `rowCount` is read on every render, so update it when the total changes.
 
 ```tsx
+const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
+const { rows, total } = usePageQuery(paginationModel); // your data fetching
+
 <DataGrid
+  rows={rows}               // only the current page
   pagination
   paginationMode="server"
-  rowCount={1000} // Total rows on server
-  onPaginationModelChange={(model) => fetchNextPage(model)}
+  rowCount={total}          // total rows on the server
+  paginationModel={paginationModel}
+  onPaginationModelChange={setPaginationModel}
 />
 ```
+
+**Or use a `dataSource`** — the grid calls `getRows` with `startRow` / `endRow` and uses the response's `rowCount` as the total (the `rowCount` prop is only a fallback until the first response). See [Server-Side Data](./data-source.md).
+
+`sortingMode="server"` and `filterMode="server"` work the same way: the grid fires `onSortModelChange` / `onFilterModelChange` and shows `rows` as given, without re-sorting or re-filtering them, with or without a `dataSource`.
 
 ### Props
 | Prop | Type | Default | Description |
@@ -108,7 +123,8 @@ When using `paginationMode="server"`, you must provide the `rowCount` and handle
 | `paginationMode` | `'client' \| 'server' \| 'infinite'` | `'client'` | Location of the pagination logic. |
 | `paginationModel` | `GridPaginationModel` | — | Controlled pagination state (`{ page, pageSize }`). |
 | `onPaginationModelChange` | `(model: GridPaginationModel) => void` | — | Fired when page or page size changes. |
-| `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Options for the rows-per-page selector. |
+| `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Options for the rows-per-page selector. The uncontrolled default page size is 100 when offered, else the first option. |
+| `rowCount` | `number` | — | Server total for `paginationMode="server"` without a `dataSource` (with one, the response's `rowCount` is used). |
 
 ---
 

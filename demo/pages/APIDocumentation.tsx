@@ -5,7 +5,7 @@ export default function APIDocumentation() {
         // Core Data
         { name: 'rows', type: 'GridRowModel[]', default: '[]', desc: 'Array of data objects to display.' },
         { name: 'columns', type: 'GridColDef[]', default: '[]', desc: 'Column definitions controlling display, sorting, and editing.' },
-        { name: 'getRowId', type: '(row: GridRowModel) => GridRowId', default: 'row.id', desc: 'Returns a unique identifier for each row.' },
+        { name: 'getRowId', type: '(row: GridRowModel) => GridRowId', default: 'row.id', desc: 'Returns a unique identifier for each row. Only keys the internal store; rows are never copied or given an id.' },
         // Layout
         { name: 'height', type: 'number', default: 'undefined', desc: 'Fixed height in pixels. Overrides a parent container height.' },
         { name: 'rowHeight', type: 'number', default: '52', desc: 'Height of each row in pixels.' },
@@ -23,7 +23,7 @@ export default function APIDocumentation() {
         { name: 'pagination', type: 'boolean', default: 'false', desc: 'Enable the bottom pagination bar.' },
         { name: 'paginationMode', type: "'client' | 'server' | 'infinite'", default: "'client'", desc: 'Controls whether paging is handled locally or server-side.' },
         { name: 'paginationModel', type: 'GridPaginationModel', default: '{page:0, pageSize:100}', desc: 'Current page index and page size.' },
-        { name: 'rowCount', type: 'number', default: '—', desc: 'Total row count for server-side pagination.' },
+        { name: 'rowCount', type: 'number', default: '—', desc: 'Server total for paginationMode="server" when you fetch pages yourself (a dataSource response rowCount wins).' },
         { name: 'pageSizeOptions', type: 'number[]', default: '[10,25,50,100]', desc: 'Available page size choices.' },
         // Sorting & Filtering
         { name: 'sortModel', type: 'GridSortItem[]', default: 'undefined', desc: 'Controlled sort state.' },
@@ -48,8 +48,8 @@ export default function APIDocumentation() {
         { name: 'pivotMode', type: 'boolean', default: 'false', desc: 'Enable pivot table mode.' },
         { name: 'pivotModel', type: 'GridPivotModel', default: 'undefined', desc: 'Active pivot configuration (rows, columns, values).' },
         // Editing
-        { name: 'processRowUpdate', type: '(newRow, oldRow) => R | Promise<R>', default: '—', desc: 'Intercepts a committed cell edit. Return the updated row.' },
-        { name: 'isCellEditable', type: '(params) => boolean', default: '—', desc: 'Fine-grained control over which cells are editable.' },
+        { name: 'processRowUpdate', type: '(newRow, oldRow) => R | Promise<R>', default: '—', desc: 'Called once per committed cell edit. Return the updated row (or a Promise of it).' },
+        { name: 'isCellEditable', type: '(params) => boolean', default: '—', desc: 'Per-cell veto over editable columns. Applies to double-click, Enter, Tab and aria-readonly.' },
         // Server-Side
         { name: 'dataSource', type: 'GridDataSource', default: '—', desc: 'Remote data provider. Drives server-side sorting, filtering, pagination.' },
         // List View
@@ -64,7 +64,7 @@ export default function APIDocumentation() {
         // Events
         { name: 'onRowClick', type: '(params: GridRowParams) => void', default: '—', desc: 'Fired when a row is clicked.' },
         { name: 'onCellClick', type: '(params: GridCellParams) => void', default: '—', desc: 'Fired when a cell is clicked.' },
-        { name: 'onStateChange', type: '(state: GridState) => void', default: '—', desc: 'Fired on every internal state change (sort, filter, page, columns).' },
+        { name: 'onStateChange', type: '(state: GridState) => void', default: '—', desc: 'Fired on mount and whenever the sort, filter, pagination, column or density state changes value.' },
         { name: 'onRowsScrollEnd', type: '() => void', default: '—', desc: 'Fired when the user scrolls to the bottom of the grid.' },
         { name: 'onColumnOrderChange', type: '(params) => void', default: '—', desc: 'Fired after a column is reordered by drag.' },
         { name: 'onRowOrderChange', type: '(params) => void', default: '—', desc: 'Fired after a row is reordered (rowReordering must be true).' },
@@ -73,14 +73,14 @@ export default function APIDocumentation() {
     const apiRefMethods = [
         { method: 'getRow(id)', return: 'GridRowModel | null', desc: 'Get row data by ID.' },
         { method: 'getAllRows()', return: 'GridRowModel[]', desc: 'Get all loaded rows.' },
-        { method: 'getVisibleRows()', return: 'GridRowModel[]', desc: 'Get filtered/sorted rows.' },
+        { method: 'getVisibleRows()', return: 'GridRowModel[]', desc: 'Get the rows on screen: pinned rows plus the current page (or all filtered rows).' },
         { method: 'getColumn(field)', return: 'GridColDef | null', desc: 'Get column definition.' },
-        { method: 'getVisibleColumns()', return: 'GridColDef[]', desc: 'Get visible columns.' },
+        { method: 'getVisibleColumns()', return: 'GridColDef[]', desc: 'Get the columns on screen, in display order.' },
         { method: 'selectRow(id, isSelected)', return: 'void', desc: 'Set row selection.' },
         { method: 'getSelectedRows()', return: 'GridRowId[]', desc: 'Get selected row IDs.' },
-        { method: 'sortColumn(field, dir)', return: 'void', desc: 'Programmatically sort.' },
-        { method: 'setFilterModel(model)', return: 'void', desc: 'Programmatically set filters.' },
-        { method: 'setPage(page)', return: 'void', desc: 'Change current page.' },
+        { method: 'sortColumn(field, dir)', return: 'void', desc: 'Sort like a header click; fires onSortModelChange.' },
+        { method: 'setFilterModel(model)', return: 'void', desc: 'Set filters; fires onFilterModelChange.' },
+        { method: 'setPage(page)', return: 'void', desc: 'Change current page; fires onPaginationModelChange.' },
         { method: 'scrollToIndexes(params)', return: 'void', desc: 'Scroll to specific index.' },
     ];
 
@@ -101,11 +101,12 @@ export default function APIDocumentation() {
         { name: 'type', type: "'string' | 'number' | 'boolean' | 'date' | 'singleSelect' | 'image'", default: "'string'", desc: 'Column type — drives filtering operators and default formatting.' },
         { name: 'valueOptions', type: 'Array<string | { value; label }>', default: '—', desc: 'Options list for singleSelect type — the filter panel offers them as a select.' },
         { name: 'valueGetter', type: '(params) => any', default: '—', desc: 'Derive a cell value from the row (computed columns). Sorting, filtering and the quick filter use this value.' },
+        { name: 'valueSetter', type: '(params: GridValueSetterParams) => R', default: '—', desc: 'Map an edited value back onto the row. Needed for editable valueGetter columns.' },
         { name: 'valueFormatter', type: '(params) => string', default: '—', desc: 'Format the display value. Sorting and column filters use the unformatted value; the quick filter also searches the formatted text.' },
         // Rendering
         { name: 'renderCell', type: '(params: GridRenderCellParams) => ReactNode', default: '—', desc: 'Custom cell renderer component.' },
         { name: 'renderHeader', type: '(params: GridRenderHeaderParams) => ReactNode', default: '—', desc: 'Custom header renderer component.' },
-        { name: 'renderEditCell', type: '(params: GridRenderCellParams) => ReactNode', default: '—', desc: 'Custom input component shown during cell editing.' },
+        { name: 'renderEditCell', type: '(params: GridRenderEditCellParams) => ReactNode', default: '—', desc: 'Custom editor shown during cell editing. Receives onValueChange, onCommit and onCancel.' },
         // Styling
         { name: 'cellClassName', type: 'string | ((params: GridRenderCellParams) => string)', default: '—', desc: 'CSS class(es) added to every cell in this column. Accepts a static string or a function for dynamic per-row classes.' },
         { name: 'headerClassName', type: 'string', default: '—', desc: 'CSS class(es) added to the header cell of this column.' },
@@ -113,7 +114,7 @@ export default function APIDocumentation() {
         { name: 'sortable', type: 'boolean', default: 'true', desc: 'Allow the column to be sorted.' },
         { name: 'filterable', type: 'boolean', default: 'true', desc: 'Include this column in the filter panel and the quick filter.' },
         { name: 'resizable', type: 'boolean', default: 'true', desc: 'Allow the user to drag-resize this column.' },
-        { name: 'editable', type: 'boolean', default: 'false', desc: 'Allow double-click to edit cell values (triggers processRowUpdate).' },
+        { name: 'editable', type: 'boolean', default: 'false', desc: 'Allow double-click or Enter to edit cell values (triggers processRowUpdate).' },
         { name: 'hideable', type: 'boolean', default: 'true', desc: 'Allow hiding via column menu / visibility panel.' },
         { name: 'pinnable', type: 'boolean', default: 'true', desc: 'Allow pinning via column menu.' },
         { name: 'disableColumnMenu', type: 'boolean', default: 'false', desc: 'Hide the ⋮ column menu icon.' },

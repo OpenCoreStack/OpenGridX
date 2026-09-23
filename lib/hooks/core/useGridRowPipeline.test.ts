@@ -39,12 +39,10 @@ describe('useGridRowPipeline — filtering', () => {
         expect(result.current.filteredRows.map(r => r.id)).toEqual([1]);
     });
 
-    it('filterMode=server passes rows through unfiltered', () => {
+    it('filterMode=server passes rows through unfiltered, with or without a dataSource', () => {
         const { result } = renderHook(() => useGridRowPipeline({
             ...BASE_PARAMS,
             filterMode: 'server',
-            // dataSource required: hook only bypasses filtering when both filterMode=server AND dataSource are set
-            dataSource: {} as never,
             filterModel: { items: [{ id: 'f1', field: 'name', operator: 'contains' as const, value: 'Alice' }] },
         }));
         expect(result.current.filteredRows).toHaveLength(5);
@@ -70,12 +68,10 @@ describe('useGridRowPipeline — sorting', () => {
         expect(ages).toEqual([35, 30, 28, 25, 22]);
     });
 
-    it('sortingMode=server passes rows through unsorted', () => {
+    it('sortingMode=server passes rows through unsorted, with or without a dataSource', () => {
         const { result } = renderHook(() => useGridRowPipeline({
             ...BASE_PARAMS,
             sortingMode: 'server',
-            // dataSource required: hook only bypasses sorting when both sortingMode=server AND dataSource are set
-            dataSource: {} as never,
             sortModel: [{ field: 'age', sort: 'asc' }],
         }));
         // Rows stay in original order
@@ -102,13 +98,12 @@ describe('useGridRowPipeline — pagination', () => {
         expect(result.current.paginatedUnpinnedRows.map(r => r.id)).toEqual([4, 5]);
     });
 
-    it('paginationMode=server returns all rows unsliced', () => {
+    it('paginationMode=server returns all rows unsliced, with or without a dataSource', () => {
         const { result } = renderHook(() => useGridRowPipeline({
             ...BASE_PARAMS,
             pagination: true,
             paginationMode: 'server',
-            dataSource: {} as never,
-            effectivePaginationModel: { page: 0, pageSize: 2 },
+            effectivePaginationModel: { page: 1, pageSize: 2 },
         }));
         expect(result.current.paginatedUnpinnedRows).toHaveLength(5);
     });
@@ -155,7 +150,6 @@ describe('useGridRowPipeline — page clamping', () => {
             ...BASE_PARAMS,
             pagination: true,
             paginationMode: 'server',
-            dataSource: {} as never,
             effectivePaginationModel: { page: 7, pageSize: 2 },
         }));
         expect(result.current.currentPage).toBe(7);

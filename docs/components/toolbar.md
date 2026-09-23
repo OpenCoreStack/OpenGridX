@@ -33,9 +33,9 @@ The Summaries panel lists each aggregable column with the functions it allows: i
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `columns` | `GridColDef[]` | `[]` | Column definitions (injected automatically when used via `slots`). |
-| `baseColumns` | `GridColDef[]` | — | Pre-pivot column definitions, used by the Pivot panel to avoid showing synthetic columns. |
+| `baseColumns` | `GridColDef[]` | — | Pre-pivot column definitions. The Pivot panel lists these instead of the generated pivot columns, and the Summaries panel only offers columns that are among them (a summary on a generated pivot column would do nothing). |
 | `aggregationModel` | `GridAggregationModel` | `{}` | Current aggregation configuration. |
-| `onAggregationModelChange` | `(model) => void` | — | Called when the user changes aggregation settings. Presence of this prop shows the Summaries button. `DataGrid` does not pass it in pivot mode, where summaries have no effect. |
+| `onAggregationModelChange` | `(model) => void` | — | Called when the user changes aggregation settings. Presence of this prop shows the Summaries button. |
 | `pivotModel` | `GridPivotModel` | — | Current pivot configuration. |
 | `onPivotModelChange` | `(model) => void` | — | Called when the user changes pivot settings. Presence of this prop shows the Pivot button. |
 | `filterModel` | `GridFilterModel` | — | Current filter model. Presence of this prop shows the search bar and Filter button. |

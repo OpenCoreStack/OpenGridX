@@ -1,7 +1,8 @@
 import React, { useState, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { ColumnVisibilityPanel } from '../ColumnVisibilityPanel/ColumnVisibilityPanel';
-import type { GridColDef, GridRowModel, GridColumnOrderChangeParams } from '../../types';
+import type { GridColDef, GridRowModel, GridColumnOrderChangeParams, GridColumnGroupingModel } from '../../types';
+import { canReorderWithinColumnGroups } from '../../utils/columnGroups';
 import { getViewportWidth } from '../../utils/viewport';
 
 export interface GridStandaloneColumnPanelProps<R extends GridRowModel> {
@@ -17,6 +18,8 @@ export interface GridStandaloneColumnPanelProps<R extends GridRowModel> {
     onColumnVisibilityChange: (model: Record<string, boolean>) => void;
     onColumnOrderChange?: (params: GridColumnOrderChangeParams) => void;
     setInternalColumnOrder: React.Dispatch<React.SetStateAction<string[]>>;
+    /** When set, a column can only be moved within its own column group. */
+    columnGroupingModel?: GridColumnGroupingModel;
 }
 
 export function GridStandaloneColumnPanel<R extends GridRowModel>({
@@ -32,6 +35,7 @@ export function GridStandaloneColumnPanel<R extends GridRowModel>({
     onColumnVisibilityChange,
     onColumnOrderChange,
     setInternalColumnOrder,
+    columnGroupingModel,
 }: GridStandaloneColumnPanelProps<R>) {
     const [panelTop, setPanelTop] = useState<number>(16);
     const [panelRight, setPanelRight] = useState<number>(16);
@@ -50,6 +54,7 @@ export function GridStandaloneColumnPanel<R extends GridRowModel>({
     const handleReorder = disableColumnReorder
         ? undefined
         : (fromField: string, toField: string) => {
+            if (!canReorderWithinColumnGroups(columnGroupingModel, fromField, toField)) return;
             const currentOrder = [...effectiveColumnOrder];
             const fromIdx = currentOrder.indexOf(fromField);
             const toIdx = currentOrder.indexOf(toField);

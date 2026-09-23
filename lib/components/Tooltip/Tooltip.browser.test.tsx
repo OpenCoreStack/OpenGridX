@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import '../../styles/opengridx.css';
 import { DataGrid, GridToolbar, GridTooltip, DataGridThemeProvider, darkTheme } from '../../index';
@@ -18,8 +18,11 @@ describe('GridTooltip in a real browser', () => {
         );
         const btn = getByLabelText('Configure summaries');
         fireEvent.mouseEnter(btn.parentElement as HTMLElement);
-        await wait(300);
-        const tip = document.querySelector<HTMLElement>('.ogx-tooltip')!;
+        const tip = await vi.waitFor(() => {
+            const el = document.querySelector<HTMLElement>('.ogx-tooltip');
+            if (!el) throw new Error('tooltip not shown yet');
+            return el;
+        }, { timeout: 3000 });
         fireEvent.click(btn);
         await wait(50);
         const panel = document.querySelector<HTMLElement>('.ogx-toolbar__panel')!;
@@ -40,8 +43,11 @@ describe('GridTooltip in a real browser', () => {
             window.scrollTo(0, 400);
             const btn = getByText('anchor');
             fireEvent.mouseEnter(btn);
-            await wait(300);
-            const tip = document.querySelector<HTMLElement>('.ogx-tooltip')!.getBoundingClientRect();
+            const tip = (await vi.waitFor(() => {
+                const el = document.querySelector<HTMLElement>('.ogx-tooltip');
+                if (!el) throw new Error('tooltip not shown yet');
+                return el;
+            }, { timeout: 3000 })).getBoundingClientRect();
             const anchor = btn.getBoundingClientRect();
             if (placement === 'top') expect(tip.bottom).toBeLessThanOrEqual(anchor.top);
             if (placement === 'bottom') expect(tip.top).toBeGreaterThanOrEqual(anchor.bottom);

@@ -8,7 +8,7 @@ Internal hook. Centralises the controlled/uncontrolled state pattern for every p
 
 ## Purpose
 
-Seven DataGrid state pairs follow the same pattern:
+Eight DataGrid state pairs follow the same pattern:
 
 ```
 [internal, setInternal] = useState(defaultValue)
@@ -25,12 +25,22 @@ Before this hook existed, those 85 lines lived inline in `DataGrid.tsx`. `useGri
 | State | Prop (controlled) | Change callback |
 | :--- | :--- | :--- |
 | Sort | `sortModel` | `onSortModelChange` |
+| Filter | `filterModel` | `onFilterModelChange` |
 | Aggregation | `aggregationModel` | `onAggregationModelChange` |
 | Column visibility | `columnVisibilityModel` | `onColumnVisibilityModelChange` |
 | Pinned columns | `pinnedColumns` | `onPinnedColumnsChange` |
 | Pivot | `pivotModel` | `onPivotModelChange` |
 | Pagination | `paginationModel` | `onPaginationModelChange` |
 | Row selection | `rowSelectionModel` | `onRowSelectionModelChange` |
+
+It also resolves `density` (the `density` prop, else `initialState.density`, else `'standard'`).
+
+This hook is the single source of truth for these models. The `useDataGrid` reducer holds only
+the row store, dimensions and dataSource status (it used to keep its own sort, filter, pagination
+and selection copies, which drifted from what the grid rendered and made `apiRef` setters no-ops).
+Everything that reads or changes these models — the header, toolbar, pager, row checkboxes and
+the imperative API (`useGridApiMethods`) — goes through the values and `handle*Change` callbacks
+returned here.
 
 ---
 
@@ -42,6 +52,9 @@ interface UseGridControlledStateParams {
 
     sortModel?: GridSortItem[];
     onSortModelChange?: (model: GridSortItem[]) => void;
+
+    filterModel?: GridFilterModel;
+    onFilterModelChange?: (model: GridFilterModel) => void;
 
     aggregationModel?: GridAggregationModel;
     onAggregationModelChange?: (model: GridAggregationModel) => void;
@@ -57,9 +70,12 @@ interface UseGridControlledStateParams {
 
     paginationModel?: GridPaginationModel;
     onPaginationModelChange?: (model: GridPaginationModel) => void;
+    pageSizeOptions?: number[];   // picks the uncontrolled default page size
 
     rowSelectionModel?: GridRowId[];
     onRowSelectionModelChange?: (model: GridRowId[]) => void;
+
+    density?: 'compact' | 'standard' | 'comfortable';
 }
 ```
 
@@ -69,10 +85,16 @@ interface UseGridControlledStateParams {
 
 ```ts
 interface UseGridControlledStateReturn {
-    // Sort — caller uses onSortModelChange directly; setInternalSortModel exposed for reducer dispatches
+    // Sort
     sortModel: GridSortItem[];
     isSortControlled: boolean;
     setInternalSortModel: React.Dispatch<React.SetStateAction<GridSortItem[]>>;
+    handleSortModelChange: (model: GridSortItem[]) => void;
+
+    // Filter (seeded from initialState.filter.filterModel)
+    filterModel: GridFilterModel;
+    isFilterControlled: boolean;
+    handleFilterModelChange: (model: GridFilterModel) => void;
 
     // Aggregation
     aggregationModel: GridAggregationModel;
@@ -99,6 +121,10 @@ interface UseGridControlledStateReturn {
     selectedRowIds: Set<GridRowId>;         // derived Set for O(1) lookup
     isSelectionControlled: boolean;
     setInternalRowSelectionModel: React.Dispatch<React.SetStateAction<GridRowId[]>>;
+    handleRowSelectionModelChange: (model: GridRowId[]) => void;
+
+    // Density
+    density: 'compact' | 'standard' | 'comfortable';
 }
 ```
 
@@ -110,7 +136,11 @@ interface UseGridControlledStateReturn {
 
 **Uncontrolled mode:** When a prop is `undefined`, the effective value is the internal state. The `handle*Change` callback updates internal state and also fires the external callback (if provided) for observability.
 
-**`onRowSelectionModelChange` exception:** This callback is consumed by DataGrid directly (e.g. inside `handleSelectAll`) rather than through the hook. The hook silences it with `void onRowSelectionModelChange` to avoid an unused-variable lint error, and exposes `setInternalRowSelectionModel` for DataGrid to update internal state after calling the callback itself.
+**Selection:** `handleRowSelectionModelChange` applies a new model like the other handlers. The row-click, checkbox, Space-key and select-all rules (including `disableMultipleRowSelection`) live in `useGridRowSelection`, which calls it.
+
+**Default page size:** without `paginationModel` or `initialState.pagination`, the page size is 100 when `pageSizeOptions` offers it, otherwise the first option, so the page-size select always shows the size in use.
+
+**`aggregationModel` identity follows content:** an inline `aggregationModel={{ salary: 'sum' }}` is a new object on every parent render. The returned `aggregationModel` keeps its identity while its content is unchanged (it is keyed on its JSON), so the server fetches and memos that depend on it do not rerun for an unchanged model.
 
 **`selectedRowIds` (Set):** The array `rowSelectionModel` is converted to a `Set` via `useMemo` for O(1) membership checks during row rendering. Both are returned so callers can choose the right structure.
 
