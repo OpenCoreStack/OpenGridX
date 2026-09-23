@@ -10,6 +10,31 @@ import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/us
 import { isColumnPinned, calculatePinnedPositions, isRowPinned } from '../../utils/pinning';
 
 
+/**
+ * Builds the Cell span info for a colSpan origin: the merged width and flex-grow are the sums over
+ * the columns it covers, taken from the rendered (layout-resolved) columns. The span never crosses a
+ * spacer, so a span cut by the column window only covers what is rendered.
+ */
+function mergeColSpan<R extends GridRowModel>(
+    columns: GridColDef<R>[],
+    originIndex: number,
+    colSpan: number,
+    columnWidths: Record<string, number>,
+): CellColSpanInfo {
+    let width = 0;
+    let flexGrow = 0;
+    let covered = 0;
+    for (let i = originIndex; i < columns.length && covered < colSpan; i++) {
+        const col = columns[i];
+        if (col.isSpacer) break;
+        const w = columnWidths[col.field] ?? col.width;
+        width += typeof w === 'number' ? w : 100;
+        flexGrow += col.flex ?? 0;
+        covered++;
+    }
+    return { spannedByColSpan: false, cellProps: { colSpan: covered, width, flexGrow } };
+}
+
 export interface RowProps<R extends GridRowModel = GridRowModel> {
     row: R;
     columns: GridColDef<R>[];
@@ -334,13 +359,20 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     const effectiveWidth = columnWidths[colDef.field] ?? colDef.width;
 
                     const pinnedPosition = isColumnPinned(colDef.field, pinnedColumns);
-                    const pinnedOffset = pinnedPosition ? pinnedPositions[colDef.field] : undefined;
 
                     const isEditing = editingCell?.id === row.id && editingCell?.field === colDef.field;
 
                     const cellValue = isEditing ? editingCell?.value : value;
 
-                    const colSpanInfo = colspanMap?.get(row.id)?.[colDef.field];
+                    const storedColSpanInfo = colspanMap?.get(row.id)?.[colDef.field];
+                    const colSpanInfo = storedColSpanInfo && !storedColSpanInfo.spannedByColSpan && storedColSpanInfo.cellProps.colSpan > 1
+                        ? mergeColSpan(columns, colIndex, storedColSpanInfo.cellProps.colSpan, columnWidths)
+                        : storedColSpanInfo;
+                    // A right-pinned merged cell is anchored by the right edge of the last column it covers.
+                    const offsetField = pinnedPosition === 'right' && colSpanInfo && !colSpanInfo.spannedByColSpan
+                        ? columns[colIndex + colSpanInfo.cellProps.colSpan - 1]?.field ?? colDef.field
+                        : colDef.field;
+                    const pinnedOffset = pinnedPosition ? pinnedPositions[offsetField] : undefined;
                     const rowSpan = rowSpanningCaches?.spannedCells[row.id]?.[colDef.field];
                     const isHiddenByRowSpan = rowSpanningCaches?.hiddenCells[row.id]?.[colDef.field] || false;
 

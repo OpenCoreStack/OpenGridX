@@ -110,11 +110,28 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         return null;
     }
 
+    const colSpan = colSpanInfo?.cellProps.colSpan ?? 1;
+    const isColSpanOrigin = colSpan > 1;
+    // A merged cell takes the summed widths of the columns it covers (computed by Row from the
+    // resolved layout widths); the origin column's own min/max width does not apply to it.
+    const cellWidth = (isColSpanOrigin ? colSpanInfo?.cellProps.width : undefined) ?? width ?? colDef.width ?? 100;
+    const sizeStyle: React.CSSProperties = {
+        width: 'var(--width)',
+        '--width': typeof cellWidth === 'number' ? `${cellWidth}px` : cellWidth,
+        flexGrow: (isColSpanOrigin ? colSpanInfo?.cellProps.flexGrow : undefined) ?? colDef.flex ?? 0,
+        flexShrink: 0,
+        flexBasis: 'auto',
+        boxSizing: 'border-box',
+        minWidth: isColSpanOrigin ? undefined : colDef.minWidth,
+        maxWidth: isColSpanOrigin ? undefined : colDef.maxWidth,
+    } as React.CSSProperties;
+
     if (isHiddenByRowSpan) {
+        // Keeps the covered column's slot so the rest of the row stays under its headers.
         return (
             <div
                 className="ogx__cell ogx__cell--hidden"
-                style={{ width: width ?? colDef.width ?? 100 }}
+                style={sizeStyle}
                 role="presentation"
                 data-field={colDef.field}
                 data-colindex={colIndex}
@@ -163,19 +180,10 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         resolvedCellClassName
     ].filter(Boolean).join(' ');
 
-    const colSpan = colSpanInfo?.cellProps?.colSpan || 1;
     const rowSpan = rowSpanProp || 1;
-    const cellWidth = colSpanInfo?.cellProps?.width ?? width ?? colDef.width ?? 100;
 
     const style: React.CSSProperties = {
-        width: 'var(--width)',
-        '--width': typeof cellWidth === 'number' ? `${cellWidth}px` : cellWidth,
-        flexGrow: colDef.flex ?? 0,
-        flexShrink: 0,
-        flexBasis: colDef.flex ? 'auto' : 'auto',
-        boxSizing: 'border-box',
-        minWidth: colDef.minWidth,
-        maxWidth: colDef.maxWidth,
+        ...sizeStyle,
         position: isPinned ? 'sticky' : undefined,
         zIndex: colDef.zIndex ?? (isPinned ? 3 : undefined),
         padding: isEditing ? 0 : undefined
