@@ -80,8 +80,10 @@ export default function InfiniteScrollDemo() {
 
 ## Implementation Details
 
-*   **`onRowsScrollEnd`**: Triggered when `scrollHeight - scrollTop - clientHeight < threshold` (default 100px).
-*   **Request Handling**: `useGridDataSource` includes logic to cancel stale requests if scrolling happens too quickly.
-*   **Appending vs Replacing**: 
-    *   In `infinite` mode, rows fetched for **new pages** are appended.
-    *   Rows fetched due to **sorting/filtering changes** replace the entire dataset (resetting to page 0).
+*   **`onRowsScrollEnd`**: Fired once when the end of the rows comes within 100px of the viewport bottom (`scrollHeight - scrollTop - clientHeight < 100`). It is re-armed when the user scrolls out of that zone or the row count changes, so one scroll gesture loads one page. It also fires after the rows change when the end is already in view, so a first page that does not fill the viewport keeps loading until it does. Horizontal scrolling never fires it.
+*   **Loading placeholders**: the skeleton rows shown while the next page loads are drawn after the last loaded row, only when the user has scrolled to the end of the data.
+*   **Ranges, not pages**: each request asks for `[rows loaded so far, (page + 1) * pageSize)`. Advancing the page twice within the 300 ms debounce, or while a request is in flight, still loads every row in between: one request runs at a time and, when it lands, the grid requests whatever the current page still needs. A response shorter than requested is treated as the end of the data until the page advances again.
+*   **Appending**: rows are appended; a row whose id (`getRowId`) is already loaded is skipped, so overlapping pages never show a row twice.
+*   **Restarting**: a sort, filter, page-size or `dataSource` (`getRows`) change replaces the rows with a new request from row 0 and reports page 0 through `onPaginationModelChange`. Setting a smaller page yourself reloads the list up to that page.
+*   **No pager**: `paginationMode="infinite"` ignores `pagination`; no pagination bar is shown and loaded rows are never sliced.
+*   **Stale responses**: a response for a list that has since restarted is discarded.

@@ -1,14 +1,14 @@
+import { getDataSourceErrorMessage } from '../../utils/dataSource';
+
 interface GridErrorOverlayProps {
     error: unknown;
+    /** Runs the failed request again. Without it, no Retry button is shown. */
+    onRetry?: () => void;
 }
 
-export function GridErrorOverlay({ error }: GridErrorOverlayProps) {
+export function GridErrorOverlay({ error, onRetry }: GridErrorOverlayProps) {
     if (!error) return null;
-    const message = error instanceof Error
-        ? error.message
-        : typeof error === 'string'
-            ? error
-            : 'An unexpected error occurred while loading the data.';
+    const message = getDataSourceErrorMessage(error);
     return (
         <div className="ogx-error-overlay" aria-live="assertive" role="alert">
             <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--ogx-color-error)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -22,12 +22,15 @@ export function GridErrorOverlay({ error }: GridErrorOverlayProps) {
             <div className="ogx-error-overlay__message">
                 {message}
             </div>
-            <button
-                onClick={() => window.location.reload()}
-                className="ogx-button ogx-button--primary"
-            >
-                Retry
-            </button>
+            {onRetry && (
+                <button
+                    type="button"
+                    onClick={onRetry}
+                    className="ogx-button ogx-button--primary"
+                >
+                    Retry
+                </button>
+            )}
         </div>
     );
 }

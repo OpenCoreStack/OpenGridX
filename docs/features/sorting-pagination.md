@@ -87,6 +87,12 @@ The pager counts the rows being paged: the rows that pass the filter, excluding 
 
 Without `paginationModel` or `initialState.pagination`, the page size is 100 when `pageSizeOptions` offers it and otherwise the first option, so the rows-per-page select always matches the rows shown.
 
+### When the rows shrink
+If the current page ends up past the last page (new `rows`, a filter, collapsed tree nodes), the grid shows the last page and reports the corrected model through `onPaginationModelChange`, so Previous and Next continue from the page on screen. The correction waits until rows are present and nothing is loading, so a restored page (for example from `initialState.pagination`) survives an initially empty `rows` array. Under server pagination the server's `rowCount` decides; the grid does not clamp.
+
+### Page sizes outside `pageSizeOptions`
+When the page size in use is not one of `pageSizeOptions` (for example a controlled `paginationModel={{ page: 0, pageSize: 20 }}` with `pageSizeOptions={[10, 25, 50]}`), the rows-per-page select adds it as an extra option, so it shows the size actually used. A page size below 1 is treated as 1.
+
 ### Server-Side Pagination
 With `paginationMode="server"` the grid does not slice rows: `rows` is the current page. There are two ways to supply it.
 

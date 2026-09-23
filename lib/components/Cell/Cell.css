@@ -70,6 +70,11 @@
 .ogx:not(.ogx--row-spanning) .ogx__row--selected:hover .ogx__cell--pinned-right {
   background-color: var(--ogx-grid-row-selected-hover-background);
 }
+/* Section edge cells show a shadow outside their box; the content stays clipped by .ogx__cell-content. */
+.ogx__cell--pinned-left-last,
+.ogx__cell--pinned-right-first {
+  overflow: visible;
+}
 .ogx__cell--pinned-left-last::after {
   content: '';
   position: absolute;

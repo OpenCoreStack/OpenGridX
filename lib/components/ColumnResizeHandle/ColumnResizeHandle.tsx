@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { clampColumnWidth } from './clampColumnWidth';
+import { clampResizeWidth } from './clampResizeWidth';
 
 
 export interface ColumnResizeHandleProps {
@@ -53,7 +53,7 @@ export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
     const widthAt = useCallback((active: ActiveResize, clientX: number) => {
         const deltaX = clientX - active.startX;
         const raw = active.startWidth + (edge === 'start' ? -deltaX : deltaX);
-        return clampColumnWidth(raw, active.startWidth, minWidth, maxWidth);
+        return clampResizeWidth(raw, active.startWidth, minWidth, maxWidth);
     }, [edge, minWidth, maxWidth]);
 
     const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
@@ -107,7 +107,7 @@ export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
         event.preventDefault();
         event.stopPropagation();
         const step = (event.shiftKey ? 50 : 10) * (event.key === 'ArrowRight' ? 1 : -1);
-        onResize(field, clampColumnWidth(currentWidth + step, currentWidth, minWidth, maxWidth));
+        onResize(field, clampResizeWidth(currentWidth + step, currentWidth, minWidth, maxWidth));
     }, [field, currentWidth, onResize, minWidth, maxWidth]);
 
     const handleDoubleClick = useCallback((event: React.MouseEvent) => {

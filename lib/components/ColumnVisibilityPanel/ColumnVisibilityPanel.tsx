@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useId } from 'react';
 import { Checkbox } from '../ui/Checkbox';
 import type { GridColDef, GridRowModel } from '../../types';
 
@@ -48,6 +48,10 @@ export function ColumnVisibilityPanel<R extends GridRowModel = GridRowModel>(
 ) {
     const { columns, visibleColumns, onVisibilityChange, onShowAll, onHideAll, onColumnReorder, onColumnOrderReset, showNonHideableColumns } = props;
     const [searchQuery, setSearchQuery] = useState('');
+    // Each checkbox is named by a <label htmlFor> holding the column name. (Wrapping Checkbox,
+    // which renders its own <label>, in another <label> nested labels and left the name to a
+    // generic fallback.)
+    const idBase = useId();
     const [dragOverField, setDragOverField] = useState<string | null>(null);
     const dragFieldRef = useRef<string | null>(null);
 
@@ -122,7 +126,8 @@ export function ColumnVisibilityPanel<R extends GridRowModel = GridRowModel>(
             </div>
 
             <div className="ogx-column-visibility-panel__list">
-                {filteredColumns.map(col => {
+                {filteredColumns.map((col, index) => {
+                    const checkboxId = `${idBase}-col-${index}`;
                     const isVisible = visibleColumns.has(col.field);
                     const isHideable = col.hideable !== false;
                     const isDragOver = dragOverField === col.field;
@@ -152,35 +157,38 @@ export function ColumnVisibilityPanel<R extends GridRowModel = GridRowModel>(
                                     <DragHandleIcon />
                                 </span>
                             )}
-                            <label
+                            <div
                                 className="ogx-column-visibility-panel__item-label"
                                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--ogx-spacing-md)', flex: 1, cursor: isHideable ? 'pointer' : 'not-allowed' }}
                             >
                                 <Checkbox
+                                    id={checkboxId}
                                     checked={isVisible}
                                     onChange={(e) => onVisibilityChange(col.field, e.target.checked)}
                                     disabled={!isHideable}
                                 />
-                                <span className="ogx-column-visibility-panel__label">
+                                <label htmlFor={checkboxId} className="ogx-column-visibility-panel__label">
                                     {col.headerName || col.field}
-                                </span>
-                            </label>
+                                </label>
+                            </div>
                         </div>
                     );
                 })}
             </div>
 
             <div className="ogx-column-visibility-panel__footer">
-                <label className="ogx-column-visibility-panel__item">
+                <div className="ogx-column-visibility-panel__item">
                     <Checkbox
+                        id={`${idBase}-all`}
                         checked={allVisible}
                         onChange={handleToggleAll}
                     />
-                    <span className="ogx-column-visibility-panel__label">
+                    <label htmlFor={`${idBase}-all`} className="ogx-column-visibility-panel__label">
                         Show/Hide All
-                    </span>
-                </label>
+                    </label>
+                </div>
                 <button
+                    type="button"
                     className="ogx-column-visibility-panel__reset-btn"
                     onClick={() => { onShowAll(); onColumnOrderReset?.(); }}
                 >

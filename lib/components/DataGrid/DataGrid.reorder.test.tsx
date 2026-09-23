@@ -3,7 +3,7 @@ import { render, fireEvent, screen, act } from '@testing-library/react';
 import { useState } from 'react';
 import { DataGrid } from './DataGrid';
 import { GridToolbar } from '../Toolbar/GridToolbar';
-import type { GridColDef, GridRowModel, GridRowOrderChangeParams, GridColumnOrderChangeParams } from '../../types';
+import type { GridColDef, GridPivotModel, GridRowModel, GridRowOrderChangeParams, GridColumnOrderChangeParams } from '../../types';
 
 // A DataTransfer double that behaves like the browser's: what dragstart stores shows up in `types`.
 function createDataTransfer(initialTypes: string[] = []) {
@@ -192,6 +192,24 @@ describe('row reordering: onRowOrderChange indices address the rows prop', () =>
         handle.remove();
         act(() => { handle.dispatchEvent(new Event('dragend')); });
         expect(container.querySelector('.ogx__row--dragging')).toBeNull();
+    });
+
+    it('is switched off while pivot mode is active, and back on when it ends', () => {
+        const rows: GridRowModel[] = [
+            { id: 1, name: 'a', dept: 'Eng', salary: 1000 },
+            { id: 2, name: 'b', dept: 'HR', salary: 2000 },
+        ];
+        const cols: GridColDef[] = [{ field: 'name', width: 100 }, { field: 'dept', width: 100 }, { field: 'salary', width: 100, type: 'number' }];
+        const model: GridPivotModel = { rowFields: ['dept'], columnFields: [], valueFields: [{ field: 'salary', aggFn: 'sum' }] };
+        const Grid = ({ pivot }: { pivot: boolean }) => (
+            <DataGrid rows={rows} columns={cols} rowReordering onRowOrderChange={() => {}} pivotMode={pivot} pivotModel={model} />
+        );
+        const { container, rerender } = render(<Grid pivot />);
+        expect(container.querySelectorAll('.ogx__rows .ogx__row').length).toBeGreaterThan(0);
+        expect(container.querySelector('.ogx__cell--drag-handle')).toBeNull();
+        expect(container.querySelector('.ogx__header [data-field="__reorder_col__"]')).toBeNull();
+        rerender(<Grid pivot={false} />);
+        expect(container.querySelector('.ogx__rows .ogx__row .ogx__cell--drag-handle')?.getAttribute('draggable')).toBe('true');
     });
 
     it('puts a row token into the DataTransfer (Firefox needs data to start a drag)', () => {

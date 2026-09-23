@@ -21,7 +21,8 @@ The grid follows the [WAI-ARIA data grid pattern](https://www.w3.org/WAI/ARIA/ap
 | **Home** / **End** | First / last column of the row. |
 | **Ctrl+Home** / **Ctrl+End** (Cmd on macOS) | First column of the header row / last column of the last row. |
 | **PageUp** / **PageDown** | Up / down one page (`pageSize` with pagination, otherwise 10 rows). |
-| **Enter** | Editable cell: open the editor. Other cells: same as clicking the row — fires `onRowClick`, toggles selection unless `disableRowSelectionOnClick`, and expands or collapses a group / tree-parent row. |
+| **Enter** | Editable cell: open the editor. Other cells of a row with children (group row or tree-data parent): expand or collapse it. Other cells: same as clicking the row — fires `onRowClick` and toggles selection unless `disableRowSelectionOnClick`. |
+| **Alt+ArrowRight** / **Alt+ArrowLeft** | Tree data / row grouping: expand / collapse the focused row. |
 | **Shift+Space** | Select or deselect the focused row (when rows can be selected: `checkboxSelection`, or click selection not disabled). Synthetic group rows are not selectable. |
 | **Space** | On the row checkbox: toggle the row. On the detail-panel toggle: expand or collapse the panel. Elsewhere it does nothing (it never scrolls the grid). |
 | **Ctrl+A** (Cmd+A) | Select every row, when several rows can be selected. |

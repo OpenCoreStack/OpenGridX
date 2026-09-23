@@ -52,7 +52,7 @@ Custom `renderCell` and `renderEditCell` callbacks are wrapped in a `CellErrorBo
 
 The cell renders again (and the indicator clears if the renderer now succeeds) when the row object, the column's `renderCell` function or the cell value changes, so passing fixed columns recovers without replacing every row (v3.0).
 
-Default cell display (no `renderCell`) does not go through the boundary — it cannot throw.
+A column's `valueGetter` or `valueFormatter` that throws for a row is contained the same way: that cell shows the `⚠` indicator and the rest of the grid renders. On synthetic rows (row-grouping group and subtotal rows, auto-created tree parents) `valueGetter` is not called (the row already holds its grouping value and aggregates under the column's field), and `valueFormatter` is only called for the values the row holds, not for its empty cells.
 
 To style the error indicator:
 

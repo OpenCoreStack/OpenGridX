@@ -1,6 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect, useContext } from 'react';
 import ReactDOM from 'react-dom';
 import type { GridColDef, GridAggregationModel, GridPivotModel, GridFilterModel } from '../../types';
+import { AGGREGATION_FUNCTIONS } from '../../utils/aggregation';
+import type { BuiltInAggFn } from '../../utils/aggregation';
+import { getViewportWidth } from '../../utils/viewport';
+import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
 import { PivotPanel, PivotIcon } from './PivotPanel';
 import { GlobalSearch } from './GlobalSearch';
 import { ColumnVisibilityPanel } from '../ColumnVisibilityPanel/ColumnVisibilityPanel';
@@ -78,7 +82,23 @@ export interface GridToolbarProps {
     showNonHideableColumns?: boolean;
 }
 
-const AGGREGATION_FUNCTIONS = ['none', 'sum', 'avg', 'count', 'min', 'max'] as const;
+const BUILT_IN_AGGREGATION_FUNCTIONS = Object.keys(AGGREGATION_FUNCTIONS) as BuiltInAggFn[];
+
+function isBuiltInAggregationFunction(fn: string): fn is BuiltInAggFn {
+    return Object.prototype.hasOwnProperty.call(AGGREGATION_FUNCTIONS, fn);
+}
+
+/**
+ * The summary functions offered for a column: its `availableAggregationFunctions` when set,
+ * otherwise every built-in one. Names the aggregation engine does not implement are dropped,
+ * because choosing one would show the label in the header but never compute a value.
+ */
+function getAggregationFunctions(col: GridColDef): BuiltInAggFn[] {
+    if (!col.availableAggregationFunctions) return BUILT_IN_AGGREGATION_FUNCTIONS;
+    return Array.from(new Set(col.availableAggregationFunctions.filter(isBuiltInAggregationFunction)));
+}
+
+type ToolbarPanel = 'summaries' | 'pivot' | 'columns' | 'filters';
 
 function SigmaIcon() {
     return (
@@ -146,7 +166,7 @@ function AggregationPanel({
         const rect = anchorRef.current.getBoundingClientRect();
         return {
             top: rect.bottom + 6,
-            right: window.innerWidth - rect.right,
+            right: getViewportWidth() - rect.right,
         };
     }, [anchorRef]);
 
@@ -195,6 +215,7 @@ function AggregationPanel({
                 </span>
                 {activeCount > 0 && (
                     <button
+                        type="button"
                         className="ogx-toolbar__clear-btn"
                         onClick={onClearAll}
                         title="Clear all summaries"
@@ -219,8 +240,9 @@ function AggregationPanel({
                                     {col.headerName || col.field}
                                 </span>
                                 <div className="ogx-toolbar__agg-pills">
-                                    {AGGREGATION_FUNCTIONS.map((fn) => (
+                                    {['none', ...getAggregationFunctions(col)].map((fn) => (
                                         <button
+                                            type="button"
                                             key={fn}
                                             className={`ogx-toolbar__pill${currentFn === fn ? ' ogx-toolbar__pill--active' : ''}`}
                                             onClick={() => onFunctionChange(col.field, fn)}
@@ -277,7 +299,7 @@ function ColumnsPanelWrapper({
         const rect = anchorRef.current.getBoundingClientRect();
         return {
             top: rect.bottom + 6,
-            right: window.innerWidth - rect.right,
+            right: getViewportWidth() - rect.right,
         };
     }, [anchorRef]);
 
@@ -304,6 +326,12 @@ function ColumnsPanelWrapper({
         document.addEventListener('mousedown', handleClick);
         return () => document.removeEventListener('mousedown', handleClick);
     }, [anchorRef, onClose]);
+
+    useEffect(() => {
+        function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
 
     const panel = (
         <div
@@ -360,7 +388,7 @@ function FilterPanelWrapper({
         const rect = anchorRef.current.getBoundingClientRect();
         return {
             top: rect.bottom + 6,
-            right: window.innerWidth - rect.right,
+            right: getViewportWidth() - rect.right,
         };
     }, [anchorRef]);
 
@@ -412,6 +440,7 @@ function FilterPanelWrapper({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {activeFilterCount > 0 && (
                         <button
+                            type="button"
                             className="ogx-toolbar__clear-btn"
                             onClick={handleClearAll}
                             title="Clear all filters"
@@ -420,6 +449,7 @@ function FilterPanelWrapper({
                         </button>
                     )}
                     <button
+                        type="button"
                         className="ogx-toolbar__close-btn"
                         onClick={() => onCloseRef.current()}
                         title="Close filters"
@@ -471,19 +501,34 @@ export function GridToolbar({
     className,
     showNonHideableColumns,
 }: GridToolbarProps) {
-    const [aggOpen, setAggOpen] = useState(false);
-    const [pivotOpen, setPivotOpen] = useState(false);
-    const [colsOpen, setColsOpen] = useState(false);
-    const [filterOpen, setFilterOpen] = useState(false);
+    // At most one panel is open. Every way the Columns panel closes (its button, a custom
+    // button, another panel opening, click-outside, Escape) reports onColumnsPanelClose, so the
+    // grid can ask for it again with forceColumnsOpen.
+    const [openPanel, setOpenPanel] = useState<ToolbarPanel | null>(null);
+    const aggOpen = openPanel === 'summaries';
+    const pivotOpen = openPanel === 'pivot';
+    const colsOpen = openPanel === 'columns';
+    const filterOpen = openPanel === 'filters';
+
+    const switchPanel = (next: ToolbarPanel | null) => {
+        if (openPanel === 'columns' && next !== 'columns') onColumnsPanelClose?.();
+        setOpenPanel(next);
+    };
+    const togglePanel = (panel: ToolbarPanel) => switchPanel(openPanel === panel ? null : panel);
+    const closePanel = (panel: ToolbarPanel) => { if (openPanel === panel) switchPanel(null); };
 
     useEffect(() => {
-        if (forceColumnsOpen) {
-            setColsOpen(true);
-            setAggOpen(false);
-            setPivotOpen(false);
-            setFilterOpen(false);
-        }
+        if (forceColumnsOpen) setOpenPanel('columns');
     }, [forceColumnsOpen]);
+
+    // Tell the grid this toolbar shows the Columns panel for the column menu; it can only do so
+    // when the grid's forceColumnsOpen reaches it and the Columns panel is enabled.
+    const toolbarHost = useContext(GridToolbarHostContext);
+    const hostsColumnsPanel = forceColumnsOpen !== undefined && Boolean(onColumnVisibilityModelChange);
+    useEffect(() => {
+        if (!toolbarHost || !hostsColumnsPanel) return undefined;
+        return toolbarHost.registerColumnsPanel();
+    }, [toolbarHost, hostsColumnsPanel]);
 
     const aggButtonRef = useRef<HTMLButtonElement>(null);
     const pivotButtonRef = useRef<HTMLButtonElement>(null);
@@ -506,6 +551,7 @@ export function GridToolbar({
     const baseFields = baseColumns ? new Set(baseColumns.map((c) => c.field)) : null;
     const aggregableColumns = columns.filter(
         (c) => c.aggregable !== false && (c.type === 'number' || c.aggregable === true)
+            && getAggregationFunctions(c).length > 0
             && (!baseFields || baseFields.has(c.field))
     );
 
@@ -610,22 +656,20 @@ export function GridToolbar({
                     <div ref={colsWrapperRef} className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
                         {renderColumnsButton
                             ? renderColumnsButton({
-                                onClick: () => { setColsOpen(o => !o); setAggOpen(false); setPivotOpen(false); setFilterOpen(false); },
+                                onClick: () => togglePanel('columns'),
                                 isOpen: colsOpen,
                                 activeCount: columns.length - visibleColumns.size,
                             })
                             : (
                                 <GridTooltip title="Columns">
                                     <button
+                                        type="button"
                                         ref={colsButtonRef}
                                         className={`ogx-toolbar__icon-btn${colsOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
                                         aria-label="Manage columns"
-                                        onClick={() => {
-                                            setColsOpen(!colsOpen);
-                                            setAggOpen(false);
-                                            setPivotOpen(false);
-                                            setFilterOpen(false);
-                                        }}
+                                        aria-haspopup="dialog"
+                                        aria-expanded={colsOpen}
+                                        onClick={() => togglePanel('columns')}
                                     >
                                         <ViewColumnIcon />
                                     </button>
@@ -642,7 +686,7 @@ export function GridToolbar({
                                 onHideAll={handleHideAllColumns}
                                 onColumnReorder={onColumnReorder}
                                 onColumnOrderReset={onColumnOrderReset}
-                                onClose={() => { setColsOpen(false); onColumnsPanelClose?.(); }}
+                                onClose={() => closePanel('columns')}
                                 showNonHideableColumns={showNonHideableColumns}
                             />
                         )}
@@ -654,22 +698,20 @@ export function GridToolbar({
                     <div ref={filterWrapperRef} className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
                         {renderFilterButton
                             ? renderFilterButton({
-                                onClick: () => { setFilterOpen(o => !o); setAggOpen(false); setPivotOpen(false); setColsOpen(false); },
+                                onClick: () => togglePanel('filters'),
                                 isOpen: filterOpen,
                                 activeCount: activeFilterCount,
                             })
                             : (
                                 <GridTooltip title="Filters">
                                     <button
+                                        type="button"
                                         ref={filterButtonRef}
                                         className={`ogx-toolbar__icon-btn${filterOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
                                         aria-label="Advanced filters"
-                                        onClick={() => {
-                                            setFilterOpen(!filterOpen);
-                                            setAggOpen(false);
-                                            setPivotOpen(false);
-                                            setColsOpen(false);
-                                        }}
+                                        aria-haspopup="dialog"
+                                        aria-expanded={filterOpen}
+                                        onClick={() => togglePanel('filters')}
                                     >
                                         <FilterIcon />
                                         {activeFilterCount > 0 && (
@@ -685,7 +727,7 @@ export function GridToolbar({
                                 columns={columns}
                                 filterModel={filterModel || { items: [] }}
                                 onFilterModelChange={onFilterModelChange}
-                                onClose={() => setFilterOpen(false)}
+                                onClose={() => closePanel('filters')}
                             />
                         )}
                     </div>
@@ -696,16 +738,13 @@ export function GridToolbar({
                     <div className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
                         <GridTooltip title="Pivot">
                             <button
+                                type="button"
                                 ref={pivotButtonRef}
                                 className={`ogx-toolbar__icon-btn${pivotOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
                                 aria-label="Configure pivot"
+                                aria-haspopup="dialog"
                                 aria-expanded={pivotOpen}
-                                onClick={() => {
-                                    setPivotOpen(!pivotOpen);
-                                    setAggOpen(false);
-                                    setColsOpen(false);
-                                    setFilterOpen(false);
-                                }}
+                                onClick={() => togglePanel('pivot')}
                             >
                                 <PivotIcon />
                                 {pivotActive && (
@@ -720,55 +759,54 @@ export function GridToolbar({
                                 columns={baseColumns ?? columns}
                                 model={currentPivotModel}
                                 onChange={(m) => { onPivotModelChange?.(m); }}
-                                onClose={() => setPivotOpen(false)}
+                                onClose={() => closePanel('pivot')}
                             />
                         )}
                     </div>
                 )}
 
                 {/* Summaries button */}
-                <div ref={aggWrapperRef} className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
-                    {renderAggregationButton
-                        ? renderAggregationButton({
-                            onClick: () => { setAggOpen(o => !o); setPivotOpen(false); setColsOpen(false); setFilterOpen(false); },
-                            isOpen: aggOpen,
-                            activeCount,
-                        })
-                        : (
-                            <GridTooltip title="Summaries">
-                                <button
-                                    ref={aggButtonRef}
-                                    className={`ogx-toolbar__icon-btn${aggOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
-                                    aria-label="Configure summaries"
-                                    aria-expanded={aggOpen}
-                                    onClick={() => {
-                                        setAggOpen(!aggOpen);
-                                        setPivotOpen(false);
-                                        setColsOpen(false);
-                                        setFilterOpen(false);
-                                    }}
-                                >
-                                    <SigmaIcon />
-                                    {activeCount > 0 && (
-                                        <span className="ogx-toolbar__dot" aria-label={`${activeCount} active summaries`} />
-                                    )}
-                                </button>
-                            </GridTooltip>
-                        )
-                    }
+                {onAggregationModelChange && (
+                    <div ref={aggWrapperRef} className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
+                        {renderAggregationButton
+                            ? renderAggregationButton({
+                                onClick: () => togglePanel('summaries'),
+                                isOpen: aggOpen,
+                                activeCount,
+                            })
+                            : (
+                                <GridTooltip title="Summaries">
+                                    <button
+                                        type="button"
+                                        ref={aggButtonRef}
+                                        className={`ogx-toolbar__icon-btn${aggOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
+                                        aria-label="Configure summaries"
+                                        aria-haspopup="dialog"
+                                        aria-expanded={aggOpen}
+                                        onClick={() => togglePanel('summaries')}
+                                    >
+                                        <SigmaIcon />
+                                        {activeCount > 0 && (
+                                            <span className="ogx-toolbar__dot" aria-label={`${activeCount} active summaries`} />
+                                        )}
+                                    </button>
+                                </GridTooltip>
+                            )
+                        }
 
-                    {aggOpen && (
-                        <AggregationPanel
-                            anchorRef={renderAggregationButton ? aggWrapperRef : aggButtonRef}
-                            aggregationModel={aggregationModel}
-                            aggregableColumns={aggregableColumns}
-                            onFunctionChange={handleFunctionChange}
-                            onClearAll={clearAllAgg}
-                            onClose={() => setAggOpen(false)}
-                            activeCount={activeCount}
-                        />
-                    )}
-                </div>
+                        {aggOpen && (
+                            <AggregationPanel
+                                anchorRef={renderAggregationButton ? aggWrapperRef : aggButtonRef}
+                                aggregationModel={aggregationModel}
+                                aggregableColumns={aggregableColumns}
+                                onFunctionChange={handleFunctionChange}
+                                onClearAll={clearAllAgg}
+                                onClose={() => closePanel('summaries')}
+                                activeCount={activeCount}
+                            />
+                        )}
+                    </div>
+                )}
 
                 {/* Export button slot */}
                 {renderExportButton && renderExportButton()}

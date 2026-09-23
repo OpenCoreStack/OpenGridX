@@ -7,15 +7,46 @@ export interface UseGridDevWarningsParams {
     viewportHeight: number;
     renderedRowCount: number;
     totalRowCount: number;
+    /** `pinnedRows` is set while tree data or row grouping is active, where it has no effect. */
+    pinnedRowsIgnored?: boolean;
+    /** Pixel height of the scrollable content. */
+    scrollHeight?: number;
 }
 
 // Below this many rows, rendering everything is harmless, so an unbounded container is not worth a warning.
 const UNBOUNDED_WARN_THRESHOLD = 200;
 
+/**
+ * Browsers cap element heights (Firefox at about 17.9M px, Chromium and Safari at about 33.5M px):
+ * rows laid out below the cap cannot be scrolled to.
+ */
+export const MAX_SCROLLABLE_HEIGHT = 17_800_000;
+
 export function useGridDevWarnings(params: UseGridDevWarningsParams): void {
-    const { paginationRequested, isRowGrouping, autoHeight, viewportHeight, renderedRowCount, totalRowCount } = params;
+    const { paginationRequested, isRowGrouping, autoHeight, viewportHeight, renderedRowCount, totalRowCount, pinnedRowsIgnored = false, scrollHeight = 0 } = params;
     const warnedPaginationRef = useRef(false);
     const warnedUnboundedRef = useRef(false);
+    const warnedPinnedRowsRef = useRef(false);
+    const warnedHeightRef = useRef(false);
+
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'production' || warnedPinnedRowsRef.current || !pinnedRowsIgnored) return;
+        warnedPinnedRowsRef.current = true;
+        console.warn(
+            '[OpenGridX] `pinnedRows` is ignored while treeData or rowGroupingModel is active: the rows stay in their ' +
+            'place in the hierarchy. See docs/features/pinning.md.'
+        );
+    }, [pinnedRowsIgnored]);
+
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'production' || warnedHeightRef.current || scrollHeight <= MAX_SCROLLABLE_HEIGHT) return;
+        warnedHeightRef.current = true;
+        console.warn(
+            `[OpenGridX] The grid content is ${Math.round(scrollHeight)}px tall. Browsers cap element heights ` +
+            '(about 17.9M px in Firefox, 33.5M px in Chrome and Safari), so the last rows may not be reachable by scrolling. ' +
+            'Use pagination, server-side or infinite loading, or a smaller rowHeight. See docs/features/virtualization.md.'
+        );
+    }, [scrollHeight]);
 
     useEffect(() => {
         if (process.env.NODE_ENV === 'production' || warnedPaginationRef.current) return;

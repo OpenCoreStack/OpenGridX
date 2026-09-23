@@ -1,5 +1,9 @@
 
 import type { GridColDef, GridRowModel, GridColumnPinning, GridRowPinning, GridPinnedPosition, GridRowId } from '../../types';
+import { getRenderedColumnWidth } from '../columnWidth';
+
+/** Width of each built-in system column (drag handle, detail-panel toggle, checkbox). */
+export const SYSTEM_COLUMN_WIDTH = 48;
 
 export function isColumnPinned(field: string, pinnedColumns?: GridColumnPinning): GridPinnedPosition | null {
     if (!pinnedColumns) return null;
@@ -15,6 +19,11 @@ export function isColumnPinned(field: string, pinnedColumns?: GridColumnPinning)
     return null;
 }
 
+/**
+ * Splits columns into left-pinned, unpinned and right-pinned groups. The unpinned group keeps
+ * column order; the pinned groups follow the order of `pinnedColumns.left` / `.right`, which is
+ * the order the grid renders them in.
+ */
 export function getPinnedColumnGroups<R extends GridRowModel = GridRowModel>(
     columns: GridColDef<R>[],
     pinnedColumns?: GridColumnPinning
@@ -62,6 +71,12 @@ export function getPinnedColumnGroups<R extends GridRowModel = GridRowModel>(
     return { left, center, right };
 }
 
+/**
+ * Sticky `left` / `right` offsets of the pinned columns, in pixels. Offsets follow the order of
+ * `columns`, which must be the order the cells are rendered in (the grid renders pinned columns
+ * in `pinnedColumns.left` / `.right` order), and use each column's rendered width (see
+ * `getRenderedColumnWidth`). Left offsets start after the pinned system columns.
+ */
 export function calculatePinnedPositions<R extends GridRowModel = GridRowModel>(
     columns: GridColDef<R>[],
     columnWidths: Record<string, number>,
@@ -76,37 +91,50 @@ export function calculatePinnedPositions<R extends GridRowModel = GridRowModel>(
 
     if (!pinnedColumns) return positions;
 
-    const groups = getPinnedColumnGroups(columns, pinnedColumns);
+    let leftOffset =
+        (rowReordering ? SYSTEM_COLUMN_WIDTH : 0) +
+        (hasDetailPanel && pinExpandColumn ? SYSTEM_COLUMN_WIDTH : 0) +
+        (checkboxSelection && pinCheckboxColumn ? SYSTEM_COLUMN_WIDTH : 0);
+    const right: GridColDef<R>[] = [];
 
-    let leftOffset = 0;
-
-    if (rowReordering) {
-        leftOffset += 48;
-    }
-
-    if (hasDetailPanel && pinExpandColumn) {
-        leftOffset += 48; 
-    }
-
-    if (checkboxSelection && pinCheckboxColumn) {
-        leftOffset += 48; 
-    }
-
-    groups.left.forEach(col => {
-        positions[col.field] = leftOffset;
-        const width = columnWidths[col.field] ?? col.width ?? 100;
-        leftOffset += width;
+    columns.forEach(col => {
+        if (col.isSpacer) return;
+        const side = isColumnPinned(col.field, pinnedColumns);
+        if (side === 'left') {
+            positions[col.field] = leftOffset;
+            leftOffset += getRenderedColumnWidth(col, columnWidths);
+        } else if (side === 'right') {
+            right.push(col);
+        }
     });
 
     let rightOffset = 0;
-
-    [...groups.right].reverse().forEach(col => {
-        const width = columnWidths[col.field] ?? col.width ?? 100;
-        positions[col.field] = rightOffset;
-        rightOffset += width;
-    });
+    for (let i = right.length - 1; i >= 0; i--) {
+        positions[right[i].field] = rightOffset;
+        rightOffset += getRenderedColumnWidth(right[i], columnWidths);
+    }
 
     return positions;
+}
+
+/**
+ * The last rendered left-pinned column and the first rendered right-pinned column: the cells that
+ * carry the pinned-section edge classes. `columns` is in render order; spacers are skipped.
+ */
+export function getPinnedEdgeFields<R extends GridRowModel = GridRowModel>(
+    columns: GridColDef<R>[],
+    pinnedColumns?: GridColumnPinning
+): { lastLeft: string | null; firstRight: string | null } {
+    let lastLeft: string | null = null;
+    let firstRight: string | null = null;
+    if (!pinnedColumns) return { lastLeft, firstRight };
+    for (const col of columns) {
+        if (col.isSpacer) continue;
+        const side = isColumnPinned(col.field, pinnedColumns);
+        if (side === 'left') lastLeft = col.field;
+        else if (side === 'right' && firstRight === null) firstRight = col.field;
+    }
+    return { lastLeft, firstRight };
 }
 
 export function isColumnPinnable<R extends GridRowModel = GridRowModel>(
@@ -166,8 +194,7 @@ export function getPinnedColumnsWidth(
         const col = columns.find(c => c.field === field);
         if (!col) return total;
 
-        const width = columnWidths[field] ?? col.width ?? 100;
-        return total + width;
+        return total + getRenderedColumnWidth(col, columnWidths);
     }, 0);
 }
 

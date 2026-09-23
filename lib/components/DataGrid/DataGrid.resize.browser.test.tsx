@@ -109,4 +109,37 @@ describe('column resize in a real browser', () => {
         expect(header('name').getBoundingClientRect().width).toBeCloseTo(160, 0);
         expect(document.activeElement).toBe(header('name'));
     });
+
+    it('with tree data, Alt+Arrow resizes on a header and expands / collapses on a row, never both', async () => {
+        type TreeRow = { id: number; name: string; path: string[] };
+        const rows: TreeRow[] = [
+            { id: 1, name: 'parent', path: ['parent'] },
+            { id: 2, name: 'child', path: ['parent', 'child'] },
+        ];
+        const { container } = render(
+            <div style={{ width: 800, height: 400 }}>
+                <DataGrid<TreeRow> rows={rows} columns={[{ field: 'name', width: 200 }]}
+                    treeData getTreeDataPath={r => r.path} defaultGroupingExpansionDepth={-1} />
+            </div>
+        );
+        const header = () => container.querySelector('.ogx__header [data-field="name"]') as HTMLElement;
+        const parentRow = () => container.querySelector('.ogx__row[aria-expanded]') as HTMLElement;
+        expect(parentRow().getAttribute('aria-expanded')).toBe('true');
+
+        header().focus();
+        await userEvent.keyboard('{Alt>}{ArrowLeft}{/Alt}');
+        await settle();
+        expect(header().getBoundingClientRect().width).toBeCloseTo(190, 0);
+        expect(parentRow().getAttribute('aria-expanded')).toBe('true');
+
+        await userEvent.click(parentRow().querySelector('.ogx__cell[data-field="name"]') as HTMLElement);
+        await userEvent.keyboard('{Alt>}{ArrowLeft}{/Alt}');
+        await settle();
+        expect(parentRow().getAttribute('aria-expanded')).toBe('false');
+        expect(header().getBoundingClientRect().width).toBeCloseTo(190, 0);
+        await userEvent.keyboard('{Alt>}{ArrowRight}{/Alt}');
+        await settle();
+        expect(parentRow().getAttribute('aria-expanded')).toBe('true');
+        expect(header().getBoundingClientRect().width).toBeCloseTo(190, 0);
+    });
 });

@@ -117,15 +117,41 @@ export function sortRows<R extends GridRowModel>(
   if (sortModel.length === 0) {
     return rows;
   }
+  return sortItemsBySortModel(rows, sortModel, (row, sortItem) => {
+    const colDef = columns?.byField.get(sortItem.field);
+    return { value: getCellValue(row, sortItem.field, colDef), type: colDef?.type };
+  });
+}
+
+/** The value an item sorts by for one sort key, and the column type used to compare it. */
+export interface GridSortValue {
+  value: unknown;
+  type?: GridColDef['type'];
+}
+
+/**
+ * Stable sort of any items by a sort model. `readValue` gives the value (and column type) an item
+ * sorts by for each sort key; it is called once per item and key, not once per comparison. Used by
+ * the flat pipeline and by tree data / row grouping, whose synthetic group rows sort by their
+ * grouping value or label instead of a cell.
+ */
+export function sortItemsBySortModel<T>(
+  items: readonly T[],
+  sortModel: readonly GridSortItem[],
+  readValue: (item: T, sortItem: GridSortItem) => GridSortValue
+): T[] {
+  if (sortModel.length === 0 || items.length < 2) {
+    return [...items];
+  }
 
   // Read and normalize every sort value once, instead of calling valueGetter and parsing dates
   // O(n log n) times inside the comparator.
-  const keys = sortModel.map(sortItem => {
-    const colDef = columns?.byField.get(sortItem.field);
-    return rows.map(row => toSortKey(getCellValue(row, sortItem.field, colDef), colDef?.type));
-  });
+  const keys = sortModel.map(sortItem => items.map(item => {
+    const { value, type } = readValue(item, sortItem);
+    return toSortKey(value, type);
+  }));
 
-  const order = rows.map((_, index) => index);
+  const order = items.map((_, index) => index);
   order.sort((ia, ib) => {
     for (let k = 0; k < sortModel.length; k++) {
       const comparison = applyDirection(compareSortKeys(keys[k][ia], keys[k][ib]), sortModel[k].sort);
@@ -134,7 +160,7 @@ export function sortRows<R extends GridRowModel>(
     return ia - ib;
   });
 
-  return order.map(index => rows[index]);
+  return order.map(index => items[index]);
 }
 
 /**

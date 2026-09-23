@@ -69,7 +69,7 @@ All three values are bundled into a single `setScrollState` call so `useGridVirt
 | 15 – 40 | 20 |
 | > 40 | 30 |
 
-The result is always `Math.max(computed, overscanRowCount)` so the prop floor is respected.
+The state holds only the velocity-derived count (0 at rest); the returned value is `Math.max(velocityCount, overscanRowCount)`, computed during render, so a new `overscanRowCount` applies immediately.
 
 ---
 
@@ -81,7 +81,11 @@ The result is always `Math.max(computed, overscanRowCount)` so the prop floor is
 
 ## `onRowsScrollEnd` threshold
 
-When the viewport scrolls to within 100px of the bottom (`scrollHeight - scrollTop - clientHeight < 100`), the hook calls `onRowsScrollEnd` synchronously (not RAF-batched) so the consumer can load the next page immediately.
+When a **vertical** scroll brings the viewport within 100px of the bottom (`scrollHeight - scrollTop - clientHeight < 100`), the hook calls `onRowsScrollEnd` synchronously (not RAF-batched) so the consumer can load the next page immediately. A latch makes it fire once per arrival: it re-arms when the viewport leaves the threshold or `rowCount` changes. After every `rowCount` change an effect re-checks the viewport, so a page that does not fill it still fires (skipped with `autoHeight` or a 0px viewport). Horizontal-only scroll events are ignored.
+
+## Viewport remounts
+
+`attachViewport` is the viewport's callback ref (combined in `DataGrid` with `useGridViewportSize`, which attaches a `ResizeObserver` to every viewport element that mounts). When the viewport remounts (list view switched off again) it restores the last scroll position onto the new element; if the browser clamps it, the state is synced to the element.
 
 ---
 

@@ -162,6 +162,7 @@ While the grid is sorted, the new position in `rows` does not change where the r
 - Every data row you passed in `rows` can be dragged and dropped on.
 - Pinned rows (`pinnedRows`) keep their place. They show an empty handle cell, so their cells line up with the header, but cannot be dragged or dropped on.
 - Rows the grid makes itself cannot be dragged or dropped on: row-grouping group rows and the tree-data parents generated for missing path segments.
+- While pivot mode is active, row reordering is off (no handle column): pivot rows are generated, so their positions mean nothing in `rows`. It comes back when pivoting ends.
 - Only the grid's own row drags are accepted: dropping a file, a text selection or a header on a row does nothing.
 
 ---

@@ -29,8 +29,17 @@ export interface GridRowMeta {
   descendantCount?: number;
   isExpanded?: boolean;
   isGroupRow?: boolean;
+  isGroupFooter?: boolean; // v3.0
 }
 ```
+
+| Field | Meaning |
+| :--- | :--- |
+| `hasChildren` | The row has children to show under the active filter, so the expand toggle is rendered. A lazy tree node whose children are not loaded yet (`serverChildrenCount > 0`) counts as having children. |
+| `descendantCount` | Data rows below the row, at any depth, that pass the filter: row-grouping leaves, or tree-data rows (auto-created tree parents are not counted). `undefined` for a lazy node whose children are not loaded. It is the `(n)` next to group labels. |
+| `groupLabel` | The label shown for a synthetic row: the group label (`groupingValueFormatter` or `"field: value"`), or the path segment of an auto-created tree parent. |
+| `isGroupRow` | The row is synthetic: a row-grouping group row, a group subtotal row, or a tree-data parent created for a path segment that has no row of its own (its row object is just `{ id }`). Synthetic rows are never selected, edited or given a detail panel, clicking one toggles it, and `valueGetter` is not called for them. Tree-data parents that are your own rows have `isGroupRow: false`. |
+| `isGroupFooter` | The row is the subtotal row of a group, shown after its children when `getAggregationPosition` returns `'footer'`. |
 
 ---
 
@@ -62,6 +71,14 @@ renderCell: (params) => {
   return params.value;
 }
 ```
+
+Since v3.0 `renderCell` is called for every row, including synthetic group, subtotal and auto-created tree-parent rows, in every column, and its output is shown. In the column that holds the expand toggle, the output replaces the default group label next to the toggle. **Returning `undefined` for a synthetic row keeps the grid's default content** (the group label and count in the toggle column, the aggregate or nothing elsewhere), so a renderCell written for data rows can opt out in one line:
+
+```tsx
+renderCell: (params) => (params.rowMeta?.isGroupRow ? undefined : <Avatar user={params.row.user} />)
+```
+
+A renderCell that throws on a synthetic row shows the `⚠` cell indicator; in the toggle column the toggle stays usable.
 
 ---
 
