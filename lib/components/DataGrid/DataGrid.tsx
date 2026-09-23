@@ -21,6 +21,8 @@ import { useTreeData } from '../../hooks/useTreeData';
 import { useRowGrouping } from '../../hooks/useRowGrouping';
 import { useGridEditing } from '../../hooks/features/useGridEditing';
 import { useGridSpanning } from '../../hooks/features/useGridSpanning';
+import { useColumnGroupReorderGuard } from '../../hooks/features/useColumnGroupReorderGuard';
+import { canReorderWithinColumnGroups, getColumnGroupDepth } from '../../utils/columnGroups';
 import { useGridDataSource } from '../../hooks/features/useGridDataSource';
 import { useAggregation } from '../../hooks/features/useAggregation';
 import { usePivot } from '../../hooks/features/usePivot';
@@ -640,6 +642,12 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         pageSize: effectivePaginationModel.pageSize,
     });
 
+    // Rendered data columns with their layout-resolved widths, in render order (column group header rows).
+    const renderedDataColumns = useMemo(
+        () => [...layout.leftPinnedCols, ...layout.unpinnedColsWithWidth, ...layout.rightPinnedCols],
+        [layout.leftPinnedCols, layout.unpinnedColsWithWidth, layout.rightPinnedCols]
+    );
+
     // Merge layout-computed widths (which include flex resolution) with user-resize
     // overrides. The footer and other consumers that receive `columnWidths` only get
     // the resize-override map, which has no entry for flex columns that haven't been
@@ -824,6 +832,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const allSelected = rows.length > 0 && selectedRowIds.size === rows.length;
     const someSelected = selectedRowIds.size > 0 && selectedRowIds.size < rows.length;
 
+    // Header drag-reorder keeps a column inside its column group (and ungrouped columns outside groups).
+    const headerReorderHandlers = useColumnGroupReorderGuard(columnGroupingModel, columnReorderHandlers);
+
     const hasRowSpanning = React.useMemo(() => effectiveColumns.some(c => !!c.rowSpan), [effectiveColumns]);
     const [columnsPanelOpen, setColumnsPanelOpen] = React.useState(false);
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -838,6 +849,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         const reorderHandler = disableColumnReorder
             ? undefined
             : (fromField: string, toField: string) => {
+                if (!canReorderWithinColumnGroups(columnGroupingModel, fromField, toField)) return;
                 const currentOrder = [...effectiveColumnOrder];
                 const fromIdx = currentOrder.indexOf(fromField);
                 const toIdx = currentOrder.indexOf(toField);
@@ -875,7 +887,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         columns, aggregationModel, handleAggregationModelChange, pivotMode,
         propPivotModel, onPivotModelChange, currentPivotModel, handlePivotModelChange,
         filterModel, onFilterModelChange, columnVisibilityModel,
-        handleColumnVisibilityModelChange, columnsPanelOpen, slotProps?.toolbar,
+        handleColumnVisibilityModelChange, columnsPanelOpen, slotProps?.toolbar, columnGroupingModel,
     ]);
 
     // Click-outside handler for standalone column panel
@@ -918,6 +930,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     onColumnVisibilityChange={handleColumnVisibilityModelChange}
                     onColumnOrderChange={onColumnOrderChange}
                     setInternalColumnOrder={setInternalColumnOrder}
+                    columnGroupingModel={columnGroupingModel}
                 />
             )}
 
@@ -964,7 +977,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     onScroll={handleScroll}
                     role="grid"
                     aria-label={ariaLabel || 'Data grid'}
-                    aria-rowcount={filteredRows.length + 1}
+                    aria-rowcount={filteredRows.length + 1 + getColumnGroupDepth(columnGroupingModel)}
                     aria-colcount={
                         columns.length +
                         (checkboxSelection ? 1 : 0) +
@@ -990,7 +1003,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                         { }
                         <Header
                             columns={virtualization.virtualColumns}
-                            allColumns={effectiveColumns}
+                            allColumns={renderedDataColumns}
                             columnGroupingModel={columnGroupingModel}
                             checkboxSelection={checkboxSelection}
                             allSelected={allSelected}
@@ -1011,12 +1024,12 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                 setKeyboardMode(false);
                                 gridRef.current?.focus({ preventScroll: true });
                             }}
-                            onDragStart={columnGroupingModel ? undefined : columnReorderHandlers.onDragStart}
-                            onDragOver={columnGroupingModel ? undefined : columnReorderHandlers.onDragOver}
-                            onDragEnd={columnGroupingModel ? undefined : columnReorderHandlers.onDragEnd}
-                            onDrop={columnGroupingModel ? undefined : columnReorderHandlers.onDrop}
-                            draggedColumn={columnGroupingModel ? undefined : columnReorderHandlers.draggedColumn}
-                            dragOverColumn={columnGroupingModel ? undefined : columnReorderHandlers.dragOverColumn}
+                            onDragStart={headerReorderHandlers.onDragStart}
+                            onDragOver={headerReorderHandlers.onDragOver}
+                            onDragEnd={headerReorderHandlers.onDragEnd}
+                            onDrop={headerReorderHandlers.onDrop}
+                            draggedColumn={headerReorderHandlers.draggedColumn}
+                            dragOverColumn={headerReorderHandlers.dragOverColumn}
                             rowReordering={rowReordering}
                             hasDetailPanel={hasDetailPanel}
                             pinCheckboxColumn={pinCheckboxColumn}
