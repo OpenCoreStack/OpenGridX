@@ -74,10 +74,12 @@ Passed to `renderQuickFilter`.
 
 ```ts
 interface ToolbarQuickFilterRenderProps {
-  value: string;                  // Current search string
+  value: string;                  // Current search string (quickFilterValues joined with spaces)
   onChange: (value: string) => void; // Call with new string on input change
 }
 ```
+
+The toolbar splits the string passed to `onChange` on whitespace, so each word becomes one `quickFilterValues` term and a row matches when every term is found in some visible column (`john london` matches first name John, city London). See [Quick Filter](../features/filtering.md#quick-filter).
 
 ---
 

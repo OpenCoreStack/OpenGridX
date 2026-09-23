@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { sortRows, compareValues } from './index';
+import { sortRows, compareValues, upsertSortItem } from './index';
+import { buildColumnLookup } from '../columnLookup';
+import type { GridSortItem } from '../../types';
 
 describe('compareValues', () => {
     describe('null handling', () => {
@@ -84,5 +86,86 @@ describe('sortRows', () => {
         ];
         const result = sortRows(rows, [{ field: 'score', sort: 'asc' }]);
         expect(result.map(r => r.id)).toEqual([1, 2, 3]);
+    });
+});
+
+describe('sortRows with column definitions', () => {
+    const values = <T,>(rows: { v: T }[]) => rows.map(r => r.v);
+
+    it('sorts a valueGetter column by the computed value', () => {
+        const lookup = buildColumnLookup([{ field: 'fullName', valueGetter: ({ row }) => `${row.first} ${row.last}` }]);
+        const rows = [{ id: 1, first: 'Zed', last: 'Young' }, { id: 2, first: 'Amy', last: 'Adams' }];
+        expect(sortRows(rows, [{ field: 'fullName', sort: 'asc' }], lookup).map(r => r.id)).toEqual([2, 1]);
+        expect(sortRows(rows, [{ field: 'fullName', sort: 'desc' }], lookup).map(r => r.id)).toEqual([1, 2]);
+    });
+
+    it('sorts numeric strings in a type:number column numerically, with non-numeric values last', () => {
+        const lookup = buildColumnLookup([{ field: 'v', type: 'number' }]);
+        const rows = [{ id: 1, v: '100' }, { id: 2, v: '9' }, { id: 3, v: '' }, { id: 4, v: '10' }, { id: 5, v: '-2.5' }];
+        expect(values(sortRows(rows, [{ field: 'v', sort: 'asc' }], lookup))).toEqual(['-2.5', '9', '10', '100', '']);
+    });
+
+    it('sorts date strings in a type:date column chronologically', () => {
+        const lookup = buildColumnLookup([{ field: 'v', type: 'date' }]);
+        const rows = [{ id: 1, v: '2024-03-01' }, { id: 2, v: new Date(2023, 11, 31) }, { id: 3, v: 'garbage' }, { id: 4, v: '2024-01-15T10:00:00Z' }];
+        expect(sortRows(rows, [{ field: 'v', sort: 'asc' }], lookup).map(r => r.id)).toEqual([2, 4, 1, 3]);
+    });
+});
+
+describe('comparator consistency', () => {
+    const values = <T,>(rows: { v: T }[]) => rows.map(r => r.v);
+
+    it('puts NaN with the empty values instead of leaving the column unsorted', () => {
+        const rows = [5, 3, NaN, 4, 1, 2].map((v, id) => ({ id, v }));
+        const asc = values(sortRows(rows, [{ field: 'v', sort: 'asc' }]));
+        expect(asc.slice(0, 5)).toEqual([1, 2, 3, 4, 5]);
+        expect(Number.isNaN(asc[5])).toBe(true);
+        expect(Number.isNaN(compareValues(NaN, 1, 'asc'))).toBe(false);
+    });
+
+    it('puts an Invalid Date with the empty values', () => {
+        const rows = [new Date(2024, 4, 1), new Date('x'), new Date(2024, 0, 1), new Date(2024, 2, 1), new Date(2024, 1, 1)].map((v, id) => ({ id, v }));
+        expect(sortRows(rows, [{ field: 'v', sort: 'asc' }]).map(r => r.id)).toEqual([2, 4, 3, 0, 1]);
+    });
+
+    it('orders mixed numbers and strings by kind first, independent of input order', () => {
+        const input = [10, '1a', 2, 'b'];
+        const expected = [2, 10, '1a', 'b'];
+        const permutations = [input, [...input].reverse(), ['1a', 2, 'b', 10], ['b', 10, '1a', 2]];
+        for (const perm of permutations) {
+            const rows = perm.map((v, id) => ({ id, v }));
+            expect(values(sortRows(rows, [{ field: 'v', sort: 'asc' }]))).toEqual(expected);
+        }
+    });
+
+    it('sorts accented strings next to their base letter', () => {
+        const rows = ['Zoe', 'Émile', 'Adam', 'Ørsted', 'emma'].map((v, id) => ({ id, v }));
+        expect(values(sortRows(rows, [{ field: 'v', sort: 'asc' }]))).toEqual(['Adam', 'Émile', 'emma', 'Ørsted', 'Zoe']);
+    });
+
+    it('sorts digit runs inside strings by value', () => {
+        const rows = ['item10', 'item9', 'item100'].map((v, id) => ({ id, v }));
+        expect(values(sortRows(rows, [{ field: 'v', sort: 'asc' }]))).toEqual(['item9', 'item10', 'item100']);
+    });
+});
+
+describe('upsertSortItem', () => {
+    const model: GridSortItem[] = [{ field: 'a', sort: 'asc' }, { field: 'b', sort: 'asc' }];
+
+    it('changes the direction of an existing key in place, keeping its priority', () => {
+        expect(upsertSortItem(model, 'a', 'desc')).toEqual([{ field: 'a', sort: 'desc' }, { field: 'b', sort: 'asc' }]);
+    });
+
+    it('appends a new key', () => {
+        expect(upsertSortItem(model, 'c', 'asc')).toEqual([...model, { field: 'c', sort: 'asc' }]);
+    });
+
+    it('removes only that key when direction is null', () => {
+        expect(upsertSortItem(model, 'a', null)).toEqual([{ field: 'b', sort: 'asc' }]);
+    });
+
+    it('does not mutate the input', () => {
+        upsertSortItem(model, 'a', 'desc');
+        expect(model).toEqual([{ field: 'a', sort: 'asc' }, { field: 'b', sort: 'asc' }]);
     });
 });

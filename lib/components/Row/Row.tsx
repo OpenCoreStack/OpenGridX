@@ -8,7 +8,33 @@ import { DetailPanel } from '../DetailPanel/DetailPanel';
 import type { GridRowModel, GridColDef, GridRowId, GridColumnPinning, GridRowPinning, GridRowParams, GridCellParams, GridDetailPanelHeight, GridRowMeta } from '../../types';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
 import { isColumnPinned, calculatePinnedPositions, isRowPinned } from '../../utils/pinning';
+import { getCellValue, resolveCellEditable } from '../../utils/editing';
 
+
+/**
+ * Builds the Cell span info for a colSpan origin: the merged width and flex-grow are the sums over
+ * the columns it covers, taken from the rendered (layout-resolved) columns. The span never crosses a
+ * spacer, so a span cut by the column window only covers what is rendered.
+ */
+function mergeColSpan<R extends GridRowModel>(
+    columns: GridColDef<R>[],
+    originIndex: number,
+    colSpan: number,
+    columnWidths: Record<string, number>,
+): CellColSpanInfo {
+    let width = 0;
+    let flexGrow = 0;
+    let covered = 0;
+    for (let i = originIndex; i < columns.length && covered < colSpan; i++) {
+        const col = columns[i];
+        if (col.isSpacer) break;
+        const w = columnWidths[col.field] ?? col.width;
+        width += typeof w === 'number' ? w : 100;
+        flexGrow += col.flex ?? 0;
+        covered++;
+    }
+    return { spannedByColSpan: false, cellProps: { colSpan: covered, width, flexGrow } };
+}
 
 export interface RowProps<R extends GridRowModel = GridRowModel> {
     row: R;
@@ -45,8 +71,11 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
 
     editingCell?: { id: GridRowId; field: string; value: unknown; } | null;
     onEditStart?: (params: { id: GridRowId, field: string, value: unknown }) => void;
-    onEditStop?: (params?: { cancel?: boolean }) => void;
+    /** `id` / `field` name the cell whose editor asked to stop. */
+    onEditStop?: (params?: { cancel?: boolean; id?: GridRowId; field?: string }) => void;
     onEditCellValueChange?: (params: { id: GridRowId, field: string, value: unknown }) => void;
+    /** Per-cell editability predicate (`DataGrid.isCellEditable`). */
+    isCellEditable?: (params: GridCellParams<R>) => boolean;
 
     focusedCellField?: string | null;
     isFocusVisible?: boolean;
@@ -91,6 +120,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         onEditStart,
         onEditStop,
         onEditCellValueChange,
+        isCellEditable,
 
         focusedCellField,
         isFocusVisible,
@@ -131,19 +161,19 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
 
     const isGroupRow = rowMeta?.hasChildren === true;
 
+    // Which cells may be edited is decided per cell below (resolveCellEditable), not per row:
+    // tree-data parents are real rows and stay editable; synthetic group rows never are.
     const handleCellEditStart = React.useCallback((field: string, value: unknown) => {
-        if (!isGroupRow) {
-            onEditStart?.({ id, field, value });
-        }
-    }, [isGroupRow, id, onEditStart]);
+        onEditStart?.({ id, field, value });
+    }, [id, onEditStart]);
 
     const handleCellValueChange = React.useCallback((field: string, newValue: unknown) => {
         onEditCellValueChange?.({ id, field, value: newValue });
     }, [onEditCellValueChange, id]);
 
-    const handleEditStopWrapper = React.useCallback((cancel?: boolean) => {
-        onEditStop?.({ cancel });
-    }, [onEditStop]);
+    const handleEditStopWrapper = React.useCallback((cancel?: boolean, field?: string) => {
+        onEditStop?.({ cancel, id, field });
+    }, [onEditStop, id]);
 
     // ── Skeleton row (shown during infinite-scroll fetch) ─────────────────────
     if (row._isSkeleton) {
@@ -165,16 +195,17 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         );
     }
 
+    // `.ogx__cell--editing` covers custom renderEditCell editors, which have no .ogx__edit-cell wrapper.
     const handleRowClick = (event: React.MouseEvent) => {
 
-        if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell')) {
+        if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell, .ogx__cell--editing')) {
             return;
         }
         onRowClick?.({ row, id, rowIndex });
     };
 
     const handleRowDoubleClick = (event: React.MouseEvent) => {
-        if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell')) {
+        if ((event.target as HTMLElement).closest('.ogx-checkbox-wrapper, .ogx-expand-icon, .ogx-drag-handle, .ogx__edit-cell, .ogx__cell--editing')) {
             return;
         }
         onRowDoubleClick?.({ row, id, rowIndex });
@@ -331,20 +362,29 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             />
                         );
                     }
-                    const value = colDef.valueGetter
-                        ? colDef.valueGetter({ row, field: colDef.field, value: row[colDef.field] })
-                        : row[colDef.field];
+                    const value = getCellValue(row, colDef);
 
                     const effectiveWidth = columnWidths[colDef.field] ?? colDef.width;
 
                     const pinnedPosition = isColumnPinned(colDef.field, pinnedColumns);
-                    const pinnedOffset = pinnedPosition ? pinnedPositions[colDef.field] : undefined;
 
+                    const isEditable = Boolean(onEditStart) && resolveCellEditable(
+                        { row, field: colDef.field, value, colDef, rowIndex, colIndex, rowMeta },
+                        isCellEditable
+                    );
                     const isEditing = editingCell?.id === id && editingCell?.field === colDef.field;
 
                     const cellValue = isEditing ? editingCell?.value : value;
 
-                    const colSpanInfo = colspanMap?.get(id)?.[colDef.field];
+                    const storedColSpanInfo = colspanMap?.get(id)?.[colDef.field];
+                    const colSpanInfo = storedColSpanInfo && !storedColSpanInfo.spannedByColSpan && storedColSpanInfo.cellProps.colSpan > 1
+                        ? mergeColSpan(columns, colIndex, storedColSpanInfo.cellProps.colSpan, columnWidths)
+                        : storedColSpanInfo;
+                    // A right-pinned merged cell is anchored by the right edge of the last column it covers.
+                    const offsetField = pinnedPosition === 'right' && colSpanInfo && !colSpanInfo.spannedByColSpan
+                        ? columns[colIndex + colSpanInfo.cellProps.colSpan - 1]?.field ?? colDef.field
+                        : colDef.field;
+                    const pinnedOffset = pinnedPosition ? pinnedPositions[offsetField] : undefined;
                     const rowSpan = rowSpanningCaches?.spannedCells[id]?.[colDef.field];
                     const isHiddenByRowSpan = rowSpanningCaches?.hiddenCells[id]?.[colDef.field] || false;
 
@@ -365,7 +405,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             isFocused={focusedCellField === colDef.field}
                             isFocusVisible={isFocusVisible}
 
-                            isEditable={colDef.editable}
+                            isEditable={isEditable}
                             isEditing={isEditing}
                             onCellEditStart={handleCellEditStart}
                             onEditStop={handleEditStopWrapper}

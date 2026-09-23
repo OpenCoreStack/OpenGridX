@@ -10,8 +10,10 @@ import type {
     GridRowMeta,
     GridColDef
 } from '../types';
-import { isRowMatchingFilter } from '../utils/filtering';
+import { createRowFilter } from '../utils/filtering';
 import { compareValues } from '../utils/sorting';
+import { getCellValue } from '../utils/values';
+import type { GridColumnLookup } from '../utils/columnLookup';
 import { computeAggregations } from '../utils/aggregation';
 
 export interface UseRowGroupingParams<R extends GridRowModel> {
@@ -24,6 +26,8 @@ export interface UseRowGroupingParams<R extends GridRowModel> {
     filterModel?: GridFilterModel;
     sortModel?: GridSortItem[];
     getAggregationPosition?: (groupNode: GridTreeNode | null) => 'inline' | 'footer' | null;
+    /** Column definitions, so filter and sort read leaf cells through valueGetter and use the column type. */
+    columnLookup?: GridColumnLookup;
 }
 
 const defaultGetAggregationPosition = (groupNode: GridTreeNode | null): 'inline' | 'footer' | null => {
@@ -53,7 +57,8 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
         defaultGroupingExpansionDepth = 0,
         filterModel,
         sortModel,
-        getAggregationPosition = defaultGetAggregationPosition
+        getAggregationPosition = defaultGetAggregationPosition,
+        columnLookup
     } = params;
 
     const columnsLookup = useMemo(() => {
@@ -224,6 +229,9 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
         const rowLookup = new Map<GridRowId, R>();
         rows.forEach(r => rowLookup.set(getRowId(r), r));
 
+        // Compiled once per pass, not once per row.
+        const rowFilter = createRowFilter(filterModel, columnLookup);
+
         const doesNodeMatchFilter = (nodeId: GridRowId): boolean => {
             const node = treeNodes.get(nodeId);
             if (!node) return false;
@@ -233,10 +241,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                 const row = rowLookup.get(nodeId);
                 if (!row) return false;
 
-                if (filterModel) {
-                    if (!isRowMatchingFilter(row, filterModel)) return false;
-                }
-                return true;
+                return rowFilter ? rowFilter(row) : true;
             }
 
             return node.children.some(childId => doesNodeMatchFilter(childId));
@@ -255,9 +260,12 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                     if (!rowA || !rowB) return 0;
 
                     for (const sortItem of sortModel) {
-                        const valA = rowA[sortItem.field];
-                        const valB = rowB[sortItem.field];
-                        const compareResult = compareValues(valA, valB, sortItem.sort);
+                        const colDef = columnLookup?.byField.get(sortItem.field);
+                        // Group rows are synthetic and already hold their grouped / aggregated
+                        // values; leaf rows are read through the column's valueGetter.
+                        const valA = groupingRows.has(aId) ? rowA[sortItem.field] : getCellValue(rowA, sortItem.field, colDef);
+                        const valB = groupingRows.has(bId) ? rowB[sortItem.field] : getCellValue(rowB, sortItem.field, colDef);
+                        const compareResult = compareValues(valA, valB, sortItem.sort, colDef?.type);
                         if (compareResult !== 0) return compareResult;
                     }
                     return 0;
@@ -289,7 +297,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
         return result;
 
-    }, [rows, getRowId, treeNodes, rootIds, groupingRows, filterModel, sortModel, expandedGroupIds, rowGroupingModel]);
+    }, [rows, getRowId, treeNodes, rootIds, groupingRows, filterModel, sortModel, expandedGroupIds, rowGroupingModel, columnLookup]);
 
     const getNode = useCallback((id: GridRowId) => treeNodes.get(id), [treeNodes]);
 

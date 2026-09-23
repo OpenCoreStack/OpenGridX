@@ -60,7 +60,7 @@ function MyGrid() {
 | `onCellClick` | `(params) => void` | Fired when clicking a specific cell. |
 | `onPaginationModelChange` | `(model: GridPaginationModel) => void` | Fired when page or page size changes. |
 | `onStateChange` | `(state) => void` | Fired on mount and whenever the value of the sort, filter, pagination, column or density state changes. |
-| `processRowUpdate` | `(new, old) => R \| Promise<R>` | Fired after a cell edit is committed. |
+| `processRowUpdate` | `(new, old) => R \| Promise<R>` | Called once per committed cell edit; return the row to store (or a Promise of it). See [Editing](../features/editing-reordering.md#commit-and-cancel). |
 
 ## 📦 Slots
 

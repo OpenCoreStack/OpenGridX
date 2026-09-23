@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { scrollRowIntoView } from '../../utils/scroll';
-import type { GridRowModel, GridRowId, GridColDef, GridCellParams, GridSortItem, GridSortDirection } from '../../types';
+import { getCellValue, resolveCellEditable } from '../../utils/editing';
+import type { GridRowModel, GridRowId, GridColDef, GridCellParams, GridSortItem, GridSortDirection, GridRowMeta } from '../../types';
 import type { GridEditingState } from '../features/useGridEditing';
 
 interface ColumnMetrics {
@@ -21,7 +22,7 @@ interface VirtualizationSnapshot {
 
 export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
     allRenderableRows: R[];
-    navigationColumns: { field: string; editable?: boolean; sortable?: boolean }[];
+    navigationColumns: { field: string; editable?: boolean; sortable?: boolean; valueGetter?: GridColDef<R>['valueGetter'] }[];
     checkboxSelection: boolean;
     selectedRowIds: Set<GridRowId>;
     handleSelectionChange: (id: GridRowId, selected: boolean) => void;
@@ -43,6 +44,13 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
     pinnedTopRowCount?: number;
     /** Resolves a row's id (getRowId); defaults to `row.id`. */
     getRowId?: (row: R) => GridRowId;
+    /** Hierarchy metadata, so synthetic group rows are never edited. */
+    rowMetaMap?: Map<GridRowId, GridRowMeta>;
+    /**
+     * For a cell covered by a colSpan or rowSpan, the origin cell of that span (`null` otherwise).
+     * Navigation skips the cells of the focused span and lands on span origins.
+     */
+    getSpanOrigin?: (rowId: GridRowId, field: string) => { rowId: GridRowId; field: string } | null;
 }
 
 const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
@@ -81,6 +89,8 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         viewportRef,
         pinnedTopRowCount = 0,
         getRowId = defaultGetRowId,
+        rowMetaMap,
+        getSpanOrigin,
     } = params;
 
     const [focusedCell, setFocusedCell] = useState<FocusedCell | null>(null);
@@ -111,6 +121,9 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
     const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
         setKeyboardMode(true);
 
+        // While an IME is composing, Enter / Escape / arrows confirm or navigate candidates.
+        if (event.nativeEvent?.isComposing || event.keyCode === 229) return;
+
         if (!focusedCell) return;
 
         const { id, field } = focusedCell;
@@ -135,11 +148,16 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
             if (isEditing) {
                 editingHandlers.stopCellEdit();
             } else {
-                const col = navigationColumns.find(c => c.field === field);
-                if (col?.editable) {
-                    const row = allRenderableRows.find(r => getRowId(r) === id);
-                    if (row) {
-                        editingHandlers.startCellEdit({ id, field, value: (row as R & Record<string, unknown>)[field] });
+                // Same rule and starting value as double-click (see Row / resolveCellEditable).
+                const colIndex = navigationColumns.findIndex(c => c.field === field);
+                const rowIndex = allRenderableRows.findIndex(r => getRowId(r) === id);
+                const col = navigationColumns[colIndex];
+                const row = allRenderableRows[rowIndex];
+                if (col && row) {
+                    const colDef = col as GridColDef<R>;
+                    const value = getCellValue(row, colDef);
+                    if (resolveCellEditable({ row, field, value, colDef, rowIndex, colIndex, rowMeta: rowMetaMap?.get(id) }, isCellEditable)) {
+                        editingHandlers.startCellEdit({ id, field, value });
                     }
                 }
             }
@@ -240,27 +258,41 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
 
                 const row = allRenderableRows[r];
                 const col = navigationColumns[c];
+                // Cells covered by a span are not stops; their origin is.
+                if (getSpanOrigin?.(getRowId(row), col.field)) continue;
                 const isInteractable = ['__checkbox_col__', '__expand_col__', '__reorder_col__'].includes(col.field);
-                let cellEditable = col.editable || isInteractable;
-
-                if (isCellEditable && !isInteractable) {
-                    try {
-                        cellEditable = isCellEditable({
-                            row,
-                            field: col.field,
-                            value: (row as R & Record<string, unknown>)[col.field],
-                            colDef: col as GridColDef<R>,
-                            rowIndex: r,
-                            colIndex: c
-                        });
-                    } catch {
-                        // isCellEditable threw — treat cell as non-editable
-                    }
-                }
+                const colDef = col as GridColDef<R>;
+                const cellEditable = isInteractable || resolveCellEditable({
+                    row,
+                    field: col.field,
+                    value: getCellValue(row, colDef),
+                    colDef,
+                    rowIndex: r,
+                    colIndex: c,
+                    rowMeta: rowMetaMap?.get(getRowId(row)),
+                }, isCellEditable);
 
                 if (cellEditable) return { r, c };
             }
             return null;
+        };
+
+        const originOf = (r: number, c: number) => {
+            const row = allRenderableRows[r];
+            const col = navigationColumns[c];
+            return row && col ? getSpanOrigin?.(getRowId(row), col.field) ?? null : null;
+        };
+
+        // Arrow keys step over the cells of the focused span (its own merged area), then land on
+        // the origin of whatever span covers the target cell.
+        const findNextArrowCell = (deltaRow: number, deltaCol: number, wrapRow: boolean) => {
+            let res = findNextCell(rowIndex, colIndex, deltaRow, deltaCol, wrapRow, true);
+            while (res && res.r >= 0) {
+                const origin = originOf(res.r, res.c);
+                if (!origin || origin.rowId !== id || origin.field !== field) break;
+                res = findNextCell(res.r, res.c, deltaRow, deltaCol, wrapRow, true);
+            }
+            return res;
         };
 
         let nextRowIndex = rowIndex;
@@ -272,16 +304,16 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
             const res = findNextEditable(rowIndex, colIndex, 0, dir, true, false);
             if (res) { nextRowIndex = res.r; nextColIndex = res.c; handled = true; }
         } else if (event.key === 'ArrowRight') {
-            const res = findNextCell(rowIndex, colIndex, 0, 1, true, true);
+            const res = findNextArrowCell(0, 1, true);
             if (res) { nextRowIndex = res.r; nextColIndex = res.c; handled = true; }
         } else if (event.key === 'ArrowLeft') {
-            const res = findNextCell(rowIndex, colIndex, 0, -1, true, true);
+            const res = findNextArrowCell(0, -1, true);
             if (res) { nextRowIndex = res.r; nextColIndex = res.c; handled = true; }
         } else if (event.key === 'ArrowDown') {
-            const res = findNextCell(rowIndex, colIndex, 1, 0, false, true);
+            const res = findNextArrowCell(1, 0, false);
             if (res) { nextRowIndex = res.r; nextColIndex = res.c; handled = true; }
         } else if (event.key === 'ArrowUp') {
-            const res = findNextCell(rowIndex, colIndex, -1, 0, false, true);
+            const res = findNextArrowCell(-1, 0, false);
             if (res) { nextRowIndex = res.r; nextColIndex = res.c; handled = true; }
         } else if (event.key === 'Home') {
             nextColIndex = 0;
@@ -299,6 +331,18 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
             const pg = pagination ? pageSize : 10;
             nextRowIndex = Math.min(allRenderableRows.length - 1, nextRowIndex + pg);
             handled = true;
+        }
+
+        if (handled && nextRowIndex >= 0) {
+            const origin = originOf(nextRowIndex, nextColIndex);
+            if (origin) {
+                const originRow = allRenderableRows.findIndex(r => getRowId(r) === origin.rowId);
+                const originCol = navigationColumns.findIndex(c => c.field === origin.field);
+                if (originRow !== -1 && originCol !== -1) {
+                    nextRowIndex = originRow;
+                    nextColIndex = originCol;
+                }
+            }
         }
 
         if (handled) {
@@ -369,6 +413,8 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         viewportRef,
         pinnedTopRowCount,
         getRowId,
+        rowMetaMap,
+        getSpanOrigin,
     ]);
 
     return { focusedCell, setFocusedCell, handleFocus, handleBlur, handleKeyDown };

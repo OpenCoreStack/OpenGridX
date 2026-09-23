@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { filterRows, applyFilterItem, applyQuickFilter, FILTER_OPERATORS } from './index';
-import type { GridFilterItem } from '../../types';
+import { describe, it, expect, vi } from 'vitest';
+import { filterRows, applyFilterItem, applyQuickFilter, FILTER_OPERATORS, getOperatorsForType } from './index';
+import { buildColumnLookup } from '../columnLookup';
+import type { GridColDef, GridFilterItem, GridFilterModel } from '../../types';
 
 const ROWS = [
     { id: 1, name: 'Alice', age: 30, active: true, department: 'Engineering' },
@@ -174,5 +175,190 @@ describe('filterRows', () => {
     it('returns same reference when no filter items and no quickfilter', () => {
         const result = filterRows(ROWS, { items: [], quickFilterValues: [] });
         expect(result).toBe(ROWS);
+    });
+});
+
+const ids = (rows: { id: number | string }[]) => rows.map(r => r.id);
+
+describe('date operators', () => {
+    const DATE_COLS: GridColDef[] = [{ field: 'd', type: 'date' }];
+    const lookup = buildColumnLookup(DATE_COLS);
+    const rows = [
+        { id: 1, d: '2024-01-10' },
+        { id: 2, d: '2024-03-10' },
+        { id: 3, d: '2024-06-10' },
+        { id: 4, d: null },
+    ];
+    const run = (operator: GridFilterItem['operator'], value: unknown) =>
+        ids(filterRows(rows, { items: [{ field: 'd', operator, value }] }, lookup));
+
+    it('implements every operator the panel offers for a date column', () => {
+        const missing = getOperatorsForType('date').filter(op => !(op in FILTER_OPERATORS));
+        expect(missing).toEqual([]);
+    });
+
+    it('after / onOrAfter / before / onOrBefore compare calendar days', () => {
+        expect(run('after', '2024-03-10')).toEqual([3]);
+        expect(run('onOrAfter', '2024-03-10')).toEqual([2, 3]);
+        expect(run('before', '2024-03-10')).toEqual([1]);
+        expect(run('onOrBefore', '2024-03-10')).toEqual([1, 2]);
+        expect(run('after', '2024-02-01')).toEqual([2, 3]);
+    });
+
+    it('reads a YYYY-MM-DD filter value as a local date, not UTC midnight', () => {
+        const local = [{ id: 1, d: new Date(2024, 0, 10, 0, 30) }, { id: 2, d: new Date(2024, 0, 9, 23, 30) }];
+        expect(ids(filterRows(local, { items: [{ field: 'd', operator: 'onOrAfter', value: '2024-01-10' }] }, lookup))).toEqual([1]);
+    });
+
+    it('"is" matches Date objects, ISO datetimes and plain dates for the same local day', () => {
+        const midday = new Date(2024, 0, 10, 12, 0);
+        const drows = [
+            { id: 1, d: new Date(2024, 0, 10) },
+            { id: 2, d: midday.toISOString() },
+            { id: 3, d: '2024-01-10' },
+            { id: 4, d: midday.getTime() },
+            { id: 5, d: '2024-01-11' },
+        ];
+        expect(ids(filterRows(drows, { items: [{ field: 'd', operator: 'is', value: '2024-01-10' }] }, lookup))).toEqual([1, 2, 3, 4]);
+        expect(ids(filterRows(drows, { items: [{ field: 'd', operator: 'not', value: '2024-01-10' }] }, lookup))).toEqual([5]);
+    });
+
+    it('"is" on a Date cell works without column definitions', () => {
+        expect(applyFilterItem({ id: 1, d: new Date(2024, 0, 10, 9) }, { field: 'd', operator: 'is', value: '2024-01-10' })).toBe(true);
+    });
+
+    it('unparsable filter values match nothing for after/before', () => {
+        expect(run('after', 'not a date')).toEqual([]);
+    });
+
+    it('warns about an unknown operator once per filter pass, not once per row', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const model = { items: [{ field: 'd', operator: 'nope', value: 'x' }] } as unknown as GridFilterModel;
+        expect(ids(filterRows(rows, model, lookup))).toEqual([1, 2, 3, 4]);
+        expect(warn).toHaveBeenCalledTimes(1);
+        warn.mockRestore();
+    });
+});
+
+describe('items with an empty value do not filter', () => {
+    const rows = [{ id: 1, n: -5 }, { id: 2, n: 0 }, { id: 3, n: 7 }, { id: 4, n: null }];
+    const run = (item: GridFilterItem) => ids(filterRows(rows, { items: [item] }));
+
+    it.each(['=', '!=', '>', '>=', '<', '<='] as const)('number operator %s with an empty value keeps every row', (operator) => {
+        expect(run({ field: 'n', operator, value: '' })).toEqual([1, 2, 3, 4]);
+        expect(run({ field: 'n', operator, value: undefined })).toEqual([1, 2, 3, 4]);
+        expect(run({ field: 'n', operator, value: '   ' })).toEqual([1, 2, 3, 4]);
+    });
+
+    it.each(['contains', 'equals', 'startsWith', 'endsWith', 'is', 'not', 'isAnyOf', 'after', 'before'] as const)('%s with undefined, null or "" keeps every row', (operator) => {
+        const srows = [{ id: 1, s: 'a' }, { id: 2, s: null }, { id: 3, s: '' }];
+        for (const value of [undefined, null, '', '  ']) {
+            expect(ids(filterRows(srows, { items: [{ field: 's', operator, value }] }))).toEqual([1, 2, 3]);
+        }
+        // An item with no value key at all behaves the same.
+        expect(ids(filterRows(srows, { items: [{ field: 's', operator }] }))).toEqual([1, 2, 3]);
+    });
+
+    it('isAnyOf with an empty array keeps every row', () => {
+        const srows = [{ id: 1, s: 'Active' }, { id: 2, s: 'Inactive' }];
+        expect(ids(filterRows(srows, { items: [{ field: 's', operator: 'isAnyOf', value: [] }] }))).toEqual([1, 2]);
+    });
+
+    it('isEmpty / isNotEmpty still apply without a value', () => {
+        expect(run({ field: 'n', operator: 'isEmpty' })).toEqual([4]);
+        expect(run({ field: 'n', operator: 'isNotEmpty' })).toEqual([1, 2, 3]);
+    });
+
+    it('an empty item inside an OR group is ignored rather than matching everything', () => {
+        const model: GridFilterModel = {
+            items: [{ logicOperator: 'or', items: [{ field: 'n', operator: '>', value: '5' }, { field: 'n', operator: '<', value: '' }] }],
+        };
+        expect(ids(filterRows(rows, model))).toEqual([3]);
+    });
+});
+
+describe('numeric operators and blank cells', () => {
+    it('a blank or whitespace cell is not 0', () => {
+        const rows = [{ id: 1, n: '' }, { id: 2, n: 0 }, { id: 3, n: ' ' }, { id: 4, n: 10 }];
+        expect(ids(filterRows(rows, { items: [{ field: 'n', operator: '=', value: '0' }] }))).toEqual([2]);
+        expect(ids(filterRows(rows, { items: [{ field: 'n', operator: '<', value: '15' }] }))).toEqual([2, 4]);
+    });
+
+    it('numeric strings compare as numbers', () => {
+        const rows = [{ id: 1, n: '9' }, { id: 2, n: '10' }];
+        expect(ids(filterRows(rows, { items: [{ field: 'n', operator: '>', value: 9 }] }))).toEqual([2]);
+    });
+
+    it('"!=" treats null, undefined and blank cells the same for every filter value', () => {
+        const rows = [{ id: 1, n: -5 }, { id: 2, n: 0 }, { id: 3, n: 7 }, { id: 4, n: null }, { id: 5, n: undefined }, { id: 6, n: '' }];
+        expect(ids(filterRows(rows, { items: [{ field: 'n', operator: '!=', value: 0 }] }))).toEqual([1, 3, 4, 5, 6]);
+        expect(ids(filterRows(rows, { items: [{ field: 'n', operator: '!=', value: 5 }] }))).toEqual([1, 2, 3, 4, 5, 6]);
+    });
+});
+
+describe('isAnyOf', () => {
+    const rows = [{ id: 1, s: 'Active' }, { id: 2, s: 'Inactive' }, { id: 3, s: 1 }];
+    it('treats a scalar value as a one-element list', () => {
+        expect(ids(filterRows(rows, { items: [{ field: 's', operator: 'isAnyOf', value: 'active' }] }))).toEqual([1]);
+    });
+    it('matches numeric option values against their string form', () => {
+        expect(ids(filterRows(rows, { items: [{ field: 's', operator: 'isAnyOf', value: ['1', 'Inactive'] }] }))).toEqual([2, 3]);
+    });
+});
+
+describe('valueGetter columns', () => {
+    const cols: GridColDef[] = [
+        { field: 'fullName', valueGetter: ({ row }) => `${row.first} ${row.last}` },
+        { field: 'first' },
+    ];
+    const lookup = buildColumnLookup(cols);
+    const rows = [{ id: 1, first: 'Zed', last: 'Young' }, { id: 2, first: 'Amy', last: 'Adams' }];
+
+    it('column filters read the computed value', () => {
+        expect(ids(filterRows(rows, { items: [{ field: 'fullName', operator: 'contains', value: 'amy a' }] }, lookup))).toEqual([2]);
+    });
+
+    it('the quick filter finds the computed text', () => {
+        expect(ids(filterRows(rows, { quickFilterValues: ['amy adams'] }, lookup))).toEqual([2]);
+    });
+});
+
+describe('quick filter with column definitions', () => {
+    it('does not match the id or fields that are not columns', () => {
+        const lookup = buildColumnLookup([{ field: 'name' }]);
+        const rows = [{ id: 11, name: 'Alice', secret: 'zebra' }, { id: 2, name: 'Bob', secret: 'lion' }];
+        expect(ids(filterRows(rows, { quickFilterValues: ['1'] }, lookup))).toEqual([]);
+        expect(ids(filterRows(rows, { quickFilterValues: ['zebra'] }, lookup))).toEqual([]);
+    });
+
+    it('skips hidden and non-filterable columns', () => {
+        const cols: GridColDef[] = [{ field: 'name' }, { field: 'secret' }, { field: 'code', filterable: false }];
+        const lookup = buildColumnLookup(cols, { secret: false });
+        const rows = [{ id: 1, name: 'Carol', secret: 'zebra', code: 'xyz' }];
+        expect(ids(filterRows(rows, { quickFilterValues: ['zebra'] }, lookup))).toEqual([]);
+        expect(ids(filterRows(rows, { quickFilterValues: ['xyz'] }, lookup))).toEqual([]);
+        expect(ids(filterRows(rows, { quickFilterValues: ['carol'] }, lookup))).toEqual([1]);
+    });
+
+    it('searches valueFormatter text as well as the raw value', () => {
+        const lookup = buildColumnLookup([{ field: 'price', valueFormatter: ({ value }) => `$${Number(value).toLocaleString('en-US')}` }]);
+        const rows = [{ id: 1, price: 1200 }, { id: 2, price: 5 }];
+        expect(ids(filterRows(rows, { quickFilterValues: ['$1,200'] }, lookup))).toEqual([1]);
+        expect(ids(filterRows(rows, { quickFilterValues: ['1200'] }, lookup))).toEqual([1]);
+    });
+
+    it('does not match "[object Object]" or Date.toString() text', () => {
+        const lookup = buildColumnLookup([{ field: 'name' }, { field: 'meta' }, { field: 'd' }]);
+        const rows = [{ id: 1, name: 'Alice', meta: { a: 1 }, d: new Date(2024, 0, 10) }];
+        expect(ids(filterRows(rows, { quickFilterValues: ['object'] }, lookup))).toEqual([]);
+        expect(ids(filterRows(rows, { quickFilterValues: ['gmt'] }, lookup))).toEqual([]);
+        expect(ids(filterRows(rows, { quickFilterValues: ['2024-01-10'] }, lookup))).toEqual([1]);
+    });
+
+    it('ignores blank terms and trims whitespace', () => {
+        const lookup = buildColumnLookup([{ field: 'name' }]);
+        const rows = [{ id: 1, name: 'John' }, { id: 2, name: 'Mary Ann' }];
+        expect(ids(filterRows(rows, { quickFilterValues: [' '] }, lookup))).toEqual([1, 2]);
+        expect(ids(filterRows(rows, { quickFilterValues: ['john '] }, lookup))).toEqual([1]);
     });
 });

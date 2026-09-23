@@ -11,21 +11,27 @@ interface Product {
     category: string;
     price: number;
     stock: number;
+    added: string;
+    onSale: boolean;
 }
 
 const rows: Product[] = [
-    { id: 1, name: 'iPhone 15', category: 'Electronics', price: 999, stock: 45 },
-    { id: 2, name: 'MacBook Pro', category: 'Electronics', price: 1999, stock: 12 },
-    { id: 3, name: 'Office Chair', category: 'Furniture', price: 299, stock: 8 },
-    { id: 4, name: 'Coffee Mug', category: 'Kitchen', price: 15, stock: 120 },
-    { id: 5, name: 'Standing Desk', category: 'Furniture', price: 549, stock: 15 },
+    { id: 1, name: 'iPhone 15', category: 'Electronics', price: 999, stock: 45, added: '2024-01-10', onSale: false },
+    { id: 2, name: 'MacBook Pro', category: 'Electronics', price: 1999, stock: 12, added: '2024-03-02', onSale: true },
+    { id: 3, name: 'Office Chair', category: 'Furniture', price: 299, stock: 8, added: '2024-02-18', onSale: true },
+    { id: 4, name: 'Coffee Mug', category: 'Kitchen', price: 15, stock: 120, added: '2023-11-27', onSale: false },
+    { id: 5, name: 'Standing Desk', category: 'Furniture', price: 549, stock: 15, added: '2024-05-06', onSale: false },
 ];
 
+// Each column type gets its own operators and value control in the panel:
+// singleSelect offers its valueOptions, date columns a date picker, boolean a true/false select.
 const columns: GridColDef<Product>[] = [
     { field: 'name', headerName: 'Product', width: 200 },
-    { field: 'category', headerName: 'Category', width: 150 },
+    { field: 'category', headerName: 'Category', width: 150, type: 'singleSelect', valueOptions: ['Electronics', 'Furniture', 'Kitchen'] },
     { field: 'price', headerName: 'Price', width: 120, type: 'number' },
     { field: 'stock', headerName: 'In Stock', width: 120, type: 'number' },
+    { field: 'added', headerName: 'Added', width: 130, type: 'date' },
+    { field: 'onSale', headerName: 'On sale', width: 110, type: 'boolean' },
 ];
 
 export default function FilterPanelDemo() {

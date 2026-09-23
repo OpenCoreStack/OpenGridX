@@ -1,8 +1,9 @@
 import React, { useId } from 'react';
 import { Checkbox } from '../ui/Checkbox';
 import { ColumnResizeHandle } from '../ColumnResizeHandle/ColumnResizeHandle';
-import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning, GridAggregationModel, GridColumnGroup, GridColumnGroupingModel } from '../../types';
+import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning, GridAggregationModel, GridColumnGroupingModel } from '../../types';
 import { isColumnPinned, calculatePinnedPositions } from '../../utils/pinning';
+import { buildColumnGroupRow, getColumnGroupDepth, getColumnGroupPaths } from '../../utils/columnGroups';
 import { ColumnMenu } from './ColumnMenu';
 
 
@@ -23,92 +24,14 @@ function SwapIcon() {
 }
 
 
-// ─── Group header helpers ─────────────────────────────────────────────────────
-
-/** Collect all leaf field names from a group node (recursive). */
-function collectGroupFields(group: GridColumnGroup): string[] {
-    const out: string[] = [];
-    for (const child of group.children) {
-        if (typeof child === 'string') out.push(child);
-        else out.push(...collectGroupFields(child));
-    }
-    return out;
-}
-
-/** Max nesting depth of the group tree (1 = single level). */
-function groupTreeDepth(groups: GridColumnGroupingModel): number {
-    let d = 0;
-    function walk(g: GridColumnGroup, depth: number) {
-        d = Math.max(d, depth);
-        for (const c of g.children) if (typeof c !== 'string') walk(c, depth + 1);
-    }
-    groups.forEach(g => walk(g, 1));
-    return d;
-}
-
-interface GroupCell { key: string; label: string; width: number; isGroup: boolean; }
-
-/**
- * Builds the flat array of GroupCell descriptors for one row (level).
- * level 0 = top-most group row.
- * allFields is the ORDERED list of all visible columns (including spacers).
- */
-function buildGroupRow(
-    groups: GridColumnGroupingModel,
-    allFields: { field: string; width: number }[],
-    level: number,
-): GroupCell[] {
-    // Map each field → the group that owns it at `level`
-    function findAtLevel(g: GridColumnGroup, field: string, cur: number): GridColumnGroup | null {
-        if (!collectGroupFields(g).includes(field)) return null;
-        if (cur === level) return g;
-        for (const child of g.children) {
-            if (typeof child !== 'string') {
-                const found = findAtLevel(child, field, cur + 1);
-                if (found) return found;
-            }
-        }
-        return null;
-    }
-
-    const fieldGroup = new Map<string, GridColumnGroup | null>();
-    for (const f of allFields) {
-        let found: GridColumnGroup | null = null;
-        for (const g of groups) {
-            found = findAtLevel(g, f.field, 0);
-            if (found) break;
-        }
-        fieldGroup.set(f.field, found);
-    }
-
-    const cells: GroupCell[] = [];
-    let i = 0;
-    while (i < allFields.length) {
-        const item = allFields[i];
-        const group = fieldGroup.get(item.field) ?? null;
-        const w = item.width;
-
-        if (!group) {
-            cells.push({ key: `fg-${item.field}-${level}`, label: '', width: w, isGroup: false });
-            i++;
-        } else {
-            let totalW = 0;
-            let j = i;
-            while (j < allFields.length && fieldGroup.get(allFields[j].field) === group) {
-                totalW += allFields[j].width;
-                j++;
-            }
-            cells.push({ key: `${group.groupId}-${level}`, label: group.headerName, width: totalW, isGroup: true });
-            i = j;
-        }
-    }
-    return cells;
-}
-
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface HeaderProps<R extends GridRowModel = GridRowModel> {
     columns: GridColDef<R>[];
+    /**
+     * Every rendered data column in render order (left-pinned, unpinned, right-pinned) with its
+     * resolved width. Column group header rows are laid out over these; defaults to `columns`.
+     */
     allColumns?: GridColDef<R>[];
     columnGroupingModel?: GridColumnGroupingModel;
     checkboxSelection?: boolean;
@@ -218,6 +141,19 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         }
     };
 
+    // Column menu: act on this column only. "Unsort" removes just this key, and picking a direction
+    // for a column that is already sorted keeps the other keys. A new sort replaces the model
+    // unless multiSort is on, matching a plain header click.
+    const handleMenuSort = (field: string, direction: GridSortDirection) => {
+        const isSorted = sortModel.some(item => item.field === field);
+        const keepOtherKeys = direction === null || isSorted || multiSort;
+        if (onSortAdd && (keepOtherKeys || !onSort)) {
+            onSortAdd(field, direction);
+        } else {
+            onSort?.(field, direction);
+        }
+    };
+
     const getSortIcon = (field: string) => {
         const sortItem = sortModel.find(item => item.field === field);
         if (!sortItem) return null;
@@ -246,16 +182,21 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         );
     }, [columns, columnWidths, pinnedColumns, checkboxSelection, pinCheckboxColumn, hasDetailPanel, pinExpandColumn, rowReordering]);
 
-    const groupDepth = columnGroupingModel ? groupTreeDepth(columnGroupingModel) : 0;
+    const groupDepth = getColumnGroupDepth(columnGroupingModel);
+    const groupPaths = React.useMemo(() => getColumnGroupPaths(columnGroupingModel), [columnGroupingModel]);
 
-    // All non-spacer fields in order (for group-span math) with their effective physical width
-    const allCols = allColumns ?? columns;
-    const allLeafFields = allCols
-        .filter(c => !c.isSpacer)
-        .map(c => ({
+    // Group rows are laid out over every rendered data column (not just the horizontal render
+    // window), in render order and with the layout-resolved widths, so they line up with the headers.
+    const groupColumns = React.useMemo(() => {
+        if (groupDepth === 0) return [];
+        return (allColumns ?? columns).map(c => ({
             field: c.field,
-            width: columnWidths[c.field] ?? c.width ?? 100
+            width: c.isSpacer ? Number(c.width) || 0 : (columnWidths[c.field] ?? (typeof c.width === 'number' ? c.width : 100)),
+            flex: c.isSpacer ? 0 : c.flex,
+            pinned: c.isSpacer ? null : isColumnPinned(c.field, pinnedColumns),
+            isSpacer: c.isSpacer,
         }));
+    }, [groupDepth, allColumns, columns, columnWidths, pinnedColumns]);
 
     // --- CHECKBOX / DETAIL / REORDER prefix width (for group filler) ---
     const CHECKBOX_W = 48;
@@ -265,6 +206,12 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         (rowReordering ? REORDER_W : 0) +
         (hasDetailPanel ? EXPAND_W : 0) +
         (checkboxSelection ? CHECKBOX_W : 0);
+    // The prefix filler sticks with the system columns when all of them are pinned.
+    const isPrefixPinned =
+        (rowReordering || hasDetailPanel || checkboxSelection) &&
+        (!hasDetailPanel || pinExpandColumn) &&
+        (!checkboxSelection || pinCheckboxColumn);
+    const systemColumnCount = (rowReordering ? 1 : 0) + (hasDetailPanel ? 1 : 0) + (checkboxSelection ? 1 : 0);
 
     return (
         // Outer sticky wrapper — both group rows AND column header row live here
@@ -272,34 +219,62 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         <div className="ogx__header-wrap">
             {/* ── Group header rows ── */}
             {groupDepth > 0 && Array.from({ length: groupDepth }, (_, level) => {
-                const row = buildGroupRow(
-                    columnGroupingModel!,
-                    allLeafFields,
-                    level,
-                );
+                const cells = buildColumnGroupRow(groupColumns, groupPaths, level);
                 return (
                     <div key={`ogx-grp-${level}`} className="ogx-col-group-row" role="row">
                         {/* Filler for checkbox / reorder / detailPanel prefix */}
                         {prefixWidth > 0 && (
                             <div
-                                className="ogx-col-group-cell ogx-col-group-cell--filler"
-                                style={{ width: prefixWidth, minWidth: prefixWidth, flexShrink: 0 }}
-                                role="columnheader"
+                                className={`ogx-col-group-cell ogx-col-group-cell--filler${isPrefixPinned ? ' ogx-col-group-cell--pinned ogx-col-group-cell--pinned-left' : ''}`}
+                                style={{
+                                    width: prefixWidth,
+                                    minWidth: prefixWidth,
+                                    flexShrink: 0,
+                                    position: isPrefixPinned ? 'sticky' : undefined,
+                                    left: isPrefixPinned ? 0 : undefined,
+                                }}
+                                aria-hidden="true"
                             />
                         )}
-                        {row.map(cell => (
-                            <div
-                                key={cell.key}
-                                role="columnheader"
-                                className={`ogx-col-group-cell ${cell.isGroup ? 'ogx-col-group-cell--group' : 'ogx-col-group-cell--filler'}`}
-                                style={{ width: cell.width, minWidth: cell.width, flexShrink: 0 }}
-                                title={cell.isGroup ? cell.label : undefined}
-                            >
-                                {cell.isGroup && (
+                        {cells.map(cell => {
+                            const pinnedClass = cell.pinned ? ` ogx-col-group-cell--pinned ogx-col-group-cell--pinned-${cell.pinned}` : '';
+                            const style: React.CSSProperties = {
+                                width: cell.width,
+                                minWidth: cell.width,
+                                flexShrink: 0,
+                                flexGrow: cell.flexGrow,
+                            };
+                            if (cell.pinned === 'left') {
+                                style.position = 'sticky';
+                                style.left = pinnedPositions[cell.fields[0]];
+                            } else if (cell.pinned === 'right') {
+                                style.position = 'sticky';
+                                style.right = pinnedPositions[cell.fields[cell.fields.length - 1]];
+                            }
+                            if (!cell.isGroup) {
+                                return (
+                                    <div
+                                        key={cell.key}
+                                        className={`ogx-col-group-cell ogx-col-group-cell--filler${pinnedClass}`}
+                                        style={style}
+                                        aria-hidden="true"
+                                    />
+                                );
+                            }
+                            return (
+                                <div
+                                    key={cell.key}
+                                    role="columnheader"
+                                    aria-colspan={cell.fields.length}
+                                    aria-colindex={systemColumnCount + cell.firstDataIndex + 1}
+                                    className={`ogx-col-group-cell ogx-col-group-cell--group${pinnedClass}${cell.headerClassName ? ` ${cell.headerClassName}` : ''}`}
+                                    style={style}
+                                    title={cell.label}
+                                >
                                     <span className="ogx-col-group-cell__label">{cell.label}</span>
-                                )}
-                            </div>
-                        ))}
+                                </div>
+                            );
+                        })}
                     </div>
                 );
             })}
@@ -520,7 +495,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                     <ColumnMenu
                         colDef={menuOpenParams.colDef as unknown as GridColDef<GridRowModel>}
                         sortModel={sortModel}
-                        onSort={onSort}
+                        onSort={onSort || onSortAdd ? handleMenuSort : undefined}
                         onHide={onHideColumn}
                         onPin={onPinColumn}
                         pinnedColumns={pinnedColumns}

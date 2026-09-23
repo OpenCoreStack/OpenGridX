@@ -9,7 +9,7 @@
     align-items: stretch;
     background: var(--ogx-grid-header-background);
     border-bottom: 1px solid var(--ogx-grid-border-color);
-    overflow: hidden;
+    /* No overflow clipping: it would make the row the scroll container of its sticky (pinned) cells. */
     flex-shrink: 0;
     min-height: var(--ogx-header-height, 48px);
 }
@@ -44,6 +44,12 @@
 /* ─── Filler cell (ungrouped / prefix spacer) ────────────────────────────────*/
 .ogx-col-group-cell--filler {
     background: transparent;
+}
+
+/* ─── Pinned group cell (sticky over pinned columns) ────────────────────────*/
+.ogx-col-group-cell--pinned {
+    background: var(--ogx-grid-header-background);
+    z-index: 12;
 }
 
 /* ─── Label text ─────────────────────────────────────────────────────────────*/

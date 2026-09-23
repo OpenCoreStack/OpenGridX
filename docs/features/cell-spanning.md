@@ -10,70 +10,41 @@ Cell spanning allows cells in the DataGrid to span across multiple columns (colu
 - **Row Spanning**: Cells can span vertically across multiple rows
 - **Dynamic Spanning**: Span values can be calculated dynamically based on cell data
 - **Static Spanning**: Span values can be set as fixed numbers
-- **Accessibility**: Automatic ARIA attributes (`aria-colspan`, `aria-rowspan`)
-- **CSS Grid Integration**: Uses CSS Grid for proper layout
+- **Accessibility**: Automatic ARIA attributes (`aria-colspan`, `aria-rowspan`) and keyboard navigation that treats a merged area as one cell
+- **Virtualization-aware**: A span stays rendered while any part of it is in view, horizontally and vertically
+- **Zero cost when unused**: Nothing is computed unless a column declares `colSpan` or `rowSpan`
 
 ---
 
-## ⚠️ Important: Feature Conflicts
+## How spans interact with other features
 
-When using `colSpan` or `rowSpan`, some other DataGrid features may not work as expected or may create a confusing grid layout. **To avoid layout issues and unexpected behavior, consider disabling the following features for any columns that use cell spanning:**
+Spans are computed from the grid **as it is rendered**, so they follow the current column order, visibility, pinning, sorting, filtering and page:
 
-### Features to Disable
+| Feature | Behaviour |
+| :--- | :--- |
+| **Column visibility** | Hidden columns are skipped. `colSpan: 2` merges the origin with the next *visible* column, and the merged width and `aria-colspan` count visible columns only. |
+| **Column order / reordering** | A span covers the columns that follow the origin in the current (rendered) order. |
+| **Column pinning** | A span never crosses a pinned-section boundary: it is clamped to the end of the left-pinned, unpinned or right-pinned section its origin is in. |
+| **Row pinning** | Spans are computed separately for the top-pinned rows, the scrolling rows and the bottom-pinned rows, and never reach from one into another. |
+| **Sorting / filtering / pagination** | Spans are recomputed against the new row order, the filtered rows and the current page. `rowIndex` in the callback is the row's position in the rendered rows (top-pinned rows first). |
+| **Master-detail** | A row span ends at a row whose detail panel is expanded, so the merged cell never covers the panel. |
+| **Virtualization** | The render window is widened so a span is never cut: the row whose cell starts a visible row span, and the column that starts a visible column span, are always rendered. |
+| **Column resizing, flex and percentage widths** | A merged cell is exactly as wide as the columns it covers, using their resolved widths. The origin column's own `minWidth` / `maxWidth` do not apply to the merged cell. Resizing never recomputes the spans. |
+| **Keyboard navigation** | Arrow keys move over a merged area in one step and land on its origin cell; covered cells are never focused. Tab skips covered cells. |
+| **Infinite scrolling** | The loading placeholder rows are never passed to `colSpan` / `rowSpan`. |
 
-1. **Sorting** (`sortable: false`)
-   - When rows are reordered by sorting, spanned cells may break visual continuity
-   - Subtotal/summary rows with spanning should remain in fixed positions
+Spans on columns whose values change with sorting still work, but the merged areas move with the rows. For summary rows that must stay in place, disable sorting on the spanning column (`sortable: false`) or use [Row Pinning](./pinning.md).
 
-2. **Filtering** (when implemented)
-   - Hidden rows can cause spanned cells to appear disconnected or incomplete
-   - Filtering may hide parts of a spanned cell group
+### Span values
 
-3. **Column Reordering** (`disableReorder: true`)
-   - Moving columns can break the spanning logic
-   - Spanned cells depend on specific column order
+The value returned (or set) for `colSpan` / `rowSpan` is normalised before it is used:
 
-4. **Column Hiding** (`hideable: false`)
-   - Hiding columns within a span creates layout gaps and visual artifacts
-   - The grid cannot properly render partial spans
+- Values larger than what is left are clamped: `colSpan` to the end of the origin's pinned section, `rowSpan` to the end of the row section (or to the first row with an expanded detail panel). `aria-colspan` / `aria-rowspan` show the clamped value.
+- Fractions are rounded down (`1.7` → `1`).
+- `Infinity` means "to the end" and is clamped like any other large value.
+- `NaN`, `0`, negative numbers and non-numbers mean no span (`1`).
 
-5. **Column Pinning** (avoid pinning spanned columns)
-   - Pinned columns with spanning can cause rendering conflicts
-   - Spanning across pinned and non-pinned columns is not supported
-
-### Recommended Configuration
-
-```tsx
-const columns: GridColDef<Row>[] = [
-    {
-        field: 'summary',
-        headerName: 'Summary',
-        width: 200,
-        colSpan: (params) => params.row.isTotal ? 3 : 1,
-        // Disable conflicting features
-        sortable: false,        // ✅ Disable sorting
-        hideable: false,        // ✅ Disable column hiding
-        // Column reorder is disabled grid-wide via disableColumnReorder on <DataGrid>
-        // Note: Avoid pinning this column
-        renderCell: (params) => {
-            if (params.row.isTotal) {
-                return <strong>Total: {params.value}</strong>;
-            }
-            return params.value;
-        }
-    },
-    // Other columns...
-];
-```
-
-### Why These Limitations Exist
-
-Cell spanning fundamentally changes the grid's layout model:
-- **Sorting/Filtering** change row order/visibility, breaking span relationships
-- **Column operations** (reorder/hide/pin) modify the column structure that spans depend on
-- **CSS Grid** requires stable column positions for proper spanning
-
-**Best Practice**: Use cell spanning primarily for static summary rows, headers, or fixed layout sections where these features are not needed.
+A `colSpan` or `rowSpan` function (or the `valueGetter` whose value it receives) that **throws** is treated as `1` for that cell, and a warning is logged in development. The rest of the grid keeps rendering.
 
 ---
 
@@ -190,7 +161,11 @@ const columns: GridColDef<Row>[] = [
 
 ## Combined Column and Row Spanning
 
-You can use both `colSpan` and `rowSpan` together:
+You can use both `colSpan` and `rowSpan` together. The origin cell then covers the whole rectangle: with `colSpan: 3` and `rowSpan: 2`, the three cells in the next row are covered too.
+
+- A cell covered by another cell's `colSpan` is not evaluated as a `rowSpan` origin in that row.
+- A cell covered by a `rowSpan` from above is not evaluated as a `colSpan` origin.
+- A `colSpan` stops before a cell that a `rowSpan` from a row above already covers.
 
 ```tsx
 const columns: GridColDef<Row>[] = [
@@ -396,12 +371,13 @@ Parameters passed to the `colSpan` and `rowSpan` functions:
 
 ```tsx
 interface GridRenderCellParams<R> {
-    value: any;           // Cell value
-    row: R;               // Complete row data
-    field: string;        // Column field name
+    value: unknown;        // Cell value: the valueGetter result when the column has one
+    row: R;                // Complete row data
+    field: string;         // Column field name
     colDef: GridColDef<R>; // Column definition
-    rowIndex: number;     // Row index
-    colIndex: number;     // Column index
+    rowIndex: number;      // Position among the rendered rows (top-pinned rows, then the current page, then bottom-pinned rows)
+    colIndex: number;      // Position among the rendered data columns (left-pinned first); checkbox, detail-panel and reorder columns are not counted
+    rowMeta?: GridRowMeta; // Hierarchy metadata under tree data / row grouping
 }
 ```
 
@@ -445,10 +421,10 @@ Spanned cells can be styled using custom `renderCell`:
 
 The DataGrid automatically adds ARIA attributes for spanned cells:
 
-- `aria-colspan`: Added when `colSpan > 1`
-- `aria-rowspan`: Added when `rowSpan > 1`
+- `aria-colspan`: Added when the (clamped) `colSpan > 1`
+- `aria-rowspan`: Added when the (clamped) `rowSpan > 1`
 
-This ensures screen readers properly announce the spanning behavior.
+Cells covered by a column span are not rendered. Cells covered by a row span render as empty `role="presentation"` placeholders that keep the column's slot. Keyboard focus always lands on the origin cell of a merged area.
 
 ---
 
@@ -456,59 +432,24 @@ This ensures screen readers properly announce the spanning behavior.
 
 1. **Use Dynamic Spanning**: Prefer dynamic spanning functions over static values for flexibility
 2. **Combine with renderCell**: Always provide custom rendering for spanned cells to improve visual clarity
-3. **Consider Performance**: Spanning calculations run on every render, so keep them lightweight
-4. **Test with Virtualization**: Ensure spanning works correctly with virtual scrolling
+3. **Consider Performance**: Span functions run once per cell of a spanning column whenever the rows or the column structure change (not on scroll or resize), so keep them lightweight
+4. **Keep Row Spans Short**: While a long row span is on screen, every row from its origin down is rendered, so a 1,000-row span renders up to 1,000 rows
 5. **Accessibility**: Provide meaningful content in spanned cells for screen readers
 
 ---
 
 ## Limitations
 
-### Feature Conflicts
-
-**⚠️ See the [Feature Conflicts](#️-important-feature-conflicts) section above for important information about which features should be disabled when using cell spanning.**
-
-### Technical Limitations
-
-1. **Virtualization**: 
-   - Row spanning may have visual artifacts with virtualization if spans cross virtual boundaries
-   - Large row spans (>10 rows) may cause performance issues with virtual scrolling
-   - Consider using row pinning for summary rows instead of row spanning
-
-2. **Pinned Columns**: 
-   - Column spanning with pinned columns requires careful consideration
-   - Spanning across pinned and non-pinned columns is not supported
-   - Use spanning only within pinned or non-pinned column groups
-
-3. **Sorting/Filtering**: 
-   - Spanned cells may break visual continuity when rows are reordered
-   - Always disable sorting on columns with dynamic spanning
-   - Filtering can hide parts of spanned cell groups
-
-4. **Column Operations**:
-   - Column reordering can break spanning logic
-   - Hiding columns within a span creates layout gaps
-   - Column resizing may not work optimally with spanned cells
-
-5. **Editing**:
-   - Cell editing on spanned cells may have unexpected behavior
-   - Consider disabling editing for columns with spanning
+1. **Pinned columns**: A span cannot cover columns in two pinned sections. Put the columns a span should merge in the same section.
+2. **Pinned rows**: A span cannot reach from a pinned row into the scrolling rows (or the other way).
+3. **Long row spans**: The rows between a visible row span's origin and the viewport are rendered, so very long row spans cost DOM nodes. Consider [Row Grouping](./tree-data-grouping.md) for large vertical groups.
+4. **Editing**: Double-click editing on a merged cell edits the origin cell's field.
 
 ### Workarounds
 
 - **For Summary Rows**: Use [Row Pinning](./pinning.md) with pinned bottom rows instead of row spanning
 - **For Headers**: Consider using column grouping instead of cell spanning
 - **For Hierarchical Data**: Use [Tree Data](./tree-data-grouping.md) instead of row spanning
-
----
-
-## Browser Support
-
-Cell spanning uses CSS Grid, which is supported in:
-- Chrome 57+
-- Firefox 52+
-- Safari 10.1+
-- Edge 16+
 
 ---
 
