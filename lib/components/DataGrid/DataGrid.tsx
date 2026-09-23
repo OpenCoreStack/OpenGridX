@@ -300,7 +300,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowHeight: effectiveRowHeight,
         headerHeight,
         columnVisibilityModel,
-        initialState: props.initialState
+        initialState: props.initialState,
+        syncRows: !dataSource,
     });
     const {
         state,
@@ -440,12 +441,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         toggleExpansion: treeDataHandlers.toggleExpansion,
         fetchChildren: dataSourceHandlers.fetchChildren,
     });
-
-    useEffect(() => {
-        if (!dataSource) {
-            setRows(activeRows);
-        }
-    }, [activeRows, setRows, dataSource]);
 
     // ── Detail panel (hoisted — hasDetailPanel feeds into useGridColumns) ──────
     const hasDetailPanel = Boolean(getDetailPanelContent);
