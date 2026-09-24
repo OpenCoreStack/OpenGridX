@@ -32,8 +32,7 @@ import { Header } from '../Header/Header';
 import { Pagination } from '../Pagination/Pagination';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
 import { useRowReorder } from '../../hooks/useRowReorder';
-import { useTreeData } from '../../hooks/useTreeData';
-import { useRowGrouping } from '../../hooks/useRowGrouping';
+import { useGridHierarchy } from '../../hooks/core/useGridHierarchy';
 import { useGridEditing } from '../../hooks/features/useGridEditing';
 import { useGridSpanning } from '../../hooks/features/useGridSpanning';
 import { useGridSpanRowWindow, useGridSpanColumnWindow } from '../../hooks/features/useGridSpanRenderWindow';
@@ -55,9 +54,7 @@ import { resolveGridModes, EMPTY_ROW_GROUPING_MODEL } from '../../utils/gridMode
 import { useGridGroupingColumn } from '../../hooks/core/useGridGroupingColumn';
 import { useGridRowIdOf, getDefaultRowId } from '../../hooks/core/useGridRowIdOf';
 import { useGridApiRefBinding } from '../../hooks/core/useGridApiRefBinding';
-import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
-
-const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
+import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridSortItem, GridGroupedExportRow } from '../../types';
 
 /**
  * The grid. `R` is your row type: any object type (an interface works), inferred from `rows`. `columns`
@@ -298,25 +295,15 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         return state.rows.allRows.map(id => state.rows.idRowsLookup.get(id)!) as R[];
     }, [state.rows]);
 
-    const treeDataHandlers = useTreeData({
+    const { treeDataHandlers, rowGroupingHandlers, activeHierarchyHandlers, rowMetaMap } = useGridHierarchy<R>({
         rows: effectiveRows,
         getRowId: getRowIdOf,
         getTreeDataPath,
-        treeData: isTreeDataRequested,
-        defaultGroupingExpansionDepth,
-        filterModel,
-
-        sortModel,
-        columnLookup,
-        filterMode,
-        sortingMode,
-    });
-
-    const rowGroupingHandlers = useRowGrouping({
-        rows: effectiveRows,
-        getRowId: getRowIdOf,
+        isTreeDataRequested,
+        isTreeData,
         columns: activeColumns,
         rowGroupingModel: hierarchyRowGroupingModel,
+        isRowGrouping,
         aggregationModel,
         defaultGroupingExpansionDepth,
         filterModel,
@@ -341,14 +328,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             replaceRow(rowId, updatedRow);
         },
     });
-
-    const activeHierarchyHandlers = isTreeData ? treeDataHandlers : (isRowGrouping ? rowGroupingHandlers : null);
-
-    const rowMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
-        if (isTreeData) return treeDataHandlers.rowMetaMap;
-        if (isRowGrouping) return rowGroupingHandlers.rowMetaMap;
-        return EMPTY_ROW_META_MAP;
-    }, [isTreeData, treeDataHandlers.rowMetaMap, isRowGrouping, rowGroupingHandlers.rowMetaMap]);
 
     // The selection without ids of removed rows. Only client-owned rows are pruned: a server page
     // or a pivot of the rows does not hold every row a selection may name.
