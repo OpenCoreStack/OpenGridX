@@ -7,8 +7,7 @@ import { useGridRowPipeline } from '../../hooks/core/useGridRowPipeline';
 import { useGridVirtualization } from '../../hooks/core/useGridVirtualization';
 import { useGridColumns } from '../../hooks/core/useGridColumns';
 import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
-import { useGridScrollSync } from '../../hooks/core/useGridScrollSync';
-import { useGridViewportSize } from '../../hooks/core/useGridViewportSize';
+import { useGridViewport } from '../../hooks/core/useGridViewport';
 import { useGridDetailPanel } from '../../hooks/core/useGridDetailPanel';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings, useGridStylesheetWarning } from '../../hooks/core/useGridDevWarnings';
@@ -249,8 +248,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const containerRef = useRef<HTMLDivElement>(null);
     const viewportRef = useRef<HTMLDivElement>(null);
-    const contentRef = useRef<HTMLDivElement>(null);
-    const gridRef = useRef<HTMLDivElement>(null);
 
     // Rows are stored and handed to consumers untouched: getRowId only decides the internal
     // key. Pivot rows are the grid's own and carry their own ids, so a getRowId written for
@@ -593,17 +590,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     });
     useGridScrollToIndexesApi<R>({ apiRef, viewportRef, layout, rowHeight: effectiveRowHeight });
 
-    const { scrollTop, scrollLeft, overscanRows, handleScroll, attachViewport } = useGridScrollSync({
-        onRowsScrollEnd, overscanRowCount, rowCount: layout.unpinnedRowsLength, autoHeight,
+    const { scrollTop, scrollLeft, overscanRows, handleScroll, setViewportElement } = useGridViewport({
+        onRowsScrollEnd, overscanRowCount, rowCount: layout.unpinnedRowsLength, autoHeight, setDimensions, viewportRef,
     });
-    const observeViewportSize = useGridViewportSize(setDimensions);
-    // Callback ref: every viewport that mounts (list view switched off again) is measured and gets its scroll position back.
-    const setViewportElement = useCallback((el: HTMLDivElement | null) => {
-        viewportRef.current = el;
-        gridRef.current = el;
-        observeViewportSize(el);
-        attachViewport(el);
-    }, [observeViewportSize, attachViewport]);
 
     const virtualization = useGridVirtualization({
         layout,
@@ -893,7 +882,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     onBlur={handleBlur}
                 >
                     <div
-                        ref={contentRef}
                         className="ogx__content"
                         style={{
                             width: virtualization.totalWidth
