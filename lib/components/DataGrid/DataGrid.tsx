@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useMemo } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useLayout } from '../../hooks/core/useLayout';
 import { useGridKeyboardNavigation } from '../../hooks/core/useGridKeyboardNavigation';
 import { useGridControlledState } from '../../hooks/core/useGridControlledState';
@@ -19,7 +19,6 @@ import { useGridPageCorrection } from '../../hooks/core/useGridPageCorrection';
 import { useGridColumnsPanel } from '../../hooks/core/useGridColumnsPanel';
 import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
 import { GridToolbarSlot } from './GridToolbarSlot';
-import { upsertSortItem } from '../../utils/sorting';
 import { getAriaRowLayout } from '../../utils/aria';
 import { GridAggregationFooter } from './GridAggregationFooter';
 import { GridEmptyState } from './GridEmptyState';
@@ -52,7 +51,9 @@ import { collectAllFilteredRows } from '../../utils/gridApiRows';
 import { useGridAggregationApi } from '../../hooks/core/useGridAggregationApi';
 import { useGridClipboardApi } from '../../hooks/core/useGridClipboardApi';
 import { useGridScrollToIndexesApi } from '../../hooks/core/useGridScrollToIndexesApi';
-import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridCellParams, GridSortItem } from '../../types';
+import { useGridSortHandlers, useGridColumnMenuHandlers } from '../../hooks/core/useGridHeaderHandlers';
+import { useGridKeyboardMode, useGridPointerFocusHandlers } from '../../hooks/core/useGridFocusHandlers';
+import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridColDef } from '../../types';
 
 /**
  * The grid. `R` is your row type: any object type (an interface works), inferred from `rows`. `columns`
@@ -254,11 +255,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // the source rows does not apply to them.
     const effectiveGetRowId = (!isPivotActive && getRowId) || getDefaultRowId;
 
-    // Keyboard-mode flag: toggled via DOM classname — no React state needed
-    // so the ring appears instantly without a re-render cycle.
-    const setKeyboardMode = useCallback((on: boolean) => {
-        containerRef.current?.classList.toggle('ogx--kb', on);
-    }, []);
+    const setKeyboardMode = useGridKeyboardMode(containerRef);
 
     const gridData = useDataGrid({
         rows: activeRows,
@@ -610,23 +607,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     });
 
 
-    const handleSort = useCallback((field: string, direction: GridSortDirection) => {
-        const newSortModel = direction ? [{ field, sort: direction }] : [];
-
-        if (!isSortControlled) {
-            setInternalSortModel(newSortModel as GridSortItem[]);
-        }
-        onSortModelChange?.(newSortModel as GridSortItem[]);
-    }, [isSortControlled, onSortModelChange, setInternalSortModel]);
-
-    const handleSortAdd = useCallback((field: string, direction: GridSortDirection) => {
-        const newSortModel = upsertSortItem(sortModel, field, direction);
-
-        if (!isSortControlled) {
-            setInternalSortModel(newSortModel);
-        }
-        onSortModelChange?.(newSortModel);
-    }, [sortModel, isSortControlled, onSortModelChange, setInternalSortModel]);
+    const { handleSort, handleSortAdd } = useGridSortHandlers({
+        sortModel, isSortControlled, setInternalSortModel, onSortModelChange,
+    });
 
     const rowSelectionEnabled = checkboxSelection || !disableRowSelectionOnClick;
     const {
@@ -670,13 +653,15 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowHeight: effectiveRowHeight,
     });
 
-    const handleCellClick = useCallback((params: GridCellParams<R>) => {
-        // Focus stays where the click put it (the cell, or a control rendered inside it).
-        ensureGridFocus();
-        setKeyboardMode(false);
-        setFocusedCell({ id: getRowIdOf(params.row), field: params.field, rowIndex: params.rowIndex });
-        onCellClick?.(params);
-    }, [onCellClick, setKeyboardMode, setFocusedCell, ensureGridFocus, getRowIdOf]);
+    const { handleCellClick, handleHeaderClick } = useGridPointerFocusHandlers<R>({
+        ensureGridFocus, setKeyboardMode, setFocusedCell, getRowId: getRowIdOf, onCellClick,
+    });
+    const { handleHideColumn, handlePinColumn } = useGridColumnMenuHandlers({
+        columnVisibilityModel,
+        onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
+        pinnedColumns,
+        onPinnedColumnsChange: handlePinnedColumnsChange,
+    });
 
     const ariaRows = useMemo(() => getAriaRowLayout({
         headerRowCount: 1 + getColumnGroupDepth(columnGroupingModel),
@@ -909,11 +894,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
                                 focusedCell={focusedCell}
                                 columnIndexMap={columnIndexMap}
-                                onHeaderClick={(field) => {
-                                    ensureGridFocus();
-                                    setFocusedCell({ id: null, field });
-                                    setKeyboardMode(false);
-                                }}
+                                onHeaderClick={handleHeaderClick}
                                 onDragStart={headerReorderHandlers.onDragStart}
                                 onDragOver={headerReorderHandlers.onDragOver}
                                 onDragEnd={headerReorderHandlers.onDragEnd}
@@ -925,27 +906,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                 pinCheckboxColumn={pinCheckboxColumn}
                                 pinExpandColumn={pinExpandColumn}
                                 aggregationModel={aggregationModel}
-                                onHideColumn={(field) => {
-                                    handleColumnVisibilityModelChange({
-                                        ...columnVisibilityModel,
-                                        [field]: false,
-                                    });
-                                }}
+                                onHideColumn={handleHideColumn}
                                 onManageColumns={columnsPanel.openColumnsPanel}
-                                onPinColumn={(field, side) => {
-                                    const left = [...(pinnedColumns?.left ?? [])];
-                                    const right = [...(pinnedColumns?.right ?? [])];
-
-                                    const cleanLeft = left.filter(f => f !== field);
-                                    const cleanRight = right.filter(f => f !== field);
-                                    if (side === 'left') {
-                                        handlePinnedColumnsChange({ left: [...cleanLeft, field], right: cleanRight });
-                                    } else if (side === 'right') {
-                                        handlePinnedColumnsChange({ left: cleanLeft, right: [...cleanRight, field] });
-                                    } else {
-                                        handlePinnedColumnsChange({ left: cleanLeft, right: cleanRight });
-                                    }
-                                }}
+                                onPinColumn={handlePinColumn}
                             />
 
                             <GridPinnedRows<R>

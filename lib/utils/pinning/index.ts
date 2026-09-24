@@ -308,3 +308,19 @@ export function getPinnedRowsCount(
     const pinnedIds = position === 'top' ? pinnedRows.top : pinnedRows.bottom;
     return pinnedIds?.length || 0;
 }
+
+/**
+ * The column pinning model after the column menu pins `field` to `side` (appended after the
+ * columns already pinned there) or unpins it (`null`). The field is removed from the other side.
+ */
+export function pinColumnTo(
+    pinnedColumns: GridColumnPinning | undefined,
+    field: string,
+    side: GridPinnedPosition | null
+): GridColumnPinning {
+    const cleanLeft = (pinnedColumns?.left ?? []).filter(f => f !== field);
+    const cleanRight = (pinnedColumns?.right ?? []).filter(f => f !== field);
+    if (side === 'left') return { left: [...cleanLeft, field], right: cleanRight };
+    if (side === 'right') return { left: cleanLeft, right: [...cleanRight, field] };
+    return { left: cleanLeft, right: cleanRight };
+}
