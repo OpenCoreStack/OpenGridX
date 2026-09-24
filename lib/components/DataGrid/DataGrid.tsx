@@ -53,6 +53,8 @@ import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
 import { resolveGridModes, EMPTY_ROW_GROUPING_MODEL } from '../../utils/gridModes';
 import { useGridGroupingColumn } from '../../hooks/core/useGridGroupingColumn';
+import { useGridRowIdOf, getDefaultRowId } from '../../hooks/core/useGridRowIdOf';
+import { useGridApiRefBinding } from '../../hooks/core/useGridApiRefBinding';
 import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
 
 const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
@@ -256,8 +258,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // Rows are stored and handed to consumers untouched: getRowId only decides the internal
     // key. Pivot rows are the grid's own and carry their own ids, so a getRowId written for
     // the source rows does not apply to them.
-    const defaultGetRowId = useCallback((row: R) => row.id, []);
-    const effectiveGetRowId = (!isPivotActive && getRowId) || defaultGetRowId;
+    const effectiveGetRowId = (!isPivotActive && getRowId) || getDefaultRowId;
 
     // Keyboard-mode flag: toggled via DOM classname — no React state needed
     // so the ring appears instantly without a re-render cycle.
@@ -287,25 +288,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         setRowCount
     } = gridData;
 
-    // The key of any row the grid renders: stored rows resolve through the store, and
-    // grid-made rows (group rows, skeletons, generated tree parents) through their own `id`.
-    const getRowIdOf = useCallback(
-        (row: GridRowModel): GridRowId => state.rows.idByRow.get(row) ?? row.id,
-        [state.rows.idByRow]
-    );
-    // Same resolver with a stable identity, for event handlers only (it reads the last
-    // committed store), so column definitions are not rebuilt on every rows change.
-    const getRowIdOfRef = useRef(getRowIdOf);
-    useLayoutEffect(() => { getRowIdOfRef.current = getRowIdOf; });
-    const getRowIdOfInEvents = useCallback((row: GridRowModel) => getRowIdOfRef.current(row), []);
-
-
-    // Layout effect: the live API must be in place before the parent's layout effects run.
-    useLayoutEffect(() => {
-        if (propApiRef) {
-            propApiRef.current = apiRef.current;
-        }
-    }, [propApiRef, apiRef]);
+    const { getRowIdOf, getRowIdOfInEvents } = useGridRowIdOf(state.rows.idByRow);
+    useGridApiRefBinding(propApiRef, apiRef);
 
     const isInternalLoading = state.dataSource.loading;
     const effectiveLoading = loading || isInternalLoading;
