@@ -3,5 +3,6 @@
   "compilerOptions": {
     "types": ["vitest/globals", "@testing-library/jest-dom", "node"]
   },
-  "include": ["lib", "src"]
+  "include": ["lib", "src"],
+  "exclude": ["node_modules", "dist", "lib/__hunt__", "lib/__verify__", ".claude"]
 }

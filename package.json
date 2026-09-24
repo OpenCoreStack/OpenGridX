@@ -44,6 +44,7 @@
     "build": "tsc --project tsconfig.build.json && vite build",
     "build:lib": "tsc --project tsconfig.build.json && vite build --config vite.config.lib.js && cp lib/styles/opengridx.css.d.ts dist/opengridx.css.d.ts && node scripts/check-bundle.mjs",
     "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "preview": "vite preview",
     "test": "vitest run --project unit",
     "test:browser": "vitest run --project browser",

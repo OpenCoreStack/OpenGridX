@@ -19,7 +19,13 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* The demo imports the package by name; Vite aliases it to lib/index.ts (vite.config.js). */
+    "paths": {
+      "@opencorestack/opengridx": ["./lib/index.ts"]
+    }
   },
-  "include": ["lib", "demo", "old_app", "src"]
+  "include": ["lib", "demo", "src"],
+  "exclude": ["node_modules", "dist", "demo/dist", "lib/__hunt__", "lib/__verify__", ".claude"]
 }
