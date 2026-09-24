@@ -51,6 +51,8 @@ import { GridLoadingOverlay } from './GridLoadingOverlay';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
+import { resolveGridModes, EMPTY_ROW_GROUPING_MODEL } from '../../utils/gridModes';
+import { useGridGroupingColumn } from '../../hooks/core/useGridGroupingColumn';
 import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridSortItem, GridRowMeta, GridGroupedExportRow } from '../../types';
 
 const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
@@ -157,13 +159,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     } = props;
 
     const effectiveNoRowsLabel = localeText?.noRowsLabel ?? noRowsLabel;
-    // List view needs a listViewColumn to render its items; without one the grid view is shown
-    // (useGridDevWarnings says so) instead of an empty container.
-    const listView = listViewRequested && Boolean(listViewColumn);
-
-    // Stable defaults
-    const defaultRowGroupingModel = useMemo(() => [], []);
-    const rowGroupingModel = propRowGroupingModel || defaultRowGroupingModel;
+    const rowGroupingModel = propRowGroupingModel || EMPTY_ROW_GROUPING_MODEL;
 
     const controlledState = useGridControlledState({
         initialState,
@@ -220,13 +216,21 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         hierarchyRequested: treeData || rowGroupingModel.length > 0,
     });
     const isPivotActive = pivot.isActive;
-    // Pivot rows are generated, so row-reorder indices over them would mean nothing to the consumer.
-    const rowReordering = rowReorderingProp && !isPivotActive;
-    // Pivot rows are already grouped by the pivot row fields; tree data and row grouping would regroup them.
-    const hierarchyRowGroupingModel = isPivotActive ? defaultRowGroupingModel : rowGroupingModel;
-    const isTreeDataRequested = treeData && !isPivotActive;
-    // Without getTreeDataPath there is no tree to build: the rows are shown flat (useTreeData warns).
-    const isTreeData = isTreeDataRequested && Boolean(getTreeDataPath);
+    const {
+        rowReordering, hierarchyRowGroupingModel, isTreeDataRequested, isTreeData,
+        isRowGrouping, isHierarchyEnabled, hasGroupingColumn, pagination, listView,
+    } = resolveGridModes({
+        rowGroupingModel,
+        treeData,
+        hasTreeDataPath: Boolean(getTreeDataPath),
+        isPivotActive,
+        rowReordering: rowReorderingProp,
+        hasGroupingColDef: Boolean(groupingColDef),
+        pagination: propPagination,
+        paginationMode,
+        listView: listViewRequested,
+        hasListViewColumn: Boolean(listViewColumn),
+    });
 
     // Props, then the enclosing DataGridThemeProvider's heights, then the defaults (52 / 56).
     const { rowHeight: effectiveRowHeight, headerHeight } = useGridThemeDimensions({
@@ -236,41 +240,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const activeRows = pivot.rows as unknown as R[];
     const baseColumns = pivot.columns as unknown as GridColDef<R>[];
 
-    // When groupingColDef is provided and row grouping or tree data is active, prepend a
-    // dedicated synthetic __group__ column at position 0 (pinned-left).
-    const isRowGroupingActive = hierarchyRowGroupingModel.length > 0;
-    const hasGroupingColumn = Boolean(groupingColDef) && (isRowGroupingActive || isTreeData);
-
-    // Auto-pin __group__ column to the left when groupingColDef is active.
-    // Both values MUST be memoized: without useMemo they produce a new array/object
-    // reference every render, which cascades through useRowGrouping's memos and
-    // effects into an infinite setState loop (Maximum update depth exceeded).
-    const effectivePinnedColumns = useMemo(() => (
-        hasGroupingColumn
-            ? { ...pinnedColumns, left: ['__group__', ...((pinnedColumns?.left ?? []).filter(f => f !== '__group__'))] }
-            : pinnedColumns
-    ), [hasGroupingColumn, pinnedColumns]);
-
-    const activeColumns = useMemo(() => (
-        hasGroupingColumn
-            ? [
-                {
-                    headerName: 'Group',
-                    width: 220,
-                    // Tree data: a row's own entry in the hierarchy is the last segment of its path.
-                    ...(isTreeData && getTreeDataPath ? { valueGetter: ({ row }: { row: R }) => { const path = getTreeDataPath(row); return path[path.length - 1]; } } : {}),
-                    ...groupingColDef,
-                    field: '__group__',
-                    hideable: false,
-                    sortable: false,
-                    filterable: false,
-                    pinnable: false,
-                    exportable: false,
-                } as unknown as GridColDef<R>,
-                ...baseColumns,
-              ]
-            : baseColumns
-    ), [groupingColDef, hasGroupingColumn, isTreeData, getTreeDataPath, baseColumns]);
+    const { activeColumns, effectivePinnedColumns } = useGridGroupingColumn<R>({
+        baseColumns, pinnedColumns, hasGroupingColumn, groupingColDef, isTreeData, getTreeDataPath,
+    });
 
     const columnLookup = useGridColumnLookup(activeColumns, columnVisibilityModel);
 
@@ -386,8 +358,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         },
     });
 
-    const isRowGrouping = hierarchyRowGroupingModel.length > 0;
-    const isHierarchyEnabled = isTreeData || isRowGrouping;
     const activeHierarchyHandlers = isTreeData ? treeDataHandlers : (isRowGrouping ? rowGroupingHandlers : null);
 
     const rowMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
@@ -405,9 +375,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         enabled: !dataSource && !isPivotActive && paginationMode === 'client' && filterMode === 'client',
         onSelectionModelChange: handleRowSelectionModelChange,
     });
-
-    // Infinite scroll loads rows as the user scrolls; it has no pages to show or slice.
-    const pagination = propPagination && !isRowGrouping && paginationMode !== 'infinite';
 
     const dataSourceHandlers = useGridDataSource({
         dataSource,
