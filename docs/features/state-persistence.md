@@ -81,6 +81,10 @@ const { initialState, onStateChange } = useGridStateStorage(storageKey);
 
 Without the remount the grid keeps its current state, and its next change is saved under the new key.
 
+### Server-side rendering
+
+The hook reads storage during the first render. On the server there is no storage, so the server HTML uses the default state while the client's first render uses the saved one, and React reports a hydration mismatch. If users can have saved state, render the persisted grid on the client only (for example after mount, or with Next.js `dynamic(..., { ssr: false })`). The [migration guide, §26](../migration/v2-to-v3.md#26-state-persistence) has a complete example.
+
 ---
 
 ## 📡 Tracking Changes

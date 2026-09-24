@@ -294,7 +294,8 @@ A correctness release: every feature area was audited against its documentation 
 - `disableClipboardCopy` prop; Ctrl+C events already handled (`defaultPrevented`) are left alone.
 - Export options: `CsvExportOptions.escapeFormulas`, `CsvExportOptions.bom`, `ExcelExportOptions.escapeFormulas`, `PdfExportOptions.font` (a Unicode TrueType font), and `getRowId` on every export function.
 - `GridGroupedExportRow.groupLabel`; `GridRowMeta.isGroupFooter` and the `ogx__row--group-footer` class for subtotal rows shown in `'footer'` position.
-- Keyboard: Shift+Space selects the focused row, Ctrl/Cmd+A selects all, Enter on a non-editable cell activates the row like a click (and toggles rows with children), Alt+ArrowRight / Alt+ArrowLeft expand and collapse, Alt+ArrowDown or Ctrl+Enter opens the column menu, Alt+ArrowLeft / Alt+ArrowRight on a focused header resizes it (Shift for 50px steps).
+- Keyboard: Shift+Space selects the focused row, Ctrl/Cmd+A selects all, Alt+ArrowRight / Alt+ArrowLeft expand and collapse, Alt+ArrowDown or Ctrl+Enter opens the column menu, Alt+ArrowLeft / Alt+ArrowRight on a focused header resizes it (Shift for 50px steps).
+- Enter on a non-editable cell: on a row with children (group rows, tree-data parents) it only toggles expansion, without firing `onRowClick` or selecting; on any other row it acts like a click (`onRowClick`, click-to-select).
 - Keyboard navigation between rows in list view.
 - Column resizing by touch and pen; resize separators expose `aria-valuenow` / `aria-valuemin` / `aria-valuemax`.
 - `aria-level` / `aria-expanded` on hierarchy rows and `aria-multiselectable` on the grid.
@@ -302,6 +303,7 @@ A correctness release: every feature area was audited against its documentation 
 - Type exports: `GridRenderEditCellParams`, `GridValueSetterParams`, `GridThemeToolbar`, `GridThemeOverlays`, `GridThemeScrollbar`, `GridThemeSkeleton`, `GridThemeGrayScale`, `GridGroupedExportRow`, `GridRowScrollEndParams`, `GridColumnOrder`, `GridDataSourceState`, `GridDetailPanelHeight`, `GridAggregationPosition`, `GridSlots`, `GridSlotProps`, and the props types `CellProps`, `RowProps`, `HeaderProps`, `SkeletonProps`, `FilterPanelProps`, `PaginationProps`, `GridTooltipProps`, `ButtonProps`, `InputProps`, `CheckboxProps`.
 - `Pagination` component export.
 - Optional `rowId` prop on `Row`, and optional `ariaRowIndex` / `ariaColIndex` / `columnIndexMap` props on the exported `Row`, `Cell` and `Header` components.
+- Optional props on the exported components: `Cell.isPinnedEdge` (adds the pinned-section edge class), `Cell.valueError` (shows a `valueGetter` error as a cell error), `Row.onDetailPanelHeightChange(rowId, height)` (measured height of an `'auto'` detail panel) and `Row.isCellEditable`.
 - Dev warnings: the grid stylesheet is not loaded, `pinnedRows` ignored under hierarchy, content taller than browsers can scroll, duplicate row ids, empty or duplicate tree paths, `valueGetter` + `editable` without `valueSetter`, pivot combined with `dataSource` / tree data / row grouping, `listView` without `listViewColumn`.
 - CSS hooks: `ogx__sticky-top`, `ogx__sticky-bottom`, `ogx__header-cell--pinned-left-last`, `ogx__header-cell--pinned-right-first`, `ogx__cell--pinned-left-last`, `ogx__cell--pinned-right-first`, `ogx__aggregation-spacer`, `ogx__aggregation-spacer--pinned`, `ogx__aggregation-footer--loading`, `ogx__loading-bar`, `ogx__loading-overlay--over-rows`, `ogx__loading-overlay--custom`, `ogx__cell-image`, `ogx-list-view__expand`, `ogx-list-view__loading`, `ogx-filter__hidden-note`, `ogx-filter__value-multiselect`, `ogx-col-group-cell--pinned`, `ogx-col-group-cell--pinned-left` / `--pinned-right`, `ogx-column-resize-handle--start`, `ogx-tooltip--left` / `--right`.
 
@@ -318,6 +320,9 @@ A correctness release: every feature area was audited against its documentation 
 - `GridToolbar` shows the Summaries button only when `onAggregationModelChange` is passed; toolbar triggers have `aria-haspopup="dialog"` and `aria-expanded`.
 - `GridTooltip` renders into the theme provider (`.ogx-theme-provider`) with `position: fixed` instead of `document.body`.
 - `useGridApiRef()` returns a `MutableRefObject<GridApi>` that is never `null` before mount; `GridInitialState` accepts partial `columns`.
+- The exported `Header` reports a focused header cell as `focusedCell.id === null` (was `'HEADER'`).
+- The exported `Cell` no longer stops propagation of the double-click that starts an edit, so it reaches the row (`onRowDoubleClick`).
+- `onStateChange` fires on value changes only (it fired for every new prop identity). With `useGridStateStorage`, remount the grid with `<DataGrid key={storageKey}>` when the key changes; storage is read during the first render, so SSR apps with saved state should render the grid on the client only (see the migration guide, §26).
 - `GridAggregationPosition` is `'inline' | 'footer' | null` (it was an unused `'footer' | 'inline' | 'both'`).
 - Accent colours use CSS `color-mix()` (Chrome 111+, Safari 16.2+, Firefox 113+); `darkTheme` gives the toolbar a solid `#1e293b` background.
 
@@ -325,7 +330,10 @@ A correctness release: every feature area was audited against its documentation 
 
 - Rows can be typed with your own interfaces and type aliases: every public generic is constrained by the new `GridValidRowModel` (`object`) instead of `GridRowModel`, and an untyped `GridColDef[]` can be passed next to typed rows. The README example now compiles under `strict`.
 - `DataGrid` and the export functions, `usePivot` and `useAggregation` have a typed and an untyped-columns overload. Use `DataGridProps<R>` rather than `React.ComponentProps<typeof DataGrid>`.
-- `GridColDef` row callbacks are declared as methods, so `GridColDef<Row>` is assignable to `GridColDef`.
+- `GridColDef` row callbacks are declared as methods, so `GridColDef<Row>` is assignable to `GridColDef` when `Row` is a type alias or extends `GridRowModel`. For an interface without an index signature it is not: type the array as `GridColDef<Row>[]`, or leave the columns untyped and use the untyped-columns overload.
+- Calling `col.renderEditCell(params)` yourself with a `GridRenderCellParams` is now a type error: its parameter is `GridRenderEditCellParams` (the old params plus `onValueChange`, `onCommit`, `onCancel`).
+- `usePivot` is declared to return `PivotResult`; `UsePivotReturn` is now a type alias of it (same fields, no declaration merging).
+- Exported `Header`: `focusedCell.id` is `GridRowId | null`. Exported `Cell`: `onEditStop(cancel?, field?)`. Exported `Row`: `onEditStop` params gain optional `id` / `field`; `rowSpanningCaches.hiddenCellOriginMap` is `Record<GridRowId, Record<string, GridRowId>>` (was `Record<number, Record<string, number>>`).
 - Slots are typed with the props the grid passes: new `GridToolbarSlotProps`, `GridPaginationSlotProps`, `GridOverlaySlotProps`, `GridFooterSlotProps`. Known `slotProps` keys are type-checked.
 - Export option types are generic (`CsvExportOptions<R>`, …), so `getRowId` receives your row type.
 - New root exports: `GridValidRowModel`, `DataGridUntypedColumnsProps` and the slot props types.

@@ -60,7 +60,7 @@ export default function App() {
 
 ---
 
-## DataGrid PROPS (DataGridProps<R extends GridRowModel>)
+## DataGrid PROPS (DataGridProps<R extends GridValidRowModel = GridRowModel>)
 
 ### Required
 | Prop      | Type             | Description                      |
@@ -312,8 +312,8 @@ apiRef.current.getAggregationModel()   // → GridAggregationModel | null
 ## CELL EDITING — FULL EXAMPLE
 
 ```tsx
-// A `type` alias (not an `interface`) satisfies GridRowModel's index signature
-type Person = { id: number; name: string; age: number; role: string };
+// Your own row type: an interface or a type alias, no index signature needed (v3+)
+interface Person { id: number; name: string; age: number; role: string }
 
 const [rows, setRows] = useState<Person[]>(initialRows);
 
