@@ -5,29 +5,333 @@
 
 ---
 
-## [Unreleased]
+## [3.0.0] — 2026-09-24
 
-Upgrading from 2.x: see [docs/migration/v2-to-v3.md](docs/migration/v2-to-v3.md).
+A correctness release: every feature area was audited against its documentation and the grid's own behaviour. Most changes are bug fixes, but many of them change observable output (formatted text, exported files, callback indices, request ranges), which is why this is a major version.
+
+**Upgrading from 2.x: read [docs/migration/v2-to-v3.md](docs/migration/v2-to-v3.md).** It starts with a table that maps what your app uses to the sections you need.
+
+**React 18 users:** 2.1.0 crashed on React 18 (the build bundled React 19's JSX runtime). 3.0.0 works on React 18 and 19 again; see *Fixed → Build & SSR*.
 
 ### Breaking
 
 - **The underscore hierarchy fields are no longer added to rows.** `_hasChildren`, `_treeDepth`, `_isExpanded`, `_groupingField`, `_groupingValue`, `_descendantCount` and `_isGroupRow` (deprecated since 1.1) are gone at runtime; use `params.rowMeta`. TypeScript does not flag reads of them, because `GridRowModel` has an index signature.
 - **`params.row` under row grouping and tree data is now the consumer's own row object**, not a per-render copy. Code that mutated `params.row` in a render callback now mutates the source data. As a side effect, rows are no longer re-created on every render.
-
+- **`getRowId` no longer writes an `id` onto your rows.** Rows are stored untouched everywhere (grid, callbacks, `processRowUpdate`, `apiRef`), so `row.id === getRowId(row)` no longer holds. Pass `getRowId` to export functions when exporting `selectedRows`.
 - **Grouped-export default labels in `exportToExcelAdvanced` now match the grid.** Without a `groupingValueFormatter`, group headers read `"field: value"` (the grid's documented default) instead of `"Header: value"`. Set `groupingValueFormatter` on the grouping column to control the label in the grid and in every export format.
+- **Cells are formatted by column `type` when there is no `valueFormatter`:** `date` shows `toLocaleDateString()`, `boolean` shows Yes/No, `singleSelect` shows the option label and `image` renders an `<img>`. This applies to cells, `params.formattedValue`, list view and text exports.
+- **Empty filter values no longer filter**, the quick filter searches only visible filterable columns, and the toolbar search box splits its text into words that must all match.
+- **Aggregation ignores blank strings, booleans and arrays** in `sum` / `avg` / `min` / `max`, and `min` / `max` over dates return a `Date` (was epoch milliseconds).
+- **CSV files start with a UTF-8 BOM and text that looks like a formula gets a leading `'`** (CSV and basic Excel). Opt out with `bom: false` / `escapeFormulas: false`.
+- **A non-empty `selectedRows` now wins over `groupedRows`** in every export: the selection is exported flat and totals are recomputed over it.
+- **`exportToExcel` always writes `.xls`**; a `.xlsx` file name is renamed with a warning (the file was always HTML, which Excel rejects under `.xlsx`).
+- **Tab leaves the grid in one press** outside edit mode (it used to step through cells). While editing, Tab still moves to the next editable cell.
+- **Index values changed meaning:** `colIndex` is absolute among visible data columns (was window-relative), bottom-pinned rows get `rowIndex` after the page rows (were 0..n), `onRowOrderChange` indices are positions in the `rows` prop (were page-local and sorted), and `onColumnOrderChange` indices are positions in the full column order.
+- **`isCellEditable` now governs every way of starting an edit** (double-click, Enter, Tab) and `aria-readonly`, not only Tab stops.
+- **`processRowUpdate` is called when an edit is lost** (the cell scrolls out, is filtered or paged away, or another cell starts editing). Those edits used to be dropped.
+- **Built-in editors commit the column's value type:** `singleSelect` commits the option value (not its string form), `date` commits a `Date` for `Date` cells and `null` when cleared.
+- **Pinned columns render in `pinnedColumns.left` / `.right` order**, not column order.
+- **Header and top-pinned rows are wrapped in `div.ogx__sticky-top`, bottom-pinned rows and the aggregation footer in `div.ogx__sticky-bottom`.** `.ogx__pinned-rows--top` / `--bottom` are no longer sticky themselves; custom CSS that targets them must move to the wrappers.
+- **Group and pivot row ids changed format.** Row-grouping ids for non-string values, tree-data auto-parent ids and pivot row ids use new, collision-free formats; do not parse them.
+- **`DataGridThemeProvider` pins a complete light or dark palette** chosen by the new `GridTheme.mode`, whatever the operating-system colour scheme. A provider-wrapped grid no longer switches with the OS.
+- **Grid buttons have `type="button"`** (including the exported `Button`), so they never submit an enclosing `<form>`. Pass `type="submit"` explicitly where you want a submit button.
+- **`apiRef.current.copySelectedRows()` rejects when the clipboard write fails** (it resolved and logged).
+- **`dataSource` requests changed:** `getRows` is now called with all-client modes, infinite scroll requests the gap after the loaded rows, and tree children are requested with `endRow: Number.MAX_SAFE_INTEGER` (was `-1`).
+- **Column resizing uses pointer events** (tests that simulate `mousedown` / `mousemove` must use pointer events) and no longer caps widths at 1000px.
+- **Removed `GridThemeSkeleton.darkBaseColor` and `darkHighlightColor`**, which had no effect.
+
+### Security
+
+- `printGrid` escapes the title, cell values, image URLs and alt text, and error messages in the same-origin print window, and only renders images from `http(s)`, `data:image`, `blob:` and relative URLs.
+- `exportToCsv` and `exportToExcel` neutralise spreadsheet formula injection: text starting with `=`, `+`, `-`, `@`, tab or carriage return gets a leading `'`. New option `escapeFormulas` (default `true`).
+- `exportToExcelAdvanced` writes object values as text, so `{ formula }`, `{ hyperlink }`, `{ richText }` or `{ error }` objects in row data can no longer become live cells or links.
+- Grouped `exportToJson` no longer leaks `exportable: false` columns through subtotals and the grand total.
 
 ### Fixed
 
-- **The aggregation footer double-counted expanded groups.** Under row grouping it aggregated the *visible* rows: group rows, which already carry their subtotals in the same fields, plus the expanded leaves. Expanding a group therefore inflated `sum` (the leaves were counted twice), and `count` / `avg` / `unique` were wrong even when every group was collapsed (`count` counted groups). Tree data totals likewise depended on which nodes were expanded. The footer, `getAggregationResult()`, the `aggregationResult` / `rowCount` passed to `slots.footer`, and grouped-export grand totals now use the filtered data rows, independent of expansion. *(Consumer report D9.)*
-- **Group rows lost their label and expand toggle when the first column was hidden**, and showed them in the middle of the row when that column was reordered or another column was pinned left. The hierarchy UI was attached to whichever column came first in `columns`; it now goes on the leftmost column actually on screen.
-- **Grouped CSV, basic Excel, JSON, print and PDF exports ignored `groupingValueFormatter`** for group-header labels. All exporters now share one label rule, and `getGroupedExportRows()` entries carry the grid's label as `groupLabel`.
-- **Pivot mode crashed with `RangeError` on datasets over ~110k rows** when a `min` or `max` value field was used, and pivot `count` counted numeric values only. Pivot now uses the shared aggregation functions.
+#### Export
+
+- Grouped CSV, basic Excel, JSON, print and PDF exports ignored `groupingValueFormatter` for group-header labels; all exporters now share one label rule, and `getGroupedExportRows()` entries carry the grid's label as `groupLabel`.
+- `exportToExcelAdvanced` dates were shifted by the UTC offset (a day early east of UTC).
+- NaN, Infinity and Invalid Date values produced a corrupt xlsx file.
+- `selectedRows` was ignored when `groupedRows` was also passed; totals are now recomputed over the selection.
+- Exporting a large selection froze the tab.
+- CSV did not quote values containing the configured delimiter or a bare carriage return.
+- `count` / `unique` totals were formatted as currency or dates.
+- A `valueFormatter` that reads other row fields or expects a `Date` aborted exports with totals.
+- The first column's aggregate was replaced by the Subtotal / Grand Total / TOTAL label; the label is now prefixed to the value.
+- Spacer columns (`isSpacer`) and grid system columns (`__checkbox_col__`, `__expand_col__`, `__reorder_col__`, `__group__`) passed in `columns` were exported; they are always left out.
+- A `valueFormatter` placeholder for missing values is exported, as the grid shows it.
+- Basic Excel dropped leading zeros and mangled long numeric ids, and wrote invalid sheet names.
+- `exportToExcelAdvanced`: `rows: 'selected'` sheets contain only the selection; invalid or duplicate sheet names no longer throw; `embedImage` follows `valueGetter` and falls back to the URL for SVG, WebP and AVIF; ISO date strings and numeric strings become native cells; integers have no trailing "."; totals and the summary sheet are numeric; striped rows have no gaps.
+- PDF: non-Latin-1 text was garbled wholesale; `#fff` shorthand colours work; the row count is correct when `groupedRows` is `[]`; the filter summary reflects nested groups, OR and quick search, and wraps.
+- JSON aggregation values are numbers, as documented.
+- Print keeps group-row highlights on even rows.
+
+#### Filtering & sorting
+
+- Date operators `after`, `onOrAfter`, `before` and `onOrBefore` did not filter (every row passed, with a warning per row).
+- Date `is` / `not` compared raw strings; they now match the local calendar day for `Date` values, ISO datetimes and epoch numbers.
+- A filter item with no value filtered anyway (`>` meant `> 0`, `=` hid every row).
+- Numeric filters treated blank cells as 0; `!=` treats empty cells consistently.
+- A `singleSelect` filter set from the panel emptied the grid; the panel now offers the column's `valueOptions`.
+- Opening the filter panel rewrote values (an `isAnyOf` array became `"a,b"`) and fired `onFilterModelChange`.
+- Editing a panel row deleted filter groups and other conditions on the same column.
+- Changing the operator right after typing lost the typed value, and a pending keystroke undid Clear all.
+- `valueGetter` columns could not be sorted, filtered or quick-searched (including under tree data and row grouping).
+- The quick filter matched the row id, hidden columns, non-column fields, `[object Object]` and `Date.toString()` text; it now matches what cells show.
+- A multi-word toolbar search now matches words across columns.
+- The row-grouping "Group" column appeared in the filter panel.
+- Number columns holding numeric strings sort numerically; NaN and Invalid Date no longer break sorting; accented strings sort next to their base letter.
+- Shift-click on a sorted column kept moving it to the end of the sort; column-menu Unsort / Asc / Desc cleared the other sort keys.
+- The toolbar search box stole focus back on re-render.
+- The boolean filter could not select "true" directly; the panel shows the real operator of programmatic items.
+- `initialState.filter` was ignored; the toolbar search and Filters button did nothing without a `filterModel` prop.
+
+#### Editing
+
+- `isCellEditable` did not block double-click and Enter editing; rejected cells now carry `aria-readonly="true"`.
+- `processRowUpdate` ran twice for one commit (Tab, or Enter then blur).
+- A slow `processRowUpdate` closed an edit on another cell or discarded text typed meanwhile.
+- Clicking inside an open editor committed and closed it; the dropdown editor was unusable with the mouse; clicks inside editors fired `onCellClick` / `onRowClick` and toggled selection.
+- An edit was lost when its row scrolled out, was filtered or paged away, or another cell started editing; it is now committed.
+- Committing one edit reverted other changes to the row and reset the server row count.
+- Tree-data parent rows could not be edited by double-click; Enter opened a useless editor on row-grouping group rows.
+- Committing by clicking a control outside the grid stole focus back.
+- The `singleSelect` editor committed typed option values as strings and showed no empty choice for an empty or unknown value.
+- The date editor was blank for `Date` and ISO datetime values and committed a different kind of value; clearing it commits `null`.
+- With a custom `getRowId`, a `processRowUpdate` result without the grid's id was not applied.
+- An inline `getRowId` function reverted committed edits on every parent re-render.
+- `onRowDoubleClick` did not fire on editable cells.
+- The boolean editor did not close on blur; IME composition Enter committed the edit; built-in editors had no accessible name.
+- Double-clicking inside an editor discarded the typed value.
+- A `processRowUpdate` that returns nothing is now reported clearly and the editor stays open.
+- Enter-to-edit starts from the `valueGetter` value.
+- Every cell re-rendered on every grid render.
+
+#### Selection & apiRef
+
+- `apiRef` methods `sortColumn`, `setFilterModel`, `setPage`, `setPageSize`, `selectRow` and `selectRows` did not change the grid or fire callbacks; `getSortModel`, `getFilterModel` and `getSelectedRows` returned stale values.
+- `apiRef.current.getSelectedRows()` returned the previous selection inside `onRowSelectionModelChange`.
+- `getVisibleColumns` included hidden columns and ignored display order; `getVisibleRows` and `getAllFilteredRows` omitted pinned rows; `getAllFilteredRows` missed rows under tree data and row grouping.
+- `getGroupedExportRows()` dropped the rows of collapsed groups and ignored sort and filter.
+- Select-all selected filtered-out rows, could not be undone with a `dataSource`, and the header checkbox showed the wrong state.
+- `disableMultipleRowSelection` was ignored by checkboxes, Space and select-all.
+- Selection kept the ids of rows that were removed from `rows`.
+- `getRowId` overwrote the row's own `id` field (grid, `dataSource` rows and tree children).
+- Duplicate row ids rendered one row twice.
+- `onStateChange` looped with inline models; its payload now carries `density` and never contains `__group__`; `initialState.density` is honoured.
+- `useGridStateStorage` crashed when storage is blocked, `clearState` was undone, and storage was written on every re-render.
+- `useGridApiRef()` did not type-check against the `apiRef` prop under `@types/react` 18.
+- Changing `rows` and `columns` together (or leaving pivot mode) ran the new columns against the old rows, crashing `valueGetter`s.
+
+#### Pagination & data source
+
+- The pager total ignored the filter and counted pinned rows.
+- Server pagination, sorting or filtering without a `dataSource` re-sliced, re-sorted or re-filtered the rows.
+- The `rowCount` prop was read only at mount.
+- The default page size could be missing from `pageSizeOptions`.
+- `slots.footer` received the page length instead of the server total.
+- Shrinking data left the grid on an empty page past the end; it now shows the last page and reports it through `onPaginationModelChange`.
+- The rows-per-page select did not show a page size missing from `pageSizeOptions`, had a hard-coded accessible name, and showed "Infinity" for page size 0.
+- Infinite scroll skipped rows when the page advanced quickly or while loading; it now requests the missing range without duplicates.
+- Infinite scroll: changing sort, filter, `pageSize` or `dataSource` restarts from the first row and reports page 0.
+- Server sort or filter with client pagination showed only the first page.
+- A `dataSource` with the default (client) modes never loaded its rows.
+- The error overlay's Retry reloaded the whole page; it now re-requests rows, and shows the message of any rejected object with a `message`.
+- Stale responses overwrote newer ones.
+- Inline `filterModel`, `sortModel`, `aggregationModel` or `dataSource` objects refetched on every render and wiped loaded infinite pages.
+- An inline `rows={[]}` next to a `dataSource` wiped the fetched rows.
+- "No Data" flashed before the first response, and the live region announced "Loading data... No Data".
+- Server tree data: children now load with every row, keep the pager total, are not re-filtered or re-sorted under server modes, reload for expanded nodes after a refetch, and a failed children request collapses its node instead of covering the grid.
+- `paginationMode="infinite"` combined with `pagination` sliced the rows.
+- `loading` with rows present showed nothing; it now shows a progress bar (or `slots.loadingOverlay`) over the rows.
+
+#### Row grouping & tree data
+
+- The aggregation footer double-counted expanded groups. Under row grouping it aggregated the *visible* rows: group rows, which already carry their subtotals in the same fields, plus the expanded leaves. Expanding a group inflated `sum`, and `count` / `avg` / `unique` were wrong even when every group was collapsed. The footer, `getAggregationResult()`, the `aggregationResult` / `rowCount` passed to `slots.footer`, and grouped-export grand totals now use the filtered data rows, independent of expansion.
+- Group rows lost their label and expand toggle when the first column was hidden, and showed them mid-row when that column was reordered or another column was pinned left; the hierarchy UI now goes on the leftmost column on screen.
+- Subtotals, the "(n)" count and `descendantCount` counted filtered-out rows; groups left empty by the filter are hidden.
+- `getAggregationPosition` was ignored; it is now called for every group and once with `null` for the grand total.
+- `groupingColDef` had no effect under tree data.
+- `pinnedRows` disappeared under tree data and row grouping.
+- Tree paths containing `/` collided with deeper paths.
+- Grouping values `null` and `'null'`, `1` and `'1'` fell into the same group.
+- Detail-panel callbacks ran for every rendered row, including group rows; they now run only for expanded data rows, and a throwing `getDetailPanelContent` is contained to its panel.
+
+#### Aggregation & pivot
+
+- Footer totals now use the column's `valueFormatter` for `sum` / `avg` / `min` / `max`; `count` / `unique` stay plain numbers, and date `min` / `max` show as dates.
+- Group rows formatted counts with the column's currency or unit formatter.
+- Blank cells, booleans and arrays counted as 0 in `sum` / `avg` / `min` / `max`; `count` / `unique` counted blank strings.
+- Aggregates of `valueGetter` columns summed `row[field]` instead of the computed values.
+- `aggregable: false` columns were aggregated when `aggregationModel` or `pivotModel` named them.
+- Footer totals now come from the server whenever a `dataSource` drives the rows, including infinite scroll and server-only filtering.
+- An inline `aggregationModel` refetched `getRows` and cleared server totals on every render; stale server totals no longer show under a new function, filter or sort, while pending, or after a failure.
+- Pivot mode crashed with `RangeError` on datasets over ~110k rows with a `min` or `max` value field, and `count` counted numeric values only.
+- Pivot: filters and the quick filter apply to source rows, filters on generated value columns apply to pivot rows, and the Grand Total matches the rows shown, stays last when sorting and is not selected by select-all.
+- Pivot: `getRowId` collapsed the pivot into one row; `treeData` and `rowGroupingModel` crashed or regrouped it; a `dataSource` produced broken output (pivot is now ignored with a warning).
+- Pivot: the same field twice (for example `sum` and `count`) doubled values; a source `valueFormatter` that reads row data crashed the grid.
+- Pivot: row-label columns keep the source column's formatter, renderer, type and alignment; column-field headers are formatted; numeric column keys sort numerically.
+- Pivot: an empty pivot keeps its value columns and shows the no-rows overlay; a row field named `id` no longer overwrites row ids; pivot rows no longer share ids with source rows.
+- Pivot: leaving pivot mode restores the column order; a controlled `columnOrder` no longer puts value columns before the label column, and the Columns panel can reorder generated columns.
+- Pivot: `getAggregationResult()` and `slots.footer` no longer report totals over pivot rows, and the Summaries panel no longer lists generated columns.
+- PivotPanel: editing or removing one of two chips on the same field affected both; it now follows `aggregable: false`, `availableAggregationFunctions` and `groupable: false`, and its controls have descriptive names.
+
+#### Layout & pinning
+
+- Columns pinned out of column order overlapped or left gaps; header, body, footer and keyboard navigation now agree on `pinnedColumns` order.
+- Column widths ignored `minWidth` / `maxWidth` for fixed, resized and pinned columns; percentage widths cascaded; pinned `%`, `flex` and `auto` columns were 100px wide.
+- Top-pinned rows covered the header when column groups were used; the aggregation footer was hidden behind bottom-pinned rows.
+- Keyboard navigation and `scrollToIndexes` left the target row under the footer or bottom-pinned rows; `scrollToIndexes({ colIndex })` left the column under system or right-pinned columns.
+- `'auto'` detail panels are laid out at their real height; `getDetailPanelHeight` returning 0 renders 0px (was 200px).
+- `onRowsScrollEnd` fired on every scroll event near the bottom (including horizontal scrolling) and never for a list shorter than the viewport; it now fires once per arrival, in grid and list view.
+- The grid re-measures its viewport and restores the scroll position after list view is switched off.
+- Infinite-scroll placeholder rows appeared before the last loaded row.
+- Row-spanned cells painted over the sticky drag and expand columns.
+- A new `overscanRowCount` applied only after scrolling.
+- Pinned-section edge classes and shadows were not applied.
+- `autoHeight` filtered visible rows in quadratic time.
+
+#### Spanning & column groups
+
+- Body cells lost `flex`, percentage and `auto` widths (misaligned with headers) as soon as any column used `colSpan`.
+- `colSpan` / `rowSpan` recomputed on every resize tick (a ~2 s freeze per rows change at 100k rows) and cost time even when unused.
+- Spans counted hidden columns, crossed into another pinned section, and crossed between pinned and scrolling rows.
+- A span broke when its origin row or column scrolled out of the render window.
+- Huge, Infinity, NaN or fractional span values hung or corrupted the grid; `aria-colspan` / `aria-rowspan` report the clamped value.
+- A throwing `colSpan` / `rowSpan` callback unmounted the grid; it now falls back to no span with a dev warning. Infinite-scroll placeholder rows are never passed to span callbacks.
+- `colSpan` received the raw field value instead of the `valueGetter` result, and a `colIndex` different from `renderCell`'s.
+- `colSpan` plus `rowSpan` covered only the origin column in following rows.
+- `rowSpan` painted over an expanded detail panel; a merged cell was capped by its origin column's `maxWidth`.
+- Keyboard navigation lost focus on covered cells; arrows now cross a merged cell in one step.
+- Column group header rows did not follow member columns under `flex` / `%` / `auto` widths, hiding, reordering and pinning; pinned groups scrolled away; non-contiguous groups caused duplicate-key errors.
+- `GridColumnGroup.headerClassName` was ignored.
+- Group header cells expose `aria-colspan` / `aria-colindex`, filler cells are hidden from assistive technology, and `aria-rowcount` counts group header rows.
+
+#### Column reorder & resize
+
+- `onRowOrderChange` indices depended on page, sort, filter and pinned rows; rows with id `0` and columns with field `''` could not be reordered.
+- With `rowReordering`, pinned rows had no handle cell and misaligned; pinned and group rows could be dragged and dropped onto.
+- Row and column drags did not start in Firefox; drags from outside the grid were treated as reorders; a drag broke after its source row scrolled away.
+- Header drag-reorder moved the wrong column after columns were added, when `__group__` appeared, or with a partial controlled `columnOrder`; dropping on a pinned column sent the dragged column to the far end.
+- `pinnable: false` also blocked drag-reorder.
+- Controlled or `initialState` `columnOrder` was ignored when `disableColumnReorder` was set.
+- The Manage-columns panel listed columns in definition order, and its Reset did nothing under a controlled `columnOrder`.
+- Resize clamped to a hidden 1000px maximum and snapped narrow columns to 50px; a click on the handle resized, sorted or turned a flex column fixed; ending a resize over the header sorted the column; right-pinned columns resized from the wrong edge; a resize kept running after unmount.
+- `rowReordering` had no effect but showed handles in pivot mode.
+
+#### Keyboard & accessibility
+
+- Keys typed into inputs inside cells and detail panels were taken by the grid; clicking an input rendered by `renderCell` lost focus.
+- Focus was lost when the focused cell scrolled out, on window switch, when tabbing out and back (the last cell is now restored), and when rows or columns were removed, filtered or hidden.
+- Tab could not reach detail-panel content.
+- Arrow keys stopped on hidden columns and ignored the pinned visual order; Space and arrows at the edges scrolled the viewport.
+- ArrowDown onto a row with a tall detail panel scrolled the row out of view; Home onto an unpinned checkbox column did not scroll it into view.
+- Enter / Space on the select-all header sorted by `__checkbox_col__` instead of selecting all.
+- Keyboard sorting from a header ignored `multiSort` and Shift.
+- Reorder, expand and checkbox columns were not real focus stops; pinned rows could not be edited.
+- DOM focus did not return to the cell after a re-click or an edit.
+- A row with id `"HEADER"` was treated as the header row.
+- `aria-rowindex`, `aria-rowcount`, `aria-colindex`, `aria-colcount` and `aria-sort` were wrong; `colIndex` in `onCellClick`, `renderCell`, `cellClassName` and `renderHeader` was relative to the render window.
+- The detail panel had an invalid row/gridcell structure.
+- A cell whose `renderCell` threw stayed broken; it now recovers when the renderer or value changes.
+- `GridTooltip` placement `left` / `right` did not work; it now opens on focus, uses `role="tooltip"` with `aria-describedby`, closes on Escape, uses theme colours and cleans up its timers.
+- Columns-panel checkboxes are announced with their column name.
+
+#### Clipboard
+
+- Copy (Ctrl/Cmd+C and `apiRef.copySelectedRows()`) included hidden and `exportable: false` columns in definition order; it now copies the visible columns in screen order.
+- Copy read `row[field]` instead of the `valueGetter` value before formatting.
+- Values containing tabs, line breaks or quotes broke the pasted table; they are now quoted.
+- Only selected rows on the current page and in expanded groups were copied; now every selected row that passes the filter is copied, including pinned rows and collapsed groups.
+- Copying right after `selectRows` or from `onRowSelectionModelChange` copied the old selection.
+- Focus moved to `<body>` after copying.
+- Ctrl+C did not copy with Caps Lock on or with non-Latin keyboard layouts, and it copied while focus was outside the grid or a text selection was active.
+- Fields starting with `__` (for example `__typename`) were not copied.
+- The Ctrl+C listener was registered more than once.
+
+#### Toolbar, header & list view
+
+- `slots.toolbar` rejected `memo`, `forwardRef`, class and `lazy` components; switching the toolbar did not remount cleanly; an inline toolbar lost its state.
+- `slotProps.toolbar` render props had implicitly-`any` parameters under `strict`; `slots.pagination` typed with `PaginationProps` did not type-check; `groupingColDef` required a `field`.
+- The column menu offered Hide for `hideable: false` and pin actions for `pinnable: false` columns (including the grouping column).
+- Manage columns worked only once (after the toolbar button or Escape closed the panel) and did nothing with a custom toolbar; it now opens a standalone panel. The Columns panel closes on Escape and `onColumnsPanelClose` fires on every close.
+- The Summaries panel offered functions outside `availableAggregationFunctions` and omitted `unique`.
+- Toolbar panels misaligned with a classic (non-overlay) scrollbar.
+- List view passed loading placeholders to `renderCell`, paged incorrectly under tree data, ignored server totals, never fired `onRowsScrollEnd`, and gave `renderCell` no `value`, `formattedValue`, `colDef` or `rowMeta`; `aria-rowindex` restarted every page.
+- List view ignored `loading`, `slots.loadingOverlay`, `slots.noRowsOverlay` and `slots.footer`, and showed "No Data" while loading; `listView` without `listViewColumn` rendered nothing (it now falls back to the grid with a dev warning).
+- List view had no expand chevron or depth indent for tree-data and group parents.
+
+#### Theming
+
+- `DataGridThemeProvider` left part of the palette to the OS colour scheme, so `darkTheme` in a light browser (or light presets in a dark browser) was unreadable.
+- Brand presets and `colors.primary` did not recolour the toolbar, filter panel, column menu, selection and focus ring.
+- `grid.rowHeight*` and `grid.headerHeight` did not size rows and the header (`compactTheme` now gives 36px rows and a 40px header).
+- `toolbar.*`, `scrollbar.*`, `overlays.itemDanger*` and `grid.cellFocusBorder` had no effect.
+
+#### Build & SSR
+
+- **The package works on React 18 again.** The 2.1.0 build bundled React 19's JSX runtime, which React 18 cannot render (`recentlyCreatedOwnerStacks` error on first render). A build check now fails if the JSX runtime is bundled.
+- `DataGrid` crashed under server rendering (`renderToString`, Next.js, Remix) because a panel read `document` during render.
+- `docs/migration/` now ships in the npm package; the v2 → v3 guide was missing from `node_modules`.
+
+#### Documentation
+
+- The README, `llms.txt` and the AI context file no longer claim the stylesheet loads automatically: `import '@opencorestack/opengridx/styles'` is required.
+- The README props tables list only real props, with correct defaults; `llms.txt` examples compile and use real APIs.
+- Server-side guides describe the real requests; "millions of rows" is replaced by the browser's height limit (about 645k rows at 52px in Chromium).
+- The theming docs no longer reference a non-existent `themes` export; the API reference and component pages were corrected against the code.
 
 ### Added
 
-- `GridGroupedExportRow.groupLabel`.
-- `formattedValue` and `rowMeta` are now passed to `renderEditCell` and to the function form of `cellClassName`, as they already were to `renderCell`.
-- `docs/migration/` now ships in the npm package; the v2 → v3 guide was missing from `node_modules`.
+- `GridColDef.valueSetter` (`GridValueSetterParams`) maps an edited value back onto the row for editable `valueGetter` columns.
+- `renderEditCell` receives `onValueChange`, `onCommit` and `onCancel` (`GridRenderEditCellParams`); errors in custom editors are contained to their cell.
+- `formattedValue` and `rowMeta` are passed to `renderEditCell` and to the function form of `cellClassName`, as they already were to `renderCell`.
+- Default cell formatting by `GridColDef.type` when there is no `valueFormatter` (see *Breaking*).
+- `GridFilterOperator` values `'='`, `'after'`, `'onOrAfter'`, `'before'` and `'onOrBefore'`; a date input and `singleSelect` / multi-select value controls in the filter panel; the panel notes conditions it cannot show.
+- `onColumnOrderModelChange(columnOrder)` fires with the whole new order after every change, including the Columns panel's Reset.
+- `disableClipboardCopy` prop; Ctrl+C events already handled (`defaultPrevented`) are left alone.
+- Export options: `CsvExportOptions.escapeFormulas`, `CsvExportOptions.bom`, `ExcelExportOptions.escapeFormulas`, `PdfExportOptions.font` (a Unicode TrueType font), and `getRowId` on every export function.
+- `GridGroupedExportRow.groupLabel`; `GridRowMeta.isGroupFooter` and the `ogx__row--group-footer` class for subtotal rows shown in `'footer'` position.
+- Keyboard: Shift+Space selects the focused row, Ctrl/Cmd+A selects all, Enter on a non-editable cell activates the row like a click (and toggles rows with children), Alt+ArrowRight / Alt+ArrowLeft expand and collapse, Alt+ArrowDown or Ctrl+Enter opens the column menu, Alt+ArrowLeft / Alt+ArrowRight on a focused header resizes it (Shift for 50px steps).
+- Keyboard navigation between rows in list view.
+- Column resizing by touch and pen; resize separators expose `aria-valuenow` / `aria-valuemin` / `aria-valuemax`.
+- `aria-level` / `aria-expanded` on hierarchy rows and `aria-multiselectable` on the grid.
+- `GridTheme.mode` (`'light' | 'dark'`), `colors.white`, `colors.black`, `colors.gray` (50–900), `grid.cellFontSize` and `grid.headerFontSize`.
+- Type exports: `GridRenderEditCellParams`, `GridValueSetterParams`, `GridThemeToolbar`, `GridThemeOverlays`, `GridThemeScrollbar`, `GridThemeSkeleton`, `GridThemeGrayScale`, `GridGroupedExportRow`, `GridRowScrollEndParams`, `GridColumnOrder`, `GridDataSourceState`, `GridDetailPanelHeight`, `GridAggregationPosition`, `GridSlots`, `GridSlotProps`, and the props types `CellProps`, `RowProps`, `HeaderProps`, `SkeletonProps`, `FilterPanelProps`, `PaginationProps`, `GridTooltipProps`, `ButtonProps`, `InputProps`, `CheckboxProps`.
+- `Pagination` component export.
+- Optional `rowId` prop on `Row`, and optional `ariaRowIndex` / `ariaColIndex` / `columnIndexMap` props on the exported `Row`, `Cell` and `Header` components.
+- Dev warnings: the grid stylesheet is not loaded, `pinnedRows` ignored under hierarchy, content taller than browsers can scroll, duplicate row ids, empty or duplicate tree paths, `valueGetter` + `editable` without `valueSetter`, pivot combined with `dataSource` / tree data / row grouping, `listView` without `listViewColumn`.
+- CSS hooks: `ogx__sticky-top`, `ogx__sticky-bottom`, `ogx__header-cell--pinned-left-last`, `ogx__header-cell--pinned-right-first`, `ogx__cell--pinned-left-last`, `ogx__cell--pinned-right-first`, `ogx__aggregation-spacer`, `ogx__aggregation-spacer--pinned`, `ogx__aggregation-footer--loading`, `ogx__loading-bar`, `ogx__loading-overlay--over-rows`, `ogx__loading-overlay--custom`, `ogx__cell-image`, `ogx-list-view__expand`, `ogx-list-view__loading`, `ogx-filter__hidden-note`, `ogx-filter__value-multiselect`, `ogx-col-group-cell--pinned`, `ogx-col-group-cell--pinned-left` / `--pinned-right`, `ogx-column-resize-handle--start`, `ogx-tooltip--left` / `--right`.
+
+### Changed
+
+- Sorting is type- and language-aware (`Intl.Collator` with numeric collation, dates parsed, mixed kinds ordered by kind).
+- The quick filter searches only visible, filterable columns, using `valueGetter` and `valueFormatter` text.
+- Pinned columns render in `pinnedColumns.left` / `.right` order; the column menu appends, so the most recently pinned column sits next to the scrolling area.
+- `onColumnOrderChange` indices are positions in the full current column order (including hidden columns and `__group__`).
+- Header drag-reorder works inside a column group when `columnGroupingModel` is set (it was disabled for every column); the toolbar and Columns panel can no longer move a column out of its group.
+- A synchronous `processRowUpdate` result is applied in the same event.
+- `apiRef.current.copySelectedRows()` rejects when the clipboard write fails.
+- `min` / `max` of dates return a `Date`; the default `avg` format in pivot cells is locale-grouped (`56,666.67`); the footer exposes `aria-busy` while server totals load.
+- `GridToolbar` shows the Summaries button only when `onAggregationModelChange` is passed; toolbar triggers have `aria-haspopup="dialog"` and `aria-expanded`.
+- `GridTooltip` renders into the theme provider (`.ogx-theme-provider`) with `position: fixed` instead of `document.body`.
+- `useGridApiRef()` returns a `MutableRefObject<GridApi>` that is never `null` before mount; `GridInitialState` accepts partial `columns`.
+- `GridAggregationPosition` is `'inline' | 'footer' | null` (it was an unused `'footer' | 'inline' | 'both'`).
+- Accent colours use CSS `color-mix()` (Chrome 111+, Safari 16.2+, Firefox 113+); `darkTheme` gives the toolbar a solid `#1e293b` background.
+
+### Typing changes
+
+<!-- PLACEHOLDER: row-typing / typecheck work in progress. Fill in before release. -->
+
+_To be completed._
+
+### Removed
+
+- `GridThemeSkeleton.darkBaseColor` and `GridThemeSkeleton.darkHighlightColor` (they had no effect).
+- The runtime underscore hierarchy fields on rows (see *Breaking*).
+- The OS dark-mode (`prefers-color-scheme`) rules for the expand icon and detail panel; the theme palette colours them.
 
 ---
 
