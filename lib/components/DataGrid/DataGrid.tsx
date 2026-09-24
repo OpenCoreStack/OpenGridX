@@ -12,7 +12,7 @@ import { useGridViewportSize } from '../../hooks/core/useGridViewportSize';
 import { useGridDetailPanel } from '../../hooks/core/useGridDetailPanel';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings, useGridStylesheetWarning } from '../../hooks/core/useGridDevWarnings';
-import { useGridRowSelection } from '../../hooks/core/useGridRowSelection';
+import { useGridRowInteractions } from '../../hooks/core/useGridRowInteractions';
 import { useGridLiveRowSelection } from '../../hooks/core/useGridLiveRowSelection';
 import { useGridApiMethods } from '../../hooks/core/useGridApiMethods';
 import { buildGroupedExportRows } from '../../utils/grouping/groupedExportRows';
@@ -41,7 +41,6 @@ import { useGridDataSource } from '../../hooks/features/useGridDataSource';
 import { useServerTreeChildren } from '../../hooks/features/useServerTreeChildren';
 import { useAggregation, useServerAggregationResults } from '../../hooks/features/useAggregation';
 import { useGridPivot } from '../../hooks/features/useGridPivot';
-import { PIVOT_GRAND_TOTAL_ID } from '../../utils/pivot';
 import { isServerDrivenDataSource, getDataSourceErrorMessage } from '../../utils/dataSource';
 import { useGridClipboard } from '../../hooks/features/useGridClipboard';
 import { GridListView } from './GridListView';
@@ -53,7 +52,7 @@ import { resolveGridModes, EMPTY_ROW_GROUPING_MODEL } from '../../utils/gridMode
 import { useGridGroupingColumn } from '../../hooks/core/useGridGroupingColumn';
 import { useGridRowIdOf, getDefaultRowId } from '../../hooks/core/useGridRowIdOf';
 import { useGridApiRefBinding } from '../../hooks/core/useGridApiRefBinding';
-import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridRowParams, GridCellParams, GridSortItem, GridGroupedExportRow } from '../../types';
+import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridCellParams, GridSortItem, GridGroupedExportRow } from '../../types';
 
 /**
  * The grid. `R` is your row type: any object type (an interface works), inferred from `rows`. `columns`
@@ -460,37 +459,19 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         ? ((dataSource ? state.pagination.rowCount ?? propRowCount : propRowCount) ?? sortedUnpinnedRows.length)
         : sortedUnpinnedRows.length;
 
-    // Select-all acts on, and the header checkbox reflects, the data rows that pass the
-    // filter: never rows hidden by it, synthetic group rows, the pivot grand total, or stale
-    // ids in the selection.
-    const selectableRowIds = useMemo(() => {
-        const ids = dataRows.map(getRowIdOf);
-        return isPivotActive ? ids.filter(id => id !== PIVOT_GRAND_TOTAL_ID) : ids;
-    }, [dataRows, getRowIdOf, isPivotActive]);
-    const rowSelection = useGridRowSelection({
+    const { rowSelection, handleRowClick, handleSelectionChange } = useGridRowInteractions<R>({
+        dataRows,
+        getRowId: getRowIdOf,
+        isPivotActive,
         selectedRowIds,
         onSelectionModelChange: handleRowSelectionModelChange,
         disableMultipleRowSelection,
-        selectableRowIds,
+        disableRowSelectionOnClick,
+        isHierarchyEnabled,
+        rowMetaMap,
+        activeHierarchyHandlers,
+        onRowClick,
     });
-
-    const handleRowClick = useCallback((params: GridRowParams<R>) => {
-        const { id } = params;
-
-        // Synthetic group rows toggle on click and are never selected. Tree-data parents are real rows:
-        // they fire onRowClick and select like any row, and expand through their chevron.
-        const rowMeta = isHierarchyEnabled ? rowMetaMap.get(id) : undefined;
-        if (rowMeta?.isGroupRow) {
-            if (rowMeta.hasChildren) activeHierarchyHandlers?.toggleExpansion(id);
-            return;
-        }
-
-        onRowClick?.(params);
-
-        if (!disableRowSelectionOnClick) {
-            rowSelection.clickRow(id);
-        }
-    }, [isHierarchyEnabled, activeHierarchyHandlers, onRowClick, rowMetaMap, disableRowSelectionOnClick, rowSelection]);
 
     useGridApiMethods({
         apiRef: gridData.apiRef,
@@ -670,13 +651,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         overscanRows,
     });
 
-
-    // Row checkbox / Space key. Honors disableMultipleRowSelection like a row click does.
-    // Synthetic group / subtotal rows are not data: their ids never enter the selection model.
-    const handleSelectionChange = useCallback((rowId: GridRowId, isSelected: boolean) => {
-        if (rowMetaMap.get(rowId)?.isGroupRow) return;
-        rowSelection.toggleRow(rowId, isSelected);
-    }, [rowMetaMap, rowSelection]);
 
     const handleSort = useCallback((field: string, direction: GridSortDirection) => {
         const newSortModel = direction ? [{ field, sort: direction }] : [];
