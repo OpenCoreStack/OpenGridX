@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
 import { useLayout } from '../../hooks/core/useLayout';
 import { useGridKeyboardNavigation } from '../../hooks/core/useGridKeyboardNavigation';
 import { useGridControlledState } from '../../hooks/core/useGridControlledState';
@@ -15,13 +15,11 @@ import { useGridDevWarnings, useGridStylesheetWarning } from '../../hooks/core/u
 import { useGridRowInteractions } from '../../hooks/core/useGridRowInteractions';
 import { useGridLiveRowSelection } from '../../hooks/core/useGridLiveRowSelection';
 import { useGridApiMethods } from '../../hooks/core/useGridApiMethods';
-import { buildGroupedExportRows } from '../../utils/grouping/groupedExportRows';
 import { useGridColumnLookup } from '../../hooks/core/useGridColumnLookup';
 import { useGridPageCorrection } from '../../hooks/core/useGridPageCorrection';
 import { useGridColumnsPanel } from '../../hooks/core/useGridColumnsPanel';
 import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
 import { GridToolbarSlot } from './GridToolbarSlot';
-import { scrollRowIntoView, scrollColumnIntoView } from '../../utils/scroll';
 import { upsertSortItem } from '../../utils/sorting';
 import { getAriaRowLayout } from '../../utils/aria';
 import { GridAggregationFooter } from './GridAggregationFooter';
@@ -42,7 +40,6 @@ import { useServerTreeChildren } from '../../hooks/features/useServerTreeChildre
 import { useAggregation, useServerAggregationResults } from '../../hooks/features/useAggregation';
 import { useGridPivot } from '../../hooks/features/useGridPivot';
 import { isServerDrivenDataSource, getDataSourceErrorMessage } from '../../utils/dataSource';
-import { useGridClipboard } from '../../hooks/features/useGridClipboard';
 import { GridListView } from './GridListView';
 import { GridLoadingOverlay } from './GridLoadingOverlay';
 import { GridPinnedRows } from './GridPinnedRows';
@@ -52,7 +49,11 @@ import { resolveGridModes, EMPTY_ROW_GROUPING_MODEL } from '../../utils/gridMode
 import { useGridGroupingColumn } from '../../hooks/core/useGridGroupingColumn';
 import { useGridRowIdOf, getDefaultRowId } from '../../hooks/core/useGridRowIdOf';
 import { useGridApiRefBinding } from '../../hooks/core/useGridApiRefBinding';
-import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridCellParams, GridSortItem, GridGroupedExportRow } from '../../types';
+import { collectAllFilteredRows } from '../../utils/gridApiRows';
+import { useGridAggregationApi } from '../../hooks/core/useGridAggregationApi';
+import { useGridClipboardApi } from '../../hooks/core/useGridClipboardApi';
+import { useGridScrollToIndexesApi } from '../../hooks/core/useGridScrollToIndexesApi';
+import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridSortDirection, GridColDef, GridCellParams, GridSortItem } from '../../types';
 
 /**
  * The grid. `R` is your row type: any object type (an interface works), inferred from `rows`. `columns`
@@ -246,6 +247,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // getRows-provided totals, dropped as soon as the aggregation model they were computed for changes.
     const [serverAggregationResults, setServerAggregationResults] = useServerAggregationResults(aggregationModel);
 
+    const containerRef = useRef<HTMLDivElement>(null);
     const viewportRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<HTMLDivElement>(null);
@@ -487,11 +489,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onRowSelectionModelChange: handleRowSelectionModelChange,
         disableMultipleRowSelection,
         getVisibleRows: () => [...pinnedTopRows, ...(pagination ? paginatedUnpinnedRows : sortedUnpinnedRows), ...pinnedBottomRows],
-        getAllFilteredRows: () => {
-            const hierarchyRows = activeHierarchyHandlers?.getVisibleRows({ expandAll: true }) as R[] | null | undefined;
-            if (!hierarchyRows) return [...pinnedTopRows, ...sortedUnpinnedRows, ...pinnedBottomRows];
-            return hierarchyRows.filter(row => !rowMetaMap.get(getRowIdOf(row))?.isGroupRow);
-        },
+        getAllFilteredRows: () => collectAllFilteredRows<GridRowModel>({
+            hierarchyHandlers: activeHierarchyHandlers,
+            pinnedTopRows,
+            sortedUnpinnedRows,
+            pinnedBottomRows,
+            rowMetaMap,
+            getRowId: getRowIdOf,
+        }),
         visibleColumns: visibleOrderedColumns as unknown as GridColDef[],
     });
 
@@ -520,25 +525,17 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // fields that the pivot rows do not have.
     const hasAggregation = Object.keys(aggregationModel).length > 0 && !isPivotActive;
 
-    useEffect(() => {
-        gridData.apiRef.current.getAggregationResult = () => hasAggregation ? aggregationResult : null;
-        gridData.apiRef.current.getAggregationModel = () => hasAggregation ? aggregationModel : null;
-        gridData.apiRef.current.getGroupedExportRows = (): GridGroupedExportRow[] | null => {
-            if (!isRowGrouping) return null;
-            // Every group expanded, filtered and sorted like the screen: collapsed groups still
-            // export their rows. Subtotals and the grand total hidden by getAggregationPosition
-            // (null) are left out, as they are on screen.
-            return buildGroupedExportRows<R>({
-                rows: (rowGroupingHandlers.getVisibleRows({ expandAll: true }) ?? []) as R[],
-                getRowId: getRowIdOf,
-                rowMetaMap,
-                columns: activeColumns,
-                aggregationModel,
-                aggregationResult: hasAggregation && rowGroupingHandlers.rootAggregationPosition !== null ? aggregationResult : null,
-                isSubtotalHidden: (groupId) => rowGroupingHandlers.aggregationPositions.get(groupId) === null,
-            });
-        };
-    }, [aggregationResult, aggregationModel, hasAggregation, gridData.apiRef, isRowGrouping, rowGroupingHandlers, rowMetaMap, activeColumns, getRowIdOf]);
+    useGridAggregationApi<R>({
+        apiRef,
+        hasAggregation,
+        aggregationResult,
+        aggregationModel,
+        isRowGrouping,
+        rowGroupingHandlers,
+        rowMetaMap,
+        columns: activeColumns,
+        getRowId: getRowIdOf,
+    });
 
     const layout = useLayout({
         rowHeight: effectiveRowHeight,
@@ -587,42 +584,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         [layout.leftPinnedCols, layout.unpinnedColsWithWidth, layout.rightPinnedCols]
     );
 
-    // Copies the selected rows (every page, collapsed groups, pinned rows) with the on-screen
-    // columns in screen order. Ctrl/Cmd+C only copies while focus is inside this grid.
-    const getGridRootElement = useCallback(() => containerRef.current, []);
-    const { copySelectedRows } = useGridClipboard({
-        getSelectedRowIds: () => apiRef.current.getSelectedRows(),
-        getColumns: () => renderedDataColumns as unknown as GridColDef[],
-        getRows: () => apiRef.current.getAllFilteredRows(),
+    useGridClipboardApi({
+        apiRef,
+        columns: renderedDataColumns as unknown as GridColDef[],
         getRowId: getRowIdOf,
-        getRootElement: getGridRootElement,
+        containerRef,
         disableKeyboardShortcut: disableClipboardCopy,
     });
-
-    // Expose on apiRef for programmatic use (stable identity)
-    useLayoutEffect(() => {
-        apiRef.current.copySelectedRows = copySelectedRows;
-    }, [copySelectedRows, apiRef]);
-
-    useEffect(() => {
-        gridData.apiRef.current.scrollToIndexes = ({ rowIndex, colIndex }) => {
-            const el = viewportRef.current;
-            if (!el) return;
-
-            if (rowIndex !== undefined && rowIndex >= 0) {
-                scrollRowIntoView(el, rowIndex, layout.cumulativeHeights, layout.pinnedBottomHeight, effectiveRowHeight);
-            }
-
-            if (colIndex !== undefined && colIndex >= 0) {
-                // colIndex is an index into all data columns: leftPinned + unpinned + rightPinned
-                const allDataCols = [...layout.leftPinnedCols, ...layout.unpinnedColsWithWidth, ...layout.rightPinnedCols];
-                const targetCol = allDataCols[colIndex];
-                if (!targetCol) return;
-                // A pinned column (index -1) is always visible: nothing to scroll.
-                scrollColumnIntoView(el, layout.unpinnedColsWithWidth.findIndex(c => c.field === targetCol.field), layout);
-            }
-        };
-    }, [layout, viewportRef, gridData.apiRef, effectiveRowHeight]);
+    useGridScrollToIndexesApi<R>({ apiRef, viewportRef, layout, rowHeight: effectiveRowHeight });
 
     const { scrollTop, scrollLeft, overscanRows, handleScroll, attachViewport } = useGridScrollSync({
         onRowsScrollEnd, overscanRowCount, rowCount: layout.unpinnedRowsLength, autoHeight,
@@ -778,7 +747,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const hasRowSpanning = React.useMemo(() => effectiveColumns.some(c => !!c.rowSpan), [effectiveColumns]);
     const columnsPanel = useGridColumnsPanel();
-    const containerRef = React.useRef<HTMLDivElement>(null);
     useGridStylesheetWarning(containerRef);
 
     const NoRowsOverlaySlot = slots?.noRowsOverlay;
