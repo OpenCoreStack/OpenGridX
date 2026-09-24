@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { useLayout } from '../../hooks/core/useLayout';
 import { useGridKeyboardNavigation } from '../../hooks/core/useGridKeyboardNavigation';
 import { useGridControlledState } from '../../hooks/core/useGridControlledState';
@@ -9,8 +9,7 @@ import { useGridColumns } from '../../hooks/core/useGridColumns';
 import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
 import { useGridScrollSync } from '../../hooks/core/useGridScrollSync';
 import { useGridViewportSize } from '../../hooks/core/useGridViewportSize';
-import { useDetailPanelHeights } from '../../hooks/features/useDetailPanelHeights';
-import { getDetailPanelRowIds } from '../../utils/detailPanel';
+import { useGridDetailPanel } from '../../hooks/core/useGridDetailPanel';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings, useGridStylesheetWarning } from '../../hooks/core/useGridDevWarnings';
 import { useGridRowSelection } from '../../hooks/core/useGridRowSelection';
@@ -367,26 +366,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     });
 
     // ── Detail panel (hoisted — hasDetailPanel feeds into useGridColumns) ──────
-    const hasDetailPanel = Boolean(getDetailPanelContent);
-    const [internalExpandedRowIds, setInternalExpandedRowIds] = useState<Set<GridRowId>>(new Set());
-    const requestedExpandedRowIds = controlledExpandedRowIds ?? internalExpandedRowIds;
-    // What renders and is laid out: synthetic group rows never show a detail panel.
-    const expandedRowIds = useMemo(() => getDetailPanelRowIds(requestedExpandedRowIds, rowMetaMap), [requestedExpandedRowIds, rowMetaMap]);
-
-    const handleDetailPanelToggle = useCallback((rowId: GridRowId) => {
-        // Synthetic group / subtotal rows have no detail panel (keyboard Space on the expand cell lands here too).
-        if (rowMetaMap.get(rowId)?.isGroupRow) return;
-        const newExpandedRowIds = new Set(requestedExpandedRowIds);
-        if (newExpandedRowIds.has(rowId)) {
-            newExpandedRowIds.delete(rowId);
-        } else {
-            newExpandedRowIds.add(rowId);
-        }
-        if (controlledExpandedRowIds === undefined) {
-            setInternalExpandedRowIds(newExpandedRowIds);
-        }
-        onDetailPanelExpandedRowIdsChange?.(newExpandedRowIds);
-    }, [requestedExpandedRowIds, rowMetaMap, controlledExpandedRowIds, onDetailPanelExpandedRowIdsChange]);
+    const {
+        hasDetailPanel, expandedRowIds, handleDetailPanelToggle, detailPanelHeights, reportDetailPanelHeight,
+    } = useGridDetailPanel({
+        hasDetailPanel: Boolean(getDetailPanelContent),
+        controlledExpandedRowIds,
+        onDetailPanelExpandedRowIdsChange,
+        rowMetaMap,
+    });
 
     // ── Column management ─────────────────────────────────────────────────────
     const {
@@ -571,8 +558,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             });
         };
     }, [aggregationResult, aggregationModel, hasAggregation, gridData.apiRef, isRowGrouping, rowGroupingHandlers, rowMetaMap, activeColumns, getRowIdOf]);
-
-    const { detailPanelHeights, reportDetailPanelHeight } = useDetailPanelHeights();
 
     const layout = useLayout({
         rowHeight: effectiveRowHeight,
