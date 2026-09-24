@@ -1007,7 +1007,10 @@ export interface GridFooterSlotProps {
   aggregationModel: GridAggregationModel;
   /** The grand-total aggregation result, or `null` when no aggregation is active. */
   aggregationResult: GridAggregationResult | null;
-  /** Rows after filtering (`rowCount` from the server in server pagination mode). */
+  /**
+   * The built-in pager's count: rows after filtering, pinned rows excluded (`rowCount` from the
+   * server in server pagination mode). Under tree data / row grouping: the filtered data rows.
+   */
   rowCount: number;
   /** Whether pagination is in effect (false under row grouping and infinite scroll). */
   pagination: boolean;

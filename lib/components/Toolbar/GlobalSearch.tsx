@@ -74,6 +74,18 @@ export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', 
         return () => clearTimeout(handler);
     }, [localValue, debounceMs]);
 
+    // Typing still waiting for the debounce is sent when the search unmounts (the toolbar is
+    // hidden, the grid switches view), instead of being dropped.
+    const localValueRef = useRef(localValue);
+    useLayoutEffect(() => { localValueRef.current = localValue; });
+    useEffect(() => () => {
+        const pending = localValueRef.current;
+        if (pending !== lastEmittedRef.current) {
+            lastEmittedRef.current = pending;
+            onChangeRef.current(pending);
+        }
+    }, []);
+
     const handleExpand = useCallback(() => {
         setIsExpanded(true);
         requestAnimationFrame(() => inputRef.current?.focus());

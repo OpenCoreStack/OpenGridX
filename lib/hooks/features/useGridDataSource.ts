@@ -32,6 +32,11 @@ interface UseGridDataSourceParams<R extends GridRowModel> {
   sortingMode?: 'client' | 'server';
   filterMode?: 'client' | 'server';
   aggregationModel?: GridAggregationModel;
+  /**
+   * Row grouping is active. It turns pagination off (every group renders in one scrollable view),
+   * so a `paginationMode: 'server'` source is asked for every row instead of the first page.
+   */
+  rowGroupingActive?: boolean;
   /** Resolves a row's id, to skip fetched rows that are already loaded. Defaults to `row.id`. */
   getRowId?: (row: R) => GridRowId;
   setRows: (rows: R[] | ((prev: R[]) => R[]), preserveRowCount?: boolean) => void;
@@ -68,26 +73,36 @@ interface InfiniteState {
 
 const defaultGetRowId = (row: GridRowModel): GridRowId => row.id;
 
-function getFetchKind(paginationMode: UseGridDataSourceParams<GridRowModel>['paginationMode']): FetchKind {
+function getFetchKind(paginationMode: UseGridDataSourceParams<GridRowModel>['paginationMode'], rowGroupingActive: boolean): FetchKind {
   if (paginationMode === 'infinite') return 'infinite';
-  if (paginationMode === 'server') return 'page';
+  // Row grouping shows no pager, so a page-sized request would leave the other rows unreachable.
+  if (paginationMode === 'server') return rowGroupingActive ? 'all' : 'page';
   return 'all';
 }
 
 /**
- * Drops fetched rows whose id (getRowId) is already loaded or repeats within the response, keeping
- * the first occurrence. Rows are kept as given: the store keys them by getRowId.
+ * Drops fetched rows whose id (getRowId) repeats within the response, keeping the first
+ * occurrence, and pairs each row with its id. Rows are kept as given: the store keys them by
+ * getRowId. Runs outside any state updater, so a getRowId that throws for a fetched row fails the
+ * request (error overlay) instead of throwing inside React's update.
  */
-function prepareRows<R extends GridRowModel>(rows: R[], getRowId: (row: R) => GridRowId, loaded: R[] = []): R[] {
-  const seen = new Set<GridRowId>(loaded.map(getRowId));
-  const result: R[] = [];
+function identifyRows<R extends GridRowModel>(rows: R[], getRowId: (row: R) => GridRowId): { id: GridRowId; row: R }[] {
+  const seen = new Set<GridRowId>();
+  const result: { id: GridRowId; row: R }[] = [];
   rows.forEach(row => {
     const id = getRowId(row);
     if (seen.has(id)) return;
     seen.add(id);
-    result.push(row);
+    result.push({ id, row });
   });
   return result;
+}
+
+/** The loaded rows followed by the fetched rows whose id is not loaded yet. */
+function appendNewRows<R extends GridRowModel>(loaded: R[], fetched: { id: GridRowId; row: R }[], getRowId: (row: R) => GridRowId): R[] {
+  const loadedIds = new Set<GridRowId>(loaded.map(getRowId));
+  const added = fetched.filter(entry => !loadedIds.has(entry.id)).map(entry => entry.row);
+  return added.length === 0 ? loaded : [...loaded, ...added];
 }
 
 export function useGridDataSource<R extends GridRowModel>(params: UseGridDataSourceParams<R>): UseGridDataSourceReturn {
@@ -100,9 +115,21 @@ export function useGridDataSource<R extends GridRowModel>(params: UseGridDataSou
     sortingMode,
     filterMode,
     aggregationModel,
+    rowGroupingActive = false,
   } = params;
 
-  const kind = getFetchKind(paginationMode);
+  const kind = getFetchKind(paginationMode, rowGroupingActive);
+  const loadsAllForGrouping = Boolean(dataSource) && paginationMode === 'server' && rowGroupingActive;
+  const warnedGroupingRef = useRef(false);
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production' || warnedGroupingRef.current || !loadsAllForGrouping) return;
+    warnedGroupingRef.current = true;
+    console.warn(
+      "[OpenGridX] `rowGroupingModel` turns pagination off, so the dataSource with `paginationMode: 'server'` is " +
+      'asked for every row (startRow 0, endRow Number.MAX_SAFE_INTEGER) instead of one page. ' +
+      'See docs/features/data-source.md.'
+    );
+  }, [loadsAllForGrouping]);
   const getRows = dataSource?.getRows;
   const serverDriven = isServerDrivenDataSource({ dataSource, paginationMode, sortingMode, filterMode });
 
@@ -220,23 +247,35 @@ export function useGridDataSource<R extends GridRowModel>(params: UseGridDataSou
     }
     if (token !== tokenRef.current) return false;
 
-    const { params: current } = latestRef.current;
-    const getRowId = current.getRowId ?? (defaultGetRowId as (row: R) => GridRowId);
-    if (k === 'infinite' && startRow > 0) {
-      current.setRows(prev => [...prev, ...prepareRows(response.rows, getRowId, prev)], true);
-    } else {
-      current.setRows(prepareRows(response.rows, getRowId), true);
-      invalidateChildren();
-    }
-    if (response.aggregationResults) current.onAggregationResults?.(response.aggregationResults);
-    if (response.rowCount !== undefined) current.setRowCount(response.rowCount);
+    // A malformed response, or a getRowId that throws for a fetched row, fails the request like a
+    // rejected getRows: error overlay, loading cleared, nothing thrown.
+    try {
+      const { params: current } = latestRef.current;
+      const getRowId = current.getRowId ?? (defaultGetRowId as (row: R) => GridRowId);
+      const fetched = identifyRows(response.rows, getRowId);
+      if (k === 'infinite' && startRow > 0) {
+        current.setRows(prev => appendNewRows(prev, fetched, getRowId), true);
+      } else {
+        current.setRows(fetched.map(entry => entry.row), true);
+        invalidateChildren();
+      }
+      if (response.aggregationResults) current.onAggregationResults?.(response.aggregationResults);
+      if (response.rowCount !== undefined) current.setRowCount(response.rowCount);
 
-    if (k === 'infinite') {
+      if (k === 'infinite') {
+        infinite.inFlightEnd = null;
+        infinite.loadedEnd = startRow + response.rows.length;
+        // A short response is the end of the data; otherwise catch up with a page that moved on.
+        const receivedAll = response.rows.length >= endRow - startRow;
+        if (receivedAll && (infinite.page + 1) * pageSize > endRow) return true;
+      }
+    } catch (error) {
       infinite.inFlightEnd = null;
-      infinite.loadedEnd = startRow + response.rows.length;
-      // A short response is the end of the data; otherwise catch up with a page that moved on.
-      const receivedAll = response.rows.length >= endRow - startRow;
-      if (receivedAll && (infinite.page + 1) * pageSize > endRow) return true;
+      rowsPendingRef.current = false;
+      latestRef.current.params.setDataSourceError(error);
+      console.error('Data Source Error:', error);
+      syncLoading();
+      return false;
     }
     rowsPendingRef.current = false;
     syncLoading();
@@ -353,7 +392,8 @@ export function useGridDataSource<R extends GridRowModel>(params: UseGridDataSou
       if (response.rows.length > 0) {
         const { params: current } = latestRef.current;
         const getRowId = current.getRowId ?? (defaultGetRowId as (row: R) => GridRowId);
-        current.setRows(prev => [...prev, ...prepareRows(response.rows, getRowId, prev)], true);
+        const fetched = identifyRows(response.rows, getRowId);
+        current.setRows(prev => appendNewRows(prev, fetched, getRowId), true);
       }
     } catch (error) {
       if (generation !== rowsGenerationRef.current) return;

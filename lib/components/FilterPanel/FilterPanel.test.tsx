@@ -213,3 +213,35 @@ describe('FilterPanel — value controls per column type', () => {
         expect(Array.from(select.options).map(o => o.value)).toContain('=');
     });
 });
+
+// The toolbar closes the Filters panel on an outside click or Escape; text typed just before
+// that is still waiting for the debounce and must not be dropped.
+describe('FilterPanel keeps typing that is still debouncing when it closes', () => {
+    it('commits the pending value once on unmount', () => {
+        vi.useFakeTimers();
+        const onFilterModelChange = vi.fn();
+        const { unmount } = render(
+            <FilterPanel filterModel={{ items: [] }} columns={[{ field: 'name', headerName: 'Name' }]} onFilterModelChange={onFilterModelChange} />
+        );
+        const input = screen.getByLabelText('Filter value for Name') as HTMLInputElement;
+        act(() => { fireEvent.change(input, { target: { value: 'Ada' } }); });
+        act(() => { vi.advanceTimersByTime(100); });
+        unmount();
+        act(() => { vi.runAllTimers(); });
+        expect(onFilterModelChange).toHaveBeenCalledTimes(1);
+        expect(onFilterModelChange.mock.calls[0][0].items[0]).toMatchObject({ field: 'name', value: 'Ada' });
+    });
+
+    it('does not commit again on unmount once the debounce has committed', () => {
+        vi.useFakeTimers();
+        const onFilterModelChange = vi.fn();
+        const { unmount } = render(
+            <FilterPanel filterModel={{ items: [] }} columns={[{ field: 'name', headerName: 'Name' }]} onFilterModelChange={onFilterModelChange} />
+        );
+        const input = screen.getByLabelText('Filter value for Name') as HTMLInputElement;
+        act(() => { fireEvent.change(input, { target: { value: 'Ada' } }); });
+        act(() => { vi.runAllTimers(); });
+        unmount();
+        expect(onFilterModelChange).toHaveBeenCalledTimes(1);
+    });
+});

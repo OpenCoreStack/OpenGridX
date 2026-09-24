@@ -168,6 +168,8 @@ export interface UseGridColumnsResult<R extends GridRowModel> {
     hierarchyField: string | undefined;
     orderedColumns: GridColDef<R>[];
     visibleOrderedColumns: GridColDef<R>[];
+    /** Visible data columns in render order: left-pinned, unpinned, right-pinned (`apiRef.getVisibleColumns`). */
+    renderOrderedColumns: GridColDef<R>[];
     /** Focusable columns in render order: system columns, then the visible data columns (left-pinned, unpinned, right-pinned). */
     navigationColumns: Array<GridColDef<R> | { field: string; sortable: false; editable: false }>;
     /** Position of each visible data column in render order (system columns excluded): the public `colIndex`. */
@@ -420,6 +422,7 @@ export function useGridColumns<R extends GridRowModel>(
         hierarchyField,
         orderedColumns,
         visibleOrderedColumns,
+        renderOrderedColumns: renderedDataColumns,
         navigationColumns,
         columnIndexMap,
         columnWidths,

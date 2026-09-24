@@ -1,13 +1,83 @@
 import type { GridColDef, GridRowModel } from '../types';
 
+const warnedCallbacks = new Set<string>();
+
+/**
+ * Warn once per key (callback kind and column), in development only, that a consumer callback
+ * threw and the grid fell back to a default instead of crashing.
+ */
+export function warnCallbackFailure(key: string, message: string, error: unknown): void {
+    if (process.env.NODE_ENV === 'production' || warnedCallbacks.has(key)) return;
+    warnedCallbacks.add(key);
+    console.warn(`[OpenGridX] ${message}.`, error);
+}
+
+/**
+ * Call a consumer callback; when it throws, warn once per `key` (dev only) and return `fallback`.
+ * Used for callbacks whose failure has an obvious default (a detail-panel height, a group label).
+ */
+export function callSafely<T>(fn: () => T, fallback: T, key: string, message: string): T {
+    try {
+        return fn();
+    } catch (error) {
+        warnCallbackFailure(key, message, error);
+        return fallback;
+    }
+}
+
+type ValueGetterColumn<R extends GridRowModel> = Pick<GridColDef<R>, 'valueGetter'>;
+
+/**
+ * Read a cell through the column's `valueGetter` (or `row[field]`), returning a throw as `error`
+ * instead of swallowing it. The row renderer uses this to show the error in that one cell.
+ */
+export function tryGetCellValue<R extends GridRowModel>(
+    row: R,
+    field: string,
+    colDef?: ValueGetterColumn<R>
+): { value: unknown; error?: unknown } {
+    const raw = row[field];
+    if (!colDef?.valueGetter) return { value: raw };
+    try {
+        return { value: colDef.valueGetter({ row, field, value: raw }) };
+    } catch (error) {
+        return { value: undefined, error: error ?? new Error('valueGetter failed') };
+    }
+}
+
 /**
  * The value a cell holds before formatting: the column's `valueGetter` result when it has one,
- * otherwise `row[field]`. Filtering, sorting and the quick filter all read cells through this,
- * so a computed column behaves the same as a stored one.
+ * otherwise `row[field]`. Filtering, sorting, the quick filter, aggregation, row grouping, pivot,
+ * list view, clipboard and editing all read cells through this, so a computed column behaves the
+ * same everywhere. A `valueGetter` that throws reads as `undefined` (with a one-time dev warning
+ * per column), so one bad record cannot take the whole grid down.
  */
-export function getCellValue(row: GridRowModel, field: string, colDef?: GridColDef): unknown {
-    const raw = row[field];
-    return colDef?.valueGetter ? colDef.valueGetter({ row, field, value: raw }) : raw;
+export function getCellValue<R extends GridRowModel>(row: R, field: string, colDef?: ValueGetterColumn<R>): unknown {
+    const { value, error } = tryGetCellValue(row, field, colDef);
+    if (error !== undefined) {
+        warnCallbackFailure(`valueGetter:${field}`, `valueGetter for column "${field}" threw; the value is read as undefined`, error);
+    }
+    return value;
+}
+
+/**
+ * The column's `valueFormatter` text for `value`, or undefined when the column has no formatter
+ * or the formatter throws (with a one-time dev warning per column).
+ */
+export function getFormattedValue<R extends GridRowModel>(
+    row: R,
+    field: string,
+    value: unknown,
+    colDef?: Pick<GridColDef<R>, 'valueFormatter'>
+): string | undefined {
+    const formatter = colDef?.valueFormatter;
+    if (!formatter) return undefined;
+    return callSafely(
+        () => formatter({ value, row, field }),
+        undefined,
+        `valueFormatter:${field}`,
+        `valueFormatter for column "${field}" threw; the value is shown unformatted`,
+    );
 }
 
 /**
@@ -83,6 +153,17 @@ export function toLocalDateString(value: unknown): string {
     return `${y}-${m}-${d}`;
 }
 
+let localDateFormat: Intl.DateTimeFormat | null = null;
+
+/**
+ * `date.toLocaleDateString()` (the default locale's numeric date), with the formatter created
+ * once: building a new one per call is several times slower on large grids.
+ */
+export function formatLocalDate(date: Date): string {
+    localDateFormat ??= new Intl.DateTimeFormat();
+    return localDateFormat.format(date);
+}
+
 type ValueOption = string | number | { value: unknown; label: string };
 
 /** The label of the `valueOptions` entry for `value`, or undefined when no option matches. */
@@ -111,7 +192,7 @@ export function formatValueByType(value: unknown, colDef: Pick<GridColDef, 'type
     switch (colDef?.type) {
         case 'date': {
             const date = toDate(value);
-            return date ? date.toLocaleDateString() : String(value);
+            return date ? formatLocalDate(date) : String(value);
         }
         case 'boolean':
             if (value === true) return 'Yes';

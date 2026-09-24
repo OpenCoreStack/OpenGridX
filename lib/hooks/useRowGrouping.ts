@@ -12,7 +12,7 @@ import type {
 } from '../types';
 import { createRowFilter } from '../utils/filtering';
 import { sortItemsBySortModel, type GridSortValue } from '../utils/sorting';
-import { getCellValue } from '../utils/values';
+import { callSafely, getCellValue } from '../utils/values';
 import type { GridColumnLookup } from '../utils/columnLookup';
 import { computeAggregations } from '../utils/aggregation';
 
@@ -40,6 +40,32 @@ export interface UseRowGroupingParams<R extends GridRowModel> {
 // Group rows show their aggregates inline; the grand total (null) is the grid's footer row.
 const defaultGetAggregationPosition = (groupNode: GridTreeNode | null): GridGroupAggregationPosition =>
     groupNode === null ? 'footer' : 'inline';
+
+// A getAggregationPosition that throws falls back to the default position for that node.
+function callAggregationPosition(
+    getAggregationPosition: (groupNode: GridTreeNode | null) => GridGroupAggregationPosition,
+    groupNode: GridTreeNode | null,
+): GridGroupAggregationPosition {
+    return callSafely(
+        () => getAggregationPosition(groupNode),
+        defaultGetAggregationPosition(groupNode),
+        'getAggregationPosition',
+        'getAggregationPosition threw; the default position is used',
+    );
+}
+
+// The group-row label: the column's groupingValueFormatter, or "field: value" (also when it throws).
+function formatGroupLabel(colDef: GridColDef | undefined, field: string, value: unknown): string {
+    const fallback = `${field}: ${String(value)}`;
+    const formatter = colDef?.groupingValueFormatter;
+    if (!formatter) return fallback;
+    return callSafely(
+        () => formatter({ field, value }),
+        fallback,
+        `groupingValueFormatter:${field}`,
+        `groupingValueFormatter for column "${field}" threw; the group is labelled "${field}: value"`,
+    );
+}
 
 // Stable empty defaults — module-level constants prevent new object identity
 // on every render, which would otherwise invalidate useMemo deps and cause
@@ -260,9 +286,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                     aggregatedValues,
                     isExpanded: false,
                     children: [],
-                    label: colDef?.groupingValueFormatter
-                        ? colDef.groupingValueFormatter({ field, value: bucket.value })
-                        : `${field}: ${String(bucket.value)}`,
+                    label: formatGroupLabel(colDef, field, bucket.value),
                     descendantCount: matching.length,
                 };
                 treeNodes.set(groupId, treeNode);
@@ -311,7 +335,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
     const positionsKey = hasAggregation
         ? groupIds.map(id => {
             const node = treeNodes.get(id);
-            return node ? encodePosition(getAggregationPosition({ ...node, isExpanded: expandedGroupIds.has(id) })) : 'i';
+            return node ? encodePosition(callAggregationPosition(getAggregationPosition, { ...node, isExpanded: expandedGroupIds.has(id) })) : 'i';
         }).join('')
         : '';
     const aggregationPositions = useMemo<Map<GridRowId, GridGroupAggregationPosition>>(() => {
@@ -321,7 +345,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
     }, [groupIds, positionsKey]);
 
     /** Where the grand total goes: `null` hides the grid's aggregation footer. */
-    const rootAggregationPosition: GridGroupAggregationPosition = hasAggregation ? getAggregationPosition(null) : 'footer';
+    const rootAggregationPosition: GridGroupAggregationPosition = hasAggregation ? callAggregationPosition(getAggregationPosition, null) : 'footer';
 
     const isClientSort = sortingMode !== 'server' && Boolean(sortModel && sortModel.length > 0);
 

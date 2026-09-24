@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useLayoutEffect, useRef } from 'react';
 import { upsertSortItem } from '../../utils/sorting';
 import { pinColumnTo } from '../../utils/pinning';
 import type {
@@ -9,11 +9,25 @@ import type {
     GridSortItem,
 } from '../../types';
 
+/**
+ * The sort model after sorting `field` by `direction` (null removes it). `multiSort` adds or updates
+ * the column in the model (shift-click); otherwise the model is replaced by this one column. The
+ * header, the keyboard and `apiRef.sortColumn` all build the next model with this.
+ */
+export function nextSortModelForColumn(
+    current: readonly GridSortItem[],
+    field: string,
+    direction: GridSortDirection,
+    multiSort: boolean
+): GridSortItem[] {
+    if (multiSort) return upsertSortItem(current, field, direction);
+    return direction ? [{ field, sort: direction }] : current.filter(item => item.field !== field);
+}
+
 export interface UseGridSortHandlersParams {
     sortModel: GridSortItem[];
-    isSortControlled: boolean;
-    setInternalSortModel: (model: GridSortItem[]) => void;
-    onSortModelChange: ((model: GridSortItem[]) => void) | undefined;
+    /** Stores the model when uncontrolled and calls onSortModelChange (useGridControlledState). */
+    onSortModelChange: (model: GridSortItem[]) => void;
 }
 
 export interface UseGridSortHandlersResult {
@@ -23,27 +37,17 @@ export interface UseGridSortHandlersResult {
     handleSortAdd: (field: string, direction: GridSortDirection) => void;
 }
 
-/** Sort changes from the header and the keyboard. */
+/** Sort changes from the header and the keyboard; the same transition and handler as apiRef.sortColumn. */
 export function useGridSortHandlers(params: UseGridSortHandlersParams): UseGridSortHandlersResult {
-    const { sortModel, isSortControlled, setInternalSortModel, onSortModelChange } = params;
+    const { sortModel, onSortModelChange } = params;
 
     const handleSort = useCallback((field: string, direction: GridSortDirection) => {
-        const newSortModel = direction ? [{ field, sort: direction }] : [];
-
-        if (!isSortControlled) {
-            setInternalSortModel(newSortModel as GridSortItem[]);
-        }
-        onSortModelChange?.(newSortModel as GridSortItem[]);
-    }, [isSortControlled, onSortModelChange, setInternalSortModel]);
+        onSortModelChange(nextSortModelForColumn(sortModel, field, direction, false));
+    }, [sortModel, onSortModelChange]);
 
     const handleSortAdd = useCallback((field: string, direction: GridSortDirection) => {
-        const newSortModel = upsertSortItem(sortModel, field, direction);
-
-        if (!isSortControlled) {
-            setInternalSortModel(newSortModel);
-        }
-        onSortModelChange?.(newSortModel);
-    }, [sortModel, isSortControlled, onSortModelChange, setInternalSortModel]);
+        onSortModelChange(nextSortModelForColumn(sortModel, field, direction, true));
+    }, [sortModel, onSortModelChange]);
 
     return { handleSort, handleSortAdd };
 }
@@ -60,20 +64,29 @@ export interface UseGridColumnMenuHandlersResult {
     handlePinColumn: (field: string, side: GridPinnedPosition | null) => void;
 }
 
-/** The column menu's Hide and Pin actions. */
+/**
+ * The column menu's Hide and Pin actions. Each builds on the latest model, including a change made
+ * earlier in the same tick, so two hides (or pins) before a re-render both stick.
+ */
 export function useGridColumnMenuHandlers(params: UseGridColumnMenuHandlersParams): UseGridColumnMenuHandlersResult {
     const { columnVisibilityModel, onColumnVisibilityModelChange, pinnedColumns, onPinnedColumnsChange } = params;
 
+    const latestRef = useRef({ columnVisibilityModel, pinnedColumns });
+    useLayoutEffect(() => {
+        latestRef.current = { columnVisibilityModel, pinnedColumns };
+    });
+
     const handleHideColumn = useCallback((field: string) => {
-        onColumnVisibilityModelChange({
-            ...columnVisibilityModel,
-            [field]: false,
-        });
-    }, [columnVisibilityModel, onColumnVisibilityModelChange]);
+        const next = { ...latestRef.current.columnVisibilityModel, [field]: false };
+        latestRef.current = { ...latestRef.current, columnVisibilityModel: next };
+        onColumnVisibilityModelChange(next);
+    }, [onColumnVisibilityModelChange]);
 
     const handlePinColumn = useCallback((field: string, side: GridPinnedPosition | null) => {
-        onPinnedColumnsChange(pinColumnTo(pinnedColumns, field, side));
-    }, [pinnedColumns, onPinnedColumnsChange]);
+        const next = pinColumnTo(latestRef.current.pinnedColumns, field, side);
+        latestRef.current = { ...latestRef.current, pinnedColumns: next };
+        onPinnedColumnsChange(next);
+    }, [onPinnedColumnsChange]);
 
     return { handleHideColumn, handlePinColumn };
 }

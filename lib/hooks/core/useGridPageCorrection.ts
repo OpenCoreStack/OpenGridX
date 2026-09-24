@@ -22,7 +22,8 @@ export interface UseGridPageCorrectionParams {
  * reports the corrected model so the stored model, the consumer's state and later Previous/Next
  * navigation agree with what is on screen. Reporting a model is a side effect, so it runs in an
  * effect, keyed on the page numbers only: a consumer that passes a fresh model object every render
- * or ignores the callback is told once per change, not on every render.
+ * or ignores the callback is told once per change, not on every render, and StrictMode's re-run
+ * of the effect does not report it twice.
  */
 export function useGridPageCorrection({
     paginationModel,
@@ -37,8 +38,17 @@ export function useGridPageCorrection({
 
     const requestedPage = paginationModel.page;
 
+    // The correction last reported; cleared once the requested page is the shown one again.
+    const reportedRef = useRef<string | null>(null);
     useEffect(() => {
-        if (!enabled || currentPage === requestedPage) return;
+        if (!enabled) return;
+        if (currentPage === requestedPage) {
+            reportedRef.current = null;
+            return;
+        }
+        const key = `${requestedPage}>${currentPage}`;
+        if (reportedRef.current === key) return;
+        reportedRef.current = key;
         const { paginationModel: model, onPaginationModelChange: notify } = latestRef.current;
         notify({ ...model, page: currentPage });
     }, [enabled, currentPage, requestedPage]);

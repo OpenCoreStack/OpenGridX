@@ -1,6 +1,8 @@
 import { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { scrollRowIntoView } from '../../utils/scroll';
-import { getCellValue, resolveCellEditable } from '../../utils/editing';
+import { resolveCellEditable } from '../../utils/editing';
+import { getCellValue } from '../../utils/values';
+import { isSyntheticRowId } from '../../utils/syntheticRows';
 import {
     CHECKBOX_FIELD,
     EXPAND_FIELD,
@@ -361,7 +363,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         const rowIndex = focusedRowIndex;
         const colIndex = navigationColumns.findIndex(c => c.field === field);
         const systemColumnCount = navigationColumns.filter(c => isSystemField(c.field)).length;
-        const isSyntheticRow = (rowId: GridRowId) => rowMetaMap?.get(rowId)?.isGroupRow === true;
+        const isSyntheticRow = (rowId: GridRowId) => isSyntheticRowId(rowId, rowMetaMap);
         // Same rule and starting value as double-click (see Row / resolveCellEditable).
         const isEditableCell = (row: R, r: number, c: number) => {
             const colDef = navigationColumns[c] as GridColDef<R>;
@@ -369,7 +371,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
             return resolveCellEditable({
                 row,
                 field: colDef.field,
-                value: getCellValue(row, colDef),
+                value: getCellValue(row, colDef.field, colDef),
                 colDef,
                 rowIndex: r,
                 colIndex: c - systemColumnCount,
@@ -464,7 +466,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
             }
             if (field === REORDER_FIELD) return;
             if (isEditableCell(row, rowIndex, colIndex)) {
-                editingHandlers.startCellEdit({ id, field, value: getCellValue(row, navigationColumns[colIndex] as GridColDef<R>) });
+                editingHandlers.startCellEdit({ id, field, value: getCellValue(row, field, navigationColumns[colIndex] as GridColDef<R>) });
                 return;
             }
             // A row with children toggles, so keyboard users can expand a tree-data parent even

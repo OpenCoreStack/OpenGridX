@@ -1,7 +1,7 @@
 
 import type { GridRowModel, GridFilterItem, GridFilterModel, GridFilterGroup, GridFilterOperator, GridColDef } from '../../types';
 import type { GridColumnLookup } from '../columnLookup';
-import { getCellValue, toLocalDateString, toLocalDayKey, toNumber } from '../values';
+import { getCellValue, getFormattedValue, toLocalDateString, toLocalDayKey, toNumber } from '../values';
 
 /** Compares a cell value with the filter item's value. */
 export type GridFilterOperatorFn = (value: unknown, filterValue?: unknown) => boolean;
@@ -229,11 +229,28 @@ function getQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | unde
   }
   for (const col of columns.quickFilterColumns) {
     const value = getCellValue(row, col.field, col);
-    if (col.valueFormatter) {
-      const formatted = col.valueFormatter({ value, row, field: col.field });
-      if (formatted != null && formatted !== '') texts.push(String(formatted).toLowerCase());
-    }
+    const formatted = getFormattedValue(row, col.field, value, col);
+    if (formatted != null && formatted !== '') texts.push(String(formatted).toLowerCase());
     pushSearchText(texts, value);
+  }
+  return texts;
+}
+
+// Search texts per column lookup and row object. The grid keeps one lookup while the columns and
+// hidden columns stay the same, so typing in the quick filter reads every cell once, not per keystroke.
+const quickFilterTextCache = new WeakMap<GridColumnLookup, WeakMap<GridRowModel, string[]>>();
+
+function getCachedQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | undefined): string[] {
+  if (!columns) return getQuickFilterTexts(row, columns);
+  let byRow = quickFilterTextCache.get(columns);
+  if (!byRow) {
+    byRow = new WeakMap();
+    quickFilterTextCache.set(columns, byRow);
+  }
+  let texts = byRow.get(row);
+  if (!texts) {
+    texts = getQuickFilterTexts(row, columns);
+    byRow.set(row, texts);
   }
   return texts;
 }
@@ -244,7 +261,7 @@ function compileQuickFilter(values: readonly string[] | undefined, columns: Grid
     .filter(term => term !== '');
   if (terms.length === 0) return null;
   return (row) => {
-    const texts = getQuickFilterTexts(row, columns);
+    const texts = getCachedQuickFilterTexts(row, columns);
     return terms.every(term => texts.some(text => text.includes(term)));
   };
 }

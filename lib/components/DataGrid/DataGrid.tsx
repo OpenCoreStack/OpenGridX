@@ -45,6 +45,9 @@ import { useGridGroupingColumn } from '../../hooks/core/useGridGroupingColumn';
 import { useGridRowIdOf, getDefaultRowId } from '../../hooks/core/useGridRowIdOf';
 import { useGridApiRefBinding } from '../../hooks/core/useGridApiRefBinding';
 import { collectAllFilteredRows } from '../../utils/gridApiRows';
+import { NO_AGGREGATION_MODEL } from '../../utils/aggregation';
+import { isSyntheticRowId } from '../../utils/syntheticRows';
+import { useStableColumns } from '../../hooks/core/useStableColumns';
 import { useGridAggregationApi } from '../../hooks/core/useGridAggregationApi';
 import { useGridClipboardApi } from '../../hooks/core/useGridClipboardApi';
 import { useGridScrollToIndexesApi } from '../../hooks/core/useGridScrollToIndexesApi';
@@ -68,7 +71,7 @@ export function DataGrid<R extends GridValidRowModel = GridRowModel>(props: Data
 export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridProps<R>): React.JSX.Element {
     const {
         rows,
-        columns,
+        columns: columnsProp,
         getRowId,
         rowHeight: rowHeightProp,
         headerHeight: headerHeightProp,
@@ -157,6 +160,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         apiRef: propApiRef,
         overscanRowCount = 3,
     } = props;
+    // Equal inline column definitions keep one identity, so the row passes memoised on it do not re-run.
+    const columns = useStableColumns(columnsProp);
 
     const effectiveNoRowsLabel = localeText?.noRowsLabel ?? noRowsLabel;
     const rowGroupingModel = propRowGroupingModel || EMPTY_ROW_GROUPING_MODEL;
@@ -181,7 +186,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     });
 
     const {
-        sortModel, isSortControlled, setInternalSortModel, handleSortModelChange, filterModel,
+        sortModel, handleSortModelChange, filterModel,
         handleFilterModelChange, aggregationModel, handleAggregationModelChange, columnVisibilityModel,
         handleColumnVisibilityModelChange, pinnedColumns, handlePinnedColumnsChange, currentPivotModel,
         handlePivotModelChange, effectivePaginationModel, handlePaginationModelChange,
@@ -308,6 +313,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         dataSource, sortModel, filterModel,
         paginationModel: effectivePaginationModel,
         paginationMode, sortingMode, filterMode, aggregationModel,
+        rowGroupingActive: isRowGrouping,
         getRowId: effectiveGetRowId as unknown as (row: GridRowModel) => GridRowId,
         setRows, setRowCount, setDataSourceLoading, setDataSourceError,
         onAggregationResults: setServerAggregationResults,
@@ -333,7 +339,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     // ── Column management ─────────────────────────────────────────────────────
     const {
-        effectiveColumns, hierarchyField, orderedColumns, visibleOrderedColumns, navigationColumns, columnIndexMap,
+        effectiveColumns, hierarchyField, orderedColumns, visibleOrderedColumns, renderOrderedColumns, navigationColumns, columnIndexMap,
         columnWidths, effectiveColumnOrder, columnReorderHandlers, moveColumn, resetColumnOrder, handleColumnResize,
     } = useGridColumns<R>({
         activeColumns, isHierarchyEnabled, isRowGrouping, isTreeData, activeHierarchyHandlers,
@@ -407,6 +413,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         getPendingRowSelectionModel: controlledState.getPendingRowSelectionModel,
         onRowSelectionModelChange: handleRowSelectionModelChange,
         disableMultipleRowSelection,
+        isSyntheticRowId: (id) => isSyntheticRowId(id, rowMetaMap),
         getVisibleRows: () => [...pinnedTopRows, ...centerRows, ...pinnedBottomRows],
         getAllFilteredRows: () => collectAllFilteredRows<GridRowModel>({
             hierarchyHandlers: activeHierarchyHandlers,
@@ -415,8 +422,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             pinnedBottomRows,
             rowMetaMap,
             getRowId: getRowIdOf,
+            hierarchyField,
+            dataRows,
         }),
-        visibleColumns: visibleOrderedColumns as unknown as GridColDef[],
+        visibleColumns: renderOrderedColumns as unknown as GridColDef[],
     });
 
     // Indices address the consumer's own rows, whatever the sort, filter, page or pinning.
@@ -430,7 +439,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const { aggregationResult, isLoading: isAggregationLoading } = useAggregation({
         rows: dataRows,
         columns: activeColumns as unknown as GridColDef[],
-        aggregationModel,
+        // The pivot's Grand Total row is the aggregate in pivot mode: nothing to total here.
+        aggregationModel: isPivotActive ? NO_AGGREGATION_MODEL : aggregationModel,
         // When the server drives the rows (paginates, sorts or filters them), the grid only holds
         // the rows it returned, so client totals would be partial.
         isServerSide: isServerDrivenDataSource({ dataSource, paginationMode, sortingMode, filterMode }),
@@ -445,6 +455,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         apiRef, hasAggregation, aggregationResult, aggregationModel, isRowGrouping, rowGroupingHandlers, rowMetaMap,
         columns: activeColumns,
         getRowId: getRowIdOf,
+        hierarchyField,
     });
 
     const layout = useLayout({
@@ -503,9 +514,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     });
 
 
-    const { handleSort, handleSortAdd } = useGridSortHandlers({
-        sortModel, isSortControlled, setInternalSortModel, onSortModelChange,
-    });
+    const { handleSort, handleSortAdd } = useGridSortHandlers({ sortModel, onSortModelChange: handleSortModelChange });
 
     const rowSelectionEnabled = checkboxSelection || !disableRowSelectionOnClick;
     const {
@@ -686,7 +695,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 <GridListView<R>
                     ariaLabel={ariaLabel}
                     allRenderableRows={allRenderableRows}
-                    filteredRows={filteredRows}
+                    dataRowCount={dataRows.length}
                     pinnedTopRowCount={pinnedTopRows.length}
                     pinnedBottomRowCount={pinnedBottomRows.length}
                     unpinnedRowCount={sortedUnpinnedRows.length}
@@ -870,7 +879,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     apiRef={gridData.apiRef}
                     aggregationModel={aggregationModel}
                     aggregationResult={hasAggregation ? aggregationResult : null}
-                    rowCount={paginationMode === 'server' ? paginationRowCount : dataRows.length}
+                    rowCount={isHierarchyEnabled && paginationMode !== 'server' ? dataRows.length : paginationRowCount}
                     pagination={pagination}
                     paginationModel={effectivePaginationModel}
                     pageSizeOptions={pageSizeOptions}

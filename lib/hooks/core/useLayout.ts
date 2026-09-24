@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { GridColDef, GridRowModel, GridRowId, GridColumnPinning, GridDetailPanelHeight } from '../../types';
 import { getPinnedColumnGroups, SYSTEM_COLUMN_WIDTH } from '../../utils/pinning';
 import { clampColumnWidth } from '../../utils/columnWidth';
-import { getDetailPanelLayoutHeight } from '../../utils/detailPanel';
+import { callGetDetailPanelHeight, getDetailPanelLayoutHeight } from '../../utils/detailPanel';
 
 export interface UseLayoutParams<R extends GridRowModel> {
     rowHeight: number;
@@ -251,7 +251,7 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
         const heightOf = (row: R, rowIndex: number) => {
             const id = getRowId(row);
             if (!expandedRowIds.has(id)) return rowHeight;
-            const panelHeight = getDetailPanelHeight?.({ row, id, rowIndex });
+            const panelHeight = callGetDetailPanelHeight(getDetailPanelHeight, { row, id, rowIndex });
             return rowHeight + getDetailPanelLayoutHeight(panelHeight, detailPanelHeights?.get(id));
         };
 

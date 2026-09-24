@@ -20,7 +20,8 @@ export interface GridListViewProps<R extends GridRowModel> {
     ariaLabel?: string;
     /** Pinned-top rows, the current page and pinned-bottom rows: what the grid view renders. */
     allRenderableRows: R[];
-    filteredRows: R[];
+    /** Filtered data rows (no group, subtotal or auto-created parent rows): the "N items" count. */
+    dataRowCount: number;
     /** Number of rows at the start of allRenderableRows that are pinned to the top. */
     pinnedTopRowCount: number;
     /** Number of rows at the end of allRenderableRows that are pinned to the bottom. */
@@ -74,7 +75,7 @@ const defaultGetRowId = <R extends GridRowModel>(row: R): GridRowId => row.id;
 export function GridListView<R extends GridRowModel>({
     ariaLabel,
     allRenderableRows,
-    filteredRows,
+    dataRowCount,
     pinnedTopRowCount,
     pinnedBottomRowCount,
     unpinnedRowCount,
@@ -168,7 +169,7 @@ export function GridListView<R extends GridRowModel>({
     const isServerPaged = paginationMode === 'server';
     // Rows split into pages (pinned rows stay on every page, as in the grid view).
     const pagedRowCount = isServerPaged ? (serverRowCount || 0) : unpinnedRowCount;
-    const itemCount = isServerPaged ? (serverRowCount || 0) : filteredRows.length;
+    const itemCount = isServerPaged ? (serverRowCount || 0) : dataRowCount;
     const pageSize = normalizePageSize(effectivePaginationModel.pageSize);
     const pageCount = getPageCount(pagedRowCount, pageSize);
 

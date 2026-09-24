@@ -1,5 +1,5 @@
 import type { GridAggregationModel, GridAggregationResult, GridColDef, GridRowModel } from '../../types';
-import { getCellValue, toNumber } from '../values';
+import { formatLocalDate, getCellValue, toNumber } from '../values';
 
 export type BuiltInAggFn = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'unique';
 
@@ -7,6 +7,9 @@ export type BuiltInAggFn = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'unique';
  * A value that carries no data for aggregation: null, undefined, or a string that is empty or whitespace
  * only. Blank cells come from edits, CSV imports and form inputs; they must not count as zero or as an item.
  */
+/** Stable empty model: no aggregation (e.g. while pivoting, where the Grand Total row is the aggregate). */
+export const NO_AGGREGATION_MODEL: GridAggregationModel = {};
+
 export const isEmptyAggregateValue = (v: unknown): boolean =>
     v == null || (typeof v === 'string' && v.trim() === '');
 
@@ -149,6 +152,6 @@ export function formatAggregateForColumn<R extends GridRowModel>(
             // Fall through to the default format rather than failing the whole grid or export.
         }
     }
-    if (normalized instanceof Date) return Number.isNaN(normalized.getTime()) ? '' : normalized.toLocaleDateString();
+    if (normalized instanceof Date) return Number.isNaN(normalized.getTime()) ? '' : formatLocalDate(normalized);
     return formatAggregationValue(normalized, fnName);
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { filterRows, applyFilterItem, applyQuickFilter, FILTER_OPERATORS, getOperatorsForType } from './index';
 import { buildColumnLookup } from '../columnLookup';
-import type { GridColDef, GridFilterItem, GridFilterModel } from '../../types';
+import type { GridColDef, GridFilterItem, GridFilterModel, GridRowModel } from '../../types';
 
 const ROWS = [
     { id: 1, name: 'Alice', age: 30, active: true, department: 'Engineering' },
@@ -360,5 +360,32 @@ describe('quick filter with column definitions', () => {
         const rows = [{ id: 1, name: 'John' }, { id: 2, name: 'Mary Ann' }];
         expect(ids(filterRows(rows, { quickFilterValues: [' '] }, lookup))).toEqual([1, 2]);
         expect(ids(filterRows(rows, { quickFilterValues: ['john '] }, lookup))).toEqual([1]);
+    });
+
+    it('reads each row\'s cells once per column lookup, not once per keystroke', () => {
+        const getter = vi.fn(({ row }: { row: GridRowModel }) => row.name);
+        const lookup = buildColumnLookup([{ field: 'name', valueGetter: getter }]);
+        const rows = [{ id: 1, name: 'John' }, { id: 2, name: 'Mary' }];
+        expect(ids(filterRows(rows, { quickFilterValues: ['j'] }, lookup))).toEqual([1]);
+        expect(ids(filterRows(rows, { quickFilterValues: ['jo'] }, lookup))).toEqual([1]);
+        expect(ids(filterRows(rows, { quickFilterValues: ['mar'] }, lookup))).toEqual([2]);
+        expect(getter).toHaveBeenCalledTimes(2);
+        // A new row object (an edit) and a new lookup (changed columns) are read again.
+        filterRows([{ id: 1, name: 'Joan' }], { quickFilterValues: ['j'] }, lookup);
+        filterRows(rows, { quickFilterValues: ['j'] }, buildColumnLookup([{ field: 'name', valueGetter: getter }]));
+        expect(getter).toHaveBeenCalledTimes(5);
+    });
+
+    it('reads a throwing valueGetter or valueFormatter as no text instead of throwing', () => {
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const lookup = buildColumnLookup([
+            { field: 'name' },
+            { field: 'bad', valueGetter: () => { throw new Error('x'); } },
+            { field: 'fmt', valueFormatter: () => { throw new Error('y'); } },
+        ]);
+        const rows = [{ id: 1, name: 'John', fmt: 'zz' }];
+        expect(ids(filterRows(rows, { quickFilterValues: ['john'] }, lookup))).toEqual([1]);
+        expect(ids(filterRows(rows, { quickFilterValues: ['zz'] }, lookup))).toEqual([1]);
+        vi.restoreAllMocks();
     });
 });

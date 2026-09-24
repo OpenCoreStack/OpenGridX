@@ -20,7 +20,7 @@ import {
 import { createRowFilter } from '../filtering';
 import { compareValues } from '../sorting';
 import { buildColumnLookup } from '../columnLookup';
-import { getCellValue } from '../values';
+import { getCellValue, getFormattedValue } from '../values';
 
 /** Row id of the Grand Total row that closes every pivot. */
 export const PIVOT_GRAND_TOTAL_ID = '__pivot_grand_total__';
@@ -321,7 +321,8 @@ export function computePivot(
 }
 
 function formatDimension(def: GridColDef | undefined, field: string, value: unknown, sample?: GridRowModel): string {
-    if (def?.valueFormatter && sample) return def.valueFormatter({ value, row: sample, field });
+    const formatted = sample ? getFormattedValue(sample, field, value, def) : undefined;
+    if (formatted !== undefined) return formatted;
     return value == null ? '' : String(value);
 }
 

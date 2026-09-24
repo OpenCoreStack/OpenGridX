@@ -1,6 +1,8 @@
 import React from 'react';
-import { formatValueByType, getCellValue } from '../../utils/values';
+import { formatValueByType, getCellValue, getFormattedValue } from '../../utils/values';
 import { ExpandIcon } from '../ui/ExpandIcon';
+import { CellErrorBoundary } from '../Cell/CellErrorBoundary';
+import { isSyntheticRowId } from '../../utils/syntheticRows';
 import type { GridColDef, GridRowModel, GridRowId, GridRowMeta, GridListViewColDef, GridRenderCellParams } from '../../types';
 
 export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
@@ -50,11 +52,12 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
 }: ListViewRowProps<R>) {
     const id = rowId ?? row.id;
     const field = listViewColumn.field;
-    // Same value and formatting as a grid cell for this field (Cell.tsx).
-    const value = getCellValue(row, field, gridColumn as GridColDef | undefined);
-    const formattedValue = gridColumn?.valueFormatter
-        ? gridColumn.valueFormatter({ value, row, field })
-        : formatValueByType(value, gridColumn);
+    // Same value and formatting as a grid cell for this field (Cell.tsx). A valueGetter or
+    // valueFormatter that throws reads as undefined / the unformatted value instead of crashing.
+    const value = getCellValue(row, field, gridColumn);
+    const formattedValue = getFormattedValue(row, field, value, gridColumn) ?? formatValueByType(value, gridColumn);
+    // Row-grouping headers, subtotals and auto-created tree parents are not data rows.
+    const isSyntheticRow = rowMeta?.isGroupRow === true || isSyntheticRowId(id);
 
     const params: GridRenderCellParams<R> = {
         row,
@@ -89,14 +92,14 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
         >
             {checkboxSelection && (
                 <div className="ogx-list-view__checkbox" onClick={(e) => e.stopPropagation()}>
-                    <input
+                    {!isSyntheticRow && <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={handleCheckboxChange}
                         aria-label={`Select row ${id}`}
                         // Not a Tab stop of its own: the list is one Tab stop, Shift+Space selects the focused row.
                         tabIndex={-1}
-                    />
+                    />}
                 </div>
             )}
             {rowMeta && onToggleExpansion && (
@@ -114,7 +117,15 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
                 </div>
             )}
             <div className="ogx-list-view__cell" role="gridcell">
-                {listViewColumn.renderCell(params)}
+                <CellErrorBoundary
+                    field={field}
+                    resetKey={row}
+                    renderFn={() => {
+                        const content = listViewColumn.renderCell(params);
+                        // A group row whose renderCell has nothing for it still shows its label.
+                        return content === undefined && isSyntheticRow ? rowMeta?.groupLabel : content;
+                    }}
+                />
             </div>
         </div>
     );

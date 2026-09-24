@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useGridRowSelection, type UseGridRowSelectionReturn } from './useGridRowSelection';
 import { PIVOT_GRAND_TOTAL_ID } from '../../utils/pivot';
+import { isSyntheticRowId } from '../../utils/syntheticRows';
 import type { GridRowId, GridRowMeta, GridRowModel, GridRowParams } from '../../types';
 
 export interface UseGridRowInteractionsParams<R extends GridRowModel> {
@@ -63,15 +64,16 @@ export function useGridRowInteractions<R extends GridRowModel>(
 
         onRowClick?.(rowParams);
 
-        if (!disableRowSelectionOnClick) {
+        // The pivot Grand Total is clickable (onRowClick) but, like any synthetic row, not selectable.
+        if (!disableRowSelectionOnClick && !isSyntheticRowId(id, rowMetaMap)) {
             rowSelection.clickRow(id);
         }
     }, [isHierarchyEnabled, activeHierarchyHandlers, onRowClick, rowMetaMap, disableRowSelectionOnClick, rowSelection]);
 
     // Honors disableMultipleRowSelection like a row click does. Synthetic group / subtotal rows
-    // are not data: their ids never enter the selection model.
+    // and the pivot Grand Total are not data: their ids never enter the selection model.
     const handleSelectionChange = useCallback((rowId: GridRowId, isSelected: boolean) => {
-        if (rowMetaMap.get(rowId)?.isGroupRow) return;
+        if (isSyntheticRowId(rowId, rowMetaMap)) return;
         rowSelection.toggleRow(rowId, isSelected);
     }, [rowMetaMap, rowSelection]);
 

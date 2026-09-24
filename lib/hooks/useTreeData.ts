@@ -279,8 +279,10 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
     }));
     const overrides = expansionState.configKey === configKey ? expansionState.overrides : EMPTY_OVERRIDES;
 
+    // A lazy server node (serverChildrenCount > 0, children not loaded yet) is expandable too, so
+    // the default depth expands it and useServerTreeChildren loads its children.
     const isDefaultExpanded = useCallback((node: GridTreeNode | undefined) => (
-        Boolean(node?.children && node.children.length > 0) &&
+        ((node?.children?.length ?? 0) > 0 || (node?.serverChildrenCount ?? 0) > 0) &&
         (defaultGroupingExpansionDepth === -1 || (node?.depth ?? 0) < defaultGroupingExpansionDepth)
     ), [defaultGroupingExpansionDepth]);
 

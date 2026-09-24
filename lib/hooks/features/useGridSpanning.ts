@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { GridRowId, GridColDef, GridRowModel, GridRenderCellParams, GridRowMeta } from '../../types';
+import { isSyntheticRowId } from '../../utils/syntheticRows';
 
 type ColumnKey = string;
 
@@ -301,6 +302,14 @@ function computeSection<R extends GridRowModel>(
         let rowSpan = 1;
         if (column.hasRowSpan) {
             rowSpan = Math.min(evaluateSpan(column.colDef.rowSpan, cellParams, 'rowSpan', column.field, warned), rows.length - r);
+            // A span ends before the next synthetic row (group header, subtotal, auto-created
+            // parent, pivot Grand Total): it never merges data across a group boundary.
+            for (let k = 1; k < rowSpan; k++) {
+                if (isSyntheticRowId(getRowId(rows[r + k]), rowMetaMap)) {
+                    rowSpan = k;
+                    break;
+                }
+            }
             if (rowSpan > 1 && expandedRowIds && expandedRowIds.size > 0) {
                 for (let k = 0; k < rowSpan - 1; k++) {
                     if (expandedRowIds.has(getRowId(rows[r + k]))) {
@@ -348,6 +357,9 @@ function computeSection<R extends GridRowModel>(
     for (let r = 0; r < rows.length; r++) {
         const row = rows[r];
         if (!row || row._isSkeleton) continue;
+        // Synthetic rows hold no data of their own: they are never a span origin (spans from above
+        // already end before them).
+        if (isSyntheticRowId(getRowId(row), rowMetaMap)) continue;
 
         if (coverEnd <= r) {
             // Nothing is covered from above: only the columns that declare a span need a look.

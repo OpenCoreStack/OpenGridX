@@ -24,7 +24,8 @@ export function nextSelectionForClick(current: ReadonlySet<GridRowId>, id: GridR
     return nextSelectionForRows(current, [id], !current.has(id), false);
 }
 
-function isSameSelection(current: ReadonlySet<GridRowId>, next: readonly GridRowId[]): boolean {
+/** Whether `next` holds exactly the ids of `current` (order ignored). */
+export function isSameSelection(current: ReadonlySet<GridRowId>, next: readonly GridRowId[]): boolean {
     return next.length === current.size && next.every(id => current.has(id));
 }
 

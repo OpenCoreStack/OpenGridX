@@ -8,7 +8,9 @@ import { DetailPanel } from '../DetailPanel/DetailPanel';
 import type { GridRowModel, GridColDef, GridRowId, GridColumnPinning, GridRowPinning, GridRowParams, GridCellParams, GridDetailPanelHeight, GridRowMeta } from '../../types';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
 import { isColumnPinned, calculatePinnedPositions, getPinnedEdgeFields, isRowPinned } from '../../utils/pinning';
-import { getCellValue, resolveCellEditable } from '../../utils/editing';
+import { resolveCellEditable } from '../../utils/editing';
+import { tryGetCellValue } from '../../utils/values';
+import { isSyntheticRowId } from '../../utils/syntheticRows';
 import { getRenderedColumnWidth } from '../../utils/columnWidth';
 import { DEFAULT_DETAIL_PANEL_HEIGHT } from '../../utils/detailPanel';
 
@@ -169,6 +171,8 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     // Group rows, subtotal rows and auto-created tree parents: not data, so no selection or detail panel.
     const isSyntheticRow = rowMeta?.isGroupRow === true;
     const showDetailPanel = hasDetailPanel && !isSyntheticRow;
+    // The pivot Grand Total is synthetic too, but its cells show values like any row.
+    const isSelectableRow = !isSyntheticRow && !isSyntheticRowId(id);
 
     // Which cells may be edited is decided per cell below (resolveCellEditable), not per row:
     // tree-data parents are real rows and stay editable; synthetic group rows never are.
@@ -368,7 +372,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             });
                         }}
                     >
-                        {!isSyntheticRow && (
+                        {isSelectableRow && (
                             <Checkbox
                                 id={checkboxId}
                                 name={`ogx-select-row-${id}`}
@@ -402,11 +406,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     if (isSyntheticRow) {
                         value = row[colDef.field];
                     } else {
-                        try {
-                            value = getCellValue(row, colDef);
-                        } catch (error) {
-                            valueError = error ?? new Error('valueGetter failed');
-                        }
+                        ({ value, error: valueError } = tryGetCellValue(row, colDef.field, colDef));
                     }
                     const colIndex = columnIndexMap?.get(colDef.field) ?? localIndex;
 

@@ -143,19 +143,37 @@ const FilterRow: React.FC<{
         value,
     }), [col.field]);
 
+    // Commits typed text unless it matches what the item already holds.
+    const commitDraft = useCallback((text: string) => {
+        const current = itemRef.current;
+        const unchanged = current ? text === toInputText(current.value, colRef.current) : text.trim() === '';
+        if (unchanged) return;
+        const operator = current?.operator ?? defaultOperator;
+        onChangeRef.current(buildItem(operator, fromInputText(text, operator)));
+    }, [defaultOperator, buildItem]);
+
+    // Text still waiting for the debounce; flushed when the panel closes (unmounts) meanwhile.
+    const pendingDraftRef = useRef<string | null>(null);
+    const commitDraftRef = useRef(commitDraft);
+    useLayoutEffect(() => {
+        pendingDraftRef.current = draft;
+        commitDraftRef.current = commitDraft;
+    });
+    useEffect(() => () => {
+        const pending = pendingDraftRef.current;
+        pendingDraftRef.current = null;
+        if (pending !== null) commitDraftRef.current(pending);
+    }, []);
+
     useEffect(() => {
         if (draft === null) return;
         const handle = setTimeout(() => {
-            const current = itemRef.current;
-            const unchanged = current ? draft === toInputText(current.value, colRef.current) : draft.trim() === '';
-            if (!unchanged) {
-                const operator = current?.operator ?? defaultOperator;
-                onChangeRef.current(buildItem(operator, fromInputText(draft, operator)));
-            }
+            pendingDraftRef.current = null;
+            commitDraft(draft);
             setDraft(null);
         }, DEBOUNCE_MS);
         return () => clearTimeout(handle);
-    }, [draft, defaultOperator, buildItem]);
+    }, [draft, commitDraft]);
 
     const handleOperatorChange = (op: GridFilterOperator) => {
         // Keep what the user typed even if the debounce has not committed it yet.

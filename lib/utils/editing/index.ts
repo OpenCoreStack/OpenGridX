@@ -1,13 +1,6 @@
-import type { GridCellParams, GridColDef, GridRowMeta, GridRowModel } from '../../types';
+import type { GridCellParams, GridRowMeta, GridRowModel } from '../../types';
 
-/** The value a cell displays and starts editing from: the `valueGetter` result, or `row[field]`. */
-export function getCellValue<R extends GridRowModel>(
-    row: R,
-    colDef: Pick<GridColDef<R>, 'field' | 'valueGetter'>
-): unknown {
-    const raw = row[colDef.field];
-    return colDef.valueGetter ? colDef.valueGetter({ row, field: colDef.field, value: raw }) : raw;
-}
+// Cells are read through the one `getCellValue` in `lib/utils/values`.
 
 export interface CellEditabilityParams<R extends GridRowModel = GridRowModel> extends GridCellParams<R> {
     rowMeta?: GridRowMeta;

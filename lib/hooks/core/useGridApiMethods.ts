@@ -6,10 +6,10 @@ import type {
     GridPaginationModel,
     GridRowId,
     GridRowModel,
-    GridSortDirection,
     GridSortItem,
 } from '../../types';
-import { nextSelectionForRows } from './useGridRowSelection';
+import { isSameSelection, nextSelectionForRows } from './useGridRowSelection';
+import { nextSortModelForColumn } from './useGridHeaderHandlers';
 
 export interface UseGridApiMethodsParams {
     apiRef: React.MutableRefObject<GridApi>;
@@ -33,6 +33,11 @@ export interface UseGridApiMethodsParams {
     getPendingRowSelectionModel?: () => GridRowId[] | null;
     onRowSelectionModelChange: (model: GridRowId[]) => void;
     disableMultipleRowSelection: boolean;
+    /**
+     * Rows the grid made (group headers, subtotals, auto-created parents, the pivot Grand Total):
+     * `selectRow` / `selectRows` ignore their ids, as the checkbox, click and keyboard paths do.
+     */
+    isSyntheticRowId?: (id: GridRowId) => boolean;
 
     /** Rows on screen: pinned top, the current page (or all rows), pinned bottom. */
     getVisibleRows: () => GridRowModel[];
@@ -40,21 +45,6 @@ export interface UseGridApiMethodsParams {
     getAllFilteredRows: () => GridRowModel[];
     /** Columns on screen, in display order. */
     visibleColumns: GridColDef[];
-}
-
-export function nextSortModelForColumn(
-    current: GridSortItem[],
-    field: string,
-    direction: GridSortDirection,
-    multiSort: boolean
-): GridSortItem[] {
-    if (!direction) return current.filter(item => item.field !== field);
-    if (!multiSort) return [{ field, sort: direction }];
-    const index = current.findIndex(item => item.field === field);
-    if (index === -1) return [...current, { field, sort: direction }];
-    const next = [...current];
-    next[index] = { field, sort: direction };
-    return next;
 }
 
 /**
@@ -104,8 +94,13 @@ export function useGridApiMethods(params: UseGridApiMethodsParams): void {
             return pending ? new Set(pending) : latest().selectedRowIds;
         };
         const setSelection = (ids: GridRowId[], isSelected: boolean) => {
-            const { disableMultipleRowSelection, onRowSelectionModelChange } = latest();
-            const next = nextSelectionForRows(currentSelection(), ids, isSelected, disableMultipleRowSelection);
+            const { disableMultipleRowSelection, onRowSelectionModelChange, isSyntheticRowId } = latest();
+            const dataIds = isSyntheticRowId ? ids.filter(id => !isSyntheticRowId(id)) : ids;
+            if (dataIds.length === 0) return;
+            const current = currentSelection();
+            const next = nextSelectionForRows(current, dataIds, isSelected, disableMultipleRowSelection);
+            // Like the UI paths, a call that changes nothing (selecting a selected row) reports nothing.
+            if (isSameSelection(current, next)) return;
             latestRef.current = { ...latest(), selectedRowIds: new Set(next) };
             onRowSelectionModelChange(next);
         };

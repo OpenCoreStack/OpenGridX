@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import type { MutableRefObject, RefObject } from 'react';
 import { scrollRowIntoView, scrollColumnIntoView } from '../../utils/scroll';
 import type { LayoutResult } from './useLayout';
@@ -11,12 +11,20 @@ export interface UseGridScrollToIndexesApiParams<R extends GridRowModel> {
     rowHeight: number;
 }
 
-/** Installs `scrollToIndexes` on the API. */
+/**
+ * Installs `scrollToIndexes` on the API, in a layout effect reading the latest layout from a ref,
+ * so it is live in a parent's layout effect and never scrolls by a previous render's layout.
+ */
 export function useGridScrollToIndexesApi<R extends GridRowModel>(params: UseGridScrollToIndexesApiParams<R>): void {
-    const { apiRef, viewportRef, layout, rowHeight } = params;
+    const { apiRef } = params;
+    const latestRef = useRef(params);
+    useLayoutEffect(() => {
+        latestRef.current = params;
+    });
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         apiRef.current.scrollToIndexes = ({ rowIndex, colIndex }) => {
+            const { viewportRef, layout, rowHeight } = latestRef.current;
             const el = viewportRef.current;
             if (!el) return;
 
@@ -33,5 +41,5 @@ export function useGridScrollToIndexesApi<R extends GridRowModel>(params: UseGri
                 scrollColumnIntoView(el, layout.unpinnedColsWithWidth.findIndex(c => c.field === targetCol.field), layout);
             }
         };
-    }, [layout, viewportRef, apiRef, rowHeight]);
+    }, [apiRef]);
 }

@@ -1,4 +1,5 @@
 import type { GridDetailPanelHeight, GridRowId, GridRowMeta } from '../types';
+import { callSafely } from './values';
 
 /** Panel height used when `getDetailPanelHeight` is omitted or returns something unusable. */
 export const DEFAULT_DETAIL_PANEL_HEIGHT = 200;
@@ -13,6 +14,23 @@ export function resolveDetailPanelHeight(height: GridDetailPanelHeight | string 
     const value = typeof height === 'string' ? Number.parseFloat(height) : height;
     if (typeof value === 'number' && Number.isFinite(value) && value >= 0) return value;
     return DEFAULT_DETAIL_PANEL_HEIGHT;
+}
+
+/**
+ * Calls `getDetailPanelHeight`; a callback that throws gets the default height (with a one-time
+ * dev warning) instead of crashing the grid. The layout and both row renderers call this.
+ */
+export function callGetDetailPanelHeight<P>(
+    getDetailPanelHeight: ((params: P) => GridDetailPanelHeight) | undefined,
+    params: P,
+): GridDetailPanelHeight | undefined {
+    if (!getDetailPanelHeight) return undefined;
+    return callSafely<GridDetailPanelHeight | undefined>(
+        () => getDetailPanelHeight(params),
+        undefined,
+        'getDetailPanelHeight',
+        'getDetailPanelHeight threw; the panel uses the default height',
+    );
 }
 
 /**

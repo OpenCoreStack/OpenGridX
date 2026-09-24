@@ -2,7 +2,7 @@ import React from 'react';
 import { Row } from '../Row/Row';
 import { DetailPanelContent } from '../DetailPanel/DetailPanelContent';
 import { SkeletonRow } from '../SkeletonRow';
-import { resolveDetailPanelHeight } from '../../utils/detailPanel';
+import { callGetDetailPanelHeight, resolveDetailPanelHeight } from '../../utils/detailPanel';
 import type {
     GridRowModel,
     GridRowId,
@@ -184,7 +184,7 @@ export function GridVirtualRows<R extends GridRowModel>({
                             hasDetailPanel={hasDetailPanel}
                             isDetailPanelExpanded={expandedRowIds.has(id)}
                             detailPanelContent={expandedRowIds.has(id) && getDetailPanelContent ? <DetailPanelContent<R> getContent={getDetailPanelContent} params={{ row, id, rowIndex: actualIndex }} /> : null}
-                            detailPanelHeight={expandedRowIds.has(id) ? resolveDetailPanelHeight(getDetailPanelHeight?.({ row, id: id, rowIndex: actualIndex })) : undefined}
+                            detailPanelHeight={expandedRowIds.has(id) ? resolveDetailPanelHeight(callGetDetailPanelHeight(getDetailPanelHeight, { row, id, rowIndex: actualIndex })) : undefined}
                             onDetailPanelHeightChange={onDetailPanelHeightChange}
                             onDetailPanelToggle={onDetailPanelToggle}
                             pinCheckboxColumn={pinCheckboxColumn}
