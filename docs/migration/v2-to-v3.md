@@ -1001,18 +1001,73 @@ CSS: `.ogx-col-group-row` no longer has `overflow: hidden`; new `ogx-col-group-c
 
 ## 25. Typing changes
 
-> **PLACEHOLDER — to be completed.** The row-typing / type-check work for 3.0.0 is still in progress. This section will list type-level changes (row generics, stricter prop types) and how to fix the resulting compile errors.
+Most of these make code compile that did not compile before. A few make code that used to compile (unchecked) into a type error, because the types now describe what the grid actually passes.
 
-Already known:
+### Your own row types now work
 
-- `slotProps.toolbar` is type-checked against `GridToolbarProps`: wrongly typed known keys are now errors (extra keys are still allowed).
-- `slots.pagination` is `ComponentType<PaginationProps & Record<string, unknown>>`.
+**What changed:** every public generic is constrained by `GridValidRowModel` (`object`) instead of `GridRowModel`. Interfaces and type aliases can be used as the row type without `extends GridRowModel` or an index signature, and an untyped `GridColDef[]` can be passed next to typed rows. The default row type is still `GridRowModel`, so untyped code is unchanged.
+
+| | v2 | v3 |
+| :--- | :--- | :--- |
+| `interface Employee { id: number; name: string }` as the row type | error: does not satisfy `GridRowModel` | compiles |
+| `const columns: GridColDef[] = …` with `rows: Employee[]` | TS2322 (the README example failed under `strict`) | compiles |
+| `renderCell` / `valueGetter` / `valueSetter` params with `GridColDef<Employee>` | only via index-signature workarounds | typed as `Employee` |
+| `getRowId` option of the export functions | `(row: GridRowModel)` | `(row: R)` |
+
+**Fix it:** remove workarounds such as `extends GridRowModel`, `[key: string]: unknown` added only for the grid, or `as unknown as GridColDef[]` casts.
+
+```tsx
+import { DataGrid } from '@opencorestack/opengridx';
+import type { GridColDef } from '@opencorestack/opengridx';
+
+interface Employee { id: number; name: string; salary: number }
+
+const columns: GridColDef<Employee>[] = [
+  { field: 'name', headerName: 'Name' },
+  { field: 'salary', valueFormatter: ({ row }) => `$${row.salary.toLocaleString()}` },
+];
+
+export function Staff({ rows }: { rows: Employee[] }) {
+  return <DataGrid rows={rows} columns={columns} />;
+}
+```
+
+### `DataGrid` has two overloads
+
+`DataGrid` is declared with a typed overload (`DataGridProps<R>`) and an untyped-columns overload (`DataGridUntypedColumnsProps<R>`). As a result, `React.ComponentProps<typeof DataGrid>` now resolves to the untyped overload. **Use `DataGridProps<R>`** when you need the props type (for a wrapper component, for example).
+
+```tsx
+import { DataGrid } from '@opencorestack/opengridx';
+import type { DataGridProps, GridValidRowModel } from '@opencorestack/opengridx';
+
+export function MyGrid<R extends GridValidRowModel>(props: DataGridProps<R>) {
+  return <DataGrid {...props} density="compact" />;
+}
+```
+
+### Slots are typed with the props the grid passes
+
+Each slot has an exported props type: `GridToolbarSlotProps`, `GridPaginationSlotProps`, `GridOverlaySlotProps` and `GridFooterSlotProps`. Slot components are checked against them.
+
+| | v2 | v3 |
+| :--- | :--- | :--- |
+| `slots.footer: ({ rowCount }: { rowCount: number }) => …` | error (slots were `ComponentType<Record<string, unknown>>`) | compiles, `rowCount` is checked |
+| Inline `slots.toolbar: (props) => …` | `props` untyped | `props` is `GridToolbarSlotProps` |
+| A slot with a **required** prop that only `slotProps` provides | compiled | error: make it optional, or close over the value in an inline slot |
+| A class / `memo` / `forwardRef` slot typed `Record<string, unknown>` | compiled | type it with the slot's props type |
+| Known keys in `slotProps.toolbar` / `pagination` / `footer` | unchecked | checked (extra keys still allowed) |
+
+### Other type-level changes
+
 - `groupingColDef` is `Partial<GridColDef<R>>`: `field` is no longer required (a dummy `field` still type-checks and is ignored).
 - `GridAggregationPosition` is `'inline' | 'footer' | null` (it was an unexported, unused `'footer' | 'inline' | 'both'`).
 - `useGridApiRef()` returns `MutableRefObject<GridApi>`, which type-checks against the `apiRef` prop under `@types/react` 18.
 - `GridInitialState` is an interface that accepts partial `columns`.
-- `GridFilterOperator` has five new members (see [§5](#5-filtering)).
-- `renderEditCell` takes `GridRenderEditCellParams`.
+- `GridFilterOperator` has five new members (see [§5](#5-filtering)); exhaustive `switch` statements need the new cases.
+- `renderEditCell` takes `GridRenderEditCellParams` (a superset of the old params).
+- The export option types are generic (`CsvExportOptions<R>`, `PdfExportOptions<R>`, …) and `UseAggregationParams<R>.columns` is `GridColDef<R>[]` (an overload still accepts `GridColDef[]`).
+- `GridApi` is not generic: its methods still return `GridRowModel`. `params.value` is still `unknown`; read typed values from `params.row`.
+- Removed unused, never-exported types from `lib/types`: `GridEditCellProps`, `GridRowModes`, `GridRowModesModel`, `GridDetailPanelContent`, `GridDetailPanelState`, `GridVirtualizationState`, `GridRenderContext`, `GridAggregationFunction`.
 
 ---
 

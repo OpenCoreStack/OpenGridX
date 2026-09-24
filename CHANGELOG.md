@@ -323,9 +323,14 @@ A correctness release: every feature area was audited against its documentation 
 
 ### Typing changes
 
-<!-- PLACEHOLDER: row-typing / typecheck work in progress. Fill in before release. -->
-
-_To be completed._
+- Rows can be typed with your own interfaces and type aliases: every public generic is constrained by the new `GridValidRowModel` (`object`) instead of `GridRowModel`, and an untyped `GridColDef[]` can be passed next to typed rows. The README example now compiles under `strict`.
+- `DataGrid` and the export functions, `usePivot` and `useAggregation` have a typed and an untyped-columns overload. Use `DataGridProps<R>` rather than `React.ComponentProps<typeof DataGrid>`.
+- `GridColDef` row callbacks are declared as methods, so `GridColDef<Row>` is assignable to `GridColDef`.
+- Slots are typed with the props the grid passes: new `GridToolbarSlotProps`, `GridPaginationSlotProps`, `GridOverlaySlotProps`, `GridFooterSlotProps`. Known `slotProps` keys are type-checked.
+- Export option types are generic (`CsvExportOptions<R>`, …), so `getRowId` receives your row type.
+- New root exports: `GridValidRowModel`, `DataGridUntypedColumnsProps` and the slot props types.
+- Removed unused, never-exported internal types (`GridEditCellProps`, `GridRowModes`, `GridRowModesModel`, `GridDetailPanelContent`, `GridDetailPanelState`, `GridVirtualizationState`, `GridRenderContext`, `GridAggregationFunction`).
+- The repository is type-checked in CI (`npm run typecheck`: library, tests and demo).
 
 ### Removed
 

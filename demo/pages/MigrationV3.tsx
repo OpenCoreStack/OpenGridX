@@ -286,10 +286,12 @@ export default function MigrationV3() {
 
             <section id="migration-v3-25" className="docs-section">
                 <h2 className="docs-h2">25. Typing changes</h2>
-                <p>
-                    <strong>Placeholder:</strong> the type-level changes of 3.0.0 (row generics, stricter prop types) are
-                    still being finalised and will be listed here.
-                </p>
+                <ul>
+                    <li>Rows can be your own interfaces or type aliases (constraint is now <code>GridValidRowModel</code>), and an untyped <code>GridColDef[]</code> works next to typed rows. Remove <code>extends GridRowModel</code> / index-signature workarounds.</li>
+                    <li><code>DataGrid</code> has two overloads: use <code>DataGridProps&lt;R&gt;</code> instead of <code>React.ComponentProps&lt;typeof DataGrid&gt;</code>.</li>
+                    <li>Slots are checked against <code>GridToolbarSlotProps</code>, <code>GridPaginationSlotProps</code>, <code>GridOverlaySlotProps</code> and <code>GridFooterSlotProps</code>. A slot prop that only <code>slotProps</code> provides must be optional.</li>
+                    <li><code>groupingColDef</code> no longer needs a <code>field</code>; export options&apos; <code>getRowId</code> takes your row type.</li>
+                </ul>
             </section>
 
             <section className="docs-section">
