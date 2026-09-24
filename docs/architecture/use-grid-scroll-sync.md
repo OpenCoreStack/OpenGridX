@@ -85,7 +85,7 @@ When a **vertical** scroll brings the viewport within 100px of the bottom (`scro
 
 ## Viewport remounts
 
-`attachViewport` is the viewport's callback ref (combined in `DataGrid` with `useGridViewportSize`, which attaches a `ResizeObserver` to every viewport element that mounts). When the viewport remounts (list view switched off again) it restores the last scroll position onto the new element; if the browser clamps it, the state is synced to the element.
+`attachViewport` is the viewport's callback ref (combined by `useGridViewport` with `useGridViewportSize`, which attaches a `ResizeObserver` to every viewport element that mounts). When the viewport remounts (list view switched off again) it restores the last scroll position onto the new element; if the browser clamps it, the state is synced to the element.
 
 ---
 

@@ -62,6 +62,7 @@ Make the grid your own.
 ## 🏛️ Architecture — Internal Hooks
 Reference for core hooks extracted from `DataGrid.tsx`. Intended for contributors.
 
+- **[DataGrid orchestration](architecture/datagrid-orchestration.md)** - Every hook `DataGrid.tsx` calls, in call order, and why the order matters
 - **[useGridControlledState](architecture/use-grid-controlled-state.md)** - Controlled/uncontrolled state for all 7 state pairs
 - **[useGridRowPipeline](architecture/use-grid-row-pipeline.md)** - Filter → pin → sort → paginate row pipeline
 - **[useGridVirtualization](architecture/use-grid-virtualization.md)** - Render context and scroll-position math

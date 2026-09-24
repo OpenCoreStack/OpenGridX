@@ -41,7 +41,7 @@ interface UseGridColumnsParams<R extends GridRowModel> {
 }
 ```
 
-> **`hasDetailPanel` is hoisted before the hook call in DataGrid.tsx** — it depends only on `getDetailPanelContent` (a prop), so it is computed as `Boolean(getDetailPanelContent)` immediately before `useGridColumns` is called.
+> **`hasDetailPanel` is resolved before the hook call** — it depends only on `getDetailPanelContent` (a prop): `useGridDetailPanel`, called just before `useGridColumns` in `DataGrid.tsx`, returns it as `Boolean(getDetailPanelContent)`.
 
 ---
 

@@ -49,7 +49,7 @@ export interface GridRowMeta {
 useTreeData / useRowGrouping
   └─ returns rowMetaMap: Map<GridRowId, GridRowMeta>
 
-DataGrid.tsx
+useGridHierarchy (called by DataGrid.tsx)
   └─ selects the active map (tree data XOR row grouping XOR empty)
   └─ uses rowMetaMap in:
        ├─ handleRowClick / selection / editing (skip or toggle synthetic rows)
