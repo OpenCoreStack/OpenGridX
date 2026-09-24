@@ -2,7 +2,7 @@ import React from 'react';
 import { Pagination } from '../Pagination/Pagination';
 import { ListViewRow } from '../ListView/ListViewRow';
 import { getPageCount, normalizePageSize } from '../../utils/pagination';
-import { getRowsScrollEndParams } from '../../utils/scroll/scrollEnd';
+import { useRowsScrollEndLatch } from '../../hooks/core/useRowsScrollEndLatch';
 import type {
     GridColDef,
     GridRowModel,
@@ -183,12 +183,7 @@ export function GridListView<R extends GridRowModel>({
         return pinnedTopRowCount + pagedRowCount + (centerIdx - centerRowsOnPage) + 1;
     };
 
-    const handleScroll = onRowsScrollEnd
-        ? (event: React.UIEvent<HTMLDivElement>) => {
-            const params = getRowsScrollEndParams(event.currentTarget);
-            if (params) onRowsScrollEnd(params);
-        }
-        : undefined;
+    const handleScroll = useRowsScrollEndLatch(onRowsScrollEnd, allRenderableRows.length);
 
     return (
         <div

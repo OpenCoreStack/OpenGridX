@@ -433,3 +433,17 @@ describe('exportToCsv — column type formatting', () => {
         expect((await csvLines())[1]).toBe(`${csvField(date.toLocaleDateString())},Yes,Active`);
     });
 });
+
+describe('grid system columns in exports', () => {
+    it('leaves out the checkbox, detail, drag-handle and grouping columns even without exportable: false', async () => {
+        const columns: GridColDef[] = [
+            { field: '__checkbox_col__' },
+            { field: '__expand_col__' },
+            { field: '__reorder_col__' },
+            { field: '__group__', headerName: 'Group' },
+            { field: 'name', headerName: 'Name' },
+        ];
+        exportToCsv([{ id: 1, name: 'Ann', __group__: 'x' }], columns);
+        expect(await csvLines()).toEqual(['Name', 'Ann']);
+    });
+});

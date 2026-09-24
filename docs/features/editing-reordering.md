@@ -10,7 +10,9 @@ OpenGridX supports inline cell editing. For a column to be editable, you must se
 
 ### Basic Setup
 ```tsx
-const columns = [
+import type { GridColDef } from '@opencorestack/opengridx';
+
+const columns: GridColDef[] = [
   { field: 'name', editable: true },
   { field: 'role', editable: true, type: 'singleSelect', valueOptions: ['Admin', 'Editor'] }
 ];
@@ -184,7 +186,7 @@ Use the `disableColumnReorder` prop to control this feature globally.
 Manage the order yourself with `columnOrder` and `onColumnOrderModelChange`, which receives the whole new order after every change: a header drag, a drag in the Columns panel, and the panel's **Reset**.
 
 ```tsx
-const [colOrder, setColOrder] = useState(['id', 'name', 'status']);
+const [colOrder, setColOrder] = useState<string[]>(['id', 'name', 'status']);
 
 <DataGrid
   columnOrder={colOrder}

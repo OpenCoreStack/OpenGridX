@@ -11,6 +11,7 @@ OpenGridX ships with a complete design-token system built on CSS custom properti
 
 ```tsx
 import { DataGrid, DataGridThemeProvider } from '@opencorestack/opengridx';
+import '@opencorestack/opengridx/styles'; // required: the tokens only take effect through the grid's stylesheet
 
 const myTheme = {
   colors: {
@@ -129,8 +130,8 @@ All sub-theme types (`GridThemeColors`, `GridThemeGrayScale`, `GridThemeTypograp
 
 | Token | Default | Description |
 |---|---|---|
-| `--ogx-font-family` | `'Inter', system-ui, sans-serif` | Primary UI font |
-| `--ogx-font-family-mono` | `'JetBrains Mono', 'Fira Code', monospace` | Monospace (code cells, IDs) |
+| `--ogx-font-family` | `'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', …, sans-serif` | Primary UI font |
+| `--ogx-font-family-mono` | `'JetBrains Mono', 'Fira Code', 'Courier New', Courier, monospace` | Monospace (code cells, IDs) |
 | `--ogx-font-size-xs` | `0.75rem` (12px) | Extra-small |
 | `--ogx-font-size-sm` | `0.875rem` (14px) | Small |
 | `--ogx-font-size-md` | `1rem` (16px) | Medium |

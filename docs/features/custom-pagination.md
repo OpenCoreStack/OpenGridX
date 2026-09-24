@@ -4,11 +4,22 @@ This guide shows how to use Ant Design (or any other UI library) components with
 
 ## Using Ant Design Select for Page Size
 
+Slots are typed `React.ComponentType<Record<string, unknown>>`, so the component takes `Record<string, unknown>` and narrows it to the props it reads (see [Slots API](../customization/slots-api.md#available-slots)).
+
 ```tsx
-import { Select } from 'antd';
+import { Pagination, Select } from 'antd';
 import { DataGrid } from '@opencorestack/opengridx';
 
-function AntdPaginationComponent(props) {
+type PaginationSlotProps = {
+    page: number;
+    pageSize: number;
+    rowCount: number;
+    pageSizeOptions: number[];
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (pageSize: number) => void;
+};
+
+function AntdPaginationComponent(props: Record<string, unknown>) {
     const {
         page,
         pageSize,
@@ -16,12 +27,15 @@ function AntdPaginationComponent(props) {
         pageSizeOptions,
         onPageChange,
         onPageSizeChange
-    } = props;
+    } = props as PaginationSlotProps;
 
-    const pageCount = Math.max(1, Math.ceil(rowCount / pageSize));
-    const currentPage = Math.min(page, pageCount - 1);
-    const firstRowIndex = currentPage * pageSize;
+    // Client-side, `page` is already clamped to the last page.
+    const firstRowIndex = page * pageSize;
     const lastRowIndex = Math.min(firstRowIndex + pageSize, rowCount);
+    // Show the page size in use even when it is not one of pageSizeOptions, as the built-in pager does.
+    const sizes = pageSizeOptions.includes(pageSize)
+        ? pageSizeOptions
+        : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
 
     return (
         <div style={{
@@ -38,7 +52,7 @@ function AntdPaginationComponent(props) {
                 <Select
                     value={pageSize}
                     onChange={onPageSizeChange}
-                    options={pageSizeOptions.map(size => ({
+                    options={sizes.map(size => ({
                         value: size,
                         label: size
                     }))}
@@ -47,11 +61,11 @@ function AntdPaginationComponent(props) {
             </div>
 
             {/* Row count */}
-            <span>{firstRowIndex + 1}–{lastRowIndex} of {rowCount}</span>
+            <span>{rowCount === 0 ? 0 : firstRowIndex + 1}–{lastRowIndex} of {rowCount}</span>
 
             {/* Ant Design Pagination */}
             <Pagination
-                current={currentPage + 1}
+                current={page + 1}
                 total={rowCount}
                 pageSize={pageSize}
                 onChange={(page) => onPageChange(page - 1)}
@@ -86,15 +100,16 @@ function MyApp() {
 
 ```tsx
 import { Select, MenuItem } from '@mui/material';
+// PaginationSlotProps: the type alias from the example above
 
-function MuiPaginationComponent(props) {
-    const { pageSize, pageSizeOptions, onPageSizeChange } = props;
+function MuiPaginationComponent(props: Record<string, unknown>) {
+    const { pageSize, pageSizeOptions, onPageSizeChange } = props as PaginationSlotProps;
 
     return (
         <div>
             <Select
                 value={pageSize}
-                onChange={(e) => onPageSizeChange(e.target.value)}
+                onChange={(e) => onPageSizeChange(Number(e.target.value))}
             >
                 {pageSizeOptions.map(size => (
                     <MenuItem key={size} value={size}>
@@ -111,18 +126,23 @@ function MuiPaginationComponent(props) {
 
 Your custom pagination component will receive these props:
 
-- `page`: Current page index (0-based)
-- `pageSize`: Current page size
-- `rowCount`: Total number of rows
-- `pageSizeOptions`: Array of available page sizes
+- `page`: Current page index (0-based). With client pagination it is clamped to the last page: when the rows shrink below the current page, the grid shows the last page and reports the corrected page once through `onPaginationModelChange`.
+- `pageSize`: Current page size. It may be a value missing from `pageSizeOptions` (the built-in pager then lists it as an extra option).
+- `rowCount`: Number of rows being paged: the filtered, unpinned rows (pinned rows show on every page), or the server total with `paginationMode="server"`.
+- `pageSizeOptions`: Array of available page sizes (default `[10, 25, 50, 100]`). The default page size is 100, or the first option when 100 is not offered.
 - `onPageChange(newPage: number)`: Callback to change page
-- `onPageSizeChange(newPageSize: number)`: Callback to change page size
+- `onPageSizeChange(newPageSize: number)`: Callback to change page size (also goes back to page 0)
+- `localeText`: `{ paginationRowsPerPage, paginationOf, paginationPage }`, passed only when the grid's `localeText` prop is set. The built-in pager uses `paginationRowsPerPage` as the select's label and accessible name.
 - Any additional props from `slotProps.pagination`
+
+The slot is rendered only while pagination is in effect: `pagination` is set, row grouping is off and `paginationMode` is not `"infinite"`. A `slots.footer` replaces it. List view uses it too.
 
 ## Other Customizable Slots
 
 ```tsx
 <DataGrid
+    rows={rows}
+    columns={columns}
     slots={{
         pagination: CustomPaginationComponent,
         noRowsOverlay: CustomNoRowsComponent,
@@ -140,4 +160,4 @@ Your custom pagination component will receive these props:
 
 ## Complete Example
 
-See `demo/examples/CustomPagination.tsx` for a complete working example.
+See `demo/examples/CustomPagination/CustomPagination.tsx` for a complete working example.

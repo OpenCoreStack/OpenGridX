@@ -10,7 +10,7 @@ Internal hook. Manages the full column lifecycle: injects hierarchy cell rendere
 
 Before extraction, ~195 lines of column management lived inline in `DataGrid.tsx`. Pulling them out gives this logic its own test surface and removes hierarchy rendering concerns from the main component.
 
-As a side effect of extraction, the `params.row as any` casts used to read internal row metadata (`_treeDepth`, `_hasChildren`, etc.) were replaced with typed `Record<string, unknown>` access, eliminating the only remaining `any` usages in the column rendering path.
+The injected hierarchy renderers read hierarchy metadata from `params.rowMeta` (the `GridRowMeta` entry from `rowMetaMap`), never from the row object: rows are the consumer's own objects and carry no `_treeDepth` / `_hasChildren` fields (removed in v3.0). See [GridRowMeta](grid-row-meta.md).
 
 ---
 
@@ -35,6 +35,7 @@ interface UseGridColumnsParams<R extends GridRowModel> {
     initialState?: GridInitialState;
     setColumns: (cols: GridColDef[]) => void; // state store updater from useDataGrid
     pinnedColumns?: GridColumnPinning;
+    getRowId?: (row: R) => GridRowId;         // id passed to toggleExpansion; defaults to row.id
     aggregationModel?: GridAggregationModel;  // formats aggregates on row-grouping group rows
     groupingRows?: ReadonlyMap<GridRowId, unknown>; // row grouping's synthetic group rows, by id
 }
@@ -49,9 +50,11 @@ interface UseGridColumnsParams<R extends GridRowModel> {
 ```ts
 interface UseGridColumnsResult<R extends GridRowModel> {
     effectiveColumns: GridColDef<R>[];   // hierarchy renderers injected
+    hierarchyField: string | undefined;  // the column that gets the expand toggle / indent / group label
     orderedColumns: GridColDef<R>[];     // sorted by effectiveColumnOrder
     visibleOrderedColumns: GridColDef<R>[];  // filtered by columnVisibilityModel
-    navigationColumns: Array<GridColDef<R> | { field: string }>;  // system + data cols
+    navigationColumns: Array<GridColDef<R> | { field: string; sortable: false; editable: false }>;  // system + visible data cols
+    columnIndexMap: Map<string, number>; // visible data column field -> public colIndex
     columnWidths: Record<string, number>;
     effectiveColumnOrder: string[];
     setInternalColumnOrder: React.Dispatch<...>;
@@ -68,13 +71,13 @@ interface UseGridColumnsResult<R extends GridRowModel> {
 
 When `isHierarchyEnabled` is `false`, `effectiveColumns` is `activeColumns` unchanged.
 
-When `true`, the first column gets a `renderCell` override that:
-1. Reads internal row metadata via `row as Record<string, unknown>` (no `any`)
-2. Renders indented padding (`depth * 24px`) for tree nesting
-3. Shows an `<ExpandIcon>` if the row has children
-4. Overrides the cell content for row-grouping header rows (shows group label + count)
+When `true`, the **hierarchy column** (`hierarchyField`) is the leftmost column actually on screen: the first visible column in render order (left-pinned in `pinnedColumns.left` order, then unpinned in column order, then right-pinned). Hiding, reordering or pinning columns therefore moves the toggle instead of dropping it. That column gets a `renderCell` override that:
+1. Reads `params.rowMeta` (`treeDepth`, `hasChildren`, `isExpanded`, `isGroupRow`, `groupLabel`, `descendantCount`, …)
+2. Renders indented padding (`treeDepth * 24px`)
+3. Shows an `<ExpandIcon>` if the row has children; clicking it calls `toggleExpansion(getRowId(row))`
+4. Renders the content next to it: the consumer's `renderCell` output if the column has one (isolated in its own `CellErrorBoundary`, so a throw keeps the toggle), otherwise the default — `params.formattedValue` for data rows, the group label plus `(count)` for row-grouping group rows and tree-data parents, nothing for subtotal (group footer) rows. For a synthetic row, a consumer `renderCell` returning `undefined` falls back to the default.
 
-All other columns get a `renderCell` wrapper that returns `null` for row-grouping header rows when the column is the grouping field, hiding duplicated values.
+All other columns get a `renderCell` wrapper. Data rows use the column's own `renderCell` or `params.formattedValue`. On synthetic group rows the consumer's `renderCell` decides (`undefined` keeps the default); by default the grouping-field column is empty (the label already shows the value) and other columns show their value (the aggregate) or nothing.
 
 Under row grouping, a column with an `aggregationModel` entry also gets `valueGetter` / `valueFormatter` wrappers for group rows (identified through `groupingRows`): the cell shows the aggregate stored on the group row (a `valueGetter` would recompute it from fields a group row does not have), formatted with `formatAggregateForColumn`, the formatter the footer, pivot cells and exports use (so `count` / `unique` are never put in the column's currency or unit format). Leaf rows keep the column's own getter and formatter.
 

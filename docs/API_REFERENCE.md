@@ -135,7 +135,7 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `onRowsScrollEnd` | `(params: GridRowScrollEndParams) => void` | — | Fired once each time the viewport comes within 100px of the bottom of the rows: after a vertical scroll, and also when the rows change while the end is in view (including rows that do not fill the viewport). It fires again only after the viewport leaves that zone or the row count changes; horizontal scrolling never fires it. In `listView` it fires on every scroll event within 100px of the bottom of the list. Use it to load the next page in infinite-scroll mode. |
+| `onRowsScrollEnd` | `(params: GridRowScrollEndParams) => void` | — | Fired once each time the viewport comes within 100px of the bottom of the rows: after a vertical scroll, and also when the rows change while the end is in view (including rows that do not fill the viewport). It fires again only after the viewport leaves that zone or the row count changes; horizontal scrolling never fires it. `listView` follows the same once-per-arrival rule for its list (it re-arms when the list leaves the zone or the row count changes). Use it to load the next page in infinite-scroll mode. |
 
 #### Accessibility & Appearance
 

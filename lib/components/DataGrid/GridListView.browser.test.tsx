@@ -36,4 +36,32 @@ describe('DataGrid list view scrolling', () => {
         expect(params.viewportHeight).toBe(list.clientHeight);
         expect(params.visibleBottom).toBe(list.scrollTop + list.clientHeight);
     });
+
+    it('fires onRowsScrollEnd once per arrival at the bottom, like the grid view', async () => {
+        const onRowsScrollEnd = vi.fn();
+        const { container } = render(
+            <div style={{ height: 300, width: 600, display: 'flex', flexDirection: 'column' }}>
+                <DataGrid rows={ROWS} columns={COLS} height={300} listView onRowsScrollEnd={onRowsScrollEnd}
+                    listViewColumn={{ field: 'name', renderCell: (p) => <div style={{ height: 40 }}>{String(p.row.name)}</div> }} />
+            </div>
+        );
+        const list = container.querySelector<HTMLElement>('.ogx-list-view__rows')!;
+        const scrollTo = async (top: number) => {
+            await act(async () => {
+                list.scrollTop = top;
+                list.dispatchEvent(new Event('scroll'));
+                await new Promise(r => setTimeout(r, 30));
+            });
+        };
+        const bottom = list.scrollHeight - list.clientHeight;
+        await scrollTo(bottom);
+        await scrollTo(bottom - 10);
+        await scrollTo(bottom - 20);
+        expect(onRowsScrollEnd).toHaveBeenCalledTimes(1);
+
+        // Leaving the end zone re-arms it.
+        await scrollTo(0);
+        await scrollTo(bottom);
+        expect(onRowsScrollEnd).toHaveBeenCalledTimes(2);
+    });
 });

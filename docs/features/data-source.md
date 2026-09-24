@@ -1,15 +1,17 @@
 # 🌐 Server-Side Data Source
 
-Handle millions of rows by connecting OpenGridX directly to your backend API.
+Connect OpenGridX to your backend API so the server does the sorting, filtering and paging.
 
 ---
 
 ## 📑 The `GridDataSource` Interface
 
-The `dataSource` prop is the gateway to server-side operations. When provided, the grid becomes a "thin client" that requests only the data it needs to render the current viewport.
+The `dataSource` prop is the gateway to server-side operations. The grid calls `getRows` with a row range and the current sort, filter and aggregation models, and shows the rows it returns. Requests are page-based (see *Modes of Operation*), not driven by the scroll position.
 
 ### Implementation
 ```tsx
+import { DataGrid, type GridDataSource } from '@opencorestack/opengridx';
+
 const myDataSource: GridDataSource = {
   getRows: async (params) => {
     const { startRow, endRow, sortModel, filterModel } = params;
@@ -23,12 +25,20 @@ const myDataSource: GridDataSource = {
     
     return {
       rows: data.items,
-      rowCount: data.totalCount // Required for stable pagination
+      rowCount: data.totalCount // the total, used by the pager with paginationMode="server"
     };
   }
 };
 
-<DataGrid dataSource={myDataSource} />
+<DataGrid
+  rows={[]}
+  columns={columns}
+  dataSource={myDataSource}
+  pagination
+  paginationMode="server"
+  sortingMode="server"
+  filterMode="server"
+/>
 ```
 
 ---

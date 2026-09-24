@@ -11,6 +11,11 @@ Enable List View by passing the `listView` prop. You must also provide a `listVi
 List view honours `loading`, `slots.loadingOverlay`, `slots.noRowsOverlay` and `slots.footer` like the grid view: while loading it shows a progress bar (or your loading overlay) rather than the empty state, and `slots.footer` replaces its pagination controls.
 
 ```tsx
+import { DataGrid, type GridListViewColDef } from '@opencorestack/opengridx';
+
+// A `type` alias: an `interface` does not satisfy GridRowModel's index signature.
+type Employee = { id: number; name: string; role: string; status: string; avatar: string };
+
 const listColDef: GridListViewColDef<Employee> = {
   field: 'card',
   renderCell: (params) => <MyEmployeeCard row={params.row} />
@@ -49,7 +54,7 @@ The `renderCell` function in `listViewColumn` receives all standard `GridRenderC
 `renderCell` only ever receives real rows: while an infinite-scroll page loads, no placeholder rows are passed to it.
 
 ```tsx
-function MyEmployeeCard({ row }) {
+function MyEmployeeCard({ row }: { row: Employee }) {
   return (
     <div className="employee-card">
        <Avatar src={row.avatar} />
@@ -69,7 +74,9 @@ function MyEmployeeCard({ row }) {
 
 List view pages exactly like the grid view: with `pagination`, one page of the (unpinned) rows is shown between any pinned rows, also under tree data. The summary line above the list reads `N items · page X of Y`, where under server pagination (`paginationMode="server"` with a `dataSource`) `N` and the page count come from the server's `rowCount`.
 
-`onRowsScrollEnd` fires when the list is scrolled to within 100px of its bottom, as it does for the grid viewport, so the [infinite scroll](./infinite-scroll.md) pattern works in list view too.
+`onRowsScrollEnd` fires when the list is scrolled to within 100px of its bottom, so the [infinite scroll](./infinite-scroll.md) pattern works in list view too. As in the grid view, it fires once per arrival: it fires again only after the list leaves that zone or the row count changes (for example, when the next page has loaded).
+
+The list view is **not virtualized**: it renders every row it shows (one page with `pagination`, otherwise all rows). Use pagination for large datasets. `slots.footer` is rendered below the list (in place of its pagination controls); the aggregation footer row is not shown in list view.
 
 ## ♿ Accessibility
 
@@ -98,10 +105,12 @@ Keys pressed in content your `renderCell` puts in a row (inputs, buttons) are le
 A common pattern is to toggle List View based on screen width:
 
 ```tsx
-const isMobile = window.innerWidth < 768;
+const isMobile = window.innerWidth < 768; // read once; use a resize listener or matchMedia to follow changes
 
 <DataGrid
+  rows={rows}
+  columns={columns}
   listView={isMobile}
-  // ...
+  listViewColumn={listColDef}
 />
 ```

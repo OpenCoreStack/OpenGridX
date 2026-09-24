@@ -51,11 +51,13 @@ useTreeData / useRowGrouping
 
 DataGrid.tsx
   └─ selects the active map (tree data XOR row grouping XOR empty)
-  └─ passes rowMetaMap to:
-       ├─ useGridColumns (reads meta for hierarchy cell renderers)
-       └─ GridVirtualRows / GridPinnedRows
-            └─ Row (resolves meta per row: rowMetaMap.get(row.id))
+  └─ uses rowMetaMap in:
+       ├─ handleRowClick / selection / editing (skip or toggle synthetic rows)
+       └─ GridVirtualRows / GridPinnedRows / GridListView
+            (resolve meta per row: rowMetaMap.get(id), id = getRowId(row))
+            └─ Row (rowMeta prop)
                  └─ Cell (passes rowMeta into GridRenderCellParams)
+                      └─ renderCell, including the hierarchy renderers useGridColumns injects (read params.rowMeta)
 ```
 
 ---
@@ -66,9 +68,9 @@ DataGrid.tsx
 renderCell: (params) => {
   // params.rowMeta is undefined for flat rows
   if (params.rowMeta?.hasChildren) {
-    return <strong>{params.value} ({params.rowMeta.descendantCount})</strong>;
+    return <strong>{params.formattedValue} ({params.rowMeta.descendantCount})</strong>;
   }
-  return params.value;
+  return params.formattedValue;
 }
 ```
 
@@ -92,4 +94,9 @@ From v1.1 to v2.x, `useTreeData` and `useRowGrouping` still copied each row and 
 
 ## Non-hierarchy rows
 
-`params.rowMeta` is `undefined` when no tree-data or row-grouping is active, and for any row that is not part of the hierarchy (plain data rows rendered within a group). Always guard: `params.rowMeta?.hasChildren`.
+`params.rowMeta` is `undefined` when no tree-data or row-grouping is active. While a hierarchy is active, **every** row rendered in it has an entry, data rows included:
+
+- Row grouping: a leaf (data) row has `{ hasChildren: false, treeDepth, isGroupRow: false }`; group rows add `groupingField`, `groupingValue`, `groupLabel`, `descendantCount` and `isExpanded`; subtotal rows are like their group row with `isGroupFooter: true`, `hasChildren: false` and `treeDepth + 1`.
+- Tree data: every node has `hasChildren`, `treeDepth`, `descendantCount`, `isGroupRow` and `isExpanded`; auto-created parents also have `groupLabel`.
+
+Still guard with optional chaining (`params.rowMeta?.hasChildren`) so the same `renderCell` works with and without a hierarchy.

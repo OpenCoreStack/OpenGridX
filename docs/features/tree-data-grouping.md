@@ -12,6 +12,7 @@ Row grouping allows you to categorize rows based on common column values.
 ```tsx
 <DataGrid
   rows={rows}
+  columns={columns}
   rowGroupingModel={['department', 'role']}
 />
 ```
@@ -19,7 +20,8 @@ Row grouping allows you to categorize rows based on common column values.
 ### Features
 - **Multi-Level Groups**: Nest data as deeply as needed — one level per field in `rowGroupingModel`, in order.
 - **Aggregation Integration**: Summarize values automatically for each group level.
-- **Expansion Control**: Control which groups are expanded by default.
+- **Expansion Control**: `defaultGroupingExpansionDepth` sets how many levels start expanded (default `0`: all collapsed; `-1`: everything expanded).
+- **Aggregate placement**: `getAggregationPosition(node)` returns `'inline'` (on the group row, the default), `'footer'` (a subtotal row after the group's children while it is expanded) or `null` (hidden). It is also called once with `null` for the grand-total footer row; returning `null` there hides the footer.
 
 ### Behaviour to know about
 
@@ -45,12 +47,14 @@ Tree data is used for data that has a natural parent-child relationship (e.g., a
 
 ### Implementation
 1. Enable `treeData={true}`.
-2. Provide a `getTreeDataPath` function to define the hierarchy.
+2. Provide a `getTreeDataPath` function to define the hierarchy. It is required: without it the rows are shown flat. Define it at module scope or with `useCallback`.
 
 ```tsx
 <DataGrid
+  rows={rows}
+  columns={columns}
   treeData
-  getTreeDataPath={(row) => row.hierarchyPath} // e.g. ['CEO', 'VP Engineering', 'Manager']
+  getTreeDataPath={getPath} // e.g. (row) => row.hierarchyPath: ['CEO', 'VP Engineering', 'Manager']
 />
 ```
 
@@ -73,15 +77,18 @@ Tree data is used for data that has a natural parent-child relationship (e.g., a
 | :--- | :--- | :--- | :--- |
 | `rowGroupingModel` | `string[]` | `[]` | Fields to group by (in order). |
 | `treeData` | `boolean` | `false` | Enable tree data mode. |
-| `getTreeDataPath` | `(row) => string[]` | `undefined` | Function to get the path for a row. |
-| `defaultGroupingExpansionDepth` | `number` | `0` | How many levels to expand on load. |
-| `groupingColDef` | `GridColDef` | `undefined` | Custom configuration for the generated group column. |
+| `getTreeDataPath` | `(row) => string[]` | `undefined` | Path of a row. Required with `treeData`. |
+| `defaultGroupingExpansionDepth` | `number` | `0` | How many levels start expanded (`0` = collapsed, `-1` = all). |
+| `groupingColDef` | `Partial<GridColDef<R>>` | `undefined` | Adds a dedicated group column (row grouping or tree data). |
+| `getAggregationPosition` | `(node: GridTreeNode \| null) => 'inline' \| 'footer' \| null` | `undefined` | Where group aggregates appear; called with `null` for the grand total. |
+
+Hierarchy information is never written onto your row objects: read it from `params.rowMeta` (`isGroupRow`, `hasChildren`, `treeDepth`, `groupLabel`, …) in `renderCell`. See [GridRowMeta](../architecture/grid-row-meta.md).
 
 ---
 
 ## 🎨 Customizing the Group Column
 
-When `rowGroupingModel` or `treeData` is active, pass `groupingColDef` to configure a dedicated `__group__` column that is prepended at position 0 and auto-pinned left, separate from your data columns. It accepts any `GridColDef` fields except `field` (always `'__group__'`). With tree data (v3.0) the column shows the last segment of each row's path, and a `valueGetter` in `groupingColDef` can show something else (for example the whole path).
+When `rowGroupingModel` or `treeData` is active, pass `groupingColDef` to configure a dedicated `__group__` column that is prepended at position 0 and auto-pinned left, separate from your data columns. Its type is `Partial<GridColDef<R>>`: every key is optional, and a `field` you pass is ignored (it is always `'__group__'`). It also forces `hideable`, `sortable`, `filterable`, `pinnable` and `exportable` to `false`. Defaults: `headerName: 'Group'`, `width: 220`. With tree data (v3.0) the column shows the last segment of each row's path, and a `valueGetter` in `groupingColDef` can show something else (for example the whole path).
 
 ```tsx
 <DataGrid

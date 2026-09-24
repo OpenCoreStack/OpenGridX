@@ -1,6 +1,7 @@
 import type { GridAggregationModel, GridColDef, GridGroupedExportRow, GridRowId, GridRowModel } from '../../types';
 import { computeAggregations, formatAggregateForColumn } from '../aggregation';
 import { formatValueByType } from '../values';
+import { isSystemField } from '../focus';
 
 /**
  * Helpers shared by every exporter (CSV, HTML .xls, JSON, print, PDF and advanced XLSX), so the
@@ -9,13 +10,20 @@ import { formatValueByType } from '../values';
 
 type SelectedRowIds = readonly (string | number)[] | undefined;
 
+/**
+ * Fields the grid generates itself and never exports: the checkbox, detail-panel and drag-handle
+ * columns, and the row-grouping `__group__` column (grouped exports write group labels from
+ * `groupedRows` instead). `__check__` / `__actions__` are older names kept for compatibility.
+ */
+const NON_EXPORTED_FIELDS = new Set(['__group__', '__check__', '__actions__']);
+
 /** Columns that appear in an export: not `exportable: false`, not a spacer, not a system column. */
 export function getExportColumns<R extends GridRowModel>(columns: GridColDef<R>[]): GridColDef<R>[] {
     return columns.filter(col =>
         col.exportable !== false &&
         !col.isSpacer &&
-        col.field !== '__check__' &&
-        col.field !== '__actions__'
+        !isSystemField(col.field) &&
+        !NON_EXPORTED_FIELDS.has(col.field)
     );
 }
 

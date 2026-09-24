@@ -18,14 +18,10 @@ npm install @opencorestack/opengridx
 
 ```tsx
 import { DataGrid } from '@opencorestack/opengridx';
+import '@opencorestack/opengridx/styles';
 ```
 
-> **Styles:** The CSS is bundled as a separate file (`opengridx.css`) alongside the JS. It is imported automatically via the package barrel in most setups.
-> However, **if your grid appears unstyled** (Vite, Next.js App Router, or SSR environments sometimes skip side-effect CSS auto-detection), add this explicit import once — typically in your app's root file (`main.tsx` / `layout.tsx`):
->
-> ```tsx
-> import '@opencorestack/opengridx/styles';
-> ```
+> **Import the styles.** The CSS ships as a separate file (`dist/opengridx.css`) and the JavaScript bundle does **not** load it. Import `@opencorestack/opengridx/styles` once, typically in your app's root file (`main.tsx`, `App.tsx` or Next.js `layout.tsx`). Without it the grid is unstyled and, because the viewport's scrolling comes from the stylesheet, it grows to fit every row and virtualization stops working. Development builds log a one-time `[OpenGridX] The grid stylesheet is not loaded` warning when this happens.
 
 ---
 
@@ -33,7 +29,8 @@ import { DataGrid } from '@opencorestack/opengridx';
 ## ⚡ Basic Example
 
 ```tsx
-import { DataGrid, GridColDef } from '@opencorestack/opengridx';
+import { DataGrid, type GridColDef } from '@opencorestack/opengridx';
+import '@opencorestack/opengridx/styles';
 
 const columns: GridColDef[] = [
   { field: 'id',         headerName: 'ID',         width: 70 },
@@ -63,23 +60,25 @@ export default function App() {
 }
 ```
 
+Give the grid a bounded height (`height`, or a parent with a definite height; a flex child needs `min-height: 0`). In an unbounded container every row is rendered.
+
 ---
 
 ## 🚀 Key Features
 
-- **High-Performance Virtualization**: Custom-built engine handling 100,000+ rows at 60fps.
+- **High-Performance Virtualization**: Row and column virtualization for 100,000+ rows. (Browsers cap an element's height, so a single scrolling grid reaches about 645,000 rows at the default 52 px row height; page or stream larger datasets.)
 - **Advanced Layouts**: Native support for **Row & Column Spanning**, Grouping, and Tree Data.
-- **Data Orchestration**: 11+ filter operators, multi-column sorting, and robust pagination.
+- **Data Orchestration**: 19 filter operators across string, number, date, boolean and select columns, AND/OR filter groups, multi-column sorting, and client or server pagination.
 - **Zero UI Dependencies**: 100% vanilla CSS (BEM) and pure React/TypeScript logic.
-- **Skeleton Loader**: Built-in animated loading states with smart column detection.
+- **Skeleton Loader**: Built-in animated skeleton rows that follow the current columns.
 - **Fully Customizable**: Slots system for replacing any component (pagination, overlays, toolbar).
-- **Export Functionality**: Built-in CSV, Excel, JSON, and Print export.
-- **Clipboard**: `Ctrl+C` / `Cmd+C` copies selected rows as TSV for Excel/Sheets.
+- **Export Functionality**: Built-in CSV, Excel (HTML `.xls`, or real `.xlsx` with the optional ExcelJS peer), JSON, PDF (optional jsPDF peer) and Print export.
+- **Clipboard**: `Ctrl+C` / `Cmd+C` copies the selected rows' visible columns as TSV for Excel/Sheets.
 - **Accessibility**: WCAG 2.1 AA — full ARIA roles and keyboard navigation.
-- **Theming**: CSS variable API with 5 built-in themes + custom theme support.
+- **Theming**: CSS variable API, `DataGridThemeProvider` with 5 built-in themes (`darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compactTheme`) and custom themes.
 - **Column & Row Reordering**: Drag-and-drop column reordering and row reordering.
 - **Inline Cell Editing**: Full inline editing with `processRowUpdate` validation.
-- **State Persistence**: Save and restore grid state (sort, filter, columns) via `useGridStateStorage`.
+- **State Persistence**: Save and restore grid state (sort, filter, pagination, columns, density) via `useGridStateStorage`.
 - **AI-Native Integration**: Shipped with raw `lib/` source and `docs/` inside the npm package, allowing AI agents (Cursor, Copilot, Windsurf) to flawlessly implement features by "seeing" the internal logic.
 
 ---
@@ -100,21 +99,27 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `rows` | `GridRowModel[]` | — | **Required.** Array of data rows. |
+| `rows` | `GridRowModel[]` | — | **Required.** Array of data rows. The grid never modifies or copies them. |
 | `columns` | `GridColDef[]` | — | **Required.** Column definitions. |
-| `height` | `number \| string` | `500` | Grid height in pixels or CSS string (e.g. `'100%'`). |
-| `autoHeight` | `boolean` | `false` | Expands grid height to fit all rows. |
-| `loading` | `boolean` | `false` | Shows skeleton loader when `true`. |
-| `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density. |
+| `height` | `number \| string` | — | Grid height in pixels or a CSS string (e.g. `'100%'`). No default: without it the grid takes its container's height, and needs a bounded container to virtualize. |
+| `autoHeight` | `boolean` | `false` | Grows the grid to fit all rows (renders every row). |
+| `loading` | `boolean` | `false` | With no rows, shows skeleton rows (or `slots.loadingOverlay`). With rows shown, keeps them and runs a progress bar along the top (or shows `slots.loadingOverlay` over them). Works in list view too. |
+| `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Row height preset: 32 px, `rowHeight`, 72 px. |
+| `overscanRowCount` | `number` | `3` | Minimum rows rendered outside the viewport; raised automatically while scrolling fast. |
 | `checkboxSelection` | `boolean` | `false` | Enables checkbox column for row selection. |
-| `pagination` | `boolean` | `false` | Enables client-side pagination. |
-| `paginationModel` | `{ page: number; pageSize: number }` | — | Controlled pagination state. |
+| `pagination` | `boolean` | `false` | Enables the pager. Ignored under row grouping and with `paginationMode="infinite"`. |
+| `paginationModel` | `{ page: number; pageSize: number }` | — | Controlled pagination state (pair with `onPaginationModelChange`). |
 | `onPaginationModelChange` | `(model) => void` | — | Fires on page or page size change. |
-| `pageSizeOptions` | `number[]` | `[10, 25, 50]` | Available page size options. |
+| `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. |
 | `getRowId` | `(row) => GridRowId` | `row.id` | Custom row ID accessor. |
 | `rowHeight` | `number` | `52` | Row height in pixels. |
 | `headerHeight` | `number` | `56` | Header height in pixels. |
-| `noRowsLabel` | `string` | — | Custom empty-state message. |
+| `noRowsLabel` | `string` | `'No Data'` | Custom empty-state message. |
+| `localeText` | `GridLocaleText` | — | Overrides for the pager and empty-state strings (i18n). |
+| `ariaLabel` | `string` | — | Accessible name for the grid. |
+| `initialState` | `GridInitialState` | — | Starting sort, filter, pagination, column and density state (uncontrolled). |
+| `onStateChange` | `(state: GridState) => void` | — | Fires when sort, filter, pagination, columns or density change. |
+| `apiRef` | `MutableRefObject<GridApi>` | — | Imperative API; create it with `useGridApiRef()`. |
 | `className` | `string` | — | Custom CSS class on the grid container. |
 | `style` | `React.CSSProperties` | — | Custom inline styles on the grid container. |
 
@@ -125,22 +130,24 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `field` | `string` | — | **Required.** Must match the row object key. |
 | `headerName` | `string` | — | Header label text. |
 | `description` | `string` | — | Tooltip on header hover. |
-| `width` | `number \| string` | `100` | Fixed width in px. |
-| `flex` | `number` | — | Flex-grow weight — fills remaining space. Cannot be combined with `width`. |
-| `minWidth` | `number` | — | Minimum width in px, enforced during resize. |
-| `maxWidth` | `number` | — | Maximum width in px, enforced during resize. |
+| `width` | `number \| string` | — | Width in px, or a percentage string such as `'20%'`. A column with neither `width` nor `flex` behaves like `flex: 1`. |
+| `flex` | `number` | — | Flex-grow weight — shares the space left after fixed and percentage columns. When set, `width` is ignored. |
+| `minWidth` | `number` | — | Minimum width in px (layout and resizing; resizing defaults to 50). |
+| `maxWidth` | `number` | — | Maximum width in px (layout and resizing). |
 | `align` | `'left' \| 'center' \| 'right'` | `'left'` | Cell content alignment. |
 | `headerAlign` | `'left' \| 'center' \| 'right'` | `'left'` | Header content alignment. |
 | `type` | `'string' \| 'number' \| 'date' \| 'boolean' \| 'singleSelect' \| 'image'` | `'string'` | Drives filter operators and, without a `valueFormatter`, the cell text: local date, Yes / No, `singleSelect` label, `<img>` for `image`. |
 | `valueOptions` | `Array<string \| number \| { value, label }>` | — | Options list for `type: 'singleSelect'`. |
 | `editable` | `boolean` | `false` | Enables inline cell editing. Pair with `processRowUpdate`. |
-| `valueGetter` | `(params) => unknown` | — | Derive a computed cell value from the row. |
-| `valueFormatter` | `(params) => string` | — | Format the display string (does not affect edit or sort). |
+| `valueGetter` | `(params) => unknown` | — | Derive a computed cell value from the row. Sorting, filtering, quick search, aggregation, copy and export use it. |
+| `valueSetter` | `(params) => row` | — | Maps an edited value back onto the row, for editable `valueGetter` columns. |
+| `valueFormatter` | `(params) => string` | — | Format the display string (does not affect edit or sort; quick search also matches it). |
 | `renderCell` | `(params) => ReactNode` | — | Fully custom cell renderer. |
 | `renderHeader` | `(params) => ReactNode` | — | Custom header cell renderer. |
 | `renderEditCell` | `(params) => ReactNode` | — | Custom editor rendered in edit mode. |
 | `cellClassName` | `string \| ((params) => string)` | — | CSS class on every cell; use a function for conditional per-row styling. |
 | `headerClassName` | `string` | — | CSS class on the header cell. |
+| `groupingValueFormatter` | `({ field, value }) => string` | — | Label for group rows when grouping by this column (default `"field: value"`). |
 | `colSpan` | `number \| ((params) => number)` | — | Merge cells horizontally. |
 | `rowSpan` | `number \| ((params) => number)` | — | Merge cells vertically. |
 | `sortable` | `boolean` | `true` | Enable/disable column sorting. |
@@ -150,8 +157,8 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `pinnable` | `boolean` | `true` | Allow pinning via the UI. |
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header context menu. |
 | `exportable` | `boolean` | `true` | Set to `false` to exclude from all exports. |
-| `groupable` | `boolean` | `true` | Allow as a row grouping dimension. |
-| `aggregable` | `boolean` | `true` | Allow aggregation on this column. |
+| `groupable` | `boolean` | `true` | Set to `false` to skip this column in `rowGroupingModel` and the pivot panel. |
+| `aggregable` | `boolean` | — | `false` keeps the column out of aggregation. The Summaries panel offers `number` columns, plus any column with `aggregable: true`. |
 | `availableAggregationFunctions` | `string[]` | all | Restrict which aggregation functions are offered. |
 
 ### Selection
@@ -162,7 +169,8 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `onRowSelectionModelChange` | `(model: GridRowId[]) => void` | Fires on selection change. |
 | `disableRowSelectionOnClick` | `boolean` | Prevent row click from toggling selection. |
 | `disableMultipleRowSelection` | `boolean` | Restrict to single-row selection. |
-| `pinCheckboxColumn` | `boolean` | Keeps the checkbox column visible during horizontal scroll. |
+| `pinCheckboxColumn` | `boolean` | Keeps the checkbox column visible during horizontal scroll. Default `true`. |
+| `disableClipboardCopy` | `boolean` | Turns off the grid's Ctrl/Cmd+C copy (`apiRef.current.copySelectedRows()` still works). |
 
 ### Sorting & Filtering
 
@@ -172,7 +180,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `onSortModelChange` | `(model: GridSortItem[]) => void` | Fires on sort change. |
 | `filterModel` | `GridFilterModel` | Controlled filter model. |
 | `onFilterModelChange` | `(model: GridFilterModel) => void` | Fires on filter change. |
-| `disableColumnFilter` | `boolean` | Disables column-level filtering. |
+| `multiSort` | `boolean` | Every header click adds to the sort instead of replacing it (Shift+click always does). |
 
 ### Columns
 
@@ -189,9 +197,10 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 
 | Prop | Type | Description |
 | :--- | :--- | :--- |
-| `onRowClick` | `(params: GridRowParams) => void` | Fires when a row is clicked. |
+| `onRowClick` | `(params: GridRowParams) => void` | Fires when a row is clicked (or Enter is pressed on a non-editable cell). |
+| `onRowDoubleClick` | `(params: GridRowParams) => void` | Fires when a row is double-clicked. |
 | `onCellClick` | `(params: GridCellParams) => void` | Fires when a cell is clicked. |
-| `onRowsScrollEnd` | `(params: GridRowScrollEndParams) => void` | Fires when scrolling reaches the bottom. |
+| `onRowsScrollEnd` | `(params: GridRowScrollEndParams) => void` | Fires once each time scrolling reaches the bottom. |
 
 ### Server-Side
 
@@ -201,7 +210,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `sortingMode` | `'client' \| 'server'` | Where sorting is applied. |
 | `filterMode` | `'client' \| 'server'` | Where filtering is applied. |
 | `dataSource` | `GridDataSource` | Server-side data adapter. |
-| `rowCount` | `number` | Total rows for server-side pagination. |
+| `rowCount` | `number` | Total rows for `paginationMode="server"` without a `dataSource` (with one, the response's `rowCount` wins). |
 
 ### Pinning
 
@@ -209,8 +218,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | :--- | :--- | :--- |
 | `pinnedColumns` | `GridColumnPinning` | Pin columns to `left` or `right`. |
 | `onPinnedColumnsChange` | `(model) => void` | Fires when column pinning changes. |
-| `pinnedRows` | `GridRowPinning` | Pin rows to `top` or `bottom`. |
-| `onPinnedRowsChange` | `(model) => void` | Fires when row pinning changes. |
+| `pinnedRows` | `GridRowPinning` | Pin rows (by id) to `top` or `bottom`. Ignored under tree data and row grouping. |
 
 ### Inline Editing
 
@@ -218,14 +226,14 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | :--- | :--- | :--- |
 | `isCellEditable` | `(params: GridCellParams) => boolean` | Per-cell editability predicate. |
 | `processRowUpdate` | `(newRow, oldRow) => R \| Promise<R>` | Handles row save; supports async validation. |
-| `onProcessRowUpdateError` | `(error: unknown) => void` | Fires if `processRowUpdate` throws. |
+| `onProcessRowUpdateError` | `(error: unknown) => void` | Fires if `processRowUpdate` throws, rejects or returns no row. |
 
 ### Row Reordering
 
 | Prop | Type | Description |
 | :--- | :--- | :--- |
 | `rowReordering` | `boolean` | Enables drag-and-drop row reordering. |
-| `onRowOrderChange` | `(params) => void` | Fires when rows are reordered. |
+| `onRowOrderChange` | `(params) => void` | Fires when a row is dropped; `oldIndex` / `targetIndex` are positions in the `rows` prop. |
 
 ### Advanced Features
 
@@ -233,12 +241,12 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | :--- | :--- | :--- |
 | `treeData` | `boolean` | Enables hierarchical tree data display. |
 | `getTreeDataPath` | `(row) => string[]` | Returns the path array for each row in tree mode. |
-| `groupingColDef` | `GridColDef` | Overrides the auto-generated grouping column. |
-| `defaultGroupingExpansionDepth` | `number` | Initial expansion depth for tree data. |
-| `rowGroupingModel` | `GridRowGroupingModel` | Controlled row grouping state. |
-| `onRowGroupingModelChange` | `(model) => void` | Fires when grouping changes. |
+| `groupingColDef` | `Partial<GridColDef>` | With `rowGroupingModel` or `treeData`, adds a dedicated `__group__` column, pinned left (`field` not needed). |
+| `defaultGroupingExpansionDepth` | `number` | Initial expansion depth for tree data and row grouping. Default `0` (collapsed); `-1` expands everything. |
+| `rowGroupingModel` | `GridRowGroupingModel` | Fields to group rows by (e.g. `['department']`). |
 | `aggregationModel` | `GridAggregationModel` | Controlled aggregation state (e.g. `{ salary: 'sum' }`). |
 | `onAggregationModelChange` | `(model) => void` | Fires when aggregation changes. |
+| `getAggregationPosition` | `(groupNode) => 'inline' \| 'footer' \| null` | Where group and grand totals appear. |
 | `pivotMode` | `boolean` | Switches the grid to multidimensional pivot mode. |
 | `pivotModel` | `GridPivotModel` | Controlled pivot configuration (rows, columns, values). |
 | `onPivotModelChange` | `(model) => void` | Fires when pivot model changes. |
@@ -248,7 +256,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | Prop | Type | Description |
 | :--- | :--- | :--- |
 | `getDetailPanelContent` | `(params) => ReactNode` | Renders the expandable detail panel. |
-| `getDetailPanelHeight` | `(params) => number \| 'auto'` | Controls detail panel height. |
+| `getDetailPanelHeight` | `(params) => number \| 'auto'` | Detail panel height in px, or `'auto'` to measure the content. Default 200. |
 | `detailPanelExpandedRowIds` | `Set<GridRowId>` | Controlled expanded rows. |
 | `onDetailPanelExpandedRowIdsChange` | `(ids) => void` | Fires when expanded rows change. |
 
@@ -257,10 +265,11 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | Prop | Type | Description |
 | :--- | :--- | :--- |
 | `slots` | `GridSlots` | Replace built-in components (toolbar, pagination, overlays, footer). |
-| `slotProps` | `GridSlotProps` | Pass custom props to slot components. |
-| `getRowClassName` | `(params) => string` | Add custom CSS class to rows. |
-| `getCellClassName` | `(params) => string` | Add custom CSS class to cells. |
-| `theme` | `GridTheme` | Apply a custom theme object. |
+| `slotProps` | `object` | Pass custom props to slot components. |
+| `listView` / `listViewColumn` | `boolean` / `GridListViewColDef` | Render rows as cards (mobile layouts). Honours loading, overlays and `slots.footer`; keyboard navigable; tree/group parents get an expand chevron. |
+| `columnGroupingModel` | `GridColumnGroupingModel` | Multi-level column group headers. |
+
+Per-cell styling uses `GridColDef.cellClassName` / `headerClassName`; themes are applied with `<DataGridThemeProvider theme={…}>` (see Theming below).
 
 ### `apiRef` — Imperative API
 
@@ -271,12 +280,14 @@ const apiRef = useGridApiRef();
 // Rows
 apiRef.current.getRow(id)              // → GridRowModel | null
 apiRef.current.getAllRows()            // → GridRowModel[]
-apiRef.current.getVisibleRows()        // → GridRowModel[] (post-filter/sort)
+apiRef.current.getVisibleRows()        // → GridRowModel[] (rows on screen: current page + pinned rows)
+apiRef.current.getAllFilteredRows()    // → GridRowModel[] (every filtered + sorted row, all pages)
+apiRef.current.getGroupedExportRows()  // → GridGroupedExportRow[] | null (row grouping only)
 
 // Columns
 apiRef.current.getColumn(field)        // → GridColDef | null
 apiRef.current.getAllColumns()         // → GridColDef[]
-apiRef.current.getVisibleColumns()     // → GridColDef[]
+apiRef.current.getVisibleColumns()     // → GridColDef[] (visible columns, display order)
 
 // Selection
 apiRef.current.selectRow(id, true)
@@ -284,7 +295,7 @@ apiRef.current.selectRows([id1, id2], true)
 apiRef.current.getSelectedRows()       // → GridRowId[]
 
 // Sorting
-apiRef.current.sortColumn('name', 'asc')
+apiRef.current.sortColumn('name', 'asc')   // null removes the column's sort
 apiRef.current.getSortModel()          // → GridSortItem[]
 
 // Filtering
@@ -299,7 +310,7 @@ apiRef.current.setPageSize(50)
 apiRef.current.scrollToIndexes({ rowIndex: 100, colIndex: 3 })
 
 // Clipboard
-apiRef.current.copySelectedRows()      // → Promise<void>
+apiRef.current.copySelectedRows()      // → Promise<void>, rejects if the clipboard write fails
 
 // Aggregation
 apiRef.current.getAggregationResult()  // → Record<string, unknown> | null
@@ -348,7 +359,7 @@ import { DataGrid, GridToolbar } from '@opencorestack/opengridx';
 />
 ```
 
-`GridToolbar` provides global search, column visibility management, advanced filters, and aggregation controls. Each feature button is automatically hidden if its callback prop is not provided.
+`GridToolbar` provides global search, column visibility management, advanced filters, and aggregation (Summaries) controls, plus a Pivot button when pivot mode is configured. Mounted through `slots.toolbar`, every control works without any filter or visibility props: the grid keeps that state itself, and the props above only make it controlled. Rendered on its own, outside a grid, `GridToolbar` hides each button whose callback prop (`onFilterModelChange`, `onColumnVisibilityModelChange`, `onAggregationModelChange`, `onPivotModelChange`) is not passed.
 
 #### Customizing individual toolbar controls
 
@@ -370,6 +381,8 @@ import { GridToolbar, exportToCsv, useGridApiRef,
 const apiRef = useGridApiRef();
 
 <DataGrid
+  rows={rows}
+  columns={columns}
   apiRef={apiRef}
   slots={{ toolbar: GridToolbar }}
   slotProps={{
@@ -384,7 +397,7 @@ const apiRef = useGridApiRef();
         </button>
       ),
       renderExportButton: () => (
-        <button onClick={() => exportToCsv(apiRef.current.getAllRows(), columns)}>
+        <button onClick={() => exportToCsv(apiRef.current.getAllFilteredRows(), apiRef.current.getVisibleColumns())}>
           Export CSV
         </button>
       ),
@@ -403,6 +416,7 @@ import {
     exportToExcel,          // ✅ built-in, zero deps
     exportToExcelAdvanced,  // ✅ rich .xlsx — requires: npm install exceljs
     exportToJson,
+    exportToPdf,            // ✅ PDF — requires: npm install jspdf jspdf-autotable
     printGrid
 } from '@opencorestack/opengridx';
 
@@ -413,20 +427,20 @@ exportToExcelAdvanced(rows, columns, {
     columnStyles: { avatar: { embedImage: true, imageWidth: 40, imageHeight: 40 } }
 });
 exportToJson(rows, columns, { fileName: 'data.json' });
+await exportToPdf(rows, columns, { fileName: 'data', title: 'Report Title' });
 printGrid(rows, columns, 'Report Title');
 ```
 
-> **Optional peer dependency:** `exportToExcelAdvanced` requires ExcelJS:
-> ```bash
-> npm install exceljs
-> ```
+> **Optional peer dependencies:** `exportToExcelAdvanced` requires ExcelJS (`npm install exceljs`); `exportToPdf` requires `npm install jspdf jspdf-autotable`.
+
+CSV and HTML-Excel exports neutralise spreadsheet formulas (text starting with `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading `'`; opt out with `escapeFormulas: false`), and CSV starts with a UTF-8 BOM (`bom: false` omits it). `exportToExcel` writes an HTML table, so a `.xlsx` file name is saved as `.xls`. To export what the grid shows, pass `apiRef.current.getAllFilteredRows()` and `apiRef.current.getVisibleColumns()`; with a custom `getRowId`, also pass `getRowId` in the options so `selectedRows` match. See the [Export Guide](docs/features/export-guide.md).
 
 ### State Persistence
 
 ```tsx
 import { useGridStateStorage } from '@opencorestack/opengridx';
 
-const { initialState, onStateChange } = useGridStateStorage('my-grid-key');
+const { initialState, onStateChange, clearState } = useGridStateStorage('my-grid-key');
 
 <DataGrid
   rows={rows}
@@ -446,24 +460,25 @@ import { DataGridThemeProvider, darkTheme } from '@opencorestack/opengridx';
 </DataGridThemeProvider>
 ```
 
-Built-in themes: `darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compactTheme`
+Built-in themes: `darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compactTheme`. The provider pins a complete light or dark palette (`theme.mode`), whatever the operating system's colour scheme.
 
 ---
 
 ## ⚡ Performance & Bundle Size
 
-| Artifact | Minified | Gzipped | Notes |
+| Artifact | Size | Gzipped | Notes |
 | :--- | :--- | :--- | :--- |
-| **Core ES Module** (`opengridx.es.js`) | 242 KB | **58 KB** | Use this — tree-shakeable |
-| **Core UMD** (`opengridx.umd.js`) | 164 KB | **48 KB** | CommonJS / CDN compat |
-| **Styles** (`opengridx.css`) | 62 KB | **10 KB** | Auto-included |
+| **Core ES Module** (`opengridx.es.js`) | 331 KB | **86 KB** | Use this — tree-shakeable |
+| **Core UMD** (`opengridx.umd.js`) | 233 KB | **73 KB** | CommonJS / CDN compat |
+| **Styles** (`opengridx.css`) | 65 KB | **10 KB** | `import '@opencorestack/opengridx/styles'` |
 | **ExcelJS** (optional peer dep) | — | — | `npm install exceljs` |
-| **npm package download** | — | **613 KB** | Total compressed tarball |
+| **jsPDF** (optional peer dep) | — | — | `npm install jspdf jspdf-autotable` |
+| **npm package download** | — | **~1.1 MB** | Compressed tarball (includes `lib/` source, docs and source maps) |
 
 - **Tree-shaking Ready**: ES Module build — bundlers (Vite, Webpack) only include what you use.
 - **Zero UI Dependencies**: No MUI, Ant Design, or Radix. Pure React + vanilla CSS.
-- **Lazy Advanced Export**: ExcelJS is an optional peer dep — not bundled, only used if you install it.
-- **Efficient Rendering**: Custom virtualization handles 100k+ rows with zero DOM churn.
+- **Lazy Advanced Export**: ExcelJS and jsPDF are optional peer deps — not bundled, loaded only when you call `exportToExcelAdvanced` / `exportToPdf`.
+- **Efficient Rendering**: Row and column virtualization keeps the DOM small for 100k+ rows (needs a bounded grid height).
 
 ---
 
@@ -486,7 +501,10 @@ Full documentation at 👉 **[opencorestack.github.io/OpenGridX](https://opencor
 - **[Pinning](docs/features/pinning.md)** — Sticky columns and rows
 - **[State Persistence](docs/features/state-persistence.md)** — Save/Restore grid state
 - **[Infinite Scroll](docs/features/infinite-scroll.md)** — Seamless lazy-loading
-- **[Export Guide](docs/features/export-guide.md)** — Excel, CSV, and Print
+- **[Export Guide](docs/features/export-guide.md)** — Excel, CSV, JSON, and Print
+- **[PDF Export](docs/features/pdf-export.md)** — Branded PDF reports
+- **[Clipboard](docs/features/clipboard.md)** — Copy rows as TSV
+- **[Keyboard & Accessibility](docs/features/keyboard-navigation.md)** — Keys, focus and ARIA
 - **[Data Source](docs/features/data-source.md)** — Server-side integration
 - **[Loading States](docs/features/loading-states.md)** — Skeleton and shimmer overlays
 

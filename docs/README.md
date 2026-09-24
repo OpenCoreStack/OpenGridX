@@ -76,4 +76,3 @@ Reference for core hooks extracted from `DataGrid.tsx`. Intended for contributor
 
 ## 🛠️ Project Meta
 - **[Development Roadmap](roadmap.md)** - What's built and what's next
-- **[Research Notes](research/FEATURE_CATALOG.md)** - Comparative analysis and design decisions

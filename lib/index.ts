@@ -1,5 +1,6 @@
 
-// Auto-import styles — this ensures consumers do NOT need a manual CSS import
+// Pulls the stylesheet into the library build. Vite library mode extracts it to dist/opengridx.css
+// and drops this import from the JS bundle, so consumers must import '@opencorestack/opengridx/styles'.
 import './styles/opengridx.css';
 
 export { DataGrid } from './components/DataGrid/DataGrid';

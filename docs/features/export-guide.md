@@ -63,6 +63,7 @@ exportToCsv(rows, columns, {
 | `aggregationResult` | `object \| null` | — | Appends two rows after the data: a function-label row (`SUM`, `AVG`…) then a values row |
 | `aggregationModel` | `object \| null` | — | Labels for aggregation row |
 | `groupedRows` | `GridGroupedExportRow[]` | — | Grouped structure from `apiRef.current.getGroupedExportRows()` |
+| `getRowId` | `(row) => GridRowId` | `row.id` | The grid's `getRowId`, needed with `selectedRows` when rows are keyed by another field (v3.0+) |
 | `escapeFormulas` | `boolean` | `true` | Prefix text that starts with `=`, `+`, `-`, `@`, tab or CR with `'` (v3.0+). See [Formula injection](#formula-injection) |
 | `bom` | `boolean` | `true` | Start the file with a UTF-8 byte-order mark so Excel reads non-ASCII text (v3.0+) |
 
@@ -99,6 +100,7 @@ exportToExcel(rows, columns, {
 | `aggregationResult` | `object \| null` | — | Appends two rows after the data: a function-label row (`SUM`, `AVG`…) then a values row |
 | `aggregationModel` | `object \| null` | — | Labels for aggregation row |
 | `groupedRows` | `GridGroupedExportRow[]` | — | Grouped structure from `apiRef.current.getGroupedExportRows()` |
+| `getRowId` | `(row) => GridRowId` | `row.id` | The grid's `getRowId`, needed with `selectedRows` when rows are keyed by another field (v3.0+) |
 | `escapeFormulas` | `boolean` | `true` | Prefix formula-like text with `'` (v3.0+). See [Formula injection](#formula-injection) |
 
 ---
@@ -172,6 +174,7 @@ await exportToExcelAdvanced(rows, columns, {
 | `aggregationResult` | `object \| null` | — | Aggregation totals |
 | `aggregationModel` | `object \| null` | — | Aggregation function labels |
 | `selectedRows` | `(string\|number)[]` | — | IDs for `rows: 'selected'` sheets. With no selection, such a sheet has only its header row (v3.0+) |
+| `getRowId` | `(row) => GridRowId` | `row.id` | The grid's `getRowId`, needed with `selectedRows` when rows are keyed by another field (v3.0+) |
 | `groupedRows` | `GridGroupedExportRow[]` | — | Grouped structure from `apiRef.current.getGroupedExportRows()` (v2.1+). See [Grouped export](#grouped-export-to-advanced-excel) |
 | `groupHeaderFillColor` | `string` | `'#e8eaf6'` | Group-header row fill (grouped export) |
 | `groupSubtotalFillColor` | `string` | `'#f0f4ff'` | Group-subtotal row fill (grouped export) |
@@ -310,8 +313,10 @@ When `aggregationResult` is provided, output shape becomes:
 | `fileName` | `string` | `'export.json'` | Output filename |
 | `pretty` | `boolean` | `true` | Pretty-print with indentation |
 | `selectedRows` | `(string\|number)[]` | — | Export only these row IDs |
+| `getRowId` | `(row) => GridRowId` | `row.id` | The grid's `getRowId`, needed with `selectedRows` when rows are keyed by another field (v3.0+) |
 | `aggregationResult` | `object \| null` | — | Append aggregation object |
 | `aggregationModel` | `object \| null` | — | Function labels |
+| `groupedRows` | `GridGroupedExportRow[]` | — | Grouped structure; output becomes a nested `{ groups, grandTotal }` tree |
 
 ---
 
@@ -343,6 +348,7 @@ printGrid(rows, columns, {
 | `aggregationResult` | `object \| null` | Append totals |
 | `aggregationModel` | `object \| null` | Label totals |
 | `groupedRows` | `GridGroupedExportRow[]` | Grouped structure from `apiRef.current.getGroupedExportRows()` |
+| `getRowId` | `(row) => GridRowId` | The grid's `getRowId`, needed with `selectedRows` when rows are keyed by another field (v3.0+) |
 
 The print window is a same-origin popup, so every value written into it — title, cells, headers, group labels, image URLs and alt text, error messages — is HTML-escaped. `type: 'image'` columns render an `<img>` only for `http(s):`, `data:image/…`, `blob:` and relative URLs; any other value (e.g. `javascript:…`) is printed as text.
 
@@ -352,15 +358,17 @@ The print window is a same-origin popup, so every value written into it — titl
 
 ### Export with toolbar integration
 
-`GridToolbar` has no built-in export action; render your own button with `renderExportButton`:
+`GridToolbar` has no built-in export action; render your own button with `renderExportButton`. Pass it through `slotProps.toolbar` rather than wrapping `GridToolbar` in an inline `slots.toolbar` function: the grid hands its filter, column and aggregation handlers to the slot component, and a wrapper that drops them leaves the toolbar without its search, Filters, Columns and Summaries controls.
 
 ```tsx
-import { DataGrid, GridToolbar, exportToExcelAdvanced } from '@opencorestack/opengridx';
+import { useState } from 'react';
+import {
+  DataGrid, GridToolbar, exportToExcelAdvanced,
+  type GridColDef, type GridRowModel, type GridRowSelectionModel,
+} from '@opencorestack/opengridx';
 
-function MyGrid() {
-  const [rows, setRows] = useState([...]);
-  const [columns] = useState([...]);
-  const [selected, setSelected] = useState([]);
+function MyGrid({ rows, columns }: { rows: GridRowModel[]; columns: GridColDef[] }) {
+  const [selected, setSelected] = useState<GridRowSelectionModel>([]);
 
   return (
     <DataGrid
@@ -369,22 +377,21 @@ function MyGrid() {
       checkboxSelection
       rowSelectionModel={selected}
       onRowSelectionModelChange={setSelected}
-      slots={{
-        toolbar: () => (
-          <GridToolbar
-            renderExportButton={() => (
-              <button
-                onClick={() => exportToExcelAdvanced(rows, columns, {
-                  fileName: 'report.xlsx',
-                  sheets: [{ name: 'Selected', rows: 'selected' }],
-                  selectedRows: selected,
-                })}
-              >
-                Export to Excel
-              </button>
-            )}
-          />
-        ),
+      slots={{ toolbar: GridToolbar }}
+      slotProps={{
+        toolbar: {
+          renderExportButton: () => (
+            <button
+              onClick={() => exportToExcelAdvanced(rows, columns, {
+                fileName: 'report.xlsx',
+                sheets: [{ name: 'Selected', rows: 'selected' }],
+                selectedRows: selected,
+              })}
+            >
+              Export to Excel
+            </button>
+          ),
+        },
       }}
     />
   );
@@ -420,7 +427,7 @@ const columns: GridColDef[] = [
   {
     field: 'salary',
     type: 'number',             // ← raw number written to Excel
-    valueFormatter: ({ value }) => `$${value.toLocaleString()}`, // used in CSV/print
+    valueFormatter: ({ value }) => `$${(value as number).toLocaleString()}`, // used in CSV/print
   },
 ];
 
@@ -445,7 +452,7 @@ const columns: GridColDef[] = [
   },
   {
     field: 'salary',
-    valueFormatter: ({ value }) => `$${value.toLocaleString()}`,
+    valueFormatter: ({ value }) => `$${(value as number).toLocaleString()}`,
   },
 ];
 ```
@@ -464,13 +471,14 @@ Subtotal, grand-total and totals cells are formatted the same way in every text 
 
 ## Excluding Columns
 
-You can exclude specific columns (e.g., action buttons or menus) from all export formats using the `exportable` property in the column definition. System columns are also automatically excluded.
+You can exclude specific columns (e.g., action buttons or menus) from all export formats using the `exportable` property in the column definition. A few fields are also excluded automatically. Every other column you pass is exported, including hidden ones: pass `apiRef.current.getVisibleColumns()` to export what is on screen.
 
 | Method | Description |
 |---|---|
 | `exportable: false` | Set in `GridColDef` to manually exclude any column |
-| `__check__` | Native checkbox column (auto-excluded) |
-| `__actions__` | Common field for action buttons (auto-excluded) |
+| `__checkbox_col__`, `__expand_col__`, `__reorder_col__` | The grid's checkbox, detail-panel and drag-handle columns (auto-excluded, v3.0+) |
+| `__group__` | The row-grouping column from `groupingColDef` (auto-excluded; grouped exports write group labels from `groupedRows`) |
+| `__check__`, `__actions__` | Legacy checkbox / action-button field names (auto-excluded) |
 | `isSpacer: true` | Spacer columns (auto-excluded from every format since v3.0; before, only advanced Excel skipped them) |
 
 ### Example
@@ -524,7 +532,9 @@ All export functions work in:
 
 ## See Also
 
-- [Demo: Export Data](../demo/examples/ExportDemo.tsx)
-- [Demo: Advanced Excel Export](../demo/examples/AdvancedExcelExportDemo.tsx)
-- [Slots API Reference](./SLOTS_API.md)
-- [Theming Guide](./THEMING.md)
+- [PDF Export](./pdf-export.md)
+- [Toolbar Customization](./toolbar-customization.md)
+- [Demo: Export Data](../../demo/examples/ExportDemo/ExportDemo.tsx)
+- [Demo: Advanced Excel Export](../../demo/examples/AdvancedExcelExportDemo/AdvancedExcelExportDemo.tsx)
+- [Slots API Reference](../customization/slots-api.md)
+- [Theming Guide](../customization/theming.md)
