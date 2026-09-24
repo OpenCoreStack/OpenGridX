@@ -206,12 +206,12 @@ export default function RealEstatePortfolioDemo() {
     const columns = useMemo<GridColDef<PropertyInfo>[]>(() => [
         { field: 'propertyName', headerName: 'Property', width: 280, renderCell: (p) => <PropertyCell row={p.row} /> },
         { field: 'location', headerName: 'Location', width: 160 },
-        { field: 'status', headerName: 'Status', width: 180, renderCell: (p) => <StatusCell value={p.value} /> },
+        { field: 'status', headerName: 'Status', width: 180, renderCell: (p) => <StatusCell value={p.row.status} /> },
         { field: 'unitsOpen', headerName: 'Open Units', width: 120, type: 'number', align: 'right' },
         { field: 'totalUnits', headerName: 'Total Units', width: 120, type: 'number', align: 'right' },
-        { field: 'value', headerName: 'Est. Value', width: 140, type: 'number', align: 'right', valueFormatter: p => `$${(p.value / 1000000).toFixed(1)}M` },
-        { field: 'monthlyRevenue', headerName: 'Monthly Rev', width: 140, type: 'number', align: 'right', valueFormatter: p => `$${p.value.toLocaleString()}` },
-        { field: 'rating', headerName: 'Score', width: 120, renderCell: (p) => <RatingCell value={p.value} /> },
+        { field: 'value', headerName: 'Est. Value', width: 140, type: 'number', align: 'right', valueFormatter: p => `$${(p.row.value / 1000000).toFixed(1)}M` },
+        { field: 'monthlyRevenue', headerName: 'Monthly Rev', width: 140, type: 'number', align: 'right', valueFormatter: p => `$${p.row.monthlyRevenue.toLocaleString()}` },
+        { field: 'rating', headerName: 'Score', width: 120, renderCell: (p) => <RatingCell value={p.row.rating} /> },
     ], []);
 
     const [aggregationModel, setAggregationModel] = useState<GridAggregationModel>({

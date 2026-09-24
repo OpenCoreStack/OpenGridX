@@ -57,7 +57,7 @@ export default function EventsDemo() {
     };
 
     const handleFilterModelChange = (model: GridFilterModel) => {
-        addLog('Filter Change', `${model.items.length} active filters`);
+        addLog('Filter Change', `${model.items?.length ?? 0} active filters`);
     };
 
     const handleColumnOrderChange = (params: GridColumnOrderChangeParams) => {

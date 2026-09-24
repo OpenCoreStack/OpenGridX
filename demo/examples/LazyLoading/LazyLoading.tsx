@@ -51,9 +51,10 @@ const mockDataSource: GridDataSource<Employee> = {
             rows.sort((a, b) => {
                 const valA = a[field];
                 const valB = b[field];
-                if (valA < valB) return sort === 'asc' ? -1 : 1;
-                if (valA > valB) return sort === 'asc' ? 1 : -1;
-                return 0;
+                const cmp = typeof valA === 'number' && typeof valB === 'number'
+                    ? valA - valB
+                    : String(valA ?? '').localeCompare(String(valB ?? ''));
+                return sort === 'asc' ? cmp : -cmp;
             });
         }
 

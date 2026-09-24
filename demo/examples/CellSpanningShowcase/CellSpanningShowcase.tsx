@@ -41,7 +41,7 @@ function SimpleColumnSpanExample() {
             field: 'email',
             headerName: 'Email',
             width: 180,
-            renderCell: (params) => params.row.organization === '' ? null : params.value
+            renderCell: (params) => params.row.organization === '' ? null : params.row.email
         },
         {
             field: 'organization',
@@ -61,14 +61,14 @@ function SimpleColumnSpanExample() {
                         </div>
                     );
                 }
-                return params.value;
+                return params.row.organization;
             }
         },
         {
             field: 'role',
             headerName: 'Role',
             width: 130,
-            renderCell: (params) => params.row.organization === '' ? null : params.value
+            renderCell: (params) => params.row.organization === '' ? null : params.row.role
         },
         { field: 'location', headerName: 'Location', width: 140 },
         { field: 'age', headerName: 'Age', width: 80, type: 'number' }
@@ -146,7 +146,7 @@ function InvoiceExample() {
                         fontWeight: isTotal ? 700 : (isSummary ? 600 : 400),
                         fontSize: isTotal ? '1.1em' : '1em'
                     }}>
-                        {params.value}
+                        {params.row.item}
                     </div>
                 );
             }
@@ -159,7 +159,7 @@ function InvoiceExample() {
             width: 100,
             type: 'number',
             align: 'right',
-            valueFormatter: ({ value }) => value != null ? `$${value.toFixed(2)}` : ''
+            valueFormatter: ({ row }) => row.price != null ? `$${row.price.toFixed(2)}` : ''
         },
         {
             field: 'discount',
@@ -169,7 +169,7 @@ function InvoiceExample() {
             align: 'right',
             renderCell: (params) => {
                 if (params.row.isTax) return <div className="invoice-tax-rate">Rate: {params.row.taxRate}</div>;
-                return params.value != null ? `$${params.value.toFixed(2)}` : '';
+                return params.row.discount != null ? `$${params.row.discount.toFixed(2)}` : '';
             }
         },
         {
@@ -186,7 +186,7 @@ function InvoiceExample() {
                         fontSize: params.row.isTotal ? '1.1em' : '1em',
                         color: params.row.isTotal ? '#1e293b' : 'inherit'
                     }}>
-                        {params.value?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {params.row.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                 );
             }
@@ -340,8 +340,8 @@ function TimetableExample() {
             sortable: false,
             colSpan: (params) => params.row.slot1ColSpan || 1,
             renderCell: (params) => {
-                if (!params.value) return null;
-                return <div style={getSubjectStyle(params.value)}>{params.value}</div>;
+                if (!params.formattedValue) return null;
+                return <div style={getSubjectStyle(params.formattedValue)}>{params.formattedValue}</div>;
             }
         },
         {
@@ -351,12 +351,12 @@ function TimetableExample() {
             sortable: false,
             colSpan: (params) => params.row.slot2ColSpan || 1,
             renderCell: (params) => {
-                if (!params.value) return null;
+                if (!params.formattedValue) return null;
 
                 if (params.row.slot1ColSpan && params.row.slot1ColSpan > 1) {
                     return null;
                 }
-                return <div style={getSubjectStyle(params.value)}>{params.value}</div>;
+                return <div style={getSubjectStyle(params.formattedValue)}>{params.formattedValue}</div>;
             }
         },
         {
@@ -366,11 +366,11 @@ function TimetableExample() {
             sortable: false,
             colSpan: (params) => params.row.slot3ColSpan || 1,
             renderCell: (params) => {
-                if (!params.value) return null;
+                if (!params.formattedValue) return null;
 
                 if (params.row.slot1ColSpan && params.row.slot1ColSpan > 2) return null;
                 if (params.row.slot2ColSpan && params.row.slot2ColSpan > 1) return null;
-                return <div style={getSubjectStyle(params.value)}>{params.value}</div>;
+                return <div style={getSubjectStyle(params.formattedValue)}>{params.formattedValue}</div>;
             }
         },
         {
@@ -380,11 +380,11 @@ function TimetableExample() {
             sortable: false,
             colSpan: (params) => params.row.slot4ColSpan || 1,
             renderCell: (params) => {
-                if (!params.value) return null;
+                if (!params.formattedValue) return null;
 
                 if (params.row.slot1ColSpan && params.row.slot1ColSpan > 3) return null;
                 if (params.row.slot3ColSpan && params.row.slot3ColSpan > 1) return null;
-                return <div style={getSubjectStyle(params.value)}>{params.value}</div>;
+                return <div style={getSubjectStyle(params.formattedValue)}>{params.formattedValue}</div>;
             }
         },
         {
@@ -393,8 +393,8 @@ function TimetableExample() {
             width: 140,
             sortable: false,
             renderCell: (params) => {
-                if (!params.value) return null;
-                return <div style={getSubjectStyle(params.value)}>{params.value}</div>;
+                if (!params.formattedValue) return null;
+                return <div style={getSubjectStyle(params.formattedValue)}>{params.formattedValue}</div>;
             }
         }
     ], []);
@@ -463,7 +463,7 @@ function RowSpanningExample() {
                 if (!isFirst) return null;
                 return (
                     <div className="row-span-category-cell">
-                        {params.value}
+                        {params.formattedValue}
                     </div>
                 );
             }
@@ -491,7 +491,7 @@ function RowSpanningExample() {
                 const className = params.value === 'High' ? 'priority-high' : (params.value === 'Medium' ? 'priority-medium' : 'priority-low');
                 return (
                     <span className={className} style={{ fontWeight: 600 }}>
-                        {params.value}
+                        {params.formattedValue}
                     </span>
                 );
             }
@@ -502,7 +502,7 @@ function RowSpanningExample() {
             width: 130,
             renderCell: (params) => (
                 <div className="status-badge">
-                    {params.value}
+                    {params.formattedValue}
                 </div>
             )
         },

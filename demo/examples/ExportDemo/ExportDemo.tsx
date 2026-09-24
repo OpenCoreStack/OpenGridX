@@ -39,7 +39,7 @@ const columns: GridColDef[] = [
         renderCell: (params) => (
             <div className="avatar-cell">
                 <img
-                    src={params.value}
+                    src={String(params.value)}
                     alt="avatar"
                     className="avatar-image"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -56,14 +56,14 @@ const columns: GridColDef[] = [
         headerName: 'Salary',
         width: 120,
         type: 'number',
-        valueFormatter: ({ value }) => `$${value.toLocaleString()}`
+        valueFormatter: ({ value }) => `$${Number(value).toLocaleString()}`
     },
     {
         field: 'bonus',
         headerName: 'Bonus',
         width: 110,
         type: 'number',
-        valueFormatter: ({ value }) => `$${value.toLocaleString()}`
+        valueFormatter: ({ value }) => `$${Number(value).toLocaleString()}`
     },
     { field: 'age', headerName: 'Age', width: 80, type: 'number' },
     { field: 'joinDate', headerName: 'Join Date', width: 110 },
@@ -535,16 +535,17 @@ export default function ExportDemo() {
                 rowSelectionModel={selectedRows}
                 onRowSelectionModelChange={(newSelection) => setSelectedRows(newSelection as number[])}
                 slots={{
-                    toolbar: ExportToolbar
-                }}
-                slotProps={{
-                    toolbar: {
-                        rows,
-                        columns,
-                        selectedRows,
-                        paginationModel,
-                        options: { json: true }
-                    }
+                    // The toolbar needs the demo's rows and pagination, so the slot closes over them.
+                    toolbar: () => (
+                        <ExportToolbar
+                            rows={rows}
+                            columns={columns}
+                            selectedRows={selectedRows}
+                            paginationModel={paginationModel}
+                            options={{ json: true }}
+                            apiRef={apiRef}
+                        />
+                    )
                 }}
                 height={500}
             />

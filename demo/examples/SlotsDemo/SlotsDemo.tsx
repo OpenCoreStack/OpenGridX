@@ -41,7 +41,7 @@ export default function SlotsDemo() {
                             transition: 'width 0.5s ease-in-out'
                         }} />
                     </div>
-                    <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{params.value}%</span>
+                    <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{String(params.value)}%</span>
                 </div>
             )
         },

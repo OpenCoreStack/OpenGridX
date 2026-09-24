@@ -9,7 +9,7 @@ interface CustomPaginationComponentProps {
     page: number;
     pageSize: number;
     rowCount: number;
-    pageSizeOptions: number[];
+    pageSizeOptions?: number[];
     onPageChange: (page: number) => void;
     onPageSizeChange: (pageSize: number) => void;
 }
@@ -19,7 +19,7 @@ function CustomPaginationComponent(props: CustomPaginationComponentProps) {
         page,
         pageSize,
         rowCount,
-        pageSizeOptions,
+        pageSizeOptions = [10, 25, 50],
         onPageChange,
         onPageSizeChange
     } = props;

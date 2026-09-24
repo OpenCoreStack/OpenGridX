@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { DataGrid, GridToolbar, GridTooltip } from '@opencorestack/opengridx';
-import type { GridColDef, GridPivotModel, GridPivotValueField, GridAggregationResult, GridAggregationModel } from '@opencorestack/opengridx';
+import type { GridApi, GridColDef, GridPivotModel, GridPivotValueField, GridToolbarSlotProps } from '@opencorestack/opengridx';
 import { exportToCsv, exportToExcel, exportToJson, printGrid } from '@opencorestack/opengridx';
 import './PivotModeDemo.css';
 import { DocsLayout } from '../../components/DocsLayout';
@@ -186,27 +186,19 @@ const PRESETS: { label: string; model: GridPivotModel }[] = [
     },
 ];
 
-interface PivotGridApi {
-    getVisibleRows?: () => SaleRow[];
-    getVisibleColumns?: () => GridColDef<SaleRow>[];
-    getAggregationResult?: () => GridAggregationResult;
-    getAggregationModel?: () => GridAggregationModel;
-}
-
 interface ExportToolbarProps {
-    apiRef?: React.RefObject<PivotGridApi>;
-    fallbackRows: SaleRow[];
-    fallbackColumns: GridColDef<SaleRow>[];
+    apiRef: React.RefObject<GridApi>;
 }
 
-function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarProps) {
+function ExportToolbar({ apiRef }: ExportToolbarProps) {
     const [isPrinting, setIsPrinting] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
 
-    const getRows = () => apiRef?.current?.getVisibleRows?.() || fallbackRows;
-    const getColumns = () => apiRef?.current?.getVisibleColumns?.() || fallbackColumns;
-    const getAgg = () => apiRef?.current?.getAggregationResult?.() || null;
-    const getAggModel = () => apiRef?.current?.getAggregationModel?.() || null;
+    // Export what the grid shows: in pivot mode, the generated pivot rows and columns.
+    const getRows = () => apiRef.current?.getVisibleRows() ?? [];
+    const getColumns = () => apiRef.current?.getVisibleColumns() ?? [];
+    const getAgg = () => apiRef.current?.getAggregationResult() ?? null;
+    const getAggModel = () => apiRef.current?.getAggregationModel() ?? null;
 
     const performPrint = async () => {
         setIsPrinting(true);
@@ -306,24 +298,14 @@ function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarP
     );
 }
 
-type CustomToolbarProps = React.ComponentProps<typeof GridToolbar> & {
-    apiRef?: React.RefObject<PivotGridApi>;
-    _fallbackRows?: SaleRow[];
-    _fallbackColumns?: GridColDef<SaleRow>[];
-};
-
 // Module-level: stable function reference so React never unmounts/remounts the toolbar.
-function CustomToolbar({ apiRef, _fallbackRows, _fallbackColumns, ...rest }: CustomToolbarProps) {
+function CustomToolbar({ apiRef, ...rest }: GridToolbarSlotProps) {
     return (
         <GridToolbar
             {...rest}
             rightContent={
                 <div className="pivot-toolbar-right">
-                    <ExportToolbar
-                        apiRef={apiRef}
-                        fallbackRows={_fallbackRows || []}
-                        fallbackColumns={_fallbackColumns || []}
-                    />
+                    <ExportToolbar apiRef={apiRef} />
                 </div>
             }
         />
@@ -402,12 +384,6 @@ export default function PivotModeDemo() {
                 paginationModel={{ page: 0, pageSize: 50 }}
                 pageSizeOptions={[25, 50, 100]}
                 slots={{ toolbar: CustomToolbar }}
-                slotProps={{
-                    toolbar: {
-                        _fallbackRows: RAW_ROWS,
-                        _fallbackColumns: SOURCE_COLUMNS,
-                    }
-                }}
                 height={500}
             />
         </DocsLayout>

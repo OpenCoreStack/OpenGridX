@@ -1569,7 +1569,7 @@ const allColumns: GridColDef<Employee>[] = [
         headerAlign: 'right',
         sortable: true,
         editable: true,
-        valueFormatter: (params) => `$${params.value.toLocaleString()}`
+        valueFormatter: (params) => `$${Number(params.value).toLocaleString()}`
     },
     {
         field: 'joinDate',
@@ -1835,7 +1835,6 @@ export function DataGridTest() {
                     pinnedColumns={pinnedColumns}
                     onPinnedColumnsChange={setPinnedColumns}
                     pinnedRows={pinnedRows}
-                    onPinnedRowsChange={setPinnedRows}
                     onRowClick={(params) => console.log('Row clicked:', params.row)}
                     onCellClick={(params) => console.log('Cell clicked:', params.row, params.field)}
                     processRowUpdate={(newRow) => {
@@ -1871,7 +1870,6 @@ export function DataGridTest() {
                     }}
 
                     rowGroupingModel={rowGroupingModel}
-                    onRowGroupingModelChange={setRowGroupingModel}
                     aggregationModel={aggregationModel}
                     onAggregationModelChange={setAggregationModel}
 

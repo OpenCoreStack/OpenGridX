@@ -36,6 +36,7 @@ const columns: GridColDef<Product>[] = [
 
 export default function FilterPanelDemo() {
     const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
+    const activeFilterCount = filterModel.items?.length ?? 0;
 
     return (
         <DocsLayout
@@ -52,7 +53,7 @@ export default function FilterPanelDemo() {
                 onFilterModelChange={setFilterModel}
             />
 
-            {filterModel.items.length > 0 && (
+            {activeFilterCount > 0 && (
                 <div style={{
                     marginTop: '16px',
                     padding: '12px 16px',
@@ -61,7 +62,7 @@ export default function FilterPanelDemo() {
                     background: '#f8fafc',
                 }}>
                     <strong style={{ fontSize: '0.8rem', color: '#475569' }}>
-                        Active Filter Model ({filterModel.items.length} filter{filterModel.items.length !== 1 ? 's' : ''})
+                        Active Filter Model ({activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''})
                     </strong>
                     <pre style={{ fontSize: '0.75rem', color: '#475569', margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>
                         {JSON.stringify(filterModel, null, 2)}

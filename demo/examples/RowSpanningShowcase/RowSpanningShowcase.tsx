@@ -41,7 +41,7 @@ function OrderItemsExample() {
                 if (params.value === 'TOTAL') {
                     style.fontWeight = 700;
                 }
-                return <div style={style}>{params.value}</div>;
+                return <div style={style}>{params.formattedValue}</div>;
             }
         },
         {
@@ -51,9 +51,9 @@ function OrderItemsExample() {
             sortable: false,
             renderCell: (params) => {
                 if (params.row.isUpgrade) {
-                    return <div className="upgrade-item">{params.value}</div>;
+                    return <div className="upgrade-item">{params.formattedValue}</div>;
                 }
-                return <div>{params.value}</div>;
+                return <div>{params.formattedValue}</div>;
             }
         },
         {
@@ -64,7 +64,7 @@ function OrderItemsExample() {
             type: 'number',
             align: 'center',
             headerAlign: 'center',
-            renderCell: (params) => params.value || ''
+            renderCell: (params) => params.row.quantity || ''
         },
         {
             field: 'unitPrice',
@@ -74,7 +74,7 @@ function OrderItemsExample() {
             type: 'number',
             align: 'right',
             headerAlign: 'right',
-            valueFormatter: ({ value }) => value ? `$${value.toFixed(2)}` : ''
+            valueFormatter: ({ row }) => row.unitPrice ? `$${row.unitPrice.toFixed(2)}` : ''
         },
         {
             field: 'totalPrice',
@@ -91,7 +91,7 @@ function OrderItemsExample() {
                     style.fontWeight = 700;
                     style.fontSize = '1.05em';
                 }
-                return <div style={style}>${params.value.toFixed(2)}</div>;
+                return <div style={style}>${params.row.totalPrice.toFixed(2)}</div>;
             }
         }
     ], []);
@@ -145,7 +145,7 @@ function EmployeeRolesExample() {
             rowSpan: (params) => params.row.nameRowSpan || 1,
             renderCell: (params) => {
                 if (!params.row.isFirstRole) return null;
-                return params.value;
+                return params.formattedValue;
             }
         },
         {
@@ -171,7 +171,7 @@ function EmployeeRolesExample() {
             rowSpan: (params) => params.row.ageRowSpan || 1,
             renderCell: (params) => {
                 if (!params.row.isFirstRole) return null;
-                return params.value;
+                return params.formattedValue;
             }
         }
     ], []);
@@ -244,7 +244,7 @@ function CourseScheduleExample() {
             rowSpan: (params) => params.row.courseRowSpan || 1,
             renderCell: (params) => {
                 if (!params.row.isFirstSlot) return null;
-                return <div style={{ fontWeight: 500 }}>{params.value}</div>;
+                return <div style={{ fontWeight: 500 }}>{params.formattedValue}</div>;
             }
         },
         {
@@ -255,7 +255,7 @@ function CourseScheduleExample() {
             rowSpan: (params) => params.row.instructorRowSpan || 1,
             renderCell: (params) => {
                 if (!params.row.isFirstSlot) return null;
-                return params.value;
+                return params.formattedValue;
             }
         },
         {
@@ -266,7 +266,7 @@ function CourseScheduleExample() {
             rowSpan: (params) => params.row.roomRowSpan || 1,
             renderCell: (params) => {
                 if (!params.row.isFirstSlot) return null;
-                return params.value;
+                return params.formattedValue;
             }
         },
         {

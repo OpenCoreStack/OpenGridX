@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { DataGrid } from '@opencorestack/opengridx';
-import type { GridColDef, GridSortModel } from '@opencorestack/opengridx';
+import type { GridColDef, GridSortItem } from '@opencorestack/opengridx';
 import './MultiSortDemo.css';
 import { DocsLayout } from '../../components/DocsLayout';
 import sourceCode from './MultiSortDemo.tsx?raw';
@@ -41,7 +41,7 @@ const columns: GridColDef[] = [
 ];
 
 export default function MultiSortDemo() {
-    const [sortModel, setSortModel] = useState<GridSortModel>([
+    const [sortModel, setSortModel] = useState<GridSortItem[]>([
         { field: 'department', sort: 'asc' },
         { field: 'salary',     sort: 'desc' },
     ]);

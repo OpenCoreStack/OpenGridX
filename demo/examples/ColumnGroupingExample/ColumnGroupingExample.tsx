@@ -6,7 +6,7 @@ import { DocsLayout } from '../../components/DocsLayout';
 import sourceCode from './ColumnGroupingExample.tsx?raw';
 
 // ─── Shared formatter ─────────────────────────────────────────────────────────
-const fmt = (v: number) => `$${v.toLocaleString()}`;
+const fmt = (v: unknown) => `$${Number(v).toLocaleString()}`;
 
 // ─── Single-level example data ────────────────────────────────────────────────
 

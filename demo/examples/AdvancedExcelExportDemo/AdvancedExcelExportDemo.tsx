@@ -78,7 +78,7 @@ const columns: GridColDef[] = [
         sortable: false,
         renderCell: ({ value }) => (
             <img
-                src={value}
+                src={String(value)}
                 alt="avatar"
                 style={{ width: 32, height: 32, borderRadius: '50%', display: 'block' }}
             />
@@ -95,14 +95,14 @@ const columns: GridColDef[] = [
         headerName: 'Salary',
         type: 'number',
         width: 120,
-        valueFormatter: ({ value }) => `$${value.toLocaleString()}`,
+        valueFormatter: ({ value }) => `$${Number(value).toLocaleString()}`,
     },
     {
         field: 'bonus',
         headerName: 'Bonus',
         type: 'number',
         width: 110,
-        valueFormatter: ({ value }) => `$${value.toLocaleString()}`,
+        valueFormatter: ({ value }) => `$${Number(value).toLocaleString()}`,
     },
     { field: 'yearsExperience', headerName: 'Exp (yrs)', type: 'number', width: 110 },
     {

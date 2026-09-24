@@ -247,7 +247,6 @@ export default function PdfExportDemo() {
                 checkboxSelection
                 aggregationModel={aggregationModel}
                 onAggregationModelChange={setAggregationModel}
-                filtering
                 height={480}
                 slots={toolbarSlots}
                 slotProps={toolbarSlotProps}

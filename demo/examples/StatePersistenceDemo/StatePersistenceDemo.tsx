@@ -71,7 +71,7 @@ const columns: GridColDef<Employee>[] = [
                         color: style.text,
                     }}
                 >
-                    {params.value}
+                    {String(params.value)}
                 </span>
             );
         },

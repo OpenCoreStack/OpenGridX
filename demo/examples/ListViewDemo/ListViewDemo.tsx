@@ -48,7 +48,7 @@ const columns: GridColDef<Employee>[] = [
     { field: 'location', headerName: 'Location', width: 130 },
     {
         field: 'salary', headerName: 'Salary', width: 120, type: 'number', align: 'right',
-        valueFormatter: ({ value }) => `$${value.toLocaleString()}`
+        valueFormatter: ({ value }) => `$${Number(value).toLocaleString()}`
     },
     { field: 'active', headerName: 'Active', width: 90, type: 'boolean' },
 ];

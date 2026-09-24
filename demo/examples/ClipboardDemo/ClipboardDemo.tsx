@@ -11,7 +11,7 @@ const columns: GridColDef[] = [
     { field: 'lastName', headerName: 'Last Name', width: 150 },
     { field: 'email', headerName: 'Email', width: 220 },
     { field: 'department', headerName: 'Department', width: 150 },
-    { field: 'salary', headerName: 'Salary', width: 120, type: 'number', valueFormatter: ({ value }) => `$${value.toLocaleString()}` },
+    { field: 'salary', headerName: 'Salary', width: 120, type: 'number', valueFormatter: ({ value }) => `$${Number(value).toLocaleString()}` },
 ];
 
 const rows = [

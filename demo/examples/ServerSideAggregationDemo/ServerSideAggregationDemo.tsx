@@ -84,8 +84,8 @@ const mockServer = {
         if (params.aggregationModel) {
             for (const [field, fn] of Object.entries(params.aggregationModel)) {
                 const values = data.map((r) => r[field as keyof Employee]).filter((v) => v != null);
-                if (fn === 'sum') aggregationResults[field] = values.reduce((a, b) => a + Number(b), 0);
-                else if (fn === 'avg') aggregationResults[field] = values.length ? values.reduce((a, b) => a + Number(b), 0) / values.length : null;
+                if (fn === 'sum') aggregationResults[field] = values.reduce<number>((a, b) => a + Number(b), 0);
+                else if (fn === 'avg') aggregationResults[field] = values.length ? values.reduce<number>((a, b) => a + Number(b), 0) / values.length : null;
                 else if (fn === 'count') aggregationResults[field] = values.length;
                 else if (fn === 'min') aggregationResults[field] = Math.min(...values.map(Number));
                 else if (fn === 'max') aggregationResults[field] = Math.max(...values.map(Number));

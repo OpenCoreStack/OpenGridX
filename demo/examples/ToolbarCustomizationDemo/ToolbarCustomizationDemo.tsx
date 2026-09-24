@@ -146,7 +146,8 @@ function BrandedAggregationButton({ onClick, isOpen, activeCount }: ToolbarButto
 
 function BrandedExportButton({ apiRef }: { apiRef: ReturnType<typeof useGridApiRef> }) {
     const handleExport = useCallback(() => {
-        exportToCsv(apiRef.current?.getAllRows?.() ?? rows, columns, { filename: 'sales-report' });
+        // Export what the grid shows: the filtered, sorted rows and the visible columns.
+        exportToCsv(apiRef.current.getAllFilteredRows(), apiRef.current.getVisibleColumns(), { fileName: 'sales-report.csv' });
     }, [apiRef]);
 
     return (
@@ -258,7 +259,7 @@ function PlainAggButton({ onClick, isOpen, activeCount }: ToolbarButtonRenderPro
 
 function PlainExportButton() {
     const handleExport = useCallback(() => {
-        exportToCsv(rows, columns, { filename: 'sales-data' });
+        exportToCsv(rows, columns, { fileName: 'sales-data.csv' });
     }, []);
 
     return (

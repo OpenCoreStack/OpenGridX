@@ -64,9 +64,9 @@ export default function GroupingExample() {
             sourceCode={sourceCode}
         >
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                <Button variant="secondary" size="sm" onClick={handleGroupedCsv}>Export CSV (grouped)</Button>
-                <Button variant="secondary" size="sm" onClick={handleGroupedExcel}>Export Excel (grouped)</Button>
-                <Button variant="secondary" size="sm" onClick={handleGroupedJson}>Export JSON (grouped)</Button>
+                <Button variant="outlined" color="secondary" size="small" onClick={handleGroupedCsv}>Export CSV (grouped)</Button>
+                <Button variant="outlined" color="secondary" size="small" onClick={handleGroupedExcel}>Export Excel (grouped)</Button>
+                <Button variant="outlined" color="secondary" size="small" onClick={handleGroupedJson}>Export JSON (grouped)</Button>
             </div>
             <DataGrid
                 apiRef={apiRef}
