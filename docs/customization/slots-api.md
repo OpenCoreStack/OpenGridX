@@ -117,7 +117,7 @@ function CustomLoader() {
 ### 5. `footer`
 Replace the entire footer section below the grid, including the default pagination. Rendered whenever the slot is set, including while row grouping is active.
 
-**Props received:**
+**Props received** (`GridFooterSlotProps`, v3.0+):
 ```typescript
 {
   apiRef: React.MutableRefObject<GridApi>;
@@ -134,11 +134,13 @@ Replace the entire footer section below the grid, including the default paginati
 
 **Example — a persistent grand-total bar that stays in sync with filtering:**
 ```tsx
-function TotalsFooter({ aggregationResult, rowCount }: Record<string, unknown>) {
-  const totals = aggregationResult as Record<string, number> | null;
+import type { GridFooterSlotProps } from '@opencorestack/opengridx';
+
+// Type the props you read; the grid checks them against GridFooterSlotProps.
+function TotalsFooter({ aggregationResult, rowCount }: Pick<GridFooterSlotProps, 'aggregationResult' | 'rowCount'>) {
   return (
     <div style={{ padding: '12px', borderTop: '1px solid #e0e0e0' }}>
-      {String(rowCount)} rows · Total: {totals?.amount ?? '—'}
+      {rowCount} rows · Total: {String(aggregationResult?.amount ?? '—')}
     </div>
   );
 }

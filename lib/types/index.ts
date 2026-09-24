@@ -1003,8 +1003,8 @@ export type GridOverlaySlotProps = Record<string, unknown>;
  */
 export interface GridFooterSlotProps {
   apiRef: React.MutableRefObject<GridApi>;
-  /** The `aggregationModel` prop. */
-  aggregationModel: GridAggregationModel | undefined;
+  /** The active aggregation model (`{}` when none). */
+  aggregationModel: GridAggregationModel;
   /** The grand-total aggregation result, or `null` when no aggregation is active. */
   aggregationResult: GridAggregationResult | null;
   /** Rows after filtering (`rowCount` from the server in server pagination mode). */

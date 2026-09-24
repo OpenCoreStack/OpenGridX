@@ -12,9 +12,9 @@ The main component for displaying and interacting with data.
 #### Props
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `rows` | `R[]` | — | **Required.** Array of data objects (`R extends GridRowModel`). Pass `[]` when a `dataSource` supplies the rows. |
-| `columns` | `GridColDef<R>[]` | — | **Required.** Definitions for the columns. |
-| `getRowId` | `(row: GridRowModel) => GridRowId` | `row.id` | Returns a unique identifier for each row. It only keys the grid's internal store: rows reach `renderCell`, events, `apiRef` and `processRowUpdate` unchanged, and the id is never written to `row.id` (v3.0+). Pass it to export functions as `getRowId` when you export `selectedRows`. |
+| `rows` | `R[]` | — | **Required.** Array of data objects. `R` is your row type: any object type, interfaces included (see [Typing your rows](#typing-your-rows)). Pass `[]` when a `dataSource` supplies the rows. |
+| `columns` | `GridColDef<R>[]` or `GridColDef[]` | — | **Required.** Definitions for the columns: typed for your rows, or untyped. |
+| `getRowId` | `(row: R) => GridRowId` | `row.id` | Returns a unique identifier for each row. It only keys the grid's internal store: rows reach `renderCell`, events, `apiRef` and `processRowUpdate` unchanged, and the id is never written to `row.id` (v3.0+). Pass it to export functions as `getRowId` when you export `selectedRows`. |
 | `rowHeight` | `number` | `52` | Height of each row in pixels. Without it, an enclosing `DataGridThemeProvider`'s `grid.rowHeightStandard` applies (v3.0+). |
 | `headerHeight` | `number` | `56` | Height of the header row. Without it, the theme's `grid.headerHeight` applies (v3.0+). |
 | `autoHeight` | `boolean` | `false` | Adjust grid height to match row total. |
@@ -171,17 +171,46 @@ The main component for displaying and interacting with data.
 | :--- | :--- | :--- | :--- |
 | `columnGroupingModel` | `GridColumnGroupingModel` | — | Defines spanning header rows above the regular column headers. See [Column Group Headers](#️-column-group-headers). |
 
+### Typing your rows
+
+`DataGrid` and every generic type (`GridColDef<R>`, `GridRenderCellParams<R>`, `GridRowParams<R>` …) take your row type `R`. Since v3.0 `R` can be any object type (`GridValidRowModel`), so your own interfaces work directly: they need no index signature and do not have to extend `GridRowModel`. `R` is inferred from `rows`.
+
+```tsx
+import { DataGrid } from '@opencorestack/opengridx';
+import type { GridColDef } from '@opencorestack/opengridx';
+
+interface Employee { id: number; name: string; salary: number }
+
+// Typed columns: callbacks see `params.row` as Employee.
+const columns: GridColDef<Employee>[] = [
+  { field: 'name', renderCell: ({ row }) => row.name.toUpperCase() },
+  { field: 'salary', valueGetter: ({ row }) => row.salary * 12,
+    valueSetter: ({ row, value }) => ({ ...row, salary: Number(value) / 12 }) },
+];
+
+<DataGrid rows={employees} columns={columns} onRowClick={({ row }) => console.log(row.name)} />;
+```
+
+- **Untyped columns** (`GridColDef[]`, as in the README) work with rows of any type. Their callbacks see `params.row` as `GridRowModel` (any key, read as `unknown`). The `DataGridUntypedColumnsProps<R>` type describes these props.
+- **Inline column arrays** (`columns={[{ field: 'name', renderCell: ({ row }) => … }]}`) get `R` from `rows`.
+- **Rows without an `id`** need `getRowId`, e.g. `getRowId={(row) => row.code}`.
+- A `GridColDef<Row>` for a type-alias row (or an interface that extends `GridRowModel`) can be used where a `GridColDef` is expected: the row callbacks are declared as methods, so they are checked bivariantly.
+- `params.value` stays `unknown`; read typed values from `params.row`, or render `params.formattedValue`.
+- The export functions, `usePivot` and `useAggregation` accept the same typed or untyped columns, and their options' `getRowId` takes your row type.
+- `apiRef` methods (`getRow`, `getAllRows` …) return `GridRowModel`: the API object is not generic.
+- For the component's props type, use `DataGridProps<R>`. `React.ComponentProps<typeof DataGrid>` resolves to the untyped-columns overload.
+
 ### `GridSlots` and `GridSlotProps`
 
-The types of the `slots` and `slotProps` props (v3.0+ exports).
+The types of the `slots` and `slotProps` props (v3.0+ exports). Each slot is typed with the props the grid passes it, so a slot component with its own typed props (e.g. `function Footer({ rowCount }: { rowCount: number })`) is checked, and an inline slot (`footer: (props) => …`) gets its parameter typed. A function component typed `(props: Record<string, unknown>)` is still accepted; a class, `memo` or `forwardRef` component needs the slot's props type (e.g. `GridToolbarSlotProps`). A prop the grid does not pass (one you supply through `slotProps`) must be optional in your component, or close over it in an inline slot.
 
 | Slot | Replaces | Receives |
 | :--- | :--- | :--- |
-| `toolbar` | Nothing by default: renders a toolbar above the grid. Use `GridToolbar` or your own component. | The toolbar props the grid owns (see [`GridToolbarProps`](#gridtoolbarprops)) plus `apiRef`, then `slotProps.toolbar`. |
-| `pagination` | The built-in `Pagination` bar (shown with `pagination`). | `PaginationProps` (`page`, `pageSize`, `rowCount`, `pageSizeOptions`, `onPageChange`, `onPageSizeChange`, `localeText`), then `slotProps.pagination`. |
-| `noRowsOverlay` | The empty-state icon and label (shown when there are no rows and the grid is not loading). | `slotProps.noRowsOverlay` only. |
-| `loadingOverlay` | The loading indicator: the skeleton rows while loading with no rows, the progress bar while loading with rows shown (the slot is then shown over them). | `slotProps.loadingOverlay` only. |
-| `footer` | The pagination area. | `apiRef`, `aggregationModel`, `aggregationResult`, `rowCount`, `pagination`, `paginationModel`, `pageSizeOptions`, `onPaginationModelChange`, then `slotProps.footer`. |
+| `toolbar` | Nothing by default: renders a toolbar above the grid. Use `GridToolbar` or your own component. | `GridToolbarSlotProps`: the toolbar props the grid owns (see [`GridToolbarProps`](#gridtoolbarprops)) plus `apiRef`, then `slotProps.toolbar`. |
+| `pagination` | The built-in `Pagination` bar (shown with `pagination`). | `GridPaginationSlotProps` (= `PaginationProps`: `page`, `pageSize`, `rowCount`, `pageSizeOptions`, `onPageChange`, `onPageSizeChange`, `localeText`), then `slotProps.pagination`. |
+| `noRowsOverlay` | The empty-state icon and label (shown when there are no rows and the grid is not loading). | `slotProps.noRowsOverlay` only (`GridOverlaySlotProps`). |
+| `loadingOverlay` | The loading indicator: the skeleton rows while loading with no rows, the progress bar while loading with rows shown (the slot is then shown over them). | `slotProps.loadingOverlay` only (`GridOverlaySlotProps`). |
+| `footer` | The pagination area. | `GridFooterSlotProps`: `apiRef`, `aggregationModel`, `aggregationResult`, `rowCount`, `pagination`, `paginationModel`, `pageSizeOptions`, `onPaginationModelChange`, then `slotProps.footer`. |
 
 ```ts
 type GridSlots = NonNullable<DataGridProps['slots']>;
@@ -388,7 +417,7 @@ Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative 
 
 In every exporter, a non-empty `selectedRows` takes precedence over `groupedRows` (the selected rows are exported flat) and the totals are recomputed over the selected rows (v3.0+). See the [Export Guide](features/export-guide.md#selection-grouping-and-totals).
 
-Every exporter's options also accept `getRowId?: (row) => GridRowId`. Pass the grid's `getRowId` when you use one: `selectedRows` holds those ids, and since v3.0 the grid no longer copies them onto `row.id`.
+Every exporter takes `columns` typed for your rows (`GridColDef<R>[]`) or untyped (`GridColDef[]`), and its options also accept `getRowId?: (row: R) => GridRowId`. Pass the grid's `getRowId` when you use one: `selectedRows` holds those ids, and since v3.0 the grid no longer copies them onto `row.id`.
 
 ---
 
@@ -471,7 +500,7 @@ const { aggregationResult, isLoading } = useAggregation({
 
 | Param | Type | Description |
 | :--- | :--- | :--- |
-| `rows` | `GridRowModel[]` | The rows to aggregate (already filtered: the hook aggregates every row it is given). |
+| `rows` | `R[]` | The rows to aggregate (already filtered: the hook aggregates every row it is given). Any object row type (v3.0+). |
 | `aggregationModel` | `GridAggregationModel` | Map of `field → aggFn` (e.g. `{ salary: 'sum' }`). |
 | `isServerSide` | `boolean` | If `true`, skips client computation and uses `serverAggregationResults`, else the result of `dataSource.getAggregations`. The grid sets it whenever a `dataSource` drives the rows (server or infinite pagination, server sorting or server filtering). |
 | `columns` | `GridColDef[]` | Optional — column definitions, so values are read through each column's `valueGetter` and `availableAggregationFunctions` is honoured. |
@@ -522,7 +551,7 @@ const { pivotRows, pivotColumns, isValid } = usePivot(
 
 | Param | Type | Description |
 | :--- | :--- | :--- |
-| `rawRows` | `GridRowModel[]` | Original flat dataset. |
+| `rawRows` | `R[]` | Original flat dataset. Any object row type (v3.0+); `rawCols` may be `GridColDef<R>[]` or `GridColDef[]`. |
 | `rawCols` | `GridColDef[]` | Original column definitions. |
 | `model` | `GridPivotModel` | Pivot configuration — `rowFields`, `columnFields`, `valueFields`. |
 | `enabled` | `boolean` | When `false`, returns empty arrays immediately (no computation). |
