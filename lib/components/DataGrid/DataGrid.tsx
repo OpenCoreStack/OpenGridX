@@ -19,7 +19,6 @@ import { useGridPageCorrection } from '../../hooks/core/useGridPageCorrection';
 import { useGridColumnsPanel } from '../../hooks/core/useGridColumnsPanel';
 import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
 import { GridToolbarSlot } from './GridToolbarSlot';
-import { getAriaRowLayout } from '../../utils/aria';
 import { GridAggregationFooter } from './GridAggregationFooter';
 import { GridEmptyState } from './GridEmptyState';
 import { GridErrorOverlay } from './GridErrorOverlay';
@@ -32,7 +31,6 @@ import { useGridEditing } from '../../hooks/features/useGridEditing';
 import { useGridSpanning } from '../../hooks/features/useGridSpanning';
 import { useGridSpanRowWindow, useGridSpanColumnWindow } from '../../hooks/features/useGridSpanRenderWindow';
 import { useColumnGroupReorderGuard } from '../../hooks/features/useColumnGroupReorderGuard';
-import { canReorderWithinColumnGroups, getColumnGroupDepth } from '../../utils/columnGroups';
 import { useGridDataSource } from '../../hooks/features/useGridDataSource';
 import { useServerTreeChildren } from '../../hooks/features/useServerTreeChildren';
 import { useAggregation, useServerAggregationResults } from '../../hooks/features/useAggregation';
@@ -53,6 +51,9 @@ import { useGridClipboardApi } from '../../hooks/core/useGridClipboardApi';
 import { useGridScrollToIndexesApi } from '../../hooks/core/useGridScrollToIndexesApi';
 import { useGridSortHandlers, useGridColumnMenuHandlers } from '../../hooks/core/useGridHeaderHandlers';
 import { useGridKeyboardMode, useGridPointerFocusHandlers } from '../../hooks/core/useGridFocusHandlers';
+import { getPaginationRowCount } from '../../utils/pagination';
+import { useGridAriaRows } from '../../hooks/core/useGridAriaRows';
+import { useGridToolbarProps } from '../../hooks/core/useGridToolbarProps';
 import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridColDef } from '../../types';
 
 /**
@@ -449,11 +450,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onPaginationModelChange: handlePaginationModelChange,
     });
 
-    // What the pager pages through. Client: the filtered, unpinned rows (pinned rows show on
-    // every page). Server: the server total, from the dataSource response or the rowCount prop.
-    const paginationRowCount = paginationMode === 'server'
-        ? ((dataSource ? state.pagination.rowCount ?? propRowCount : propRowCount) ?? sortedUnpinnedRows.length)
-        : sortedUnpinnedRows.length;
+    const paginationRowCount = getPaginationRowCount({
+        paginationMode,
+        hasDataSource: Boolean(dataSource),
+        dataSourceRowCount: state.pagination.rowCount,
+        rowCountProp: propRowCount,
+        clientRowCount: sortedUnpinnedRows.length,
+    });
 
     const { rowSelection, handleRowClick, handleSelectionChange } = useGridRowInteractions<R>({
         dataRows,
@@ -663,18 +666,17 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onPinnedColumnsChange: handlePinnedColumnsChange,
     });
 
-    const ariaRows = useMemo(() => getAriaRowLayout({
-        headerRowCount: 1 + getColumnGroupDepth(columnGroupingModel),
+    const ariaRows = useGridAriaRows({
+        columnGroupingModel,
         pinnedTopCount: pinnedTopRows.length,
         pinnedBottomCount: pinnedBottomRows.length,
-        pageRowCount: pagination ? paginatedUnpinnedRows.length : sortedUnpinnedRows.length,
-        totalCenterRowCount: pagination && paginationMode === 'server'
-            ? Math.max(paginationRowCount, paginatedUnpinnedRows.length)
-            : sortedUnpinnedRows.length,
-        pageOffset: pagination ? effectivePaginationModel.page * effectivePaginationModel.pageSize : 0,
-    }), [columnGroupingModel, pinnedTopRows.length, pinnedBottomRows.length, pagination, paginatedUnpinnedRows.length,
-        sortedUnpinnedRows.length, paginationMode, paginationRowCount, effectivePaginationModel.page,
-        effectivePaginationModel.pageSize]);
+        pagination,
+        paginationMode,
+        paginationModel: effectivePaginationModel,
+        paginationRowCount,
+        paginatedUnpinnedRowCount: paginatedUnpinnedRows.length,
+        sortedUnpinnedRowCount: sortedUnpinnedRows.length,
+    });
 
     const spanRowWindow = useGridSpanRowWindow({
         spanning,
@@ -731,41 +733,30 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const showLoadingOverRows = effectiveLoading && allRenderableRows.length > 0 && paginationMode !== 'infinite';
     const ToolbarSlot = slots?.toolbar;
 
-    const toolbarProps = React.useMemo(() => {
-        if (!slots?.toolbar) return null;
-        const reorderHandler = disableColumnReorder
-            ? undefined
-            : (fromField: string, toField: string) => {
-                if (!canReorderWithinColumnGroups(columnGroupingModel, fromField, toField)) return;
-                moveColumn(fromField, toField);
-            };
-        return {
-            apiRef: gridData.apiRef,
-            columns: orderedColumns as unknown as GridColDef[],
-            baseColumns: columns as unknown as GridColDef[],
-            aggregationModel,
-            onAggregationModelChange: handleAggregationModelChange,
-            ...(pivotMode || propPivotModel || onPivotModelChange ? {
-                pivotModel: currentPivotModel,
-                onPivotModelChange: handlePivotModelChange,
-            } : {}),
-            filterModel,
-            onFilterModelChange: handleFilterModelChange,
-            columnVisibilityModel,
-            onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
-            onColumnReorder: reorderHandler,
-            onColumnOrderReset: disableColumnReorder ? undefined : resetColumnOrder,
-            forceColumnsOpen: columnsPanel.toolbarPanelRequested,
-            onColumnsPanelClose: columnsPanel.closeToolbarPanel,
-            ...slotProps?.toolbar,
-        };
-    }, [
-        slots?.toolbar, disableColumnReorder, moveColumn, resetColumnOrder, orderedColumns, gridData.apiRef,
-        columns, aggregationModel, handleAggregationModelChange, pivotMode,
-        propPivotModel, onPivotModelChange, currentPivotModel, handlePivotModelChange,
-        filterModel, handleFilterModelChange, columnVisibilityModel,
-        handleColumnVisibilityModelChange, columnsPanel.toolbarPanelRequested, columnsPanel.closeToolbarPanel, slotProps?.toolbar, columnGroupingModel,
-    ]);
+    const toolbarProps = useGridToolbarProps<R>({
+        toolbar: slots?.toolbar,
+        toolbarSlotProps: slotProps?.toolbar,
+        apiRef,
+        orderedColumns,
+        baseColumns: columns,
+        aggregationModel,
+        onAggregationModelChange: handleAggregationModelChange,
+        pivotMode,
+        pivotModelProp: propPivotModel,
+        onPivotModelChangeProp: onPivotModelChange,
+        pivotModel: currentPivotModel,
+        onPivotModelChange: handlePivotModelChange,
+        filterModel,
+        onFilterModelChange: handleFilterModelChange,
+        columnVisibilityModel,
+        onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
+        disableColumnReorder,
+        columnGroupingModel,
+        moveColumn,
+        resetColumnOrder,
+        forceColumnsOpen: columnsPanel.toolbarPanelRequested,
+        onColumnsPanelClose: columnsPanel.closeToolbarPanel,
+    });
 
     return (
         <div
