@@ -10,6 +10,14 @@ Generate a styled PDF report from grid data using `exportToPdf()`.
 npm install jspdf jspdf-autotable
 ```
 
+> **Currency symbols such as `₹` print as `?` by default.** The built-in Helvetica font only covers Latin-1. Pass the [`font` option](#non-latin-text-and-unicode-fonts) with a Unicode `.ttf`:
+>
+> ```ts
+> await exportToPdf(rows, columns, { fileName: 'invoices', font: { name: 'NotoSans', data: notoSansBase64 } });
+> ```
+
+> **Large datasets:** PDF generation runs on the main thread, and time and file size grow with every row: 50,000 grouped rows took 10–16 s (the page is unresponsive meanwhile) and produced a file of about 120 MB. For more than a few thousand rows, export CSV (`exportToCsv`) or `.xlsx` (`exportToExcelAdvanced`) instead, or export a filtered subset.
+
 ## Basic Usage
 
 ```tsx
@@ -133,6 +141,14 @@ Columns with `exportable: false` are excluded automatically:
 System columns (`__check__`, `__actions__`) and spacer columns (`isSpacer: true`) are also always excluded.
 
 ## Troubleshooting
+
+**`₹` or other characters print as `?`**
+
+Pass the `font` option with a Unicode TrueType font. See [Non-Latin text](#non-latin-text-and-unicode-fonts).
+
+**Export is slow or the file is huge**
+
+PDF is not suited to tens of thousands of rows (see Installation above). Use CSV or `.xlsx` for large exports.
 
 **Error: "exportToPdf requires 'jspdf' and 'jspdf-autotable'"**
 

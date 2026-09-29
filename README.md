@@ -62,7 +62,7 @@ export default function App() {
 }
 ```
 
-Give the grid a bounded height (`height`, or a parent with a definite height; a flex child needs `min-height: 0`). In an unbounded container every row is rendered.
+Without a `height` prop the grid fills its container (`height: 100%`, or the free space as a flex item), so put it in a container with a bounded height: a definite `height`, and `min-height: 0` on every flex or grid item up to that element. In an unbounded container the grid grows to fit and every row is rendered (a development warning says so). See [Virtualization](docs/features/virtualization.md#the-grid-needs-a-bounded-height).
 
 ---
 
@@ -103,7 +103,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | :--- | :--- | :--- | :--- |
 | `rows` | `GridRowModel[]` | — | **Required.** Array of data rows. The grid never modifies or copies them. |
 | `columns` | `GridColDef[]` | — | **Required.** Column definitions. |
-| `height` | `number \| string` | — | Grid height in pixels or a CSS string (e.g. `'100%'`). No default: without it the grid takes its container's height, and needs a bounded container to virtualize. |
+| `height` | `number \| string` | — | Grid height in pixels or a CSS string (e.g. `'100%'`). No default: fills its container's height (`height: 100%`, or `flex: 1` with `min-height: 0` as a flex item); in an auto-height container it grows to fit every row. |
 | `autoHeight` | `boolean` | `false` | Grows the grid to fit all rows (renders every row). |
 | `loading` | `boolean` | `false` | With no rows, shows skeleton rows (or `slots.loadingOverlay`). With rows shown, keeps them and runs a progress bar along the top (or shows `slots.loadingOverlay` over them). Works in list view too. |
 | `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Row height preset: 32 px, `rowHeight`, 72 px. |
@@ -228,7 +228,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | :--- | :--- | :--- |
 | `isCellEditable` | `(params: GridCellParams) => boolean` | Per-cell editability predicate. |
 | `processRowUpdate` | `(newRow, oldRow) => R \| Promise<R>` | Handles row save; supports async validation. |
-| `onProcessRowUpdateError` | `(error: unknown) => void` | Fires if `processRowUpdate` throws, rejects or returns no row. |
+| `onProcessRowUpdateError` | `(error: unknown) => void` | Fires if `processRowUpdate` throws, rejects or returns no row. The cell then stays in edit mode with the typed value, so the user can correct it or press Escape to cancel. |
 
 ### Row Reordering
 
@@ -268,7 +268,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | :--- | :--- | :--- |
 | `slots` | `GridSlots` | Replace built-in components (toolbar, pagination, overlays, footer). |
 | `slotProps` | `object` | Pass custom props to slot components. |
-| `listView` / `listViewColumn` | `boolean` / `GridListViewColDef` | Render rows as cards (mobile layouts). Honours loading, overlays and `slots.footer`; keyboard navigable; tree/group parents get an expand chevron. |
+| `listView` / `listViewColumn` | `boolean` / `GridListViewColDef` | Render rows as cards (mobile layouts). Honours loading, overlays and `slots.footer`; keyboard navigable; tree/group parents get an expand chevron. **Not virtualized:** every row of the page is rendered, so use `pagination` or server-side loading for more than a few thousand rows (development builds warn above 2,000). |
 | `columnGroupingModel` | `GridColumnGroupingModel` | Multi-level column group headers. |
 
 Per-cell styling uses `GridColDef.cellClassName` / `headerClassName`; themes are applied with `<DataGridThemeProvider theme={…}>` (see Theming below).
@@ -434,6 +434,8 @@ printGrid(rows, columns, 'Report Title');
 ```
 
 > **Optional peer dependencies:** `exportToExcelAdvanced` requires ExcelJS (`npm install exceljs`); `exportToPdf` requires `npm install jspdf jspdf-autotable`.
+
+> **Large exports:** PDF generation runs on the main thread and grows fast (about 120 MB and 10–16 s for 50,000 grouped rows, with the page blocked meanwhile). For more than a few thousand rows export CSV or `.xlsx`. PDF's built-in font only covers Latin-1: pass the `font` option (a Unicode `.ttf`) for characters such as `₹`, otherwise they print as `?`. See [PDF Export](docs/features/pdf-export.md).
 
 CSV and HTML-Excel exports neutralise spreadsheet formulas (text starting with `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading `'`; opt out with `escapeFormulas: false`), and CSV starts with a UTF-8 BOM (`bom: false` omits it). `exportToExcel` writes an HTML table, so a `.xlsx` file name is saved as `.xls`. To export what the grid shows, pass `apiRef.current.getAllFilteredRows()` and `apiRef.current.getVisibleColumns()`; with a custom `getRowId`, also pass `getRowId` in the options so `selectedRows` match. See the [Export Guide](docs/features/export-guide.md).
 

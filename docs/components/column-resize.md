@@ -3,7 +3,7 @@
 OpenGridX supports dynamic column resizing, allowing users to adjust the width of any column on the fly for better visibility of data. This is facilitated by the `ColumnResizeHandle`, an internal component (not exported) that `<Header />` renders invisibly on the edge of each resizable column header.
 
 ## 📑 Overview
-- **Where the handle is**: on the right edge of each resizable column header. Right-pinned columns are anchored to the right edge of the grid and grow leftwards, so their handle is on their **left** edge, and the edge you grab follows the pointer.
+- **Where the handle is**: on the right edge of each resizable column header. Right-pinned columns are anchored to the right edge of the grid and grow leftwards, so their handle is on their **left** edge, and the edge you grab follows the pointer. The handle is an 8px strip just inside the column, against that edge, and all of it can be grabbed (v3.0.1+; before, the neighbouring header cell clipped half of it).
 - **Mouse, touch and pen**: the handle uses pointer events with pointer capture, so a resize keeps following the pointer outside the header and works on tablets and phones.
 - **Keyboard**: with a column header focused, **Alt+ArrowRight** / **Alt+ArrowLeft** widen / narrow the column by 10px (hold **Shift** for 50px). The handle is a `role="separator"` that reports the width in `aria-valuenow` (and `aria-valuemin` / `aria-valuemax`).
 - **Constraints**: `minWidth` and `maxWidth` from your `GridColDef` apply. Without `minWidth` a column can be narrowed to 50px; a column that is already narrower (a 30px icon column) is never snapped up to 50px. Without `maxWidth` there is no upper limit.

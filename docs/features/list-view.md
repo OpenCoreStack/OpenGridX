@@ -78,7 +78,7 @@ List view pages exactly like the grid view: with `pagination`, one page of the (
 
 `onRowsScrollEnd` fires when the list is scrolled to within 100px of its bottom, so the [infinite scroll](./infinite-scroll.md) pattern works in list view too. As in the grid view, it fires once per arrival: it fires again only after the list leaves that zone or the row count changes (for example, when the next page has loaded).
 
-The list view is **not virtualized**: it renders every row it shows (one page with `pagination`, otherwise all rows). Use pagination for large datasets. `slots.footer` is rendered below the list (in place of its pagination controls); the aggregation footer row is not shown in list view.
+The list view is **not virtualized**: it renders every row it shows (one page with `pagination`, otherwise all rows). Use pagination for large datasets: rendering tens of thousands of cards freezes the page, and in development the grid warns when the list view renders more than 2,000 items (v3.0.1+). `slots.footer` is rendered below the list (in place of its pagination controls); the aggregation footer row is not shown in list view.
 
 ## ♿ Accessibility
 

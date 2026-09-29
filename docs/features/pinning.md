@@ -20,6 +20,7 @@ Columns can be pinned to the left or right edges of the grid. Pinned columns rem
 
 ### Order and widths
 - Pinned columns render in the order of `pinnedColumns.left` / `pinnedColumns.right`, not in column order. Pinning from the column menu appends the column to the end of its side, so it lands next to the scrolling columns.
+- When the columns are narrower than the grid, right-pinned columns sit at the grid's right edge, and the free space is between the scrolling columns and them (v3.0.1+).
 - A pinned column is sized exactly as it would be unpinned: numbers, percentages, `flex` and `'auto'` all apply, clamped to `minWidth` / `maxWidth`. The sticky offsets use those widths, so pinned columns never overlap.
 
 ### Column Configuration

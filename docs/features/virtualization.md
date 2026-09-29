@@ -53,37 +53,39 @@ Without the stylesheet the viewport does not scroll, so the grid renders every r
 
 Virtualization renders as many rows as fit in the grid's viewport. If the grid's container has no bounded height, the viewport grows to fit **every** row, so every row is rendered. Nothing errors; the grid just stops virtualizing.
 
-The most common cause is a flex child that is missing `min-height: 0`. A flex item defaults to `min-height: auto`, which lets it grow to its content:
+**Without a `height` prop the grid fills its container** (since 3.0.1): its root gets `height: 100%` and, as a flex item, `flex: 1 1 auto; min-height: 0`. So it fills a sized block parent, or the free space of a flex column, and virtualizes. In a container with no definite height, `100%` resolves to `auto` and the grid grows to fit its rows, exactly as before. Passing `height` (a number or any CSS length) sets the height instead; `autoHeight` always grows to fit every row.
+
+The most common cause of an unbounded container is a flex child that is missing `min-height: 0`. A flex item defaults to `min-height: auto`, which lets it grow to its content:
 
 ```tsx
-// ❌ Grows to fit all rows — virtualization is effectively off
+// ❌ The wrapper grows to fit all rows — virtualization is effectively off
 <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
   <div style={{ flex: 1 }}>
-    <DataGrid rows={rows} columns={columns} height="100%" />
+    <DataGrid rows={rows} columns={columns} />
   </div>
 </div>
 
 // ✅ Bounded — only visible rows render
 <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
   <div style={{ flex: 1, minHeight: 0 }}>
-    <DataGrid rows={rows} columns={columns} height="100%" />
+    <DataGrid rows={rows} columns={columns} />
   </div>
 </div>
 ```
 
-`height="100%"` only helps if every ancestor up to a fixed-height element also has a definite height.
+Every flex (or grid) item between the grid and the element with a fixed height (`100vh`, `600px`, …) needs `min-height: 0`. The grid itself can also be the flex item: `<div style={{ display: 'flex', flexDirection: 'column', height: 600 }}><Toolbar /><DataGrid … /></div>` gives the grid the space left after the toolbar.
 
-**`DataGridThemeProvider` counts as an ancestor.** It renders a plain `<div class="ogx-theme-provider">` around the grid, and that wrapper is auto-height like any other `div`. When you use `height="100%"` inside it, give the wrapper a height as well:
+**`DataGridThemeProvider` counts as an ancestor.** It renders a plain `<div class="ogx-theme-provider">` around the grid, and that wrapper is auto-height like any other `div`. Inside a bounded container, give the wrapper a height as well:
 
 ```tsx
 <div style={{ flex: 1, minHeight: 0 }}>
   <DataGridThemeProvider theme={theme} style={{ height: '100%' }}>
-    <DataGrid rows={rows} columns={columns} height="100%" />
+    <DataGrid rows={rows} columns={columns} />
   </DataGridThemeProvider>
 </div>
 ```
 
-In development builds the grid logs a `console.warn` when it detects that it is rendering every row of a dataset larger than 200 rows because its viewport is unbounded.
+In development builds the grid logs a `console.warn` when it is rendering every row of a dataset larger than 200 rows and its viewport is at least as tall as those rows, that is, when its container really is unbounded. The warning names the fixes above.
 
 Pagination can hide this problem, because a paginated grid only has one page of rows to render. Row grouping switches pagination off (see below), so an unbounded container that looked fine with pagination can freeze the tab once grouping is enabled.
 

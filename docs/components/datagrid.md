@@ -25,7 +25,7 @@ function MyGrid() {
 | `rows` | `R[]` | — | **Required.** The dataset to display (`[]` when a `dataSource` supplies the rows). |
 | `columns` | `GridColDef<R>[]` | — | **Required.** Column definitions. |
 | `getRowId` | `(row: R) => GridRowId` | `row.id` | Unique ID for each row. Only keys the grid's store; row objects are never copied or given an `id` (v3.0+). Duplicate ids keep the first row and log a development warning. |
-| `height` | `number \| string` | `undefined` | Height of the grid container. |
+| `height` | `number \| string` | `undefined` | Height of the grid. Without it the grid fills its container (v3.0.1+); the container needs a bounded height for virtualization. See [Virtualization](../features/virtualization.md#the-grid-needs-a-bounded-height). |
 | `loading` | `boolean` | `false` | Displays a loading skeleton/shimmer. |
 | `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Row height preset: compact = 32 px, standard = `rowHeight`, comfortable = 72 px. Inside a `DataGridThemeProvider`, the theme's `grid.rowHeightCompact` / `rowHeightStandard` / `rowHeightComfortable` replace these defaults (an explicit `rowHeight` still wins for standard). |
 | `checkboxSelection` | `boolean` | `false` | Enable row checkboxes. |

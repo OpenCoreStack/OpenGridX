@@ -27,7 +27,7 @@ The main component for displaying and interacting with data.
 | `onPaginationModelChange` | `(model: GridPaginationModel) => void` | — | Fired when page or page size changes. |
 | `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Available page size options. The uncontrolled default page size is 100 when offered, else the first option. |
 | `rowCount` | `number` | — | Server total for `paginationMode="server"` when you fetch pages yourself (read on every render). With a `dataSource`, the response's `rowCount` is used and this is only the fallback before the first response. |
-| `height` | `number \| string` | `undefined` | Total height of the grid container. |
+| `height` | `number \| string` | `undefined` | Total height of the grid. Without it the grid fills its container (`height: 100%`, or `flex: 1 1 auto; min-height: 0` as a flex item; v3.0.1+), and grows to fit every row in an auto-height container. |
 | `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density: compact = the theme's `grid.rowHeightCompact` or 32 px, standard = `rowHeight`, comfortable = the theme's `grid.rowHeightComfortable` or 72 px. |
 | `initialState` | `GridInitialState` | `undefined` | Starting state (sort, filter, pagination, columns, density), read on mount. Seeds the grid's uncontrolled state; see [State Persistence](features/state-persistence.md). |
 | `slots` | `GridSlots` | — | Custom component overrides: `toolbar`, `pagination`, `noRowsOverlay`, `loadingOverlay`, `footer`. See [`GridSlots`](#gridslots-and-gridslotprops) and the [Slots API](customization/slots-api.md). |
@@ -156,7 +156,7 @@ The main component for displaying and interacting with data.
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `apiRef` | `React.MutableRefObject<GridApi>` | — | Reactive ref to the imperative API. Create with `useGridApiRef()`. |
+| `apiRef` | `React.MutableRefObject<GridApi<R>> \| React.MutableRefObject<GridApi>` | — | Reactive ref to the imperative API. Create with `useGridApiRef()`, or `useGridApiRef<Row>()` for typed row getters (v3.0.1+). |
 
 #### List View
 
@@ -197,7 +197,7 @@ const columns: GridColDef<Employee>[] = [
 - A `GridColDef<Row>` for a type-alias row (or an interface that extends `GridRowModel`) can be used where a `GridColDef` is expected: the row callbacks are declared as methods, so they are checked bivariantly.
 - `params.value` stays `unknown`; read typed values from `params.row`, or render `params.formattedValue`.
 - The export functions, `usePivot` and `useAggregation` accept the same typed or untyped columns, and their options' `getRowId` takes your row type.
-- `apiRef` methods (`getRow`, `getAllRows` …) return `GridRowModel`: the API object is not generic.
+- `apiRef` row getters (`getRow`, `getAllRows`, `getVisibleRows`, `getAllFilteredRows`) return your row type when the ref is created with `useGridApiRef<Row>()` (v3.0.1+); a plain `useGridApiRef()` returns `GridRowModel`.
 - For the component's props type, use `DataGridProps<R>`. `React.ComponentProps<typeof DataGrid>` resolves to the untyped-columns overload.
 
 ### `GridSlots` and `GridSlotProps`
@@ -279,9 +279,9 @@ Access these methods via the `apiRef` prop.
 
 | Method | Return | Description |
 | :--- | :--- | :--- |
-| `getRow(id)` | `GridRowModel \| null` | Get row data by ID (your row object, unchanged). |
-| `getAllRows()` | `GridRowModel[]` | Get all loaded rows. |
-| `getVisibleRows()` | `GridRowModel[]` | Get the rows on screen after filtering/sorting: pinned-top rows, the current page (or all rows without pagination), pinned-bottom rows. Under row grouping and tree data this is the visible hierarchy, group rows included. |
+| `getRow(id)` | `R \| null` | Get row data by ID (your row object, unchanged). `R` is the type passed to `useGridApiRef<R>()`, `GridRowModel` by default. |
+| `getAllRows()` | `R[]` | Get all loaded rows. |
+| `getVisibleRows()` | `R[]` | Get the rows on screen after filtering/sorting: pinned-top rows, the current page (or all rows without pagination), pinned-bottom rows. Under row grouping and tree data this is the visible hierarchy, group rows included. |
 | `getColumn(field)` | `GridColDef \| null` | Get column definition by field. |
 | `getVisibleColumns()` | `GridColDef[]` | Get the columns on screen, in render order (hidden columns excluded): left-pinned, unpinned, right-pinned, as the header shows them (v3.0+; before, pinned columns kept their unpinned position). |
 | `selectRow(id, isSelected = true)` | `void` | Set selection for a single row. Fires `onRowSelectionModelChange`, unless nothing changes (selecting a selected row, deselecting an unselected one; v3.0+). Ids of rows the grid made (group headers, subtotals, auto-created tree parents, the pivot Grand Total) are ignored, as they are for the checkbox, click and keyboard (v3.0+). |
@@ -297,7 +297,7 @@ Access these methods via the `apiRef` prop.
 | `getAllColumns()` | `GridColDef[]` | Get all defined columns. |
 | `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results (`null` without an `aggregationModel`, and in pivot mode). Live in a parent's `useLayoutEffect` on mount and current after every update (v3.0+; before, it was installed in a passive effect). The same holds for `getAggregationModel()` and `getGroupedExportRows()`. |
 | `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
-| `getAllFilteredRows()` | `GridRowModel[]` | Get every row that passes the filter, sorted, regardless of pagination, including pinned rows. Under row grouping and tree data it returns the data rows (no group rows) in hierarchy order with every group expanded, ordered like the screen (also when sorting by the hierarchy column; v3.0+). With tree data and a filter, ancestors shown only to give a match its context are left out: the result is the set select-all and the aggregation footer act on (v3.0+). Use for full-dataset exports. |
+| `getAllFilteredRows()` | `R[]` | Get every row that passes the filter, sorted, regardless of pagination, including pinned rows. Under row grouping and tree data it returns the data rows (no group rows) in hierarchy order with every group expanded, ordered like the screen (also when sorting by the hierarchy column; v3.0+). With tree data and a filter, ancestors shown only to give a match its context are left out: the result is the set select-all and the aggregation footer act on (v3.0+). Use for full-dataset exports. |
 | `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total), sorted and filtered like the screen. Collapsed groups are included with their rows, and subtotals are computed over each group's exported rows. Group-header and subtotal entries carry `groupLabel`, the label the grid shows (v3.0+). Returns `null` when row grouping is not active. |
 | `copySelectedRows()` | `Promise<void>` | Copy every selected row that passes the filter (other pages, collapsed groups and pinned rows included) as TSV, with the visible columns in screen order. Resolves without writing when no selected row is found; rejects when the clipboard write fails. |
 
@@ -476,6 +476,10 @@ const apiRef = useGridApiRef();
 // Then call methods imperiously
 apiRef.current.scrollToIndexes({ rowIndex: 0 });
 apiRef.current.setFilterModel({ items: [] });
+
+// Typed row getters (v3.0.1+)
+const invoiceApi = useGridApiRef<Invoice>();
+const invoice = invoiceApi.current.getRow(42); // Invoice | null
 ```
 
 See the [Imperative API (`GridApi`)](#%EF%B8%8F-imperative-api-gridapi) table above for the full method list.

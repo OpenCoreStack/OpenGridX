@@ -46,7 +46,7 @@ How the provider builds the variables (v3.0+):
 - **Toolbar tokens follow the grid surface.** Unless you set `toolbar.*`, the toolbar uses the header background, header text and grid border colours.
 - **Row and header heights reach the layout.** `grid.rowHeightStandard` / `grid.headerHeight` (and `rowHeightCompact` / `rowHeightComfortable` with `density`) are read by the grid itself, which virtualizes from them. They must be pixel values (`'36px'` or `'36'`); other units are ignored. The `rowHeight` / `headerHeight` props win over the theme.
 
-> **Sizing:** the wrapper `div` (`.ogx-theme-provider`) is a normal auto-height block. If the grid uses `height="100%"`, pass `style={{ height: '100%' }}` (or a `className` that sets a height) to the provider too. Otherwise the wrapper grows to fit every row and row virtualization is effectively off. See [Virtualization → The grid needs a bounded height](../features/virtualization.md#the-grid-needs-a-bounded-height).
+> **Sizing:** the wrapper `div` (`.ogx-theme-provider`) is a normal auto-height block. A grid without a `height` prop (or with `height="100%"`) fills its parent, which here is the wrapper, so inside a bounded container pass `style={{ height: '100%' }}` (or a `className` that sets a height) to the provider too. Otherwise the wrapper grows to fit every row and row virtualization is effectively off. See [Virtualization → The grid needs a bounded height](../features/virtualization.md#the-grid-needs-a-bounded-height).
 
 ---
 
