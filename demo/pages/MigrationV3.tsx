@@ -110,6 +110,7 @@ const sections: MigrationSection[] = [
             <><code>getVisibleColumns</code> returns render order (left-pinned, unpinned, right-pinned). <code>getAllFilteredRows</code> under tree data with a filter returns only matching rows. <code>selectRow(s)</code> ignore synthetic ids and fire nothing when the selection does not change.</>,
             <><code>sortColumn</code>, <code>setFilterModel</code>, <code>setPage</code>, <code>setPageSize</code>, <code>selectRow(s)</code> now change the grid and fire callbacks: remove duplicate state updates.</>,
             <><code>getVisibleRows</code> / <code>getAllFilteredRows</code> include pinned rows; under grouping <code>getAllFilteredRows</code> returns data rows only; <code>getVisibleColumns</code> excludes hidden columns.</>,
+            <>3.0.1: <code>useGridApiRef&lt;MyRow&gt;()</code> types <code>getRow</code>, <code>getAllRows</code>, <code>getVisibleRows</code> and <code>getAllFilteredRows</code> as <code>MyRow</code>; untyped refs still compile.</>,
         ],
     },
     {
@@ -158,6 +159,7 @@ const sections: MigrationSection[] = [
             <><code>getDetailPanelHeight</code> 0 → 0px and <code>'auto'</code> → measured (both were 200px); detail callbacks run for expanded data rows only.</>,
             <><code>onRowsScrollEnd</code> fires once per arrival at the bottom (was every scroll event).</>,
             <>Header and pinned rows are wrapped in <code>.ogx__sticky-top</code> / <code>.ogx__sticky-bottom</code>.</>,
+            <>3.0.1: right-pinned columns sit at the grid&apos;s right edge when the columns are narrower than the grid; a grid without <code>height</code> fills its container.</>,
         ],
     },
     {
@@ -165,6 +167,7 @@ const sections: MigrationSection[] = [
             <><code>onRowOrderChange</code> indices are positions in <code>rows</code> (were page-local and sorted): remove page-offset workarounds.</>,
             <><code>onColumnOrderChange</code> indices are positions in the full column order; use the new <code>onColumnOrderModelChange</code> for a controlled <code>columnOrder</code>.</>,
             <>Resize: no 1000px maximum, pointer events (update tests), right-pinned columns resize from the left edge.</>,
+            <>3.0.1: the 8px handle lies inside its own header cell against the resizing edge (was <code>right: -4px</code>, half clipped), so all of it can be grabbed.</>,
         ],
     },
     {
@@ -205,6 +208,7 @@ const sections: MigrationSection[] = [
         n: 23, title: 'List view', points: [
             <><code>renderCell</code> gets real <code>value</code>, <code>formattedValue</code>, <code>colDef</code> and <code>rowMeta</code>; <code>slots.footer</code>, loading and overlays are honoured.</>,
             <>Without <code>listViewColumn</code> the grid view is shown with a warning. Rows are focusable; checkboxes are not Tab stops.</>,
+            <>The list view is not virtualized: 3.0.1 warns in development above 2,000 rendered items. Use pagination for large datasets.</>,
         ],
     },
     {
@@ -212,6 +216,7 @@ const sections: MigrationSection[] = [
             <>Move sticky rules from <code>.ogx__pinned-rows--top</code> / <code>--bottom</code> to <code>.ogx__sticky-top</code> / <code>.ogx__sticky-bottom</code>.</>,
             <>New classes include <code>ogx__aggregation-spacer</code>, <code>ogx__loading-bar</code>, <code>ogx__row--group-footer</code>, <code>ogx__cell-image</code>, <code>ogx-column-resize-handle--start</code>, <code>ogx-col-group-cell--pinned</code>, <code>ogx-column-visibility-panel__item-label</code> (now styled; the Columns panel item is a <code>&lt;div&gt;</code> with a <code>&lt;label for&gt;</code>).</>,
             <>Focus outlines read <code>--ogx-grid-cell-focus-border</code>; the toolbar, search, scrollbars and filter-panel delete button read the theme&apos;s <code>--ogx-toolbar-*</code>, <code>--ogx-scrollbar-*</code> and <code>--ogx-overlay-item-danger-*</code> variables.</>,
+            <>3.0.1: new root class <code>ogx--fill</code> (no <code>height</code>); <code>*--pinned-right-first</code> cells get <code>margin-left: auto</code>; the resize handle is <code>right: 0</code> / <code>left: 0</code> instead of <code>-4px</code>.</>,
         ],
     },
 ];
@@ -259,6 +264,12 @@ export default function MigrationV3() {
                 <p>
                     The stylesheet is <strong>not</strong> loaded by the JavaScript entry (some v2 docs said it was).
                     Without it the viewport is unbounded and every row renders. In development, 3.0.0 warns when it is missing.
+                </p>
+                <p>
+                    <strong>3.0.1:</strong> without a <code>height</code> prop the grid fills its container
+                    (class <code>ogx--fill</code>: <code>height: 100%</code>, and as a flex item{' '}
+                    <code>flex: 1 1 auto; min-height: 0</code>). The container still needs a bounded height; in an
+                    auto-height container the grid grows to fit. An explicit <code>height</code> or <code>autoHeight</code> is never stretched.
                 </p>
                 <div className="docs-code-block">
                     {"import '@opencorestack/opengridx/styles';"}

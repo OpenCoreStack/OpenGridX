@@ -154,6 +154,8 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - The list view does not virtualize; `useGridDevWarnings` warns above `LIST_VIEW_WARN_THRESHOLD` (2000) items
 - The column resize handle lies inside its header cell (the cell clips overflow); right-pinned columns take `margin-left: auto` on their first cell and `.ogx__content` is `max(100%, totalWidth)` when right-pinned columns exist
 - `GridApi<R>` / `useGridApiRef<R>()` type the row getters; `apiRef` prop accepts `MutableRefObject<GridApi<R>> | MutableRefObject<GridApi>`
+- `.ogx-list-view__rows` has `tabIndex={-1}` (Firefox makes scroll containers Tab stops). CI (deploy + publish workflows) installs and runs Chromium, Firefox and WebKit
+- Demo pages: a `<DataGrid>` without `height` now stretches to its parent; give demo grids an explicit `height` (or a sized wrapper) unless filling is intended
 
 ## v3.0.0 — significant changes (breaking)
 

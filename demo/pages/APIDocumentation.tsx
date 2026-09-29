@@ -7,7 +7,7 @@ export default function APIDocumentation() {
         { name: 'columns', type: 'GridColDef<R>[]', default: 'required', desc: 'Column definitions controlling display, sorting, and editing.' },
         { name: 'getRowId', type: '(row: GridRowModel) => GridRowId', default: 'row.id', desc: 'Returns a unique identifier for each row. Only keys the internal store; rows are never copied or given an id.' },
         // Layout
-        { name: 'height', type: 'number | string', default: 'undefined', desc: 'Height of the grid container (pixels or a CSS length).' },
+        { name: 'height', type: 'number | string', default: 'undefined', desc: 'Height of the grid (pixels or a CSS length). Without it the grid fills its container (v3.0.1+); the container needs a bounded height.' },
         { name: 'rowHeight', type: 'number', default: '52', desc: 'Height of each row in pixels.' },
         { name: 'headerHeight', type: 'number', default: '56', desc: 'Height of the header row in pixels.' },
         { name: 'autoHeight', type: 'boolean', default: 'false', desc: 'Expand the grid height to exactly fit all rows (no scrollbar).' },
@@ -53,7 +53,7 @@ export default function APIDocumentation() {
         // Server-Side
         { name: 'dataSource', type: 'GridDataSource', default: '—', desc: 'Remote data provider. Drives server-side sorting, filtering, pagination.' },
         // List View
-        { name: 'listView', type: 'boolean', default: 'false', desc: 'Render rows using a single custom cell (card view).' },
+        { name: 'listView', type: 'boolean', default: 'false', desc: 'Render rows using a single custom cell (card view). Not virtualized: use pagination for large datasets (dev warning above 2,000 items).' },
         { name: 'listViewColumn', type: 'GridListViewColDef', default: '—', desc: 'The single column definition used in list view mode.' },
         // Customization
         { name: 'slots', type: 'GridSlots', default: '—', desc: 'Override internal components: toolbar, pagination, noRowsOverlay, loadingOverlay, footer.' },
@@ -73,9 +73,9 @@ export default function APIDocumentation() {
     ];
 
     const apiRefMethods = [
-        { method: 'getRow(id)', return: 'GridRowModel | null', desc: 'Get row data by ID.' },
-        { method: 'getAllRows()', return: 'GridRowModel[]', desc: 'Get all loaded rows.' },
-        { method: 'getVisibleRows()', return: 'GridRowModel[]', desc: 'Get the rows on screen: pinned rows plus the current page (or all filtered rows).' },
+        { method: 'getRow(id)', return: 'R | null', desc: 'Get row data by ID.' },
+        { method: 'getAllRows()', return: 'R[]', desc: 'Get all loaded rows.' },
+        { method: 'getVisibleRows()', return: 'R[]', desc: 'Get the rows on screen: pinned rows plus the current page (or all filtered rows).' },
         { method: 'getColumn(field)', return: 'GridColDef | null', desc: 'Get column definition.' },
         { method: 'getVisibleColumns()', return: 'GridColDef[]', desc: 'Get the columns on screen, in display order.' },
         { method: 'selectRow(id, isSelected)', return: 'void', desc: 'Set row selection.' },
@@ -198,7 +198,7 @@ export default function APIDocumentation() {
 
             <section className="docs-section">
                 <h2 className="docs-h2">🕹️ GridApi Methods</h2>
-                <p>Imperative methods accessible via <code>apiRef.current</code>.</p>
+                <p>Imperative methods accessible via <code>apiRef.current</code>. Create the ref with <code>useGridApiRef&lt;MyRow&gt;()</code> and the row getters return <code>MyRow</code> (<code>R</code> below; <code>GridRowModel</code> without a type argument).</p>
                 <div className="docs-table-wrapper">
                     <table className="docs-table">
                         <thead>

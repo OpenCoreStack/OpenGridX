@@ -50,7 +50,7 @@ export default function Quickstart({ onNavigate }: QuickstartProps) {
             <div className="docs-alert">
                 <span className="docs-alert-icon">💡</span>
                 <div className="docs-alert-body">
-                    <strong>Note:</strong> The grid or its container MUST have a defined height for virtualization to work correctly.
+                    <strong>Note:</strong> Without a <code>height</code> prop the grid fills its container, so the container MUST have a bounded height (in a flex layout, <code>min-height: 0</code> on each flex ancestor) for virtualization to work.
                 </div>
             </div>
 

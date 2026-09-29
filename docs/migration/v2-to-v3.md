@@ -53,6 +53,8 @@ import '@opencorestack/opengridx/styles';
 
 Without it the grid is unstyled and its viewport has no bounded height, so **every row renders** (virtualization is effectively off). If your v2 app looked fine, you already have this import. In development, 3.0.0 logs a warning when the stylesheet is not loaded.
 
+> **3.0.1 note — height.** Without a `height` prop the grid now fills its container (root class `ogx--fill`: `height: 100%`, and as a flex item `flex: 1 1 auto; min-height: 0`). In 3.0.0 the root was auto-height, so inside a bounded flex layout it grew to fit every row. The container still needs a bounded height (a definite height, or `min-height: 0` on every flex / grid ancestor up to the sized one); in an auto-height container the grid still grows to fit. An explicit `height`, `style.height` or `autoHeight` is never stretched. The unbounded-container dev warning is only logged when the viewport really is as tall as its rows.
+
 ### Know the size limit
 
 A single scrolling grid tops out at about 645,000 rows at the default 52px row height in Chromium (the browser's maximum element height). Above that, use pagination or a `dataSource`. The grid logs a dev warning when content is taller than browsers can scroll.
@@ -427,6 +429,8 @@ Pruning applies when the grid owns the rows: no `dataSource`, client pagination 
 
 **Fix it:** call the setter and let your change callback update controlled state; remove duplicate `setState` calls.
 
+> **3.0.1 note — typed row getters.** `useGridApiRef<MyRow>()` returns a `GridApi<MyRow>` whose `getRow`, `getAllRows`, `getVisibleRows` and `getAllFilteredRows` return `MyRow`, so the casts v2 needed can go. `useGridApiRef()` without a type argument and `DataGridProps.apiRef` with an untyped ref still compile.
+
 ---
 
 ## 11. Editing
@@ -714,6 +718,8 @@ Keep `getRows` stable (`useCallback` or module scope) if you do not want a refet
 | Sticky header and pinned rows | `.ogx__pinned-rows--top` / `--bottom` were sticky | wrapped in `div.ogx__sticky-top` / `div.ogx__sticky-bottom` (see [§24](#24-dom-and-css-class-changes)) |
 | z-index of sticky body system cells | 4 / 5 / 11 | 12; header drag / expand cells have no inline z-index |
 | Returning from list view | scroll reset | scroll position restored |
+| Right-pinned columns when columns are narrower than the grid | followed the last unpinned column | at the grid's right edge (3.0.1; free space sits before the right-pinned section) |
+| No `height` prop | auto height (3.0.0) | fills the container, `ogx--fill` (3.0.1; see [Before you start](#import-the-stylesheet)) |
 
 **Who is affected:** apps with `onRowsScrollEnd` loaders that relied on repeated firing, apps with custom z-index or sticky CSS, and apps whose pinned columns were pinned out of column order.
 
@@ -751,6 +757,7 @@ export function Pinned({ rows, columns }: { rows: GridRowModel[]; columns: GridC
 | Click on the resize handle without moving | resized / sorted | nothing |
 | Resize events | mouse events on `document` | pointer events with capture on the handle (touch and pen work) |
 | Right-pinned column resize | right edge | left edge (`ogx-column-resize-handle--start`); drag left to widen |
+| Resize handle position | straddled the cell border (`right: -4px`); half was clipped, 3–4px grabbable | inside its own header cell against the resizing edge (`right: 0` / `left: 0`), all 8px grabbable (3.0.1) |
 | `dragstart` data types | `text/plain` | `application/x-ogx-row` / `application/x-ogx-column` plus `text/plain` |
 | Toolbar, pivot and standalone panels | portal mounted in render | mounted one layout effect later (invisible to users; matters for tests) |
 
@@ -967,6 +974,8 @@ CSS: `.ogx-col-group-row` no longer has `overflow: hidden`; new `ogx-col-group-c
 | Tree data and grouping | no expand control | expand chevron and depth indent (`.ogx-list-view__expand`) |
 | Summary and paging with a `dataSource` | loaded rows | server total |
 | `onRowsScrollEnd` | never fired | fires once per arrival at the bottom, like the grid view |
+| Large lists | not virtualized | still not virtualized; 3.0.1 warns in development above 2,000 rendered items — use pagination |
+| Tab in Firefox | — | lands on the focused row, not the rows container (3.0.1, `tabIndex={-1}` on `.ogx-list-view__rows`) |
 
 ---
 
@@ -1002,6 +1011,7 @@ CSS: `.ogx-col-group-row` no longer has `overflow: hidden`; new `ogx-col-group-c
 | `ogx__row--group-footer` | subtotal rows in `'footer'` position |
 | `ogx__cell-image` | default `<img>` for `type: 'image'` |
 | `ogx-column-resize-handle--start` | resize handle on the left edge (right-pinned columns) |
+| `ogx--fill` (3.0.1) | grid root when no `height`, `style.height` or `autoHeight` is set |
 | `ogx-col-group-cell--pinned`, `ogx-col-group-cell--pinned-left`, `ogx-col-group-cell--pinned-right` | pinned column-group cells |
 | `ogx-filter__hidden-note`, `ogx-filter__value-multiselect` | filter panel |
 | `ogx-list-view__expand`, `ogx-list-view__loading` | list view |
@@ -1019,7 +1029,8 @@ CSS: `.ogx-col-group-row` no longer has `overflow: hidden`; new `ogx-col-group-c
 | `.ogx-global-search--expanded` | shows the input border while expanded and unfocused; the primary border and focus shadow moved to `:focus-within` |
 | `.ogx__cell--focused`, `.ogx__header-cell--focused`, `.ogx__header-cell--focus-visible` | outline colour reads `--ogx-grid-cell-focus-border` (falls back to `--ogx-color-primary`) |
 | `.ogx__header-cell--drag-over` | background `--ogx-color-primary-light` (was the undefined `--ogx-color-blue-50`) |
-| `.ogx-column-resize-handle` | `touch-action: none`; a `:focus-visible` line colour |
+| `.ogx-column-resize-handle` | `touch-action: none`; a `:focus-visible` line colour; 3.0.1: `right: 0` (was `-4px`), `justify-content: flex-end`; `--start` is `left: 0`, `flex-start` |
+| `.ogx__header-cell--pinned-right-first`, `.ogx__cell--pinned-right-first`, `.ogx__aggregation-cell--pinned-right-first`, first right-pinned `.ogx-col-group-cell` (3.0.1) | `margin-left: auto`; `.ogx__content` width is `max(100%, <total>px)` when right-pinned columns exist |
 | `.ogx-list-view__row` | `:focus-visible` outline (rows are focusable) |
 | `.ogx-toolbar` and its buttons / chips, `.ogx-global-search`, scrollbars, filter-panel delete button | read the `--ogx-toolbar-*`, `--ogx-scrollbar-*` and `--ogx-overlay-item-danger-*` variables the theme provider sets (the filter-panel delete button used `--ogx-toolbar-btn-danger-*`); fallbacks match the v2 colours except the danger-button hover |
 

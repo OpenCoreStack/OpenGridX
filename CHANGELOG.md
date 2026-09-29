@@ -22,6 +22,17 @@ Fixes from a smoke test in a real application (Chromium, Firefox and WebKit).
 
 - **Typed `apiRef` row getters.** `GridApi<R>` (default `GridRowModel`) and `useGridApiRef<R>()` type `getRow`, `getAllRows`, `getVisibleRows` and `getAllFilteredRows` as your row type. `DataGridProps.apiRef` accepts a typed or an untyped ref, so existing code compiles unchanged.
 
+### Styling and DOM (check custom CSS)
+
+- New root class `ogx--fill` (`height: 100%; flex: 1 1 auto; min-height: 0`) when no `height`, `style.height` or `autoHeight` is set. CSS that sets the grid's height on `.ogx` still wins only if it is more specific or passed as `style.height` / `height`.
+- `.ogx-column-resize-handle` is `right: 0` (was `-4px`) with `justify-content: flex-end`; `.ogx-column-resize-handle--start` is `left: 0` (was `-4px`) with `flex-start`. The visible line stays on the column border.
+- `.ogx__header-cell--pinned-right-first`, `.ogx__cell--pinned-right-first`, `.ogx__aggregation-cell--pinned-right-first` and the first right-pinned column-group cell get `margin-left: auto`; with right-pinned columns, `.ogx__content` is `max(100%, <total>px)` wide instead of the column total.
+- `.ogx-list-view__rows` has `tabIndex="-1"`.
+
+### Testing
+
+- The browser test suite and CI (deploy and publish workflows) run in Chromium, Firefox and WebKit.
+
 ### Documentation
 
 - README `height` row, Getting Started, virtualization, theming, datagrid and pinning docs describe how the grid fills its container.

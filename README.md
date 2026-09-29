@@ -121,7 +121,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `ariaLabel` | `string` | — | Accessible name for the grid. |
 | `initialState` | `GridInitialState` | — | Starting sort, filter, pagination, column and density state (uncontrolled). |
 | `onStateChange` | `(state: GridState) => void` | — | Fires when sort, filter, pagination, columns or density change. |
-| `apiRef` | `MutableRefObject<GridApi>` | — | Imperative API; create it with `useGridApiRef()`. |
+| `apiRef` | `MutableRefObject<GridApi<R>> \| MutableRefObject<GridApi>` | — | Imperative API; create it with `useGridApiRef<R>()` so the row getters return your row type (or `useGridApiRef()` for `GridRowModel`). |
 | `className` | `string` | — | Custom CSS class on the grid container. |
 | `style` | `React.CSSProperties` | — | Custom inline styles on the grid container. |
 
