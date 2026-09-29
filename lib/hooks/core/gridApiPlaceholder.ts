@@ -29,6 +29,8 @@ export function createGridApiPlaceholder<R extends GridValidRowModel = GridRowMo
         setPage: noop,
         setPageSize: noop,
         scrollToIndexes: noop,
+        autosizeColumn: noop,
+        autosizeColumns: noop,
         copySelectedRows: () => Promise.resolve(),
     };
 }

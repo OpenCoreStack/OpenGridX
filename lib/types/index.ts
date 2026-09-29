@@ -1150,6 +1150,16 @@ export interface GridApi<R extends GridValidRowModel = GridRowModel> {
   scrollToIndexes: (params: { rowIndex?: number; colIndex?: number }) => void;
 
   /**
+   * Sizes a column to fit its header and the cells rendered right now (the virtualization window),
+   * clamped to `minWidth` (default 50px) / `maxWidth`, like double-clicking its resize handle.
+   * Does nothing for `resizable: false` columns or a column that is not rendered.
+   * A flex column gets a fixed width. @since v3.1
+   */
+  autosizeColumn: (field: string) => void;
+  /** `autosizeColumn` for several columns (default: every column). @since v3.1 */
+  autosizeColumns: (fields?: readonly string[]) => void;
+
+  /**
    * Programmatically copies all currently selected rows to the clipboard as TSV: every selected
    * row that passes the filter (other pages, collapsed groups and pinned rows included), with the
    * visible columns in screen order. Equivalent to the user pressing Ctrl+C / Cmd+C.

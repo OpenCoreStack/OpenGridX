@@ -51,6 +51,7 @@ import { useStableColumns } from '../../hooks/core/useStableColumns';
 import { useGridAggregationApi } from '../../hooks/core/useGridAggregationApi';
 import { useGridClipboardApi } from '../../hooks/core/useGridClipboardApi';
 import { useGridScrollToIndexesApi } from '../../hooks/core/useGridScrollToIndexesApi';
+import { useGridColumnAutosize } from '../../hooks/core/useGridColumnAutosize';
 import { useGridSortHandlers, useGridColumnMenuHandlers } from '../../hooks/core/useGridHeaderHandlers';
 import { useGridKeyboardMode, useGridPointerFocusHandlers } from '../../hooks/core/useGridFocusHandlers';
 import { getPaginationRowCount, pickPaginationLocaleText } from '../../utils/pagination';
@@ -500,6 +501,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         disableKeyboardShortcut: disableClipboardCopy,
     });
     useGridScrollToIndexesApi<R>({ apiRef, viewportRef, layout, rowHeight: effectiveRowHeight });
+    const handleColumnAutosize = useGridColumnAutosize<R>({ apiRef, containerRef, columns: orderedColumns, onColumnResize: handleColumnResize });
 
     const { scrollTop, scrollLeft, overscanRows, handleScroll, setViewportElement } = useGridViewport({
         onRowsScrollEnd, overscanRowCount, rowCount: layout.unpinnedRowsLength, autoHeight, setDimensions, viewportRef,
@@ -779,6 +781,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                 multiSort={multiSort}
 
                                 onColumnResize={handleColumnResize}
+                                onColumnAutosize={handleColumnAutosize}
                                 columnWidths={columnWidths}
                                 pinnedColumns={effectivePinnedColumns}
 

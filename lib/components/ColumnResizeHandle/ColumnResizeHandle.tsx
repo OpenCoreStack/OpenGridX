@@ -6,6 +6,8 @@ export interface ColumnResizeHandleProps {
     field: string;
     currentWidth: number;
     onResize: (field: string, newWidth: number) => void;
+    /** Fits the column to its content: called on double-click and on Enter. */
+    onAutosize?: (field: string) => void;
     /** Defaults to 50 (the layout's default minimum), or the current width if that is smaller. */
     minWidth?: number;
     /** Defaults to no limit. */
@@ -43,7 +45,7 @@ function suppressNextClick(): void {
 }
 
 export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
-    const { field, currentWidth, onResize, minWidth, maxWidth, edge = 'end' } = props;
+    const { field, currentWidth, onResize, onAutosize, minWidth, maxWidth, edge = 'end' } = props;
     const [isDragging, setIsDragging] = useState(false);
     const activeRef = useRef<ActiveResize | null>(null);
 
@@ -103,17 +105,24 @@ export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
     }, [field, onResize, widthAt]);
 
     const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Enter' && onAutosize) {
+            event.preventDefault();
+            event.stopPropagation();
+            onAutosize(field);
+            return;
+        }
         if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
         event.preventDefault();
         event.stopPropagation();
         const step = (event.shiftKey ? 50 : 10) * (event.key === 'ArrowRight' ? 1 : -1);
         onResize(field, clampResizeWidth(currentWidth + step, currentWidth, minWidth, maxWidth));
-    }, [field, currentWidth, onResize, minWidth, maxWidth]);
+    }, [field, currentWidth, onResize, onAutosize, minWidth, maxWidth]);
 
     const handleDoubleClick = useCallback((event: React.MouseEvent) => {
         event.preventDefault();
         event.stopPropagation();
-    }, []);
+        onAutosize?.(field);
+    }, [field, onAutosize]);
 
     const classNames = [
         'ogx-column-resize-handle',

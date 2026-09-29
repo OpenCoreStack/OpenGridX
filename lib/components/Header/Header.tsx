@@ -43,6 +43,8 @@ export interface HeaderProps<R extends GridRowModel = GridRowModel> {
     onSort?: (field: string, direction: GridSortDirection) => void;
     sortModel?: Array<{ field: string; sort: 'asc' | 'desc' }>;
     onColumnResize?: (field: string, newWidth: number) => void;
+    /** Fits a column to its content (double-click or Enter on its resize handle). */
+    onColumnAutosize?: (field: string) => void;
     columnWidths?: Record<string, number>;
     pinnedColumns?: GridColumnPinning;
     hasDetailPanel?: boolean;
@@ -81,6 +83,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         onSort,
         sortModel = [],
         onColumnResize,
+        onColumnAutosize,
         columnWidths = {},
         pinnedColumns,
         hasDetailPanel = false,
@@ -525,6 +528,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                                     field={colDef.field}
                                     currentWidth={getRenderedColumnWidth(colDef, columnWidths)}
                                     onResize={onColumnResize}
+                                    onAutosize={onColumnAutosize}
                                     minWidth={colDef.minWidth}
                                     maxWidth={colDef.maxWidth}
                                     edge={pinnedPosition === 'right' ? 'start' : 'end'}
