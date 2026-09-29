@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 3.0.0
+# Version: 3.0.1
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 
@@ -71,7 +71,7 @@ export default function App() {
 ### Display
 | Prop              | Type      | Default | Description                            |
 |-------------------|-----------|---------|----------------------------------------|
-| height            | number/string | —     | Grid height. No default. The grid must have a BOUNDED height or it renders every row (see GOTCHAS) |
+| height            | number/string | —     | Grid height. No default: fills its container (class ogx--fill, 3.0.1+); the container must have a BOUNDED height or it renders every row (see GOTCHAS) |
 | autoHeight        | boolean   | false   | Fit height to rows (renders every row) |
 | overscanRowCount  | number    | 3       | Minimum rows rendered outside the viewport (raised automatically while scrolling fast) |
 | ariaLabel         | string    | —       | Accessible name for the grid          |
@@ -211,12 +211,12 @@ There are no getRowClassName / getCellClassName / theme props: use GridColDef.ce
 | Prop         | Type             | Description                                  |
 |--------------|------------------|----------------------------------------------|
 | initialState | GridInitialState | Starting sorting, filter, pagination, columns (widths, order, pinning, visibility) and density. Read at mount only |
-| apiRef       | MutableRefObject<GridApi> | Imperative API handle from useGridApiRef() |
+| apiRef       | MutableRefObject<GridApi<R>> or MutableRefObject<GridApi> | Imperative API handle from useGridApiRef<R>() (typed row getters) or useGridApiRef() |
 
 ### List View
 | Prop           | Type               | Description                                 |
 |----------------|--------------------|---------------------------------------------|
-| listView       | boolean            | Render as cards instead of a table (requires listViewColumn; without it the grid view shows + dev warning). Honours loading, noRowsOverlay/loadingOverlay and slots.footer; rows are a roving Tab stop (arrows, Home/End, PageUp/Down, Enter/Space, Alt+Arrow expand); tree/group parents get a chevron. Not virtualized |
+| listView       | boolean            | Render as cards instead of a table (requires listViewColumn; without it the grid view shows + dev warning). Honours loading, noRowsOverlay/loadingOverlay and slots.footer; rows are a roving Tab stop (arrows, Home/End, PageUp/Down, Enter/Space, Alt+Arrow expand); tree/group parents get a chevron. Not virtualized (dev warning above 2,000 items; paginate) |
 | listViewColumn | { field, renderCell } | Defines the card renderer                |
 
 ---
@@ -269,7 +269,7 @@ const apiRef = useGridApiRef();
 <DataGrid apiRef={apiRef} rows={rows} columns={columns} />
 
 // Row access
-apiRef.current.getRow(id)              // → GridRowModel | null
+apiRef.current.getRow(id)              // → R | null with useGridApiRef<R>(), else GridRowModel | null
 apiRef.current.getAllRows()            // → every loaded row
 apiRef.current.getVisibleRows()        // → rows on screen: current page + pinned rows
 apiRef.current.getAllFilteredRows()    // → every filtered + sorted row, all pages (use for exports); tree data + filter: matching rows only
@@ -599,7 +599,7 @@ Arrows move between cells (skipping hidden columns); Home/End, Ctrl+Home/End, Pa
 8. **`initialState.columns.columnWidths`**: accepts `Record<string, number>` to restore saved column widths. Every part of `initialState` is optional.
 9. **`pinnedColumns`** and **`columnWidths`** are independent state — pinning does not reset widths.
 10. **Aggregation**: setting `aggregationModel` alone renders a sticky footer with the totals; with `rowGroupingModel` each group row also shows its own aggregates. `null`/`undefined`, blank strings, booleans and arrays are ignored by sum/avg/min/max; min/max of dates return a `Date`; `valueGetter` columns aggregate the computed value; footer totals go through the column's `valueFormatter` (not for count/unique).
-11. **GOTCHAS — bounded height**: virtualization only works if the grid's container has a bounded height. A flex child without `min-height: 0` grows to fit every row, so every row is rendered. Pagination hides this, and row grouping turns pagination off. Use `<div style={{ flex: 1, minHeight: 0 }}>` around `height="100%"`, or pass a fixed pixel `height`. Dev builds log a warning when this happens.
+11. **GOTCHAS — bounded height**: virtualization only works if the grid's container has a bounded height. A flex child without `min-height: 0` grows to fit every row, so every row is rendered. Pagination hides this, and row grouping turns pagination off. Without a `height` prop the grid fills its container (3.0.1+), so use `<div style={{ flex: 1, minHeight: 0 }}>` around the grid, or pass a fixed pixel `height`. The list view never virtualizes: paginate it. Dev builds log a warning when this happens.
 12. **Pagination is ignored under row grouping** — a grouped grid is one scrollable, virtualized list.
 13. **`valueFormatter` + `renderCell`**: `renderCell` receives `params.formattedValue` (v2.1+), so a custom renderer can reuse the formatter instead of duplicating it.
 14. **`slots.footer`** replaces the pagination area and receives `apiRef`, `aggregationModel`, `aggregationResult`, `rowCount` (filtered data rows excluding pinned rows in flat grids — data rows under tree data / grouping; the server total with `paginationMode="server"`), `pagination`, `paginationModel`, `pageSizeOptions` and `onPaginationModelChange`.
