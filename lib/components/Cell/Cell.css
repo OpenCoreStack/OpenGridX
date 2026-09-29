@@ -58,6 +58,10 @@
 .ogx__cell--pinned-right {
   border-left: 1px solid var(--ogx-grid-border-color);
 }
+/* When the columns are narrower than the grid, the free space goes before the right-pinned section. */
+.ogx__cell--pinned-right-first {
+  margin-left: auto;
+}
 .ogx:not(.ogx--row-spanning) .ogx__row:hover .ogx__cell--pinned-left,
 .ogx:not(.ogx--row-spanning) .ogx__row:hover .ogx__cell--pinned-right {
   background-color: var(--ogx-grid-row-hover-background);

@@ -263,7 +263,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                                 aria-hidden="true"
                             />
                         )}
-                        {cells.map(cell => {
+                        {cells.map((cell, cellIndex) => {
                             const pinnedClass = cell.pinned ? ` ogx-col-group-cell--pinned ogx-col-group-cell--pinned-${cell.pinned}` : '';
                             const style: React.CSSProperties = {
                                 width: cell.width,
@@ -277,6 +277,8 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             } else if (cell.pinned === 'right') {
                                 style.position = 'sticky';
                                 style.right = pinnedPositions[cell.fields[cell.fields.length - 1]];
+                                // Free space goes before the right-pinned section, as in the column header row.
+                                if (cells[cellIndex - 1]?.pinned !== 'right') style.marginLeft = 'auto';
                             }
                             if (!cell.isGroup) {
                                 return (

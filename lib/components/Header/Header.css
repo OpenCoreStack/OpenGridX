@@ -148,6 +148,9 @@
 .ogx__header-cell--pinned-left {
   box-shadow: var(--ogx-grid-pinned-left-shadow, 4px 0 12px -4px rgba(0, 0, 0, 0.05)); 
 }
+.ogx__header-cell--pinned-right-first {
+  margin-left: auto;
+}
 .ogx__header-cell--pinned-right {
   box-shadow: var(--ogx-grid-pinned-right-shadow, -4px 0 12px -4px rgba(0, 0, 0, 0.05));
 }

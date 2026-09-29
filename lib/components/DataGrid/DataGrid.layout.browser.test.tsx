@@ -122,6 +122,33 @@ describe('DataGrid layout in a real browser', () => {
         });
     });
 
+    describe('right-pinned columns in a grid wider than its columns', () => {
+        it('sticks right-pinned columns to the right edge in every section', async () => {
+            const cols: GridColDef<Row>[] = [
+                { field: 'name', width: 120 }, { field: 'amount', width: 120, type: 'number' }, { field: 'c', width: 100 }, { field: 'd', width: 100 },
+            ];
+            const grouping: GridColumnGroupingModel = [{ groupId: 'right', headerName: 'Right', children: ['c', 'd'] }];
+            const { container } = render(
+                <Box>
+                    <DataGrid rows={makeRows(20)} columns={cols} height="100%" pinnedColumns={{ right: ['c', 'd'] }}
+                        pinnedRows={{ top: [1], bottom: [20] }} aggregationModel={{ amount: 'sum' }} columnGroupingModel={grouping} />
+                </Box>
+            );
+            await expect.poll(() => container.querySelector('.ogx__aggregation-footer')).not.toBeNull();
+            const vp = viewport(container);
+            const edge = Math.round(vp.getBoundingClientRect().left + vp.clientWidth);
+            for (const scope of ['.ogx__header', '.ogx__rows', '.ogx__pinned-rows--top', '.ogx__pinned-rows--bottom']) {
+                expect(Math.round(rect(container, `${scope} [data-field="d"]`).right), scope).toBe(edge);
+                expect(Math.round(rect(container, `${scope} [data-field="c"]`).right), scope).toBe(Math.round(rect(container, `${scope} [data-field="d"]`).left));
+            }
+            const footerCells = container.querySelectorAll<HTMLElement>('.ogx__aggregation-footer .ogx__aggregation-cell');
+            expect(Math.round(footerCells[footerCells.length - 1].getBoundingClientRect().right)).toBe(edge);
+            expect(Math.round(rect(container, '.ogx-col-group-cell--group').right)).toBe(edge);
+            // Unpinned columns stay at the left.
+            expect(Math.round(rect(container, '.ogx__rows [data-field="name"]').left)).toBe(Math.round(vp.getBoundingClientRect().left));
+        });
+    });
+
     describe('stacking of sticky system columns', () => {
         it('keeps the expand and drag-handle columns above a row-spanned cell scrolled under them', async () => {
             const cols: GridColDef<Row>[] = [{ field: 'name', width: 150, rowSpan: 2 }, ...wideColumns(12)];

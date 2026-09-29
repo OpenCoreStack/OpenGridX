@@ -756,7 +756,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     <div
                         className="ogx__content"
                         style={{
-                            width: virtualization.totalWidth
+                            // With right-pinned columns the content spans at least the viewport, so they sit at its right edge.
+                            width: effectivePinnedColumns?.right?.length
+                                ? `max(100%, ${virtualization.totalWidth}px)`
+                                : virtualization.totalWidth
                         }}
                         role="presentation"
                     >
