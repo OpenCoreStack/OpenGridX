@@ -66,7 +66,9 @@ Tree data is used for data that has a natural parent-child relationship (e.g., a
 - **`descendantCount`** (the `(n)`) counts the rows below a node at any depth that pass the filter. A parent whose children are all filtered out is shown without a toggle.
 - **Invalid paths are reported in development**: a row whose path is empty is shown as a top-level row, rows sharing a path attach their children to the first of them, and `treeData` without `getTreeDataPath` shows the rows flat. Each logs a `console.warn`.
 - **Pagination** pages the flattened visible tree; keyboard navigation stays on the current page.
-- **Lazy (server) trees**: the children of an expanded node with `serverChildrenCount` are fetched when it is expanded, and fetched again after a server re-fetch (a sort or filter change) replaces the rows.
+- **Lazy (server) trees**: the children of an expanded node with `serverChildrenCount` are fetched when it is expanded, and fetched again after a server re-fetch (a sort or filter change) replaces the rows. `defaultGroupingExpansionDepth` counts such a node as expandable (v3.0+), so `-1` expands every lazy node and loads its children.
+- **`apiRef.getAllFilteredRows()` with a filter** returns the rows that match the filter, the same set select-all and the aggregation footer use. Ancestors shown only to give a match its context are not in it (v3.0+; before, they were).
+- **Row grouping with `paginationMode="server"`**: grouping turns pagination off, so a `dataSource` is asked for every row (see [Data Source](data-source.md#2-server-side-pagination)).
 
 ---
 

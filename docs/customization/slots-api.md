@@ -165,7 +165,8 @@ Replace the entire footer section below the grid, including the default paginati
 
 `rowCount` is:
 - with `paginationMode="server"`: the server total (the `dataSource` response's `rowCount`, else the `rowCount` prop, else the number of loaded rows);
-- otherwise: the data rows that pass the client filter. Under row grouping and tree data that is the leaf/data rows (never group rows), whatever is expanded. In a flat grid it **includes** pinned rows (unlike the pager's `rowCount`). With `filterMode="server"` it is every row the grid holds; with `paginationMode="infinite"` the rows loaded so far; in pivot mode the pivot rows including the Grand Total row.
+- otherwise, in a flat grid: the pager's `rowCount`, the filtered rows **without** pinned rows (v3.0+; before, pinned rows were counted). With `filterMode="server"` it is every row the grid holds; with `paginationMode="infinite"` the rows loaded so far; in pivot mode the pivot rows including the Grand Total row;
+- under row grouping and tree data: the data rows that pass the client filter (never group rows), whatever is expanded.
 
 **Example — a persistent grand-total bar that stays in sync with filtering:**
 ```tsx

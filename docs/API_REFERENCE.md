@@ -13,8 +13,8 @@ The main component for displaying and interacting with data.
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `rows` | `R[]` | — | **Required.** Array of data objects. `R` is your row type: any object type, interfaces included (see [Typing your rows](#typing-your-rows)). Pass `[]` when a `dataSource` supplies the rows. |
-| `columns` | `GridColDef<R>[]` or `GridColDef[]` | — | **Required.** Definitions for the columns: typed for your rows, or untyped. |
-| `getRowId` | `(row: R) => GridRowId` | `row.id` | Returns a unique identifier for each row. It only keys the grid's internal store: rows reach `renderCell`, events, `apiRef` and `processRowUpdate` unchanged, and the id is never written to `row.id` (v3.0+). Pass it to export functions as `getRowId` when you export `selectedRows`. |
+| `columns` | `GridColDef<R>[]` or `GridColDef[]` | — | **Required.** Definitions for the columns: typed for your rows, or untyped. An inline array is fine (v3.0+): while every column is shallowly equal to the previous render's (same properties, callbacks compared by identity) the grid keeps its filter, sort and grouping results. A new inline callback (`valueGetter: (p) => …` written in the render) counts as a change. |
+| `getRowId` | `(row: R) => GridRowId` | `row.id` | Returns a unique identifier for each row. It only keys the grid's internal store: rows reach `renderCell`, events, `apiRef` and `processRowUpdate` unchanged, and the id is never written to `row.id` (v3.0+). Pass it to export functions as `getRowId` when you export `selectedRows`. It must not throw: an id is a programming contract, so a throw is not contained (for a `dataSource` row it fails that request with the error overlay). |
 | `rowHeight` | `number` | `52` | Height of each row in pixels. Without it, an enclosing `DataGridThemeProvider`'s `grid.rowHeightStandard` applies (v3.0+). |
 | `headerHeight` | `number` | `56` | Height of the header row. Without it, the theme's `grid.headerHeight` applies (v3.0+). |
 | `autoHeight` | `boolean` | `false` | Adjust grid height to match row total. |
@@ -101,7 +101,7 @@ The main component for displaying and interacting with data.
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `getDetailPanelContent` | `(params: GridDetailPanelParams) => ReactNode` | — | Returns the JSX content rendered inside the expandable detail panel. |
-| `getDetailPanelHeight` | `(params: GridDetailPanelParams) => GridDetailPanelHeight` | `200` | Panel height in pixels (`0` is a 0px panel), or `'auto'` to fit the content. An `'auto'` panel is measured when it renders and whenever its size changes, and the rows below it are laid out at that height. Without this prop every panel is a fixed 200px scroll box. |
+| `getDetailPanelHeight` | `(params: GridDetailPanelParams) => GridDetailPanelHeight` | `200` | Panel height in pixels (`0` is a 0px panel), or `'auto'` to fit the content. An `'auto'` panel is measured when it renders and whenever its size changes, and the rows below it are laid out at that height. Without this prop every panel is a fixed 200px scroll box. A callback that throws gets the 200px default (v3.0+, with a one-time development warning). |
 | `detailPanelExpandedRowIds` | `Set<GridRowId>` | — | Controlled set of currently-expanded detail panel row IDs. |
 | `onDetailPanelExpandedRowIdsChange` | `(ids: Set<GridRowId>) => void` | — | Fired when detail panels expand or collapse. |
 
@@ -110,7 +110,7 @@ The main component for displaying and interacting with data.
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `treeData` | `boolean` | `false` | Enables hierarchical tree data display. |
-| `getTreeDataPath` | `(row: R) => string[]` | — | Returns the hierarchy path for a row (e.g. `['Engineering', 'Frontend']`). Required with `treeData`: without it the rows are shown flat. Keep its identity stable (module scope or `useCallback`); a new function rebuilds the tree. |
+| `getTreeDataPath` | `(row: R) => string[]` | — | Returns the hierarchy path for a row (e.g. `['Engineering', 'Frontend']`). Required with `treeData`: without it the rows are shown flat. Keep its identity stable (module scope or `useCallback`); a new function rebuilds the tree. It must not throw (a throw is not contained). |
 | `groupingColDef` | `Partial<GridColDef<R>>` | — | Configures the dedicated `__group__` column prepended at position 0 (auto-pinned left) when row grouping or tree data is active. Under tree data its cells show the last segment of each row's `getTreeDataPath` (override with `groupingColDef.valueGetter`). Accepts `headerName`, `width`, `renderCell`, and any non-system `GridColDef` field. Its `renderCell` is called for group rows too (check `params.rowMeta?.isGroupRow`); its output replaces the default group label next to the toggle, and returning `undefined` for a group row keeps the default label. The column's `field` is always `'__group__'` (no `field` is needed; one you pass is ignored); it is never sorted, filtered, pinned by the user, exported, hidden, or re-ordered. Defaults: `headerName: 'Group'`, `width: 220`. |
 | `defaultGroupingExpansionDepth` | `number` | `0` | Number of tree levels expanded on initial render (`-1` = all). |
 
@@ -121,7 +121,7 @@ The main component for displaying and interacting with data.
 | `rowGroupingModel` | `GridRowGroupingModel` | `[]` | Array of field names to group rows by (e.g. `['department', 'team']`). See [Row Grouping](#️-row-grouping). |
 | `aggregationModel` | `GridAggregationModel` | — | Map of `field → aggFn` (e.g. `{ salary: 'sum', age: 'avg' }`). See [Aggregation Reference](#-aggregation-reference). |
 | `onAggregationModelChange` | `(model: GridAggregationModel) => void` | — | Fired when the aggregation model changes. |
-| `getAggregationPosition` | `(groupNode: GridTreeNode \| null) => 'inline' \| 'footer' \| null` | — | Controls where aggregation results appear. Called for every group node (with its current `isExpanded`) and once with `null` for the grand total. `'inline'` (group default) = on the group row, `'footer'` = on a subtotal row after the group's children while it is expanded (on the group row while collapsed), `null` = hidden. For the grand total, `null` hides the footer row. See [the callback](#getaggregationposition-callback). |
+| `getAggregationPosition` | `(groupNode: GridTreeNode \| null) => 'inline' \| 'footer' \| null` | — | Controls where aggregation results appear. Called for every group node (with its current `isExpanded`) and once with `null` for the grand total. `'inline'` (group default) = on the group row, `'footer'` = on a subtotal row after the group's children while it is expanded (on the group row while collapsed), `null` = hidden. For the grand total, `null` hides the footer row. A callback that throws gets the default (`'inline'` for a group, `'footer'` for the grand total; v3.0+). See [the callback](#getaggregationposition-callback). |
 
 #### Pivot
 
@@ -210,7 +210,7 @@ The types of the `slots` and `slotProps` props (v3.0+ exports). Each slot is typ
 | `pagination` | The built-in `Pagination` bar (shown with `pagination`). | `GridPaginationSlotProps` (= `PaginationProps`: `page`, `pageSize`, `rowCount`, `pageSizeOptions`, `onPageChange`, `onPageSizeChange`, `localeText`), then `slotProps.pagination`. |
 | `noRowsOverlay` | The empty-state icon and label (shown when there are no rows and the grid is not loading). | `slotProps.noRowsOverlay` only (`GridOverlaySlotProps`). |
 | `loadingOverlay` | The loading indicator: the skeleton rows while loading with no rows, the progress bar while loading with rows shown (the slot is then shown over them). | `slotProps.loadingOverlay` only (`GridOverlaySlotProps`). |
-| `footer` | The pagination area. | `GridFooterSlotProps`: `apiRef`, `aggregationModel`, `aggregationResult`, `rowCount`, `pagination`, `paginationModel`, `pageSizeOptions`, `onPaginationModelChange`, then `slotProps.footer`. |
+| `footer` | The pagination area. | `GridFooterSlotProps`: `apiRef`, `aggregationModel`, `aggregationResult`, `rowCount`, `pagination`, `paginationModel`, `pageSizeOptions`, `onPaginationModelChange`, then `slotProps.footer`. `rowCount` is the built-in pager's count (pinned rows excluded, v3.0+); under tree data or row grouping, the filtered data rows. |
 
 ```ts
 type GridSlots = NonNullable<DataGridProps['slots']>;
@@ -283,9 +283,9 @@ Access these methods via the `apiRef` prop.
 | `getAllRows()` | `GridRowModel[]` | Get all loaded rows. |
 | `getVisibleRows()` | `GridRowModel[]` | Get the rows on screen after filtering/sorting: pinned-top rows, the current page (or all rows without pagination), pinned-bottom rows. Under row grouping and tree data this is the visible hierarchy, group rows included. |
 | `getColumn(field)` | `GridColDef \| null` | Get column definition by field. |
-| `getVisibleColumns()` | `GridColDef[]` | Get the columns on screen, in display order (hidden columns excluded). |
-| `selectRow(id, isSelected = true)` | `void` | Set selection for a single row. Fires `onRowSelectionModelChange`. |
-| `selectRows(ids, isSelected = true)`| `void` | Set selection for multiple rows. With `disableMultipleRowSelection`, selecting keeps only the last id. |
+| `getVisibleColumns()` | `GridColDef[]` | Get the columns on screen, in render order (hidden columns excluded): left-pinned, unpinned, right-pinned, as the header shows them (v3.0+; before, pinned columns kept their unpinned position). |
+| `selectRow(id, isSelected = true)` | `void` | Set selection for a single row. Fires `onRowSelectionModelChange`, unless nothing changes (selecting a selected row, deselecting an unselected one; v3.0+). Ids of rows the grid made (group headers, subtotals, auto-created tree parents, the pivot Grand Total) are ignored, as they are for the checkbox, click and keyboard (v3.0+). |
+| `selectRows(ids, isSelected = true)`| `void` | Set selection for multiple rows. With `disableMultipleRowSelection`, selecting keeps only the last id. Same no-op and synthetic-id rules as `selectRow`. |
 | `getSelectedRows()` | `GridRowId[]` | Get IDs of all selected rows. |
 | `sortColumn(field, dir)` | `void` | Sort like a header click: replaces the sort model (or, with `multiSort`, updates/appends that field); `null` removes the field. Fires `onSortModelChange`. |
 | `getSortModel()` | `GridSortItem[]` | Get the sort model the grid is using (controlled or not). |
@@ -293,11 +293,11 @@ Access these methods via the `apiRef` prop.
 | `getFilterModel()` | `GridFilterModel` | Get the filter model the grid is using (controlled or not). |
 | `setPage(page)` | `void` | Change current page (0-indexed). Fires `onPaginationModelChange`. |
 | `setPageSize(pageSize)` | `void` | Change the page size and go to page 0. Fires `onPaginationModelChange`. |
-| `scrollToIndexes(params)` | `void` | Scroll to specific row/column index. |
+| `scrollToIndexes(params)` | `void` | Scroll to specific row/column index. Uses the current layout, also when called from a layout effect right after an update (v3.0+). |
 | `getAllColumns()` | `GridColDef[]` | Get all defined columns. |
-| `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results (`null` without an `aggregationModel`, and in pivot mode). |
+| `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results (`null` without an `aggregationModel`, and in pivot mode). Live in a parent's `useLayoutEffect` on mount and current after every update (v3.0+; before, it was installed in a passive effect). The same holds for `getAggregationModel()` and `getGroupedExportRows()`. |
 | `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
-| `getAllFilteredRows()` | `GridRowModel[]` | Get every row that passes the filter, sorted, regardless of pagination, including pinned rows. Under row grouping and tree data it returns the data rows (no group rows) in hierarchy order with every group expanded. Use for full-dataset exports. |
+| `getAllFilteredRows()` | `GridRowModel[]` | Get every row that passes the filter, sorted, regardless of pagination, including pinned rows. Under row grouping and tree data it returns the data rows (no group rows) in hierarchy order with every group expanded, ordered like the screen (also when sorting by the hierarchy column; v3.0+). With tree data and a filter, ancestors shown only to give a match its context are left out: the result is the set select-all and the aggregation footer act on (v3.0+). Use for full-dataset exports. |
 | `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total), sorted and filtered like the screen. Collapsed groups are included with their rows, and subtotals are computed over each group's exported rows. Group-header and subtotal entries carry `groupLabel`, the label the grid shows (v3.0+). Returns `null` when row grouping is not active. |
 | `copySelectedRows()` | `Promise<void>` | Copy every selected row that passes the filter (other pages, collapsed groups and pinned rows included) as TSV, with the visible columns in screen order. Resolves without writing when no selected row is found; rejects when the clipboard write fails. |
 
@@ -352,9 +352,9 @@ Defines the behavior and appearance of a single column.
 | :--- | :--- | :--- | :--- |
 | `type` | `'string' \| 'number' \| 'date' \| 'boolean' \| 'singleSelect' \| 'image'` | `'string'` | Data type: sets the default filter operators and, when the column has no `valueFormatter`, the default cell text: `date` shows the local calendar date (`toLocaleDateString()`), `boolean` shows Yes / No, `singleSelect` shows the `valueOptions` label, `image` renders an `<img>` of the URL. `number` and `string` show `String(value)`. The text exporters (CSV, Excel HTML, print, PDF) and list view use the same text. |
 | `valueOptions` | `Array<string \| number \| { value: unknown; label: string }>` | — | Allowed values for `type: 'singleSelect'` — the filter panel offers them as a (multi-)select, and the edit cell uses them; cells and exports show the option's label. |
-| `valueGetter` | `(params: GridValueGetterParams) => unknown` | — | Derive a computed value from the row object. Runs before `valueFormatter` and `renderCell`. Client-side sorting, column filters and the quick filter use this value, and editors start from it (double-click and Enter alike). |
+| `valueGetter` | `(params: GridValueGetterParams) => unknown` | — | Derive a computed value from the row object. Runs before `valueFormatter` and `renderCell`. Client-side sorting, column filters and the quick filter use this value, and editors start from it (double-click and Enter alike). Keep it pure: the quick filter caches each row's search text per row object and column set. A getter that throws for a row shows an error in that cell and reads as `undefined` for sorting, filtering, aggregation, grouping, pivot and list view (v3.0+, with a one-time development warning per column); before, it crashed the grid once the column was sorted, filtered or aggregated. |
 | `valueSetter` | `(params: GridValueSetterParams) => R` | — | v3.0+. Maps an edited value back onto the row (`{ value, row, field }` → updated row) when an edit is committed. Needed for editable `valueGetter` columns; without it the commit writes `row[field]` and a development warning is logged. |
-| `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format the value into a display string (e.g. currency, dates). Does not affect editing, sorting or column filters; the quick filter also searches the formatted text. |
+| `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format the value into a display string (e.g. currency, dates). Does not affect editing, sorting or column filters; the quick filter also searches the formatted text. A formatter that throws leaves the value unformatted (the quick filter searches the raw value; v3.0+). |
 
 #### Rendering
 
@@ -398,7 +398,7 @@ Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative 
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header kebab/context menu. |
 | `exportable` | `boolean` | `true` | Set to `false` to exclude from CSV, Excel, JSON, PDF and Print exports (including their subtotals and totals). |
 | `groupable` | `boolean` | `true` | Allow this column to be used as a row grouping dimension. Set to `false` to prevent this field from being grouped, even when it appears in `rowGroupingModel`, or used as a pivot row or column field (the pivot panel does not offer it). |
-| `groupingValueFormatter` | `(params: { field: string; value: unknown }) => string` | — | Custom formatter for group-header labels when this column is the active grouping field. Falls back to `"field: value"` when omitted. |
+| `groupingValueFormatter` | `(params: { field: string; value: unknown }) => string` | — | Custom formatter for group-header labels when this column is the active grouping field. Falls back to `"field: value"` when omitted or when it throws (v3.0+). |
 | `aggregable` | `boolean` | — | Whether this column can be aggregated. Unset, the toolbar's Summaries panel and the pivot panel's value fields offer it only for `type: 'number'` columns; `true` offers it for any type. `false` keeps it out of both panels, and an `aggregationModel` or `pivotModel` entry naming it is ignored (no footer total, group aggregate, pivot value or export total). |
 | `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are computed and available for this column (e.g. `['sum', 'avg']`). Functions outside this list are skipped even if set in `aggregationModel` or a pivot value field, the toolbar's Summaries panel and the pivot panel offer only these. |
 

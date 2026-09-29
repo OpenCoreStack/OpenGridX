@@ -68,6 +68,25 @@ Options (pass an object instead of the key string):
 
 `clearState()` removes the saved state and cancels any pending write, so the old state is not written back afterwards. It does not reset the mounted grid, and the grid's next state change is saved again; remount the grid (for example with a new `key`) to start from defaults.
 
+### Server-side rendering (Next.js, Remix)
+
+`useGridStateStorage` is client-only. It reads storage in its initial render, so on the server `initialState` is empty while the browser's first render already has the saved state: when saved state exists, React reports a hydration mismatch (the sort arrows, column order or page differ). Render the persisted grid only after mount, for example:
+
+```tsx
+function PersistedGrid() {
+  const { initialState, onStateChange } = useGridStateStorage('my-app-storage-key');
+  return <DataGrid rows={rows} columns={columns} initialState={initialState} onStateChange={onStateChange} />;
+}
+
+export default function Page() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted ? <PersistedGrid /> : <GridPlaceholder />;
+}
+```
+
+In Next.js, `dynamic(() => import('./PersistedGrid'), { ssr: false })` does the same.
+
 ### Changing the key
 
 The grid reads `initialState` only when it mounts. If the key can change while the grid stays on screen (a per-user or per-view key), remount the grid with the key so it starts from the new key's saved state:

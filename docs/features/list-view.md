@@ -53,6 +53,8 @@ The `renderCell` function in `listViewColumn` receives all standard `GridRenderC
 
 `renderCell` only ever receives real rows: while an infinite-scroll page loads, no placeholder rows are passed to it.
 
+Under row grouping (and for auto-created tree parents) `renderCell` is also called for group rows (`rowMeta.isGroupRow`). Returning `undefined` for one shows its `rowMeta.groupLabel`. Group rows have no selection checkbox, and the `N items` summary counts data rows only, as in the grid view (v3.0+). A `renderCell` that throws shows an error in that row only, and a throwing `valueGetter` / `valueFormatter` of the grid column reads as `undefined` / the unformatted value (v3.0+).
+
 ```tsx
 function MyEmployeeCard({ row }: { row: Employee }) {
   return (

@@ -68,7 +68,7 @@ Use `disableMultipleRowSelection` to cap selection to one row at a time. Clickin
 
 ### Select All
 
-With `checkboxSelection`, the header checkbox selects the rows that pass the current filter (including pinned rows) and adds them to the selection; unchecking it removes those rows again. Rows hidden by the filter keep their selection state, and under row grouping group rows are not part of select-all. Synthetic rows (row-grouping group and subtotal rows, auto-created tree-data parents) have no checkbox and are never selected, by click, checkbox or Space key; tree-data parents that are your own rows are selectable like any row. The header shows checked when every such row is selected and indeterminate when only some are, so ids of rows that are no longer in `rows` do not affect it.
+With `checkboxSelection`, the header checkbox selects the rows that pass the current filter (including pinned rows) and adds them to the selection; unchecking it removes those rows again. Rows hidden by the filter keep their selection state, and under row grouping group rows are not part of select-all. Synthetic rows (row-grouping group and subtotal rows, auto-created tree-data parents, the pivot Grand Total) have no checkbox and are never selected, by click, checkbox, Space key or `apiRef.selectRow` / `selectRows` (v3.0+ for the Grand Total and `apiRef`); tree-data parents that are your own rows are selectable like any row. A click on the Grand Total still fires `onRowClick`. `apiRef.selectRow` on a row that is already selected reports nothing, as a click on the checkbox would not. The header shows checked when every such row is selected and indeterminate when only some are, so ids of rows that are no longer in `rows` do not affect it.
 
 ### Removed Rows
 
@@ -88,7 +88,7 @@ With focus in the grid (see [Keyboard & Accessibility](keyboard-navigation.md)):
 | **Enter** on a non-editable cell | Same as clicking the row: `onRowClick`, then click-to-select unless `disableRowSelectionOnClick`. |
 | **Ctrl+A** / **Cmd+A** | Select every row, unless `disableMultipleRowSelection` (or selection is not possible). |
 
-Synthetic group rows (row grouping) are never selected from the keyboard. The grid sets `aria-multiselectable="true"` when several rows can be selected.
+Synthetic rows (row-grouping groups and subtotals, auto-created tree parents, the pivot Grand Total) are never selected from the keyboard. The grid sets `aria-multiselectable="true"` when several rows can be selected.
 
 ---
 

@@ -32,6 +32,7 @@ Spans are computed from the grid **as it is rendered**, so they follow the curre
 | **Column resizing, flex and percentage widths** | A merged cell is exactly as wide as the columns it covers, using their resolved widths. The origin column's own `minWidth` / `maxWidth` do not apply to the merged cell. Resizing never recomputes the spans. |
 | **Keyboard navigation** | Arrow keys move over a merged area in one step and land on its origin cell; covered cells are never focused. While editing, Tab skips covered cells (outside edit mode Tab leaves the grid). |
 | **Infinite scrolling** | The loading placeholder rows are never passed to `colSpan` / `rowSpan`. |
+| **Row grouping, tree data, pivot** | Rows the grid made (group headers, subtotals, auto-created tree parents, the pivot Grand Total) are never a span origin, and a `rowSpan` ends before the next such row, so a span never merges data across a group boundary (v3.0+). |
 
 Spans on columns whose values change with sorting still work, but the merged areas move with the rows. For summary rows that must stay in place, disable sorting on the spanning column (`sortable: false`) or use [Row Pinning](./pinning.md).
 

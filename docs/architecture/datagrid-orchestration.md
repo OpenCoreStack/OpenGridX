@@ -13,7 +13,10 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 - `useGridApiRefBinding` points the consumer's `apiRef` at the live API in a layout effect, before any
   parent layout effect runs.
 - `useGridApiMethods` (layout effects) installs the state methods before `useGridAggregationApi`,
-  `useGridClipboardApi` and `useGridScrollToIndexesApi` install theirs.
+  `useGridClipboardApi` and `useGridScrollToIndexesApi` install theirs. `useGridApiMethods`,
+  `useGridAggregationApi` and `useGridScrollToIndexesApi` install once per `apiRef` in a layout
+  effect and read the latest values from a ref refreshed in a layout effect, so the methods are
+  live in a parent's layout effect and never answer from a previous render.
 - `useGridLiveRowSelection` prunes the selection, and `useGridPageCorrection` corrects a page past the
   end, in effects that run before the later hooks' effects.
 
@@ -21,6 +24,7 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 
 | # | Hook / util | File | Produces |
 | :- | :--- | :--- | :--- |
+| 0 | `useStableColumns` | `hooks/core/useStableColumns.ts` | The `columns` prop with a stable identity while every column is shallowly equal (inline columns do not re-run the row passes) |
 | 1 | `useGridControlledState` | `hooks/core/useGridControlledState.ts` | Controlled/uncontrolled sort, filter, aggregation, visibility, pinning, pivot, pagination, selection, density |
 | 2 | `useGridPivot` | `hooks/features/useGridPivot.ts` | Pivot rows/columns (or the source ones) and the pipeline filter/sort models |
 | 3 | `resolveGridModes` (pure) | `utils/gridModes.ts` | Which features are in effect: tree data, row grouping, pagination, row reordering, list view, grouping column |
