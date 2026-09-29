@@ -18,7 +18,7 @@ import {
     isEmptyAggregateValue,
 } from '../aggregation';
 import { createRowFilter } from '../filtering';
-import { compareValues } from '../sorting';
+import { applySortDirection, callSortComparator, compareValues } from '../sorting';
 import { buildColumnLookup } from '../columnLookup';
 import { getCellValue, getFormattedValue } from '../values';
 
@@ -256,7 +256,16 @@ export function computePivot(
     if (sortModel && sortModel.length > 0) {
         kept = [...kept].sort((a, b) => {
             for (const item of sortModel) {
-                const c = compareValues(sortValue(a.row, item.field), sortValue(b.row, item.field), item.sort, typeOf(item.field));
+                const va = sortValue(a.row, item.field);
+                const vb = sortValue(b.row, item.field);
+                const comparator = isRowField(item.field) ? colDefMap.get(item.field)?.sortComparator : undefined;
+                const c = comparator
+                    ? applySortDirection(callSortComparator(
+                        comparator,
+                        { id: a.row.id, field: item.field, row: a.row, value: va },
+                        { id: b.row.id, field: item.field, row: b.row, value: vb },
+                    ), item.sort)
+                    : compareValues(va, vb, item.sort, typeOf(item.field));
                 if (c !== 0) return c;
             }
             return 0;

@@ -103,8 +103,8 @@ export function useGridRowPipeline<R extends GridRowModel>(
     const sortedUnpinnedRows = useMemo<R[]>(() => {
         if (activeHierarchyHandlers) return unpinnedRows;
         if (sortingMode === 'server') return unpinnedRows;
-        return sortRows(unpinnedRows, sortModel, columnLookup) as R[];
-    }, [unpinnedRows, sortModel, activeHierarchyHandlers, sortingMode, columnLookup]);
+        return sortRows(unpinnedRows, sortModel, columnLookup, getRowId) as R[];
+    }, [unpinnedRows, sortModel, activeHierarchyHandlers, sortingMode, columnLookup, getRowId]);
 
     const isClientPaged = pagination && paginationMode !== 'server';
     const pageSize = normalizePageSize(effectivePaginationModel.pageSize);

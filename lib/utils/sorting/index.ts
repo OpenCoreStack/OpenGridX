@@ -1,7 +1,7 @@
 
-import type { GridColDef, GridRowModel, GridSortDirection, GridSortItem } from '../../types';
+import type { GridColDef, GridRowId, GridRowModel, GridSortCellParams, GridSortDirection, GridSortItem } from '../../types';
 import type { GridColumnLookup } from '../columnLookup';
-import { getCellValue, toDate, toNumber } from '../values';
+import { getCellValue, toDate, toNumber, warnCallbackFailure } from '../values';
 
 /**
  * Language-aware string order: accented letters sort next to their base letter instead of after
@@ -68,7 +68,8 @@ function compareSortKeys(a: SortKey, b: SortKey): number {
   return a.num < b.num ? -1 : a.num > b.num ? 1 : 0;
 }
 
-function applyDirection(comparison: number, direction: 'asc' | 'desc'): number {
+/** Reverse an ascending comparison for 'desc'. */
+export function applySortDirection(comparison: number, direction: 'asc' | 'desc'): number {
   if (comparison === 0) return 0;
   return direction === 'asc' ? comparison : -comparison;
 }
@@ -83,27 +84,62 @@ export function compareValues(
   direction: 'asc' | 'desc',
   type?: GridColDef['type']
 ): number {
-  return applyDirection(compareSortKeys(toSortKey(a, type), toSortKey(b, type)), direction);
+  return applySortDirection(compareSortKeys(toSortKey(a, type), toSortKey(b, type)), direction);
 }
+
+/** A column's `sortComparator`, as the sorting utils call it. */
+export type GridSortComparatorFn = NonNullable<GridColDef['sortComparator']>;
+
+/**
+ * Call a consumer `sortComparator`, containing failures: a throw or a non-finite result reads as 0
+ * (equal), with a one-time dev warning per column, so one bad comparison cannot break the sort.
+ */
+export function callSortComparator(
+  comparator: GridSortComparatorFn,
+  a: GridSortCellParams,
+  b: GridSortCellParams
+): number {
+  let result: number;
+  try {
+    result = comparator(a.value, b.value, a, b);
+  } catch (error) {
+    warnCallbackFailure(`sortComparator:${a.field}`, `sortComparator for column "${a.field}" threw; the values are treated as equal`, error);
+    return 0;
+  }
+  if (typeof result !== 'number' || Number.isNaN(result)) {
+    warnCallbackFailure(`sortComparator:${a.field}:nan`, `sortComparator for column "${a.field}" returned ${String(result)}; the values are treated as equal`, undefined);
+    return 0;
+  }
+  return result;
+}
+
+const defaultRowId = (row: GridRowModel): GridRowId => row.id;
 
 /**
  * Compare two rows by a sort model, reading cells through `valueGetter` and using each column's
- * `type`. Returns 0 when every key is equal.
+ * `type` (or its `sortComparator`). Returns 0 when every key is equal.
  */
 export function compareRowsBySortModel(
   a: GridRowModel,
   b: GridRowModel,
   sortModel: readonly GridSortItem[],
-  columns?: GridColumnLookup
+  columns?: GridColumnLookup,
+  getRowId: (row: GridRowModel) => GridRowId = defaultRowId
 ): number {
   for (const sortItem of sortModel) {
     const colDef = columns?.byField.get(sortItem.field);
-    const comparison = compareValues(
-      getCellValue(a, sortItem.field, colDef),
-      getCellValue(b, sortItem.field, colDef),
-      sortItem.sort,
-      colDef?.type
-    );
+    const va = getCellValue(a, sortItem.field, colDef);
+    const vb = getCellValue(b, sortItem.field, colDef);
+    const comparison = colDef?.sortComparator
+      ? applySortDirection(
+          callSortComparator(
+            colDef.sortComparator,
+            { id: getRowId(a), field: sortItem.field, row: a, value: va },
+            { id: getRowId(b), field: sortItem.field, row: b, value: vb }
+          ),
+          sortItem.sort
+        )
+      : compareValues(va, vb, sortItem.sort, colDef?.type);
     if (comparison !== 0) return comparison;
   }
   return 0;
@@ -112,28 +148,42 @@ export function compareRowsBySortModel(
 export function sortRows<R extends GridRowModel>(
   rows: R[],
   sortModel: GridSortItem[],
-  columns?: GridColumnLookup
+  columns?: GridColumnLookup,
+  getRowId: (row: R) => GridRowId = defaultRowId
 ): R[] {
   if (sortModel.length === 0) {
     return rows;
   }
   return sortItemsBySortModel(rows, sortModel, (row, sortItem) => {
     const colDef = columns?.byField.get(sortItem.field);
-    return { value: getCellValue(row, sortItem.field, colDef), type: colDef?.type };
+    const value = getCellValue(row, sortItem.field, colDef);
+    return {
+      value,
+      type: colDef?.type,
+      comparator: colDef?.sortComparator,
+      params: colDef?.sortComparator ? { id: getRowId(row), field: sortItem.field, row, value } : undefined,
+    };
   });
 }
 
-/** The value an item sorts by for one sort key, and the column type used to compare it. */
+/** The value an item sorts by for one sort key, and how to compare it. */
 export interface GridSortValue {
   value: unknown;
   type?: GridColDef['type'];
+  /**
+   * The column's `sortComparator`. Two items are compared with it when both carry the same one
+   * (with their `params`); otherwise the built-in comparison of `value` / `type` applies.
+   */
+  comparator?: GridSortComparatorFn;
+  /** The params passed to `comparator` for this item; `value` here is what the comparator sees. */
+  params?: GridSortCellParams;
 }
 
 /**
- * Stable sort of any items by a sort model. `readValue` gives the value (and column type) an item
- * sorts by for each sort key; it is called once per item and key, not once per comparison. Used by
- * the flat pipeline and by tree data / row grouping, whose synthetic group rows sort by their
- * grouping value or label instead of a cell.
+ * Stable sort of any items by a sort model. `readValue` gives the value (and column type or
+ * comparator) an item sorts by for each sort key; it is called once per item and key, not once per
+ * comparison. Used by the flat pipeline and by tree data / row grouping, whose synthetic group rows
+ * sort by their grouping value or label instead of a cell.
  */
 export function sortItemsBySortModel<T>(
   items: readonly T[],
@@ -146,15 +196,18 @@ export function sortItemsBySortModel<T>(
 
   // Read and normalize every sort value once, instead of calling valueGetter and parsing dates
   // O(n log n) times inside the comparator.
-  const keys = sortModel.map(sortItem => items.map(item => {
-    const { value, type } = readValue(item, sortItem);
-    return toSortKey(value, type);
-  }));
+  const values = sortModel.map(sortItem => items.map(item => readValue(item, sortItem)));
+  const keys = values.map(column => column.map(({ value, type }) => toSortKey(value, type)));
 
   const order = items.map((_, index) => index);
   order.sort((ia, ib) => {
     for (let k = 0; k < sortModel.length; k++) {
-      const comparison = applyDirection(compareSortKeys(keys[k][ia], keys[k][ib]), sortModel[k].sort);
+      const a = values[k][ia];
+      const b = values[k][ib];
+      const ascending = a.comparator && a.comparator === b.comparator && a.params && b.params
+        ? callSortComparator(a.comparator, a.params, b.params)
+        : compareSortKeys(keys[k][ia], keys[k][ib]);
+      const comparison = applySortDirection(ascending, sortModel[k].sort);
       if (comparison !== 0) return comparison;
     }
     return ia - ib;

@@ -172,6 +172,16 @@ export interface GridColDef<R extends GridValidRowModel = GridRowModel> {
    * @since v3.0
    */
   valueSetter?(params: GridValueSetterParams<R>): R;
+  /**
+   * Custom ascending comparator for client-side sorting by this column, used instead of the built-in
+   * type-aware comparison. `v1` / `v2` are the cell values (`valueGetter` applied) and **include
+   * `null` / `undefined`**, so the comparator decides where empty values go. The grid reverses the
+   * result for 'desc' and chains it with the other sort keys in a multi-sort. Row grouping uses the
+   * grouping column's comparator to order groups by their grouping value. A comparator that throws
+   * or returns NaN is read as 0 (with a one-time dev warning). Ignored with `sortingMode="server"`.
+   * @since v3.1
+   */
+  sortComparator?(v1: unknown, v2: unknown, params1: GridSortCellParams<R>, params2: GridSortCellParams<R>): number;
   /** Function to format a value into a human-readable string. */
   valueFormatter?(params: GridValueFormatterParams<R>): string;
   /** Custom component or element to render in the cell. */
@@ -261,6 +271,18 @@ export interface GridColumnGroup {
 
 export type GridColumnGroupingModel = GridColumnGroup[];
 
+
+/**
+ * Parameters passed to `GridColDef.sortComparator` for each side of a comparison. For a row-grouping
+ * group row, `row` is the synthetic group row and `value` its grouping value.
+ * @since v3.1
+ */
+export interface GridSortCellParams<R extends GridValidRowModel = GridRowModel> {
+  id: GridRowId;
+  field: string;
+  row: R;
+  value: unknown;
+}
 
 /** Parameters passed to the `valueGetter` function. */
 export interface GridValueGetterParams<R extends GridValidRowModel = GridRowModel> {

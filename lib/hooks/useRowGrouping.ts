@@ -362,10 +362,20 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
         const readSortValue = (id: GridRowId, sortItem: GridSortItem): GridSortValue => {
             const node = treeNodes.get(id);
-            if (node && groupRowVariants.has(id)) {
+            const groupVariants = groupRowVariants.get(id);
+            if (node && groupVariants) {
                 const groupingField = node.groupingField ?? '';
                 if (sortItem.field === groupingField || sortItem.field === labelField) {
-                    return { value: node.groupingValue, type: columnLookup?.byField.get(groupingField)?.type };
+                    const groupingColDef = columnLookup?.byField.get(groupingField);
+                    const comparator = groupingColDef?.sortComparator;
+                    return {
+                        value: node.groupingValue,
+                        type: groupingColDef?.type,
+                        comparator,
+                        params: comparator
+                            ? { id, field: groupingField, row: groupVariants.inline, value: node.groupingValue }
+                            : undefined,
+                    };
                 }
                 if (node.aggregatedValues && Object.prototype.hasOwnProperty.call(node.aggregatedValues, sortItem.field)) {
                     return { value: node.aggregatedValues[sortItem.field], type: columnLookup?.byField.get(sortItem.field)?.type };
@@ -374,7 +384,14 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
             }
             const row = rowLookup.get(id);
             const colDef = columnLookup?.byField.get(sortItem.field);
-            return { value: row ? getCellValue(row, sortItem.field, colDef) : undefined, type: colDef?.type };
+            const value = row ? getCellValue(row, sortItem.field, colDef) : undefined;
+            const comparator = colDef?.sortComparator;
+            return {
+                value,
+                type: colDef?.type,
+                comparator,
+                params: comparator && row ? { id, field: sortItem.field, row, value } : undefined,
+            };
         };
 
         const result: R[] = [];

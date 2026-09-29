@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { sortRows, compareValues, upsertSortItem } from './index';
 import { buildColumnLookup } from '../columnLookup';
 import type { GridSortItem } from '../../types';
@@ -167,5 +167,96 @@ describe('upsertSortItem', () => {
     it('does not mutate the input', () => {
         upsertSortItem(model, 'a', 'desc');
         expect(model).toEqual([{ field: 'a', sort: 'asc' }, { field: 'b', sort: 'asc' }]);
+    });
+});
+
+describe('sortComparator', () => {
+    const rows = [
+        { id: 1, size: 'M' },
+        { id: 2, size: 'S' },
+        { id: 3, size: null },
+        { id: 4, size: 'L' },
+    ];
+    const order: Record<string, number> = { S: 0, M: 1, L: 2 };
+    const bySize = (a: unknown, b: unknown) =>
+        (typeof a === 'string' ? order[a] : 99) - (typeof b === 'string' ? order[b] : 99);
+    const lookup = (comparator: (a: unknown, b: unknown) => number) =>
+        buildColumnLookup([{ field: 'size', sortComparator: comparator }]);
+    const ids = (list: { id: number }[]) => list.map(r => r.id);
+
+    it('orders asc by the comparator instead of the built-in comparison', () => {
+        expect(ids(sortRows(rows, [{ field: 'size', sort: 'asc' }], lookup(bySize)))).toEqual([2, 1, 4, 3]);
+    });
+
+    it('reverses the comparator for desc', () => {
+        expect(ids(sortRows(rows, [{ field: 'size', sort: 'desc' }], lookup(bySize)))).toEqual([3, 4, 1, 2]);
+    });
+
+    it('passes null values and { id, field, row, value } params to the comparator', () => {
+        const seen: unknown[] = [];
+        const cols = buildColumnLookup([{
+            field: 'size',
+            sortComparator: (a, b, p1, p2) => {
+                seen.push(a, b);
+                expect(p1.value).toBe(a);
+                expect(p2.field).toBe('size');
+                expect(p1.row.id).toBe(p1.id);
+                return bySize(a, b);
+            },
+        }]);
+        sortRows(rows, [{ field: 'size', sort: 'asc' }], cols);
+        expect(seen).toContain(null);
+    });
+
+    it('receives valueGetter values', () => {
+        const seen: unknown[] = [];
+        const cols = buildColumnLookup([{
+            field: 'n',
+            valueGetter: ({ row }) => Number(row.raw) * 10,
+            sortComparator: (a, b) => { seen.push(a, b); return Number(b) - Number(a); },
+        }]);
+        const data = [{ id: 1, raw: 1 }, { id: 2, raw: 3 }];
+        expect(ids(sortRows(data, [{ field: 'n', sort: 'asc' }], cols))).toEqual([2, 1]);
+        expect(seen.every(v => v === 10 || v === 30)).toBe(true);
+    });
+
+    it('chains with other keys in a multi-sort', () => {
+        const data = [
+            { id: 1, size: 'M', name: 'b' },
+            { id: 2, size: 'M', name: 'a' },
+            { id: 3, size: 'S', name: 'z' },
+        ];
+        const cols = buildColumnLookup([{ field: 'size', sortComparator: bySize }, { field: 'name' }]);
+        expect(ids(sortRows(data, [{ field: 'size', sort: 'asc' }, { field: 'name', sort: 'asc' }], cols))).toEqual([3, 2, 1]);
+        expect(ids(sortRows(data, [{ field: 'name', sort: 'desc' }, { field: 'size', sort: 'asc' }], cols))).toEqual([3, 1, 2]);
+    });
+
+    it('uses the row id from getRowId in params', () => {
+        const data = [{ id: 0, key: 'a', v: 2 }, { id: 0, key: 'b', v: 1 }];
+        const seenIds = new Set<unknown>();
+        const cols = buildColumnLookup([{
+            field: 'v',
+            sortComparator: (a, b, p1, p2) => { seenIds.add(p1.id); seenIds.add(p2.id); return Number(a) - Number(b); },
+        }]);
+        sortRows(data, [{ field: 'v', sort: 'asc' }], cols, r => r.key);
+        expect([...seenIds].sort()).toEqual(['a', 'b']);
+    });
+
+    it('contains a throwing comparator (treated as equal, original order kept) and warns once', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const cols = buildColumnLookup([{ field: 'boom', sortComparator: () => { throw new Error('x'); } }]);
+        const data = [{ id: 1, boom: 2 }, { id: 2, boom: 1 }, { id: 3, boom: 3 }];
+        expect(ids(sortRows(data, [{ field: 'boom', sort: 'asc' }], cols))).toEqual([1, 2, 3]);
+        sortRows(data, [{ field: 'boom', sort: 'desc' }], cols);
+        expect(warn.mock.calls.filter(c => String(c[0]).includes('"boom"'))).toHaveLength(1);
+        warn.mockRestore();
+    });
+
+    it('reads a NaN result as equal', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const cols = buildColumnLookup([{ field: 'nan', sortComparator: () => NaN }]);
+        const data = [{ id: 1, nan: 2 }, { id: 2, nan: 1 }];
+        expect(ids(sortRows(data, [{ field: 'nan', sort: 'asc' }], cols))).toEqual([1, 2]);
+        warn.mockRestore();
     });
 });

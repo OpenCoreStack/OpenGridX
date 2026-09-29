@@ -89,6 +89,7 @@ export type {
     GridRenderEditCellParams,
     GridRenderHeaderParams,
     GridValueGetterParams,
+    GridSortCellParams,
     GridValueSetterParams,
     GridValueFormatterParams,
     GridRowParams,

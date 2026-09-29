@@ -333,7 +333,14 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
             }
             const row = rowLookup.get(id);
             const colDef = columnLookup?.byField.get(sortItem.field);
-            return { value: row ? getCellValue(row, sortItem.field, colDef) : undefined, type: colDef?.type };
+            const value = row ? getCellValue(row, sortItem.field, colDef) : undefined;
+            const comparator = colDef?.sortComparator;
+            return {
+                value,
+                type: colDef?.type,
+                comparator,
+                params: comparator && row ? { id, field: sortItem.field, row, value } : undefined,
+            };
         };
 
         const result: GridRowModel[] = [];
