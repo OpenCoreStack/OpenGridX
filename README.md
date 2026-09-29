@@ -6,6 +6,8 @@
 
 👉 **[Live Demo & Docs](https://opencorestack.github.io/OpenGridX/)** — Interactive showcase with full API documentation
 
+> **Upgrading from 2.x?** 3.0.0 changes formatted text, exported files, callback indices and request ranges. See the **[v2 → v3 migration guide](https://github.com/OpenCoreStack/OpenGridX/blob/main/docs/migration/v2-to-v3.md)** first: it starts with a table that maps what your app uses to the sections you need.
+
 ---
 
 ## 🛠️ Getting Started

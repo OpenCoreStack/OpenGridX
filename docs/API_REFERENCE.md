@@ -859,7 +859,7 @@ import {
   GridColDef,
 } from '@opencorestack/opengridx';
 
-interface Employee extends GridRowModel {
+interface Employee {
   id: number;
   name: string;
   department: string;
@@ -1211,7 +1211,7 @@ import {
   GridRowGroupingModel,
 } from '@opencorestack/opengridx';
 
-interface Employee extends GridRowModel {
+interface Employee {
   id: number;
   name: string;
   department: string;
@@ -1361,7 +1361,7 @@ List view renders the grid as a single-column list of cards, replacing all norma
 ### `GridListViewColDef<R>`
 
 ```typescript
-interface GridListViewColDef<R extends GridRowModel = GridRowModel> {
+interface GridListViewColDef<R extends GridValidRowModel = GridRowModel> {
   field: string;
   renderCell: (params: GridRenderCellParams<R>) => React.ReactNode;
 }
@@ -1374,7 +1374,7 @@ The `renderCell` function receives the full `GridRenderCellParams` (including `r
 ```tsx
 import { DataGrid, GridListViewColDef, GridRenderCellParams, GridRowModel } from '@opencorestack/opengridx';
 
-interface Employee extends GridRowModel {
+interface Employee {
   id: number;
   name: string;
   department: string;
@@ -1411,7 +1411,7 @@ export default function MobileGrid() {
 ### `exportToPdf`
 
 ```ts
-function exportToPdf<R extends GridRowModel>(
+function exportToPdf<R extends GridValidRowModel>(
     rows: R[],
     columns: GridColDef<R>[],
     options?: PdfExportOptions

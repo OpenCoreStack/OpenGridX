@@ -13,8 +13,8 @@ List view honours `loading`, `slots.loadingOverlay`, `slots.noRowsOverlay` and `
 ```tsx
 import { DataGrid, type GridListViewColDef } from '@opencorestack/opengridx';
 
-// A `type` alias: an `interface` does not satisfy GridRowModel's index signature.
-type Employee = { id: number; name: string; role: string; status: string; avatar: string };
+// Your own row type: an interface or a type alias both work (v3+).
+interface Employee { id: number; name: string; role: string; status: string; avatar: string }
 
 const listColDef: GridListViewColDef<Employee> = {
   field: 'card',

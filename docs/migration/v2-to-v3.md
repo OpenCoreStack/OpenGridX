@@ -33,6 +33,7 @@ Use the table to find the sections that apply to you. Sections are ordered by ho
 | uses `listView` | [§23](#23-list-view) |
 | has custom CSS targeting `ogx__*` / `ogx-*` classes or grid DOM structure | [§24](#24-dom-and-css-class-changes) |
 | relies on TypeScript types of rows, columns or props | [§25](#25-typing-changes) |
+| persists grid state: `onStateChange`, `initialState`, `useGridStateStorage` (including with SSR) | [§26](#26-state-persistence) |
 
 ---
 
@@ -71,7 +72,7 @@ A single scrolling grid tops out at about 645,000 rows at the default 52px row h
 
 **Who is affected:** apps whose tests, snapshots or downstream parsers expect the old text, and apps that post-process `params.formattedValue`.
 
-**How to find it:** `grep -rnE "type: *'(date|boolean|singleSelect|image)'" src/`
+**How to find it:** `grep -rnE "type: *['\"](date|boolean|singleSelect|image)['\"]" src/`
 
 **Fix it:** if you want a different format, add a `valueFormatter`; it always wins over the default.
 
@@ -136,7 +137,7 @@ They were deprecated in v1.1 and removed from the TypeScript types then. In v3 t
 **How to find it:**
 
 ```bash
-grep -rnE "\._(hasChildren|treeDepth|isExpanded|groupingField|groupingValue|descendantCount|isGroupRow)\b" src/
+grep -rnE "_(hasChildren|treeDepth|isExpanded|groupingField|groupingValue|descendantCount|isGroupRow)\b" src/
 ```
 
 **Fix it:** read `params.rowMeta` instead. It is `undefined` for flat rows, so always use optional chaining.
@@ -298,7 +299,7 @@ const priority: GridColDef<Ticket> = {
 | :--- | :--- | :--- |
 | Tab outside edit mode | moved between editable and system cells | **leaves the grid** in one press (Shift+Tab leaves backwards); focus returns to the last cell when you tab back in |
 | Tab while editing | next editable cell | unchanged |
-| Enter on a non-editable cell | nothing | runs row-click handling: `onRowClick`, click-to-select, and toggles rows with children |
+| Enter on a non-editable cell | nothing | on a row with children (group rows, tree-data parents): toggles expansion only, no `onRowClick` and no selection; on any other row: behaves like a click (`onRowClick`, click-to-select) |
 | Enter on an editable cell | starts editing | unchanged |
 | Header `focusedCell` (exported `Header` prop) | `{ id: 'HEADER', field }` | `{ id: null, field }` |
 | Ctrl/Cmd+C | copied even when focus was outside the grid | only from a focused grid, never over a text selection |
@@ -322,9 +323,9 @@ Also: the detail panel is `role="row"` > `role="gridcell"`; `ExpandIcon` has `ta
 
 **Who is affected:** apps (and end-user docs) that describe Tab navigation, apps with `onRowClick` handlers that must not fire from the keyboard, code that stores `colIndex` or `rowIndex`, and accessibility tests.
 
-**How to find it:** `grep -rnE "colIndex|rowIndex|'HEADER'|aria-rowindex|aria-colindex" src/`
+**How to find it:** `grep -rnE "colIndex|rowIndex|data-(col|row)index|aria-(row|col)index|['\"]HEADER['\"]" src/`
 
-**Fix it:** key your logic on `field` and row `id`, not on indices. If you stored `colIndex` to look up a column, use `params.field`. To make Enter do nothing extra, make your `onRowClick` idempotent or check `params.row` before acting.
+**Fix it:** key your logic on `field` and row `id`, not on indices. If you stored `colIndex` to look up a column, use `params.field`. Enter on an ordinary row now fires `onRowClick` like a click, so make that handler safe to run from the keyboard. On a tree-data parent, Enter only expands or collapses; it does not fire `onRowClick` or select the row (a mouse click on it does both).
 
 ---
 
@@ -376,7 +377,8 @@ export function Orders({ rows, columns }: { rows: GridRowModel[]; columns: GridC
 | Header checkbox state | counted stale ids and group ids | reflects the filtered rows only |
 | `disableMultipleRowSelection` | honoured by row click only | also caps checkboxes, Space and `apiRef`; removes the select-all checkbox |
 | Rows removed from `rows` | their ids stayed selected | pruned; `onRowSelectionModelChange` fires once with the pruned model |
-| Clicking an already-selected row (no-op toggle) | fired `onRowSelectionModelChange` | does not fire |
+| An action that leaves the selection as it was (for example Ctrl/Cmd+A when every row is already selected, or `apiRef.current.selectRow(id, true)` on a selected row) | UI handlers fired `onRowSelectionModelChange` with an identical model | does not fire |
+| Clicking an already-selected row | deselected it and fired | unchanged: deselects it and fires |
 | `apiRef.current.getSelectedRows()` inside `onRowSelectionModelChange` | previous selection | the new selection |
 | Group rows | had a checkbox | no checkbox, never selected |
 | Exported `Header` | always rendered select-all | renders it only when `onSelectAll` is passed |
@@ -407,7 +409,7 @@ Pruning applies when the grid owns the rows: no `dataSource`, client pagination 
 
 **Who is affected:** apps that call a setter and then also update their own state "because the grid ignored it". With a controlled prop, the setter now fires your change callback, so both paths run.
 
-**How to find it:** `grep -rnE "apiRef\.current\.(sortColumn|setFilterModel|setPage|setPageSize|selectRows?|getAllFilteredRows|getVisibleRows|getVisibleColumns)" src/`
+**How to find it:** `grep -rnE "apiRef\.current[?!]?\.(sortColumn|setFilterModel|setPage|setPageSize|selectRows?|getAllFilteredRows|getVisibleRows|getVisibleColumns)" src/`
 
 **Fix it:** call the setter and let your change callback update controlled state; remove duplicate `setState` calls.
 
@@ -423,7 +425,7 @@ Pruning applies when the grid owns the rows: no `dataSource`, client pagination 
 | `processRowUpdate` per commit | sometimes twice (Tab; Enter then blur) | exactly once |
 | Edit when the cell unmounts (scroll, filter, page) or another edit starts | dropped | committed: `processRowUpdate` is called |
 | Synchronous `processRowUpdate` result | applied after a microtask | applied in the same event |
-| `processRowUpdate` returns a non-object | `TypeError` about `.id` | `onProcessRowUpdateError` receives `Error("processRowUpdate must return the updated row…")`, editor stays open |
+| `processRowUpdate` returns a non-object | `TypeError` about `.id` | `onProcessRowUpdateError` receives an `Error` whose message starts with `[OpenGridX] processRowUpdate must return the updated row object (or a Promise of it)`; the editor stays open |
 | `singleSelect` editor commit | option value as a string (`"2"`) | the original option value (`2`, or the object) |
 | `date` editor on `Date` cells | opened blank, committed `'YYYY-MM-DD'` | shows the date, commits a `Date`; ISO datetimes keep their time; clearing commits `null` (was `''`) |
 | `boolean` editor | committed on `setTimeout(0)`, stayed open on blur | commits synchronously and on blur |
@@ -479,7 +481,7 @@ const notes: GridColDef = {
 
 The type of `renderEditCell`'s parameter is now `GridRenderEditCellParams`, a superset of `GridRenderCellParams`, so existing editors still type-check.
 
-For the exported `Cell` / `Row` components: `Cell.onEditStop` gains an optional second argument `field`; `Cell` no longer stops propagation of double-click; `Row.onEditStop` params gain optional `id` / `field`; new optional `Row.isCellEditable`; pinned rows report `aria-readonly`.
+For the exported `Cell` / `Row` components: `Cell.onEditStop` gains an optional second argument `field`; `Cell` no longer stops propagation of the double-click that starts an edit (so it reaches the row and `onRowDoubleClick`); `Row.onEditStop` params gain optional `id` / `field`; new optional `Row.isCellEditable`; pinned rows report `aria-readonly`. See [§25](#25-typing-changes) for the type-level details.
 
 ---
 
@@ -660,7 +662,7 @@ Keep `getTreeDataPath` stable (module scope or `useCallback`); a new function re
 
 **Who is affected:** every `getRows` implementation that validates `startRow` / `endRow`, treats `endRow: -1` as "all", or assumes page-aligned requests.
 
-**How to find it:** `grep -rnE "getRows|endRow|startRow|paginationMode=\"infinite\"" src/`
+**How to find it:** `grep -rnE "getRows|endRow|startRow|paginationMode[=:{ ]*['\"]infinite" src/`
 
 **Fix it:** slice by the requested range, whatever it is:
 
@@ -738,7 +740,7 @@ export function Pinned({ rows, columns }: { rows: GridRowModel[]; columns: GridC
 
 **Who is affected:** apps that added page offsets to `onRowOrderChange` indices, apps with a controlled `columnOrder`, and tests that simulate resizing with mouse events.
 
-**How to find it:** `grep -rnE "onRowOrderChange|onColumnOrderChange|columnOrder=|mousedown" src/`
+**How to find it:** `grep -rnE "onRowOrderChange|onColumnOrderChange|columnOrder=|mousedown|fireEvent\.mouse(Down|Move|Up)" src/`
 
 **Fix it:** remove page-offset workarounds, and switch controlled column order to the model callback:
 
@@ -967,6 +969,8 @@ CSS: `.ogx-col-group-row` no longer has `overflow: hidden`; new `ogx-col-group-c
 | Detail panel | `role` mismatch | `role="row"` > `role="gridcell"` | update a11y test queries |
 | Column group filler cells | `role="columnheader"` | no role, hidden from AT | update a11y test queries |
 | Sticky body system cells z-index | 4 / 5 / 11 | 12 | re-check custom overlays above the grid body |
+| Columns panel item | `<label class="ogx-column-visibility-panel__item-label">` wrapping the checkbox and a `<span class="ogx-column-visibility-panel__label">` | `<div class="ogx-column-visibility-panel__item-label">` with the checkbox and a `<label for> class="ogx-column-visibility-panel__label"` | update selectors and test queries that expect a `label` / `span` |
+| Double-click on an editable cell (exported `Cell`) | propagation stopped when it started an edit | bubbles to the row | remove workarounds for the missing `onRowDoubleClick` / row `dblclick` |
 
 ### Added classes
 
@@ -985,6 +989,7 @@ CSS: `.ogx-col-group-row` no longer has `overflow: hidden`; new `ogx-col-group-c
 | `ogx-filter__hidden-note`, `ogx-filter__value-multiselect` | filter panel |
 | `ogx-list-view__expand`, `ogx-list-view__loading` | list view |
 | `ogx-tooltip--left`, `ogx-tooltip--right` | tooltip placements |
+| `ogx-column-visibility-panel__item-label` | Columns panel item row; the class existed in v2 but had no stylesheet rule |
 
 ### Changed or removed rules
 
@@ -994,8 +999,14 @@ CSS: `.ogx-col-group-row` no longer has `overflow: hidden`; new `ogx-col-group-c
 | `.ogx-col-group-row` | no longer `overflow: hidden` |
 | `.ogx__cell--drag-handle` | now also rendered (empty, `draggable=false`) on pinned rows |
 | `.ogx-expand-icon`, `.ogx__detail-panel` | their `prefers-color-scheme: dark` rules were removed; the theme palette colours them |
+| `.ogx-global-search--expanded` | shows the input border while expanded and unfocused; the primary border and focus shadow moved to `:focus-within` |
+| `.ogx__cell--focused`, `.ogx__header-cell--focused`, `.ogx__header-cell--focus-visible` | outline colour reads `--ogx-grid-cell-focus-border` (falls back to `--ogx-color-primary`) |
+| `.ogx__header-cell--drag-over` | background `--ogx-color-primary-light` (was the undefined `--ogx-color-blue-50`) |
+| `.ogx-column-resize-handle` | `touch-action: none`; a `:focus-visible` line colour |
+| `.ogx-list-view__row` | `:focus-visible` outline (rows are focusable) |
+| `.ogx-toolbar` and its buttons / chips, `.ogx-global-search`, scrollbars, filter-panel delete button | read the `--ogx-toolbar-*`, `--ogx-scrollbar-*` and `--ogx-overlay-item-danger-*` variables the theme provider sets (the filter-panel delete button used `--ogx-toolbar-btn-danger-*`); fallbacks match the v2 colours except the danger-button hover |
 
-**How to find it:** `grep -rnE "ogx(__|-)[a-z-]+" src/ --include=*.css --include=*.scss --include=*.tsx`
+**How to find it:** `grep -rnE "ogx(__|-)[a-z-]+" src/ --include='*.css' --include='*.scss' --include='*.ts' --include='*.tsx'`
 
 ---
 
@@ -1053,7 +1064,6 @@ Each slot has an exported props type: `GridToolbarSlotProps`, `GridPaginationSlo
 | :--- | :--- | :--- |
 | `slots.footer: ({ rowCount }: { rowCount: number }) => …` | error (slots were `ComponentType<Record<string, unknown>>`) | compiles, `rowCount` is checked |
 | Inline `slots.toolbar: (props) => …` | `props` untyped | `props` is `GridToolbarSlotProps` |
-| A slot with a **required** prop that only `slotProps` provides | compiled | error: make it optional, or close over the value in an inline slot |
 | A class / `memo` / `forwardRef` slot typed `Record<string, unknown>` | compiled | type it with the slot's props type |
 | Known keys in `slotProps.toolbar` / `pagination` / `footer` | unchecked | checked (extra keys still allowed) |
 
@@ -1064,10 +1074,73 @@ Each slot has an exported props type: `GridToolbarSlotProps`, `GridPaginationSlo
 - `useGridApiRef()` returns `MutableRefObject<GridApi>`, which type-checks against the `apiRef` prop under `@types/react` 18.
 - `GridInitialState` is an interface that accepts partial `columns`.
 - `GridFilterOperator` has five new members (see [§5](#5-filtering)); exhaustive `switch` statements need the new cases.
-- `renderEditCell` takes `GridRenderEditCellParams` (a superset of the old params).
+- `renderEditCell` takes `GridRenderEditCellParams` (a superset of the old params). Existing editors still type-check, but **calling** `col.renderEditCell(params)` yourself with a `GridRenderCellParams` is now a type error: pass a `GridRenderEditCellParams` (add `onValueChange`, `onCommit`, `onCancel`).
+- `GridColDef<Row>` is assignable to `GridColDef` when `Row` is a type alias or extends `GridRowModel`. It is **not** when `Row` is an interface without an index signature: type the array as `GridColDef<Row>[]` instead of `GridColDef[]`, or keep the columns untyped and use the untyped-columns overload.
+- `usePivot` is declared to return `PivotResult`; `UsePivotReturn` is now a type alias of it (same fields). An alias cannot be augmented with declaration merging.
+- Exported `Header`: `focusedCell.id` is `GridRowId | null` (a header cell has `id: null`, was the string `'HEADER'`). Code that assigns it to `string | number` needs a `null` check.
+- Exported `Cell`: `onEditStop` is `(cancel?: boolean, field?: string) => void`. Exported `Row`: `onEditStop` params are `{ cancel?, id?, field? }`, and `rowSpanningCaches.hiddenCellOriginMap` is `Record<GridRowId, Record<string, GridRowId>>` (was `Record<number, Record<string, number>>`).
+- New optional props on the exported components: `Cell.isPinnedEdge`, `Cell.valueError`, `Row.onDetailPanelHeightChange`, `Row.isCellEditable`, `Row.rowId`, and `ariaRowIndex` / `ariaColIndex` / `columnIndexMap` on `Row`, `Cell` and `Header`.
 - The export option types are generic (`CsvExportOptions<R>`, `PdfExportOptions<R>`, …) and `UseAggregationParams<R>.columns` is `GridColDef<R>[]` (an overload still accepts `GridColDef[]`).
 - `GridApi` is not generic: its methods still return `GridRowModel`. `params.value` is still `unknown`; read typed values from `params.row`.
 - Removed unused, never-exported types from `lib/types`: `GridEditCellProps`, `GridRowModes`, `GridRowModesModel`, `GridDetailPanelContent`, `GridDetailPanelState`, `GridVirtualizationState`, `GridRenderContext`, `GridAggregationFunction`.
+
+---
+
+## 26. State persistence
+
+**What changed:**
+
+| Behaviour | v2 | v3 |
+| :--- | :--- | :--- |
+| When `onStateChange` fires | on every new prop identity, so inline models (`sortModel={[…]}`) or storing the state in parent state could loop | once on mount, then only when the state's value changes |
+| `onStateChange` payload | no `density` | includes `density: { density }` |
+| `columns.pinnedColumns` / `columns.columnOrder` in the payload | could contain the synthetic `__group__` column | only your own columns |
+| `initialState.density` | ignored | applied (the `density` prop still wins) |
+| `useGridStateStorage` when storage is blocked (cookie blocking, sandboxed iframes) | threw | no persistence, no error |
+| `useGridStateStorage` `clearState()` | undone by the next debounced write or the flush on unmount | final: removes the saved state and cancels any pending write |
+| `useGridStateStorage` writes | on every re-render | only after a state change (debounced), plus a pending write on unmount |
+
+**Who is affected:** apps that save grid state, and in particular:
+
+- **The storage key can change** (per user, per view) while the grid stays mounted. The grid reads `initialState` only when it mounts, so remount it with the key: `<DataGrid key={storageKey} … />`. Without the remount the grid keeps its current state and its next change is saved under the new key.
+- **You call `clearState()`** and expect the grid to reset. It does not reset the mounted grid, and the grid's next state change is saved again. Remount the grid to start from defaults.
+- **Server-side rendering.** `useGridStateStorage` reads storage during the first render. On the server there is no storage, so the server renders the default state while the client's first render uses the saved state: a hydration mismatch. When users can have saved state, render the grid on the client only.
+
+**How to find it:** `grep -rnE "onStateChange|useGridStateStorage|initialState" src/`
+
+**Fix it:** remount with the key, and render a persisted grid on the client only in an SSR app:
+
+```tsx
+import { useSyncExternalStore } from 'react';
+import { DataGrid, useGridStateStorage } from '@opencorestack/opengridx';
+import type { GridColDef, GridRowModel } from '@opencorestack/opengridx';
+
+interface OrdersGridProps { userId: string; rows: GridRowModel[]; columns: GridColDef[] }
+
+const subscribe = () => () => {};
+// false on the server and during hydration, true after it.
+const useIsClient = () => useSyncExternalStore(subscribe, () => true, () => false);
+
+function SavedOrdersGrid({ userId, rows, columns }: OrdersGridProps) {
+  const storageKey = `orders-grid-${userId}`;
+  const { initialState, onStateChange } = useGridStateStorage(storageKey);
+  return (
+    <DataGrid
+      key={storageKey}
+      rows={rows}
+      columns={columns}
+      initialState={initialState}
+      onStateChange={onStateChange}
+    />
+  );
+}
+
+export function OrdersGrid(props: OrdersGridProps) {
+  return useIsClient() ? <SavedOrdersGrid {...props} /> : null;
+}
+```
+
+In Next.js you can instead load the component with `dynamic(() => import('./OrdersGrid'), { ssr: false })`.
 
 ---
 
@@ -1114,7 +1187,7 @@ Each slot has an exported props type: `GridToolbarSlotProps`, `GridPaginationSlo
 - [ ] With `getRowId`: stop reading `row.id`; pass `getRowId` to exports of `selectedRows` (§2).
 - [ ] Replace underscore hierarchy fields with `params.rowMeta` (§3) and remove writes to `params.row` in render callbacks (§4).
 - [ ] Review programmatic filter items with empty values, exhaustive `GridFilterOperator` switches, and search expectations (§5).
-- [ ] Update sorted-output snapshots; add `sortComparator` where you need a custom order (§6).
+- [ ] Update sorted-output snapshots; where you need a custom order, use a `valueGetter` that returns the sort key (§6).
 - [ ] Update keyboard docs/tests for Tab and Enter; stop storing `colIndex` / `rowIndex` (§7).
 - [ ] In controlled pagination and selection, adopt the models the callbacks pass you (§8, §9).
 - [ ] Remove duplicate state updates around `apiRef` setters (§10).
@@ -1129,3 +1202,4 @@ Each slot has an exported props type: `GridToolbarSlotProps`, `GridPaginationSlo
 - [ ] Wrap `copySelectedRows()` in `try` / `catch` (§19).
 - [ ] Choose light or dark theme yourself; remove `darkBaseColor` / `darkHighlightColor`; check `compactTheme` heights (§20).
 - [ ] Run `tsc --noEmit` and your test suite (§25).
+- [ ] With persisted state: remount the grid when the storage key changes, and render it client-only under SSR (§26).

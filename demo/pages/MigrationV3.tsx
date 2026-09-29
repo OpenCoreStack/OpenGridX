@@ -38,6 +38,7 @@ const triage: TriageRow[] = [
     { usage: <>you use <code>listView</code></>, section: 23 },
     { usage: <>you have CSS targeting <code>ogx__*</code> / <code>ogx-*</code> classes</>, section: 24 },
     { usage: <>you rely on TypeScript types of rows, columns or props</>, section: 25 },
+    { usage: <>you persist grid state (<code>onStateChange</code>, <code>initialState</code>, <code>useGridStateStorage</code>), including with SSR</>, section: 26 },
 ];
 
 const sections: MigrationSection[] = [
@@ -82,7 +83,7 @@ const sections: MigrationSection[] = [
     {
         n: 7, title: 'Keyboard, focus and ARIA', points: [
             <>Tab outside edit mode <strong>leaves the grid</strong>; while editing it still moves to the next editable cell.</>,
-            <>Enter on a non-editable cell runs row-click handling (<code>onRowClick</code>, click-to-select, toggle rows with children).</>,
+            <>Enter on a non-editable cell acts like a click on the row (<code>onRowClick</code>, click-to-select). On a row with children (group rows, tree-data parents) it only toggles expansion: no <code>onRowClick</code>, no selection.</>,
             <><code>colIndex</code> is absolute among visible data columns (was window-relative); bottom-pinned <code>rowIndex</code> follows the page rows (was 0..n).</>,
             <>Header <code>focusedCell</code> is <code>{'{ id: null, field }'}</code> (was <code>{"{ id: 'HEADER' }"}</code>); <code>aria-rowindex</code> is global, 1 = header.</>,
         ],
@@ -98,6 +99,7 @@ const sections: MigrationSection[] = [
             <>Select-all adds the filtered rows (was every stored row); deselect removes only those.</>,
             <>Ids of removed rows are pruned and <code>onRowSelectionModelChange</code> fires once with the pruned model.</>,
             <><code>disableMultipleRowSelection</code> also caps checkboxes, Space and <code>apiRef</code>, and removes select-all.</>,
+            <>Actions that leave the selection unchanged (Ctrl/Cmd+A with everything selected, <code>apiRef.current.selectRow(id, true)</code> on a selected row) no longer fire <code>onRowSelectionModelChange</code>. Clicking a selected row still deselects it.</>,
         ],
     },
     {
@@ -200,7 +202,8 @@ const sections: MigrationSection[] = [
     {
         n: 24, title: 'DOM and CSS class changes', points: [
             <>Move sticky rules from <code>.ogx__pinned-rows--top</code> / <code>--bottom</code> to <code>.ogx__sticky-top</code> / <code>.ogx__sticky-bottom</code>.</>,
-            <>New classes include <code>ogx__aggregation-spacer</code>, <code>ogx__loading-bar</code>, <code>ogx__row--group-footer</code>, <code>ogx__cell-image</code>, <code>ogx-column-resize-handle--start</code>, <code>ogx-col-group-cell--pinned</code>.</>,
+            <>New classes include <code>ogx__aggregation-spacer</code>, <code>ogx__loading-bar</code>, <code>ogx__row--group-footer</code>, <code>ogx__cell-image</code>, <code>ogx-column-resize-handle--start</code>, <code>ogx-col-group-cell--pinned</code>, <code>ogx-column-visibility-panel__item-label</code> (now styled; the Columns panel item is a <code>&lt;div&gt;</code> with a <code>&lt;label for&gt;</code>).</>,
+            <>Focus outlines read <code>--ogx-grid-cell-focus-border</code>; the toolbar, search, scrollbars and filter-panel delete button read the theme&apos;s <code>--ogx-toolbar-*</code>, <code>--ogx-scrollbar-*</code> and <code>--ogx-overlay-item-danger-*</code> variables.</>,
         ],
     },
 ];
@@ -291,6 +294,17 @@ export default function MigrationV3() {
                     <li><code>DataGrid</code> has two overloads: use <code>DataGridProps&lt;R&gt;</code> instead of <code>React.ComponentProps&lt;typeof DataGrid&gt;</code>.</li>
                     <li>Slots are checked against <code>GridToolbarSlotProps</code>, <code>GridPaginationSlotProps</code>, <code>GridOverlaySlotProps</code> and <code>GridFooterSlotProps</code>. A slot prop that only <code>slotProps</code> provides must be optional.</li>
                     <li><code>groupingColDef</code> no longer needs a <code>field</code>; export options&apos; <code>getRowId</code> takes your row type.</li>
+                    <li><code>GridColDef&lt;Row&gt;</code> is assignable to <code>GridColDef</code> for type aliases and rows extending <code>GridRowModel</code>, not for interfaces without an index signature: type those arrays as <code>GridColDef&lt;Row&gt;[]</code>.</li>
+                    <li>Calling <code>col.renderEditCell</code> with <code>GridRenderCellParams</code> is a type error (it takes <code>GridRenderEditCellParams</code>). Exported components: <code>Header</code> <code>focusedCell.id</code> can be <code>null</code>; <code>Cell.onEditStop</code> / <code>Row.onEditStop</code> gain <code>field</code> / <code>id</code>; <code>Row</code>&apos;s <code>hiddenCellOriginMap</code> is keyed by <code>GridRowId</code>; <code>usePivot</code> returns <code>PivotResult</code> (<code>UsePivotReturn</code> is an alias).</li>
+                </ul>
+            </section>
+
+            <section id="migration-v3-26" className="docs-section">
+                <h2 className="docs-h2">26. State persistence</h2>
+                <ul>
+                    <li><code>onStateChange</code> fires once on mount and then only when the state&apos;s value changes (it fired for every new prop identity). Its payload includes <code>density</code>, and <code>pinnedColumns</code> / <code>columnOrder</code> never contain <code>__group__</code>. <code>initialState.density</code> is applied.</li>
+                    <li><code>useGridStateStorage</code>: when the storage key can change, remount the grid with <code>{'<DataGrid key={storageKey} … />'}</code>. <code>clearState()</code> is final (no pending write restores it) but does not reset the mounted grid. Blocked storage means no persistence, not an error.</li>
+                    <li>Storage is read during the first render. With SSR and saved state the server and client render differently (hydration mismatch): render the persisted grid on the client only.</li>
                 </ul>
             </section>
 
@@ -351,6 +365,7 @@ export default function MigrationV3() {
                     <label><input type="checkbox" readOnly /> Label <code>Checkbox</code>es; wrap <code>copySelectedRows()</code> in <code>try</code> / <code>catch</code></label>
                     <label><input type="checkbox" readOnly /> Choose light or dark theme yourself; remove the skeleton dark keys</label>
                     <label><input type="checkbox" readOnly /> Run <code>tsc --noEmit</code> and your test suite</label>
+                    <label><input type="checkbox" readOnly /> With persisted state: remount on key change; render client-only under SSR</label>
                 </div>
             </section>
         </div>

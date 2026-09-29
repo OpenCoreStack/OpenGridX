@@ -534,7 +534,7 @@ All export functions work in:
 
 - [PDF Export](./pdf-export.md)
 - [Toolbar Customization](./toolbar-customization.md)
-- [Demo: Export Data](../../demo/examples/ExportDemo/ExportDemo.tsx)
-- [Demo: Advanced Excel Export](../../demo/examples/AdvancedExcelExportDemo/AdvancedExcelExportDemo.tsx)
+- [Demo: Export Data](https://github.com/OpenCoreStack/OpenGridX/blob/main/demo/examples/ExportDemo/ExportDemo.tsx)
+- [Demo: Advanced Excel Export](https://github.com/OpenCoreStack/OpenGridX/blob/main/demo/examples/AdvancedExcelExportDemo/AdvancedExcelExportDemo.tsx)
 - [Slots API Reference](../customization/slots-api.md)
 - [Theming Guide](../customization/theming.md)
