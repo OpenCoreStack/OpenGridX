@@ -171,3 +171,24 @@ describe('DataGrid list view tree data', () => {
         expect(container.querySelector('.ogx-list-view__expand')).toBeNull();
     });
 });
+
+describe('DataGrid list view size warning', () => {
+    const many = (n: number): GridRowModel[] => Array.from({ length: n }, (_, i) => ({ id: i + 1, name: `r${i}` }));
+    const col = { field: 'name', renderCell: (p: GridRenderCellParams<GridRowModel>) => String(p.row.name) };
+    const warned = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.some(([m]) => String(m).includes('list view is rendering all'));
+
+    it('warns in development when the list view renders more than 2000 items', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        render(<DataGrid rows={many(2001)} columns={COLS} listView listViewColumn={col} />);
+        expect(warned(warn)).toBe(true);
+        warn.mockRestore();
+    });
+
+    it('does not warn for a paginated or small list', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        render(<DataGrid rows={many(2000)} columns={COLS} listView listViewColumn={col} />);
+        render(<DataGrid rows={many(5000)} columns={COLS} listView listViewColumn={col} pagination />);
+        expect(warned(warn)).toBe(false);
+        warn.mockRestore();
+    });
+});

@@ -595,6 +595,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         pinnedRowsIgnored: isHierarchyEnabled && Boolean(pinnedRows?.top?.length || pinnedRows?.bottom?.length),
         scrollHeight: virtualization.totalHeight,
         listViewWithoutColumn: listViewRequested && !listViewColumn,
+        listViewRowCount: listView && listViewColumn ? allRenderableRows.length : 0,
     });
 
     const { allSelected, someSelected } = rowSelection;
@@ -660,7 +661,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     return (
         <div
             ref={containerRef}
-            className={['ogx', className, autoHeight && 'ogx--auto-height', hasRowSpanning && 'ogx--row-spanning', listView && 'ogx--list-view'].filter(Boolean).join(' ')}
+            className={['ogx', className, autoHeight && 'ogx--auto-height', !autoHeight && height === undefined && style?.height === undefined && 'ogx--fill', hasRowSpanning && 'ogx--row-spanning', listView && 'ogx--list-view'].filter(Boolean).join(' ')}
             style={{
                 ...style,
                 height: height ?? style?.height,

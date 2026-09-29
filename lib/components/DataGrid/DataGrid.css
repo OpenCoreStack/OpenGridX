@@ -88,6 +88,13 @@
   justify-content: center;
   z-index: var(--ogx-z-index-modal);
 }
+/* No height prop: fill the container, as a block child of a sized box (height: 100%) or as a
+   flex item (flex: 1 with min-height: 0). In an auto-height parent 100% resolves to auto. */
+.ogx--fill {
+  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
 .ogx--auto-height {
   height: auto;
 }
