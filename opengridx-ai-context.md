@@ -8,7 +8,7 @@ that uses the `@opencorestack/opengridx` library. Read it in full before writing
 ## What this library is
 
 `@opencorestack/opengridx` is a zero-dependency, high-performance React DataGrid component.
-Current version: **3.0.1**. It is a full custom implementation — not a wrapper around MUI or any
+Current version: **3.1.0**. It is a full custom implementation — not a wrapper around MUI or any
 other library.
 
 ---
@@ -181,6 +181,20 @@ const columns: GridColDef[] = [
 <DataGrid rows={rows} columns={columns} multiSort sortModel={sortModel} onSortModelChange={setSortModel} />
 
 // Option B — Shift+click always appends without any prop.
+```
+
+### Custom sort order and column auto-size (3.1.0+)
+
+```tsx
+// sortComparator: ascending order only (the grid negates it for desc). v1/v2 are valueGetter values
+// INCLUDING null/undefined, so the comparator decides where empty values go. Used by multi-sort,
+// row-grouping group order, tree-data siblings, pivot row labels; ignored with sortingMode="server".
+{ field: 'size', sortComparator: (a, b, p1, p2) => rank(a) - rank(b) }
+
+// Double-click a column's resize handle (or Enter on it) to fit the column to its header and the
+// rendered cells, clamped to minWidth/maxWidth. Programmatic:
+apiRef.current.autosizeColumn('name');
+apiRef.current.autosizeColumns(); // all columns
 ```
 
 ---

@@ -5,6 +5,20 @@
 
 ---
 
+## [3.1.0] — 2026-09-29
+
+### Added
+
+- **`GridColDef.sortComparator(v1, v2, params1, params2)`** — a per-column ascending comparator for client-side sorting, used instead of the built-in type-aware comparison. `v1` / `v2` are the cell values after `valueGetter`, **including `null` / `undefined`** (the comparator decides where empty values go); `params` are the new exported `GridSortCellParams` `{ id, field, row, value }`. The grid negates the result for `desc`. It is used for flat sorting, as one key in a multi-sort chain, to order row-grouping groups by their grouping value (the grouping column's comparator), for tree-data siblings and for pivot row-label columns, so `getAllFilteredRows()`, exports and clipboard follow the same order. A comparator that throws or returns `NaN` reads as `0` with a one-time dev warning. Ignored with `sortingMode="server"`.
+- **Auto-size a column to its content** — double-click a column's resize handle (or press Enter with the handle focused) to fit the column to its header and the cells in the current render window (pinned rows included), measured in the DOM and clamped to `minWidth` (default 50px) / `maxWidth`. A flex column gets a fixed width, like after a drag; `resizable: false` columns are never auto-sized; the double-click never sorts. Works for left/right-pinned columns and under column groups. The width goes to `columnWidths` state, so `onStateChange` reports it.
+- **`apiRef.current.autosizeColumn(field)`** and **`apiRef.current.autosizeColumns(fields?)`** — the same measurement, programmatically (every column when `fields` is omitted).
+
+### Changed
+
+- Double-clicking a resize handle used to do nothing; it now auto-sizes the column.
+
+---
+
 ## [3.0.1] — 2026-09-29
 
 Fixes from a smoke test in a real application (Chromium, Firefox and WebKit).

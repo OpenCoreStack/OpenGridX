@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 3.0.1
+# Version: 3.1.0
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 
@@ -248,8 +248,9 @@ There are no getRowClassName / getCellClassName / theme props: use GridColDef.ce
 | align             | 'left'/'center'/'right'                                | Cell content alignment                     |
 | headerAlign       | 'left'/'center'/'right'                                | Header content alignment                   |
 | sortable          | boolean (default true)                                 | Enable sorting                             |
+| sortComparator    | (v1, v2, params1, params2) => number                   | Custom ascending comparator (3.1.0+). v1/v2 are valueGetter values incl. null/undefined; params { id, field, row, value }. Negated for desc; multi-sort tie-break chain; groups by grouping value; tree siblings; pivot row labels. Throw/NaN = 0. Ignored in server sortingMode |
 | filterable        | boolean (default true)                                 | Enable filtering and quick search          |
-| resizable         | boolean (default true)                                 | Enable resize handle (mouse, touch, Alt+Arrow on header) |
+| resizable         | boolean (default true)                                 | Enable resize handle (mouse, touch, Alt+Arrow on header); double-click or Enter on the handle auto-sizes to content (3.1.0+) |
 | hideable          | boolean (default true)                                 | Allow hiding via toolbar / column menu     |
 | pinnable          | boolean (default true)                                 | Allow pinning via column menu (does not affect drag-reorder) |
 | exportable        | boolean (default true)                                 | Include in CSV/Excel/JSON/Print/PDF exports and clipboard copy |
@@ -297,6 +298,10 @@ apiRef.current.setPageSize(size)
 
 // Scroll
 apiRef.current.scrollToIndexes({ rowIndex, colIndex })
+
+// Auto-size to header + rendered cells, clamped to minWidth/maxWidth (3.1.0+)
+apiRef.current.autosizeColumn(field)
+apiRef.current.autosizeColumns(fields?)
 
 // Clipboard
 apiRef.current.copySelectedRows()      // → Promise<void>; rejects if the write fails. Copies every selected row that passes

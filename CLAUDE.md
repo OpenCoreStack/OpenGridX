@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.0.1
+- **Current version:** 3.1.0
 
 ---
 
@@ -147,6 +147,11 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.1.0 — significant changes
+
+- `GridColDef.sortComparator(v1, v2, params1, params2)`: ascending comparator; sees null/undefined (no built-in nulls-last for that column); negated for desc. Sorting utils (`lib/utils/sorting`) take it through `GridSortValue.comparator` + `params` — two items use it only when both carry the same comparator, otherwise the built-in key comparison applies (tree auto-parents, group rows sorted by a non-grouping field). Always call it through `callSortComparator` (throw / NaN → 0, warn once). Row grouping passes the grouping column's comparator for group rows; pivot uses the source column's for row-label fields
+- Column auto-size: `useGridColumnAutosize` (hooks/core, after `useGridScrollToIndexesApi`) measures via `lib/utils/columnAutosize` (`.ogx__cell-content` / `.ogx__header-cell-content` at `max-content` + cell padding/borders, scoped to the grid's own `.ogx` root so nested grids are skipped) and writes through `handleColumnResize`. Installs `apiRef.autosizeColumn` / `autosizeColumns`; `ColumnResizeHandle` calls it on double-click and Enter. Only rendered rows are measured
 
 ## v3.0.1 — significant changes
 
