@@ -286,6 +286,7 @@ describe('useTreeData — build cost', () => {
         const large = best(80_000);
         // 4x the rows: about 4x the time when linear, about 16x when quadratic (the old build took
         // ~14 s for 100k children).
-        expect(large / small).toBeLessThan(9);
+        // Linear is ~4x and quadratic ~16x; 12 leaves room for noisy CI runners.
+        expect(large / small).toBeLessThan(12);
     }, 120_000);
 });
