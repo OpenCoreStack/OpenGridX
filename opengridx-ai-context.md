@@ -8,7 +8,7 @@ that uses the `@opencorestack/opengridx` library. Read it in full before writing
 ## What this library is
 
 `@opencorestack/opengridx` is a zero-dependency, high-performance React DataGrid component.
-Current version: **3.1.0**. It is a full custom implementation — not a wrapper around MUI or any
+Current version: **3.2.0**. It is a full custom implementation — not a wrapper around MUI or any
 other library.
 
 ---
@@ -183,6 +183,15 @@ const columns: GridColDef[] = [
 // Option B — Shift+click always appends without any prop.
 ```
 
+### Large PDF exports (3.2.0+)
+
+`exportToPdf` returns `Promise<void>` and yields to the event loop between ~30 ms slices (formatting and drawing), so the page stays responsive; jsPDF's final save is one synchronous step. Options: `onProgress({ phase: 'prepare' | 'render' | 'save', done, total })`, `signal` (abort → rejects with `DOMException` `'AbortError'`, no file saved), `maxRows` (default 20000: above it a dev-only `console.warn` recommends `exportToCsv` / `exportToExcelAdvanced`; never throws). Output pages are unchanged. For big datasets prefer CSV / `.xlsx`.
+
+```ts
+const controller = new AbortController();
+await exportToPdf(rows, columns, { signal: controller.signal, onProgress: p => setProgress(p) });
+```
+
 ### Custom sort order and column auto-size (3.1.0+)
 
 ```tsx
@@ -343,7 +352,7 @@ import type {
   GridTheme, DataGridThemeProviderProps,
   GridToolbarProps, ToolbarButtonRenderProps, ToolbarQuickFilterRenderProps,
   PaginationProps, CellProps, RowProps, HeaderProps, FilterPanelProps, ColumnVisibilityPanelProps,
-  CsvExportOptions, ExcelExportOptions, JsonExportOptions, PrintOptions, PdfExportOptions,
+  CsvExportOptions, ExcelExportOptions, JsonExportOptions, PrintOptions, PdfExportOptions, PdfExportProgress,
   ExcelAdvancedExportOptions, UseGridStateStorageOptions,
 } from '@opencorestack/opengridx';
 ```

@@ -1446,6 +1446,15 @@ interface PdfExportOptions {
     headerTextColor?: string;
     fontSize?: number;
     font?: { name: string; data: string; boldData?: string }; // v3.0+
+    onProgress?: (p: PdfExportProgress) => void; // v3.2+
+    signal?: AbortSignal; // v3.2+
+    maxRows?: number; // v3.2+, default 20000
+}
+
+interface PdfExportProgress {
+    phase: 'prepare' | 'render' | 'save';
+    done: number;
+    total: number;
 }
 ```
 
@@ -1466,3 +1475,8 @@ interface PdfExportOptions {
 | `headerTextColor` | `string` | `'#ffffff'` | Column header cell text color (`#rrggbb` / `#rgb`) |
 | `fontSize` | `number` | `9` | Body cell font size in points |
 | `font` | `{ name, data, boldData? }` | — | Base64 TrueType font for text outside Latin-1 (₹, CJK, Cyrillic…). Without it, such characters are replaced with `?` (v3.0+) |
+| `onProgress` | `(p: PdfExportProgress) => void` | — | Called per slice with `{ phase, done, total }`; phases `prepare` → `render` → `save`, `done` monotonic per phase and ending at `total` (v3.2+) |
+| `signal` | `AbortSignal` | — | Abort → the promise rejects with `DOMException` `'AbortError'`, no file saved. The final jsPDF save step cannot be interrupted (v3.2+) |
+| `maxRows` | `number` | `20000` | Above this many table rows a dev-mode `console.warn` recommends `exportToCsv` / `exportToExcelAdvanced`. Never throws; `Infinity` silences it (v3.2+) |
+
+The export yields to the event loop between ~30 ms slices while formatting and drawing (v3.2+), so the page stays responsive; only jsPDF's final save is one synchronous step. See [PDF Export › Large exports](./features/pdf-export.md#large-exports).

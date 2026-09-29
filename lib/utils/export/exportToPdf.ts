@@ -57,7 +57,48 @@ interface AutoTableOptions {
     showFoot?: string;
     showHead?: string;
     margin?: { top: number; left: number; right: number; bottom: number };
+    willDrawPage?: (data: AutoTableHookData) => void;
 }
+
+/** The part of jspdf-autotable's hook data used here; `settings` and `cursor` are the table's live objects. */
+interface AutoTableHookData {
+    settings: { showHead: string };
+    cursor: { y: number } | null;
+}
+
+type AutoTableFn = (doc: JsPDFDoc, opts: AutoTableOptions) => void;
+
+/** How the work is sliced. Output does not depend on these values; tests shrink them. */
+export interface PdfExportTuning {
+    /** Longest stretch of synchronous work before yielding to the event loop, in ms. */
+    sliceMs: number;
+    /** Table rows drawn by the first autoTable call; later calls adapt to `sliceMs`. Rounded to even. */
+    renderChunkRows: number;
+    /** Resize later chunks to fit `sliceMs` (default behaviour); false keeps every chunk at `renderChunkRows`. */
+    adaptive: boolean;
+}
+
+const DEFAULT_TUNING: PdfExportTuning = { sliceMs: 30, renderChunkRows: 200, adaptive: true };
+
+/** Default `maxRows`: above this a PDF is tens of MB and takes seconds to build and open. */
+export const PDF_MAX_ROWS_DEFAULT = 20_000;
+
+/**
+ * Let the browser paint and run other tasks. A macrotask on purpose: `scheduler.yield()` resumes
+ * ahead of queued tasks, which starves timers and React's scheduler (a progress bar would not
+ * update until the export finished).
+ */
+function yieldToEventLoop(): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+function abortError(): DOMException {
+    return new DOMException('PDF export was aborted', 'AbortError');
+}
+
+const now = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+const evenAtLeast2 = (n: number): number => Math.max(2, Math.floor(n / 2) * 2);
 
 type Rgb = [number, number, number];
 
@@ -144,21 +185,37 @@ const LINE_HEIGHT_MM_PER_PT = 1.15 * 0.3528;
 
 export function exportToPdf<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef<R>[], options?: PdfExportOptions<R>): Promise<void>;
 export function exportToPdf<R extends GridValidRowModel = GridRowModel>(rows: R[], columns: GridColDef[], options?: PdfExportOptions<R>): Promise<void>;
-export async function exportToPdf<R extends GridRowModel>(
+export function exportToPdf<R extends GridRowModel>(
     rows: R[],
     columns: GridColDef<R>[],
     options: PdfExportOptions<R> = {}
 ): Promise<void> {
+    return runPdfExport(rows, columns, options, DEFAULT_TUNING);
+}
+
+/** `exportToPdf` with explicit slicing. Internal: not part of the public API. */
+export async function runPdfExport<R extends GridRowModel>(
+    rows: R[],
+    columns: GridColDef<R>[],
+    options: PdfExportOptions<R>,
+    tuning: PdfExportTuning,
+): Promise<void> {
+    const { signal, onProgress } = options;
+    const checkAbort = (): void => {
+        if (signal?.aborted) throw abortError();
+    };
+    checkAbort();
+
     // Lazy-load peer deps — provides a clear error if not installed
     let JsPDF: new (opts: Record<string, unknown>) => JsPDFDoc;
-    let autoTable: (doc: JsPDFDoc, opts: AutoTableOptions) => void;
+    let autoTable: AutoTableFn;
     try {
         const [jspdfMod, autoTableMod] = await Promise.all([
             import('jspdf'),
             import('jspdf-autotable'),
         ]);
         JsPDF = jspdfMod.default as unknown as new (opts: Record<string, unknown>) => JsPDFDoc;
-        autoTable = autoTableMod.default as unknown as (doc: JsPDFDoc, opts: AutoTableOptions) => void;
+        autoTable = autoTableMod.default as unknown as AutoTableFn;
     } catch {
         throw new Error(
             "exportToPdf requires 'jspdf' and 'jspdf-autotable'. Run: npm install jspdf jspdf-autotable"
@@ -181,7 +238,21 @@ export async function exportToPdf<R extends GridRowModel>(
         fontSize = 9,
         groupedRows,
         font,
+        maxRows = PDF_MAX_ROWS_DEFAULT,
     } = options;
+    checkAbort();
+
+    // Time-sliced work: `maybeYield` yields once the current slice has run for `sliceMs`.
+    let sliceStart = now();
+    const maybeYield = async (): Promise<void> => {
+        if (now() - sliceStart < tuning.sliceMs) return;
+        await yieldToEventLoop();
+        checkAbort();
+        sliceStart = now();
+    };
+    const report = (phase: 'prepare' | 'render' | 'save', done: number, total: number): void => {
+        onProgress?.({ phase, done, total });
+    };
 
     const doc = new JsPDF({ orientation, unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -274,30 +345,48 @@ export async function exportToPdf<R extends GridRowModel>(
     const aggregateTexts = (values: Record<string, unknown>): string[] =>
         exportColumns.map(col => formatExportAggregate(col, aggMod[col.field], values[col.field], values));
 
-    let body: string[][];
+    const body: string[][] = [];
     let foot: string[][] | undefined;
+    const pushRow = (cells: string[]): void => {
+        body.push(cells.map(pdfText));
+    };
 
     if (useGrouped) {
         // Grouped export: flatten the ordered list into body rows with indentation
-        body = [];
-        groupedRows.forEach((entry: GridGroupedExportRow) => {
+        const total = groupedRows.length;
+        report('prepare', 0, total);
+        for (let index = 0; index < total; index++) {
+            const entry: GridGroupedExportRow = groupedRows[index];
             const indent = '  '.repeat(entry.depth * 2);
             if (entry.type === 'group-header') {
                 const label = `${indent}${groupHeaderLabel(entry, columns)}`;
-                body.push(exportColumns.map((_, i) => i === 0 ? label : ''));
+                pushRow(exportColumns.map((_, i) => i === 0 ? label : ''));
             } else if (entry.type === 'leaf' && entry.row) {
                 const row = entry.row as R;
-                body.push(exportColumns.map((col, i) => (i === 0 ? indent : '') + resolveValue(row, col)));
+                pushRow(exportColumns.map((col, i) => (i === 0 ? indent : '') + resolveValue(row, col)));
             } else if (entry.type === 'group-subtotal' && entry.aggregatedValues) {
                 const texts = aggregateTexts(entry.aggregatedValues);
-                body.push(texts.map((text, i) => (i === 0 ? `${indent}${summaryLabelText('Subtotal', text)}` : text)));
+                pushRow(texts.map((text, i) => (i === 0 ? `${indent}${summaryLabelText('Subtotal', text)}` : text)));
             } else if (entry.type === 'grand-total' && entry.aggregatedValues) {
                 const texts = aggregateTexts(entry.aggregatedValues);
-                foot = [texts.map((text, i) => (i === 0 ? summaryLabelText('Grand Total', text) : text))];
+                foot = [texts.map((text, i) => (i === 0 ? summaryLabelText('Grand Total', text) : text)).map(pdfText)];
             }
-        });
+            if ((index & 63) === 63) {
+                report('prepare', index + 1, total);
+                await maybeYield();
+            }
+        }
+        report('prepare', total, total);
     } else {
-        body = rowsToExport.map(row => exportColumns.map(col => resolveValue(row, col)));
+        const total = rowsToExport.length;
+        report('prepare', 0, total);
+        for (let index = 0; index < total; index++) {
+            pushRow(exportColumns.map(col => resolveValue(rowsToExport[index], col)));
+            if ((index & 63) === 63) {
+                report('prepare', index + 1, total);
+                await maybeYield();
+            }
+        }
 
         const totals = aggregationModel
             ? aggregationForExport(rowsToExport, hasSelection(selectedRows), columns, aggregationResult, aggregationModel)
@@ -305,12 +394,19 @@ export async function exportToPdf<R extends GridRowModel>(
         if (totals && aggregationModel) {
             const hasAgg = exportColumns.some(c => aggregationModel[c.field]);
             const texts = aggregateTexts(totals);
-            foot = [texts.map((text, i) => (i === 0 && hasAgg ? summaryLabelText('TOTAL', text) : text))];
+            foot = [texts.map((text, i) => (i === 0 && hasAgg ? summaryLabelText('TOTAL', text) : text)).map(pdfText)];
         }
+        report('prepare', total, total);
     }
+    checkAbort();
 
-    body = body.map(cells => cells.map(pdfText));
-    if (foot) foot = foot.map(cells => cells.map(pdfText));
+    if (body.length > maxRows && process.env.NODE_ENV !== 'production') {
+        console.warn(
+            `[exportToPdf] Exporting ${body.length} table rows (maxRows: ${maxRows}). PDFs this large are slow to build ` +
+            'and open and can reach tens of MB. Prefer exportToCsv or exportToExcelAdvanced for full-dataset exports, ' +
+            'or pass a larger `maxRows` to silence this warning.'
+        );
+    }
 
     if (replacedCharacters) {
         console.warn(
@@ -325,11 +421,8 @@ export async function exportToPdf<R extends GridRowModel>(
     const [hr, hg, hb] = hexToRgb(headerBackgroundColor, DEFAULT_HEADER_BACKGROUND);
     const [tr, tg, tb] = hexToRgb(headerTextColor, DEFAULT_HEADER_TEXT);
 
-    autoTable(doc, {
+    const baseTableOptions: Omit<AutoTableOptions, 'body' | 'startY'> = {
         head,
-        body,
-        ...(foot ? { foot } : {}),
-        startY,
         styles: { fontSize, cellPadding: 3, font: fontName, overflow: 'linebreak' },
         headStyles: {
             fillColor: [hr, hg, hb],
@@ -343,10 +436,59 @@ export async function exportToPdf<R extends GridRowModel>(
             ? { footStyles: { fillColor: [241, 245, 249], fontStyle: 'bold', textColor: [0, 0, 0] } }
             : {}),
         columnStyles,
-        showFoot: foot ? 'lastPage' : 'never',
         showHead: 'everyPage',
         margin: { top: MARGIN, left: MARGIN, right: MARGIN, bottom: MARGIN + 6 },
-    });
+    };
+
+    // The body is drawn as a series of autoTable calls, each continuing where the previous one
+    // ended, so the drawing phase yields too. Column widths are fixed (columnStyles), chunks hold
+    // an even number of rows (alternate shading keeps its parity), only the last chunk carries the
+    // footer, and a continuation chunk skips the header on the page it starts on but repeats it on
+    // every page it adds: the same pages a single call would produce.
+    const totalRows = body.length;
+    report('render', 0, totalRows);
+    let drawn = 0;
+    let chunkRows = evenAtLeast2(tuning.renderChunkRows);
+    do {
+        const chunk = body.slice(drawn, drawn + chunkRows);
+        const isFirst = drawn === 0;
+        const isLast = drawn + chunk.length >= totalRows;
+        const continueY = isFirst ? startY : doc.lastAutoTable.finalY;
+        let firstPageOfChunk = true;
+        const started = now();
+        autoTable(doc, {
+            ...baseTableOptions,
+            body: chunk,
+            ...(isLast && foot ? { foot } : {}),
+            // A continuation starts at the top margin so autoTable's "does the table fit below
+            // startY" check never adds a page; the hook then moves the cursor to where the previous
+            // chunk ended, and each row breaks the page exactly as it would in a single table.
+            startY: isFirst ? startY : MARGIN,
+            showFoot: isLast && foot ? 'lastPage' : 'never',
+            ...(isFirst ? {} : {
+                willDrawPage: (data: AutoTableHookData) => {
+                    if (firstPageOfChunk) {
+                        firstPageOfChunk = false;
+                        // Same page as the previous chunk: its header is already drawn.
+                        data.settings.showHead = 'never';
+                        if (data.cursor) data.cursor.y = continueY;
+                    } else {
+                        data.settings.showHead = 'everyPage';
+                    }
+                },
+            }),
+        });
+        drawn += chunk.length;
+        report('render', drawn, totalRows);
+        const elapsed = now() - started;
+        // Aim each call at one slice; grow at most 4x at a time.
+        if (tuning.adaptive) chunkRows = evenAtLeast2(elapsed > 0 ? Math.min(chunkRows * 4, chunkRows * (tuning.sliceMs / elapsed)) : chunkRows * 4);
+        if (!isLast) {
+            await yieldToEventLoop();
+            checkAbort();
+            sliceStart = now();
+        }
+    } while (drawn < totalRows);
 
     // Two-pass page numbering — stamp all pages after the table is fully rendered
     // so each stamp reads the correct final total (not the running count during draw)
@@ -361,7 +503,11 @@ export async function exportToPdf<R extends GridRowModel>(
             pageHeight - 8,
             { align: 'right' }
         );
+        await maybeYield();
     }
 
+    checkAbort();
+    report('save', 0, 1);
     doc.save(`${fileName}.pdf`);
+    report('save', 1, 1);
 }

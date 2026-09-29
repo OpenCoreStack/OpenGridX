@@ -527,6 +527,37 @@ export interface PdfExportOptions<R extends GridValidRowModel = GridRowModel> {
    * Has no effect when the grid has no active `rowGroupingModel`, or when `selectedRows` is non-empty.
    */
   groupedRows?: GridGroupedExportRow[];
+
+  /**
+   * Called as the export advances: `prepare` (formatting rows; `total` = source rows or grouped
+   * entries), `render` (drawing table rows; `total` = table body rows) and `save` (`0/1` before the
+   * file is written, `1/1` after). `done` never decreases within a phase and ends at `total`.
+   * @since v3.2
+   */
+  onProgress?: (progress: PdfExportProgress) => void;
+
+  /**
+   * Cancels the export. When aborted, the returned promise rejects with a `DOMException` named
+   * `'AbortError'` and no file is saved. Checked between slices of work, so cancellation takes
+   * effect within one slice; the final save step cannot be interrupted once started.
+   * @since v3.2
+   */
+  signal?: AbortSignal;
+
+  /**
+   * Table-row count above which a development-mode warning recommends `exportToCsv` or
+   * `exportToExcelAdvanced`. The export still runs (nothing is thrown). Pass `Infinity` to silence it.
+   * Default: 20000
+   * @since v3.2
+   */
+  maxRows?: number;
+}
+
+/** Progress reported by `PdfExportOptions.onProgress`. @since v3.2 */
+export interface PdfExportProgress {
+  phase: 'prepare' | 'render' | 'save';
+  done: number;
+  total: number;
 }
 
 /**

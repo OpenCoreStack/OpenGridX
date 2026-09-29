@@ -690,4 +690,4 @@ function downloadFile(content: string, fileName: string, mimeType: string): void
 }
 
 export { exportToPdf } from './exportToPdf';
-export type { PdfExportOptions } from '../../types';
+export type { PdfExportOptions, PdfExportProgress } from '../../types';

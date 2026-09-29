@@ -168,6 +168,12 @@ export default function APIDocumentation() {
         { name: 'onChange', type: '(value: string) => void', desc: 'Call with the updated string when the input changes. The toolbar splits it on whitespace into quickFilterValues terms.' },
     ];
 
+    const pdfExportOptions = [
+        { name: 'onProgress', type: "(p: { phase: 'prepare' | 'render' | 'save'; done: number; total: number }) => void", default: '—', desc: 'Progress per slice (v3.2+). done never decreases within a phase and ends at total; save reports 0/1 then 1/1.' },
+        { name: 'signal', type: 'AbortSignal', default: '—', desc: "Cancel the export (v3.2+): the promise rejects with a DOMException named 'AbortError' and no file is saved. jsPDF's final save step cannot be interrupted." },
+        { name: 'maxRows', type: 'number', default: '20000', desc: 'Above this many table rows a development-mode warning recommends exportToCsv / exportToExcelAdvanced (v3.2+). Never throws; Infinity silences it.' },
+    ];
+
     return (
         <div className="docs-container" style={{ maxWidth: '1200px' }}>
             <h1 className="docs-title">📖 API Reference</h1>
@@ -310,6 +316,29 @@ export default function APIDocumentation() {
                                 <tr key={p.name}>
                                     <td><span className="docs-prop-name">{p.name}</span></td>
                                     <td><span className="docs-prop-type">{p.type}</span></td>
+                                    <td>{p.desc}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <h2 className="docs-h2" style={{ marginTop: '32px' }}>📄 exportToPdf options (large exports)</h2>
+                <p>
+                    <code>exportToPdf</code> returns a <code>Promise&lt;void&gt;</code> and yields to the event loop between ~30 ms
+                    slices, so the page stays responsive during large exports. The full option list is in <code>docs/features/pdf-export.md</code>.
+                </p>
+                <div className="docs-table-wrapper">
+                    <table className="docs-table">
+                        <thead>
+                            <tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr>
+                        </thead>
+                        <tbody>
+                            {pdfExportOptions.map(p => (
+                                <tr key={p.name}>
+                                    <td><span className="docs-prop-name">{p.name}</span></td>
+                                    <td><span className="docs-prop-type">{p.type}</span></td>
+                                    <td><code>{p.default}</code></td>
                                     <td>{p.desc}</td>
                                 </tr>
                             ))}

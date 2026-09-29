@@ -16,7 +16,7 @@ npm install jspdf jspdf-autotable
 > await exportToPdf(rows, columns, { fileName: 'invoices', font: { name: 'NotoSans', data: notoSansBase64 } });
 > ```
 
-> **Large datasets:** PDF generation runs on the main thread, and time and file size grow with every row: 50,000 grouped rows took 10–16 s (the page is unresponsive meanwhile) and produced a file of about 120 MB. For more than a few thousand rows, export CSV (`exportToCsv`) or `.xlsx` (`exportToExcelAdvanced`) instead, or export a filtered subset.
+> **Large datasets:** time and file size grow with every row (50,000 grouped rows: several seconds and a file of 75–120 MB). Since v3.2 the export is sliced so the page stays responsive, and it reports progress and can be cancelled, but for more than a few thousand rows CSV (`exportToCsv`) or `.xlsx` (`exportToExcelAdvanced`) is still the better format. See [Large exports](#large-exports).
 
 ## Basic Usage
 
@@ -97,6 +97,42 @@ await exportToPdf(
 | `headerTextColor` | `string` | `'#ffffff'` | Column header cell text color (`#rrggbb` or `#rgb`). Invalid values fall back to the default |
 | `fontSize` | `number` | `9` | Body cell font size in points |
 | `font` | `{ name: string; data: string; boldData?: string }` | — | A TrueType font (base64 `.ttf`) for text outside Latin-1 (v3.0+). See [Non-Latin text](#non-latin-text-and-unicode-fonts) |
+| `onProgress` | `(p: PdfExportProgress) => void` | — | Progress: `{ phase: 'prepare' \| 'render' \| 'save', done, total }` (v3.2+). See [Large exports](#large-exports) |
+| `signal` | `AbortSignal` | — | Cancels the export: the promise rejects with a `DOMException` named `'AbortError'` and nothing is saved (v3.2+) |
+| `maxRows` | `number` | `20000` | Table-row count above which a development-mode warning recommends CSV / `.xlsx`. The export still runs; `Infinity` silences it (v3.2+) |
+
+## Large exports
+
+`exportToPdf` returns a `Promise<void>`. Since v3.2 it works in slices of about 30 ms and yields to the event loop between them, both while formatting the rows and while drawing the table, so the page keeps painting and handling input. Pass `onProgress` for a progress bar and `signal` for a Cancel button:
+
+```tsx
+const controllerRef = useRef<AbortController | null>(null);
+const [progress, setProgress] = useState<PdfExportProgress | null>(null);
+
+const onExport = async () => {
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    try {
+        await exportToPdf(rows, columns, {
+            groupedRows: apiRef.current.getGroupedExportRows() ?? undefined,
+            signal: controller.signal,
+            onProgress: setProgress,
+        });
+    } catch (error) {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) throw error;
+    } finally {
+        setProgress(null);
+    }
+};
+// <button onClick={() => controllerRef.current?.abort()}>Cancel</button>
+```
+
+- **Phases.** `prepare` formats the rows (`total` = rows, or grouped entries with `groupedRows`); `render` draws the table (`total` = table body rows); `save` is reported as `0/1` before the file is written and `1/1` after. Within a phase `done` never decreases and ends at `total`.
+- **Cancel.** When `signal` aborts, the promise rejects with `DOMException` `'AbortError'` at the next slice boundary and no file is saved. An already aborted signal rejects before jsPDF is loaded.
+- **The last step still blocks.** jsPDF builds the whole file in one synchronous call when saving; that step cannot be split or cancelled. It is short next to the rest (about 0.4–0.6 s for 50,000 grouped rows in Chromium), but it grows with the file.
+- **Same output.** The table is drawn as a series of `jspdf-autotable` calls that continue on the same page, with fixed column widths, the header repeated on every page and the footer only at the end. Pages, row positions, shading and page breaks are the same as a single call; the file is marginally larger (repeated style operators).
+- **`maxRows` (default 20,000).** Above it a console warning in development recommends `exportToCsv` or `exportToExcelAdvanced`; nothing is thrown, so existing exports keep working. 20,000 rows is roughly where a PDF passes 30 MB and a few seconds to build, and where viewers start to struggle to open it. Pass a larger value (or `Infinity`) to silence the warning when a large PDF is intended.
+- **Total time.** Slicing makes an export slightly slower overall, not faster. Formatting is a small part of the work; drawing the table dominates.
 
 ## Totals and filter summary
 
@@ -148,7 +184,7 @@ Pass the `font` option with a Unicode TrueType font. See [Non-Latin text](#non-l
 
 **Export is slow or the file is huge**
 
-PDF is not suited to tens of thousands of rows (see Installation above). Use CSV or `.xlsx` for large exports.
+PDF is not suited to tens of thousands of rows. Show progress and a Cancel button (see [Large exports](#large-exports)), or use CSV or `.xlsx` for large exports.
 
 **Error: "exportToPdf requires 'jspdf' and 'jspdf-autotable'"**
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
     DataGrid,
     GridColDef,
@@ -6,6 +6,7 @@ import {
     GridToolbar,
     exportToPdf,
     GridAggregationModel,
+    PdfExportProgress,
 } from '@opencorestack/opengridx';
 import { DocsLayout } from '../../components/DocsLayout';
 import sourceCode from './PdfExportDemo.tsx?raw';
@@ -19,7 +20,7 @@ interface Employee {
     status: string;
 }
 
-const ALL_ROWS: Employee[] = Array.from({ length: 50 }, (_, i) => ({
+const makeRows = (count: number): Employee[] => Array.from({ length: count }, (_, i) => ({
     id: i + 1,
     name: ['Alice Chen', 'Bob Smith', 'Carol Davis', 'Dan Lee', 'Eve Park'][i % 5] + ` ${i + 1}`,
     department: ['Engineering', 'Marketing', 'Finance', 'HR', 'Operations'][i % 5],
@@ -27,6 +28,14 @@ const ALL_ROWS: Employee[] = Array.from({ length: 50 }, (_, i) => ({
     startDate: `${2019 + (i % 5)}-${String((i % 12) + 1).padStart(2, '0')}-01`,
     status: i % 3 === 0 ? 'active' : 'inactive',
 }));
+
+const ROW_COUNTS = [50, 5_000, 25_000];
+
+const PHASE_LABEL: Record<PdfExportProgress['phase'], string> = {
+    prepare: 'Formatting rows',
+    render: 'Drawing table',
+    save: 'Saving file',
+};
 
 const COLUMNS: GridColDef<Employee>[] = [
     { field: 'name', headerName: 'Name', width: 180 },
@@ -86,10 +95,23 @@ export default function PdfExportDemo() {
     const [selectedOnly, setSelectedOnly] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
+    const [rowCount, setRowCount] = useState(ROW_COUNTS[0]);
+    const rows = useMemo(() => makeRows(rowCount), [rowCount]);
+    const [progress, setProgress] = useState<PdfExportProgress | null>(null);
+    const [status, setStatus] = useState('');
+    const abortRef = useRef<AbortController | null>(null);
+
+    const handleCancel = useCallback(() => {
+        abortRef.current?.abort();
+    }, []);
 
     const handleExport = useCallback(async () => {
         if (!apiRef.current) return;
+        const controller = new AbortController();
+        abortRef.current = controller;
         setIsExporting(true);
+        setStatus('');
+        const started = performance.now();
         try {
             // getAllFilteredRows returns all filtered+sorted rows regardless of pagination,
             // so the PDF includes every row, not just the current page.
@@ -134,8 +156,18 @@ export default function PdfExportDemo() {
                 aggregationModel: hasAgg ? aggregationModel : null,
                 filterModel,
                 selectedRows: selected,
+                // Large exports: the export yields between slices, so the progress bar and
+                // the Cancel button keep working while it runs.
+                signal: controller.signal,
+                onProgress: setProgress,
             });
+            setStatus(`Exported ${rows.length.toLocaleString()} rows in ${((performance.now() - started) / 1000).toFixed(1)} s`);
+        } catch (error) {
+            if (error instanceof DOMException && error.name === 'AbortError') setStatus('Export cancelled, no file saved');
+            else throw error;
         } finally {
+            abortRef.current = null;
+            setProgress(null);
             setIsExporting(false);
         }
     }, [apiRef, aggregationModel, includeAgg, includeFilters, includeTitle, includeLogo, selectedOnly, title, logoUrl]);
@@ -235,11 +267,52 @@ export default function PdfExportDemo() {
                         Export selected rows only
                     </label>
                 </div>
+
+                {/* Dataset size */}
+                <label style={labelStyle}>
+                    <span>Rows (try 25,000 for progress and Cancel)</span>
+                    <select
+                        value={rowCount}
+                        onChange={e => setRowCount(Number(e.target.value))}
+                        style={inputStyle}
+                        disabled={isExporting}
+                    >
+                        {ROW_COUNTS.map(n => <option key={n} value={n}>{n.toLocaleString()}</option>)}
+                    </select>
+                </label>
             </div>
+
+            {(progress || status) && (
+                <div
+                    role="status"
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, fontSize: '0.85rem', color: '#374151' }}
+                >
+                    {progress ? (
+                        <>
+                            <span style={{ minWidth: 120 }}>{PHASE_LABEL[progress.phase]}</span>
+                            <progress
+                                value={progress.done}
+                                max={Math.max(progress.total, 1)}
+                                style={{ flex: 1, maxWidth: 360 }}
+                                aria-label="PDF export progress"
+                            />
+                            <span>{progress.done.toLocaleString()} / {progress.total.toLocaleString()}</span>
+                            <button
+                                onClick={handleCancel}
+                                style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer' }}
+                            >
+                                Cancel
+                            </button>
+                        </>
+                    ) : (
+                        <span>{status}</span>
+                    )}
+                </div>
+            )}
 
             <DataGrid
                 apiRef={apiRef}
-                rows={ALL_ROWS}
+                rows={rows}
                 columns={COLUMNS}
                 pagination
                 paginationModel={paginationModel}

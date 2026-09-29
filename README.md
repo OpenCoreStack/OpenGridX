@@ -437,7 +437,7 @@ printGrid(rows, columns, 'Report Title');
 
 > **Optional peer dependencies:** `exportToExcelAdvanced` requires ExcelJS (`npm install exceljs`); `exportToPdf` requires `npm install jspdf jspdf-autotable`.
 
-> **Large exports:** PDF generation runs on the main thread and grows fast (about 120 MB and 10–16 s for 50,000 grouped rows, with the page blocked meanwhile). For more than a few thousand rows export CSV or `.xlsx`. PDF's built-in font only covers Latin-1: pass the `font` option (a Unicode `.ttf`) for characters such as `₹`, otherwise they print as `?`. See [PDF Export](docs/features/pdf-export.md).
+> **Large exports:** PDF size and time grow fast (75–120 MB and several seconds for 50,000 grouped rows). Since v3.2 `exportToPdf` yields between slices so the page stays responsive, reports `onProgress` and accepts an abort `signal`; above `maxRows` (default 20,000) it warns in development. For more than a few thousand rows export CSV or `.xlsx`. PDF's built-in font only covers Latin-1: pass the `font` option (a Unicode `.ttf`) for characters such as `₹`, otherwise they print as `?`. See [PDF Export](docs/features/pdf-export.md).
 
 CSV and HTML-Excel exports neutralise spreadsheet formulas (text starting with `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading `'`; opt out with `escapeFormulas: false`), and CSV starts with a UTF-8 BOM (`bom: false` omits it). `exportToExcel` writes an HTML table, so a `.xlsx` file name is saved as `.xls`. To export what the grid shows, pass `apiRef.current.getAllFilteredRows()` and `apiRef.current.getVisibleColumns()`; with a custom `getRowId`, also pass `getRowId` in the options so `selectedRows` match. See the [Export Guide](docs/features/export-guide.md).
 

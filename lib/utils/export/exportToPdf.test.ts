@@ -302,3 +302,163 @@ describe('exportToPdf — characters outside the built-in font', () => {
         expect(mockSetFont).toHaveBeenCalledWith('NotoSans', 'bold');
     });
 });
+
+describe('exportToPdf — large exports (progress, abort, slicing, maxRows)', () => {
+    beforeEach(() => {
+        resetMocks();
+        mockSave.mockClear();
+    });
+
+    interface ChunkCall {
+        body: string[][];
+        foot?: string[][];
+        startY: number;
+        showFoot: string;
+        showHead: string;
+        willDrawPage?: (data: { settings: { showHead: string } }) => void;
+    }
+    const tableCalls = (): ChunkCall[] => mockAutoTable.mock.calls.map(c => c[1] as ChunkCall);
+    const manyRows = (n: number): GridRowModel[] => Array.from({ length: n }, (_, i) => ({ id: i, name: `r${i}`, salary: i }));
+    const SLICED = { sliceMs: 0, renderChunkRows: 10, adaptive: false };
+
+    it('draws a small export with a single autoTable call, as before', async () => {
+        const { exportToPdf } = await import('./exportToPdf');
+        await exportToPdf(sampleRows, sampleColumns, { aggregationResult: { salary: 170000 }, aggregationModel: { salary: 'sum' } });
+        expect(mockAutoTable).toHaveBeenCalledTimes(1);
+        const call = tableCalls()[0];
+        expect(call.body).toEqual([['Alice', '$90000'], ['Bob', '$80000']]);
+        expect(call.showFoot).toBe('lastPage');
+        expect(call.showHead).toBe('everyPage');
+        expect(call.startY).toBe(14);
+        expect(call.willDrawPage).toBeUndefined();
+        expect(mockSave).toHaveBeenCalledTimes(1);
+    });
+
+    it('splits the body into even-sized chunks that together equal the single-call body', async () => {
+        const { runPdfExport } = await import('./exportToPdf');
+        const rows = manyRows(95);
+        await runPdfExport(rows, sampleColumns, { aggregationResult: { salary: 1 }, aggregationModel: { salary: 'sum' } }, SLICED);
+        const calls = tableCalls();
+        expect(calls.length).toBeGreaterThan(1);
+        expect(calls.flatMap(c => c.body)).toEqual(rows.map(r => [String(r.name), `$${String(r.salary)}`]));
+        calls.slice(0, -1).forEach(c => {
+            expect(c.body.length % 2).toBe(0);
+            expect(c.foot).toBeUndefined();
+            expect(c.showFoot).toBe('never');
+        });
+        expect(calls[calls.length - 1].foot).toEqual([['TOTAL', '$1']]);
+        expect(calls[calls.length - 1].showFoot).toBe('lastPage');
+        calls.slice(1).forEach(c => {
+            // Continuations start at the top margin so autoTable never adds a page up front;
+            // the hook then moves the cursor to where the previous chunk ended (finalY 50).
+            expect(c.startY).toBe(14);
+            expect(c.willDrawPage).toBeTypeOf('function');
+            const data = { settings: { showHead: 'everyPage' }, cursor: { y: 14 } };
+            c.willDrawPage?.(data);
+            expect(data.cursor.y).toBe(50);
+            expect(data.settings.showHead).toBe('never');
+        });
+    });
+
+    it('skips the header of a continuation chunk only on the page it starts on', async () => {
+        const { runPdfExport } = await import('./exportToPdf');
+        await runPdfExport(manyRows(40), sampleColumns, {}, SLICED);
+        const hook = tableCalls()[1].willDrawPage;
+        const settings = { showHead: 'everyPage' };
+        hook?.({ settings });
+        expect(settings.showHead).toBe('never');
+        hook?.({ settings });
+        expect(settings.showHead).toBe('everyPage');
+    });
+
+    it('reports monotonic progress per phase, in order, reaching each total', async () => {
+        const { runPdfExport } = await import('./exportToPdf');
+        const events: { phase: string; done: number; total: number }[] = [];
+        await runPdfExport(manyRows(300), sampleColumns, { onProgress: p => events.push(p) }, SLICED);
+        const phases = [...new Set(events.map(e => e.phase))];
+        expect(phases).toEqual(['prepare', 'render', 'save']);
+        for (const phase of phases) {
+            const list = events.filter(e => e.phase === phase);
+            for (let i = 1; i < list.length; i++) expect(list[i].done).toBeGreaterThanOrEqual(list[i - 1].done);
+            expect(list[0].done).toBe(0);
+            expect(list[list.length - 1].done).toBe(list[list.length - 1].total);
+        }
+        expect(events.filter(e => e.phase === 'prepare').length).toBeGreaterThan(2);
+        expect(events.find(e => e.phase === 'render')?.total).toBe(300);
+        expect(events.filter(e => e.phase === 'save')).toEqual([{ phase: 'save', done: 0, total: 1 }, { phase: 'save', done: 1, total: 1 }]);
+    });
+
+    it('reports grouped progress over the grouped entries', async () => {
+        const { runPdfExport } = await import('./exportToPdf');
+        const groupedRows: GridGroupedExportRow[] = [
+            { type: 'group-header', depth: 0, groupField: 'name', groupValue: 'A' },
+            ...manyRows(100).map((row): GridGroupedExportRow => ({ type: 'leaf', depth: 1, row })),
+        ];
+        const events: { phase: string; done: number; total: number }[] = [];
+        await runPdfExport(manyRows(100), sampleColumns, { groupedRows, onProgress: p => events.push(p) }, SLICED);
+        expect(events.filter(e => e.phase === 'prepare').pop()).toEqual({ phase: 'prepare', done: 101, total: 101 });
+        expect(tableCalls().flatMap(c => c.body)).toHaveLength(101);
+    });
+
+    it('yields to the event loop between slices', async () => {
+        const { runPdfExport } = await import('./exportToPdf');
+        const spy = vi.spyOn(globalThis, 'setTimeout');
+        await runPdfExport(manyRows(300), sampleColumns, {}, SLICED);
+        expect(spy.mock.calls.filter(c => c[1] === 0).length).toBeGreaterThan(5);
+        spy.mockRestore();
+    });
+
+    it('rejects with an AbortError and draws nothing when aborted before it starts', async () => {
+        const { exportToPdf } = await import('./exportToPdf');
+        const controller = new AbortController();
+        controller.abort();
+        await expect(exportToPdf(sampleRows, sampleColumns, { signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' });
+        expect(mockAutoTable).not.toHaveBeenCalled();
+        expect(mockSave).not.toHaveBeenCalled();
+    });
+
+    it('rejects with an AbortError and never saves when aborted during prepare', async () => {
+        const { runPdfExport } = await import('./exportToPdf');
+        const controller = new AbortController();
+        const promise = runPdfExport(manyRows(500), sampleColumns, {
+            signal: controller.signal,
+            onProgress: p => { if (p.phase === 'prepare' && p.done >= 128) controller.abort(); },
+        }, SLICED);
+        const error: unknown = await promise.catch((e: unknown) => e);
+        expect(error).toBeInstanceOf(DOMException);
+        expect((error as DOMException).name).toBe('AbortError');
+        expect(mockAutoTable).not.toHaveBeenCalled();
+        expect(mockSave).not.toHaveBeenCalled();
+    });
+
+    it('rejects with an AbortError and never saves when aborted during render', async () => {
+        const { runPdfExport } = await import('./exportToPdf');
+        const controller = new AbortController();
+        const promise = runPdfExport(manyRows(500), sampleColumns, {
+            signal: controller.signal,
+            onProgress: p => { if (p.phase === 'render' && p.done > 0) controller.abort(); },
+        }, SLICED);
+        await expect(promise).rejects.toMatchObject({ name: 'AbortError' });
+        expect(mockAutoTable).toHaveBeenCalledTimes(1);
+        expect(mockSave).not.toHaveBeenCalled();
+    });
+
+    it('warns (without throwing) above maxRows, recommending CSV / Excel', async () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const { exportToPdf } = await import('./exportToPdf');
+        await exportToPdf(manyRows(3), sampleColumns, { maxRows: 2 });
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('exportToCsv'));
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('exportToExcelAdvanced'));
+        expect(mockSave).toHaveBeenCalledTimes(1);
+        warn.mockClear();
+        await exportToPdf(manyRows(3), sampleColumns, { maxRows: 3 });
+        await exportToPdf(manyRows(3), sampleColumns);
+        expect(warn).not.toHaveBeenCalled();
+        warn.mockRestore();
+    });
+
+    it('defaults maxRows to 20000', async () => {
+        const { PDF_MAX_ROWS_DEFAULT } = await import('./exportToPdf');
+        expect(PDF_MAX_ROWS_DEFAULT).toBe(20_000);
+    });
+});

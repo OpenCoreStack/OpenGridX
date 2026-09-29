@@ -136,4 +136,5 @@ export type {
     GridRowMeta,
     GridLocaleText,
     PdfExportOptions,
+    PdfExportProgress,
 } from './types';
