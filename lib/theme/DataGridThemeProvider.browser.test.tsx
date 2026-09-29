@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
+import { commands } from 'vitest/browser';
 import '../styles/opengridx.css';
 import { DataGrid, DataGridThemeProvider, GridToolbar, darkTheme, roseTheme, compactTheme } from '../index';
 import type { GridTheme } from './types';
@@ -29,20 +30,21 @@ const groupRowColors = (container: HTMLElement) => {
     };
 };
 
-// vitest/browser types CDPSession as an empty interface; the Chromium session has send().
-interface ChromiumSession {
-    send(method: string, params: Record<string, unknown>): Promise<unknown>;
+declare module 'vitest/browser' {
+    interface BrowserCommands {
+        // Defined in vitest.config.ts: Playwright emulateMedia, which every engine supports.
+        setColorScheme: (colorScheme: 'light' | 'dark' | null) => Promise<void>;
+    }
 }
 
 async function withColorScheme(value: 'dark' | 'light', run: () => void | Promise<void>) {
-    const { cdp } = await import('vitest/browser');
-    const session = cdp() as unknown as ChromiumSession;
-    await session.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value }] });
+    await commands.setColorScheme(value);
     try {
-        expect(window.matchMedia(`(prefers-color-scheme: ${value})`).matches).toBe(true);
+        // Firefox applies the emulated scheme to the test iframe a moment later, so wait for it.
+        await expect.poll(() => window.matchMedia(`(prefers-color-scheme: ${value})`).matches).toBe(true);
         await run();
     } finally {
-        await session.send('Emulation.setEmulatedMedia', { features: [] });
+        await commands.setColorScheme(null);
     }
 }
 

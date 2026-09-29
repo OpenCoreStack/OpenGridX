@@ -77,6 +77,8 @@ describe('DataGrid editing in a real browser', () => {
         await expect.poll(() => cellOf(container, 0, 'name')).not.toBeNull();
         await userEvent.dblClick(cellOf(container, 0, 'name')!);
         await userEvent.keyboard('Changed');
+        // Firefox scrolls the caret into view a frame after typing; let it settle so it does not undo the scroll below.
+        await frame();
 
         const viewport = container.querySelector<HTMLElement>('.ogx__viewport')!;
         viewport.scrollTop = 5000;

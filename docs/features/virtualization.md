@@ -205,7 +205,7 @@ When using detail panels, row heights become variable. The grid automatically:
 
 ## Virtualization with Grouping/Tree Data
 
-Grouped and tree rows go through the same virtualizer as flat rows. Expanding a group of any size adds its rows to the virtual row list, not to the DOM: in a bounded container, expanding a 25,000-row group renders ~20 DOM rows (verified in Chromium by `DataGrid.virtualization.browser.test.tsx`).
+Grouped and tree rows go through the same virtualizer as flat rows. Expanding a group of any size adds its rows to the virtual row list, not to the DOM: in a bounded container, expanding a 25,000-row group renders ~20 DOM rows (verified in Chromium, Firefox and WebKit by `DataGrid.virtualization.browser.test.tsx`).
 
 ```tsx
 // Tree data with virtualization

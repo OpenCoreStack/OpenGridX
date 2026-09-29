@@ -241,13 +241,16 @@ describe('DataGrid scrolling in a real browser', () => {
             await expect.poll(() => bodyRows(container)).toBeGreaterThan(0);
             await scrollTo(viewport(container), { top: 60000 });
             await settle();
+            // Firefox snaps scrollTop to device pixels (59999.65 rather than 60000), so compare with what it took.
+            const beforeTop = viewport(container).scrollTop;
+            expect(Math.abs(beforeTop - 60000)).toBeLessThan(1);
             const before = visibleRowIds(container);
             expect(before.length).toBeGreaterThan(5);
             rerender(<Tall listView rows={rows} />);
             await frame();
             rerender(<Tall listView={false} rows={rows} />);
             await settle();
-            expect(viewport(container).scrollTop).toBe(60000);
+            expect(viewport(container).scrollTop).toBe(beforeTop);
             expect(visibleRowIds(container)).toEqual(before);
         });
     });

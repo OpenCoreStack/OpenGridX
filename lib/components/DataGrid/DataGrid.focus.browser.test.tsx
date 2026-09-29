@@ -106,11 +106,12 @@ describe('focus across blur and re-entry', () => {
         expect(activeText()).toBe('r2c0');
     });
 
+    // Tab anchors are text inputs, not buttons: WebKit on macOS skips buttons on Tab by default.
     it('Shift+Tab back into a scrolled grid restores the last focused cell', async () => {
-        const { container, getByText } = render(
+        const { container, getByLabelText } = render(
             <div>
                 <Box><DataGrid rows={makeRows(300)} columns={makeCols(3)} height="100%" /></Box>
-                <button type="button">after</button>
+                <input aria-label="after" />
             </div>
         );
         await expect.poll(() => cellByText(container, 'r1c0')).not.toBeNull();
@@ -121,7 +122,7 @@ describe('focus across blur and re-entry', () => {
         await settle();
         await userEvent.keyboard('{Tab}');
         await settle();
-        expect(document.activeElement).toBe(getByText('after'));
+        expect(document.activeElement).toBe(getByLabelText('after'));
         expect(container.querySelector('.ogx--kb .ogx__cell--focused')).toBeNull();
         await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
         await settle();
@@ -135,21 +136,21 @@ describe('focus across blur and re-entry', () => {
     });
 
     it('Tab leaves the grid in one press from any cell, even with checkbox and detail columns', async () => {
-        const { container, getByText } = render(
+        const { container, getByLabelText } = render(
             <div>
-                <button type="button">before</button>
+                <input aria-label="before" />
                 <Box><DataGrid rows={makeRows(50)} columns={makeCols(3, 100)} height="100%" checkboxSelection getDetailPanelContent={() => null} /></Box>
-                <button type="button">after</button>
+                <input aria-label="after" />
             </div>
         );
         await expect.poll(() => cellByText(container, 'r3c1')).not.toBeNull();
         await userEvent.click(cellByText(container, 'r3c1')!);
         await userEvent.keyboard('{Tab}');
-        expect(document.activeElement).toBe(getByText('after'));
+        expect(document.activeElement).toBe(getByLabelText('after'));
         await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
         expect(activeText()).toBe('r3c1');
         await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
-        expect(document.activeElement).toBe(getByText('before'));
+        expect(document.activeElement).toBe(getByLabelText('before'));
     });
 
     it('Tab from a cell reaches an input inside an expanded detail panel', async () => {

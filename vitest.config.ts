@@ -2,6 +2,13 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { playwright } from '@vitest/browser-playwright';
 import { fileURLToPath, URL } from 'node:url';
+import type { BrowserCommand } from 'vitest/node';
+
+// Engine-neutral prefers-color-scheme emulation (Playwright's emulateMedia works in Chromium,
+// Firefox and WebKit; CDP's Emulation.setEmulatedMedia is Chromium-only).
+const setColorScheme: BrowserCommand<['light' | 'dark' | null]> = async (ctx, colorScheme) => {
+    await ctx.page.emulateMedia({ colorScheme });
+};
 
 const BROWSER_TESTS = 'lib/**/*.browser.test.{ts,tsx}';
 
@@ -26,16 +33,20 @@ export default defineConfig({
                 },
             },
             {
-                // Real Chromium: layout, ResizeObserver and scrolling behave as in production.
+                // Real Chromium, Firefox and WebKit: layout, ResizeObserver and scrolling behave as in production.
+                // Files run one at a time: several test pages open at once in one Firefox lose focus and
+                // pointer input to each other, which makes focus and editing tests fail at random.
                 extends: true,
                 test: {
                     name: 'browser',
                     include: [BROWSER_TESTS],
+                    fileParallelism: false,
                     browser: {
                         enabled: true,
                         headless: true,
                         provider: playwright(),
-                        instances: [{ browser: 'chromium' }],
+                        commands: { setColorScheme },
+                        instances: [{ browser: 'chromium' }, { browser: 'firefox' }, { browser: 'webkit' }],
                     },
                 },
             },

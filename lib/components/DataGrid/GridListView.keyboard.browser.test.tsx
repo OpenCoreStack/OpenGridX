@@ -6,6 +6,7 @@ import { DataGrid } from './DataGrid';
 import type { GridColDef, GridListViewColDef, GridRowModel, GridRowId } from '../../types';
 
 // Real focus and Tab order: jsdom cannot show either.
+// Tab anchors are text inputs, not buttons: WebKit on macOS skips buttons on Tab by default.
 
 afterEach(() => { cleanup(); });
 
@@ -19,7 +20,7 @@ const LIST_COL: GridListViewColDef<TRow> = {
 
 const Box = ({ children }: { children: React.ReactNode }) => (
     <div style={{ height: 300, width: 500, display: 'flex', flexDirection: 'column' }}>
-        <button type="button">before</button>
+        <input aria-label="before" />
         {children}
     </div>
 );
@@ -29,10 +30,10 @@ const focusedName = () => (document.activeElement as HTMLElement | null)?.textCo
 
 describe('list view keyboard', () => {
     it('is a single Tab stop and moves between rows with the arrow keys, Home and End', async () => {
-        const { container, getByText } = render(
+        const { container, getByLabelText } = render(
             <Box><DataGrid rows={ROWS} columns={COLS} listView listViewColumn={LIST_COL} height={260} /></Box>
         );
-        getByText('before').focus();
+        getByLabelText('before').focus();
         await userEvent.keyboard('{Tab}');
         expect(focusedName()).toBe('r1');
         await userEvent.keyboard('{ArrowDown}{ArrowDown}');
@@ -52,13 +53,13 @@ describe('list view keyboard', () => {
     });
 
     it('returns Tab to the last focused row', async () => {
-        const { getByText } = render(
+        const { getByLabelText } = render(
             <Box><DataGrid rows={ROWS} columns={COLS} listView listViewColumn={LIST_COL} height={260} /></Box>
         );
-        getByText('before').focus();
+        getByLabelText('before').focus();
         await userEvent.keyboard('{Tab}{ArrowDown}{ArrowDown}');
         await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
-        expect(document.activeElement?.textContent).toBe('before');
+        expect(document.activeElement).toBe(getByLabelText('before'));
         await userEvent.keyboard('{Tab}');
         expect(focusedName()).toBe('r3');
     });
@@ -66,14 +67,14 @@ describe('list view keyboard', () => {
     it('activates the focused row with Enter and Space, and selects it with Shift+Space', async () => {
         const onRowClick = vi.fn();
         const onRowSelectionModelChange = vi.fn<(ids: GridRowId[]) => void>();
-        const { getByText } = render(
+        const { getByLabelText } = render(
             <Box>
                 <DataGrid rows={ROWS} columns={COLS} listView listViewColumn={LIST_COL} height={260}
                     onRowClick={onRowClick} disableRowSelectionOnClick checkboxSelection
                     onRowSelectionModelChange={onRowSelectionModelChange} />
             </Box>
         );
-        getByText('before').focus();
+        getByLabelText('before').focus();
         await userEvent.keyboard('{Tab}');
         // With checkboxSelection the first Tab stop inside the row list is the focused row, not a checkbox.
         expect(focusedName()).toBe('r1');
@@ -90,13 +91,13 @@ describe('list view keyboard', () => {
             { id: 1, name: 'parent', path: ['parent'] },
             { id: 2, name: 'child', path: ['parent', 'child'] },
         ];
-        const { container, getByText } = render(
+        const { container, getByLabelText } = render(
             <Box>
                 <DataGrid rows={rows} columns={COLS} listView listViewColumn={LIST_COL} height={260}
                     treeData getTreeDataPath={(r) => r.path ?? []} />
             </Box>
         );
-        getByText('before').focus();
+        getByLabelText('before').focus();
         await userEvent.keyboard('{Tab}');
         expect(focusedName()).toBe('parent');
         expect(rowEls(container)).toHaveLength(1);
@@ -115,14 +116,14 @@ describe('list view keyboard', () => {
     });
 
     it('does not make the row checkboxes separate Tab stops', async () => {
-        const { getByText } = render(
+        const { getByLabelText } = render(
             <Box>
                 <DataGrid rows={ROWS.slice(0, 3)} columns={COLS} listView listViewColumn={LIST_COL} height={260} checkboxSelection />
-                <button type="button">after</button>
+                <input aria-label="after" />
             </Box>
         );
-        getByText('before').focus();
+        getByLabelText('before').focus();
         await userEvent.keyboard('{Tab}{Tab}');
-        expect(document.activeElement?.textContent).toBe('after');
+        expect(document.activeElement).toBe(getByLabelText('after'));
     });
 });

@@ -82,11 +82,14 @@ describe('column resize in a real browser', () => {
         const before = header('c').getBoundingClientRect();
         const h = handle('c').getBoundingClientRect();
         expect(h.left + h.width / 2).toBeCloseTo(before.left, 0);
+        // Grab the handle just inside column c: its outer half is clipped by the header cell, and its
+        // exact centre is the clip edge, which pointer rounding can put on the unpinned header underneath (Firefox does).
+        const GRAB = 2;
         // Drag the handle 60px to the left, over column b.
         const b = header('b').getBoundingClientRect();
         await userEvent.dragAndDrop(handle('c'), header('b'), {
-            sourcePosition: { x: h.width / 2, y: 10 },
-            targetPosition: { x: before.left - 60 - b.left, y: 10 },
+            sourcePosition: { x: h.width / 2 + GRAB, y: 10 },
+            targetPosition: { x: before.left + GRAB - 60 - b.left, y: 10 },
         });
         await settle();
         const after = header('c').getBoundingClientRect();

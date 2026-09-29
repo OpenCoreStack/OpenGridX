@@ -90,7 +90,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 - `slots.footer`, `slots.noRowsOverlay` and `slots.loadingOverlay` are rendered (they were typed but ignored).
 - New `onRowDoubleClick`; `ColumnVisibilityPanel` exported; `exportToExcelAdvanced` accepts `groupedRows`.
 - Dev-mode warnings for an unbounded grid container and for `pagination` with row grouping.
-- Real-browser test project (Vitest browser mode + Playwright/Chromium), `npm run test:browser`; the npm publish workflow now runs unit and browser tests before publishing.
+- Real-browser test project (Vitest browser mode + Playwright; Chromium, Firefox and WebKit), `npm run test:browser`; the npm publish workflow now runs unit and browser tests before publishing.
 - Already shipped, previously listed as upcoming: npm publishing (since 0.1.0), native PDF export (v1.2.1), GitHub Pages deployment.
 
 ### Library Hardening *(completed 2026-09-02)*

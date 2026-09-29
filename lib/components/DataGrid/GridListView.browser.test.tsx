@@ -29,9 +29,9 @@ describe('DataGrid list view scrolling', () => {
 
         await act(async () => {
             list.scrollTop = list.scrollHeight;
-            await new Promise(r => setTimeout(r, 50));
         });
-        expect(onRowsScrollEnd).toHaveBeenCalled();
+        // The scroll event is dispatched on a later frame; under load that can take longer than a fixed wait.
+        await expect.poll(() => onRowsScrollEnd.mock.calls.length).toBeGreaterThan(0);
         const params = onRowsScrollEnd.mock.calls[onRowsScrollEnd.mock.calls.length - 1][0];
         expect(params.viewportHeight).toBe(list.clientHeight);
         expect(params.visibleBottom).toBe(list.scrollTop + list.clientHeight);

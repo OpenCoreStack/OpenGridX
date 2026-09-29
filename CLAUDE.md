@@ -10,7 +10,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 
 - **Language:** TypeScript 5.9 strict mode. Zero `any`, zero `eslint-disable`.
 - **Framework:** React 19
-- **Tests:** Vitest 4 + `@testing-library/react`. Two projects: `unit` (jsdom, `npm test`) and `browser` (real Chromium via Playwright, `npm run test:browser`)
+- **Tests:** Vitest 4 + `@testing-library/react`. Two projects: `unit` (jsdom, `npm test`) and `browser` (real Chromium, Firefox and WebKit via Playwright, `npm run test:browser`)
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
@@ -121,7 +121,9 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Run unit tests: `npm test` (jsdom). Real-browser tests: `npm run test:browser`. Both: `npm run test:all`
 - Run a single file: `npx vitest run --project unit lib/hooks/core/useGridRowPipeline.test.ts`
 - Anything that depends on layout, `ResizeObserver`, or scrolling (virtualization, container height, drag) must be a `*.browser.test.tsx` — jsdom has no layout engine and reports a 0px viewport (the grid falls back to 600px), so such bugs are invisible there
-- Browser tests need Chromium: `npx playwright install chromium` once
+- Browser tests run in Chromium, Firefox and WebKit: `npx playwright install chromium firefox webkit` once. One engine only: `npx vitest run --project browser --browser.name=firefox`
+- Browser test files run one at a time (`fileParallelism: false`): several test pages open at once in one Firefox steal focus and pointer input from each other
+- Keep browser tests engine-neutral: no CDP (`cdp()` is Chromium-only; use a Playwright-backed command such as `commands.setColorScheme` from `vitest.config.ts`), Tab-order anchors are text inputs (WebKit on macOS skips buttons on Tab), compare scroll positions with what the browser actually took (Firefox snaps them to device pixels), and wait for CSS animations to finish before measuring. Skip an engine only with `it.skipIf(server.browser === '...')` (`server` from `vitest/browser`) and a comment saying why
 
 ---
 

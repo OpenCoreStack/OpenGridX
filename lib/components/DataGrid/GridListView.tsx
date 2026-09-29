@@ -202,7 +202,8 @@ export function GridListView<R extends GridRowModel>({
                 </span>
             </div>
 
-            <div className="ogx-list-view__rows" onScroll={handleScroll} onKeyDown={handleKeyDown} ref={rowsRef}>
+            {/* tabIndex -1: Firefox otherwise makes this scroll container a Tab stop of its own; the rows carry the roving tab stop. */}
+            <div className="ogx-list-view__rows" tabIndex={-1} onScroll={handleScroll} onKeyDown={handleKeyDown} ref={rowsRef}>
                 {allRenderableRows.length === 0 && loading ? (
                     // The grid's live region announces loading; the list shows no "No Data" meanwhile.
                     <div className="ogx-list-view__loading">

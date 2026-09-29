@@ -43,11 +43,15 @@ describe('GridTooltip in a real browser', () => {
             window.scrollTo(0, 400);
             const btn = getByText('anchor');
             fireEvent.mouseEnter(btn);
-            const tip = (await vi.waitFor(() => {
+            const tipEl = await vi.waitFor(() => {
                 const el = document.querySelector<HTMLElement>('.ogx-tooltip');
                 if (!el) throw new Error('tooltip not shown yet');
                 return el;
-            }, { timeout: 3000 })).getBoundingClientRect();
+            }, { timeout: 3000 });
+            // Measure the resting position: the 150ms entry animation starts 4px further out, and how
+            // far it has run by now depends on engine timing (Firefox is often still mid-animation).
+            await Promise.all(tipEl.getAnimations().map(a => a.finished));
+            const tip = tipEl.getBoundingClientRect();
             const anchor = btn.getBoundingClientRect();
             if (placement === 'top') expect(tip.bottom).toBeLessThanOrEqual(anchor.top);
             if (placement === 'bottom') expect(tip.top).toBeGreaterThanOrEqual(anchor.bottom);
