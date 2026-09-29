@@ -181,7 +181,7 @@ Missing path segments become auto-created parent rows `{ id }` (id like `auto-gr
 | pivotModel     | GridPivotModel | {rowFields, columnFields, valueFields: {field, aggFn: 'sum'/'avg'/'count'/'min'/'max', headerName?}[]} |
 | onPivotModelChange | (model) => void | Pivot change callback (toolbar Pivot panel) |
 
-Pivot row ids look like `__pivot_row__:["North"]`; the Grand Total row is always last and never selected by select-all.
+Pivot row ids look like `__pivot_row__:["North"]`; the Grand Total row is always last and cannot be selected.
 
 ### Server-Side
 | Prop       | Type            | Description                                        |
@@ -238,7 +238,7 @@ There are no getRowClassName / getCellClassName / theme props: use GridColDef.ce
 | renderCell        | (params: GridRenderCellParams<R>) => ReactNode         | Custom cell renderer (errors contained per cell) |
 | renderHeader      | (params: GridRenderHeaderParams) => ReactNode          | Custom header renderer                     |
 | renderEditCell    | (params: GridRenderEditCellParams<R>) => ReactNode     | Custom editor: call params.onValueChange(v), params.onCommit(), params.onCancel() |
-| valueGetter       | ({row, field, value}) => unknown                       | Computed value; used by sort, filter, quick search, aggregation, copy, export |
+| valueGetter       | ({row, field, value}) => unknown                       | Computed value; used by sort, filter, quick search, aggregation, copy, export. Must be pure (quick filter caches per row object); a throw reads as undefined + dev warning |
 | valueSetter       | ({value, row, field}) => R                             | Write an edited value back onto the row (editable valueGetter columns) |
 | valueFormatter    | ({value, row, field}) => string                        | Format display value (value is `unknown`: cast before calling methods) |
 | cellClassName     | string / (params) => string                            | CSS class on cells                         |
@@ -272,17 +272,17 @@ const apiRef = useGridApiRef();
 apiRef.current.getRow(id)              // → GridRowModel | null
 apiRef.current.getAllRows()            // → every loaded row
 apiRef.current.getVisibleRows()        // → rows on screen: current page + pinned rows
-apiRef.current.getAllFilteredRows()    // → every filtered + sorted row, all pages (use for exports)
+apiRef.current.getAllFilteredRows()    // → every filtered + sorted row, all pages (use for exports); tree data + filter: matching rows only
 apiRef.current.getGroupedExportRows()  // → GridGroupedExportRow[] | null (row grouping only)
 
 // Column access
 apiRef.current.getColumn(field)        // → GridColDef | null
 apiRef.current.getAllColumns()         // → GridColDef[]
-apiRef.current.getVisibleColumns()     // → visible columns in display order
+apiRef.current.getVisibleColumns()     // → visible columns in render order (left-pinned, unpinned, right-pinned)
 
 // Selection
-apiRef.current.selectRow(id, isSelected?)   // select/deselect a row
-apiRef.current.selectRows(ids, isSelected?) // bulk select
+apiRef.current.selectRow(id, isSelected?)   // select/deselect a row (synthetic group/total ids ignored; no-op fires nothing)
+apiRef.current.selectRows(ids, isSelected?) // bulk select (same rules)
 apiRef.current.getSelectedRows()            // → GridRowId[]
 
 // Sort / Filter (setters update the grid and fire the change callbacks)
@@ -377,7 +377,8 @@ const dataSource: GridDataSource = {
 - `endRow` is exclusive: return `allRows.slice(startRow, endRow)`.
 - Server tree data: rows with `serverChildrenCount > 0` get an expand toggle; expanding calls `getRows` with the row's path in `groupKeys`. There is no `getChildren`.
 - Refetch happens only when a model's content or the `getRows` function changes; stale responses are discarded; 300 ms debounce.
-- A rejected `getRows` shows the error overlay; its Retry button calls `getRows` again.
+- A rejected `getRows` (or a response that cannot be processed) shows the error overlay; its Retry button calls `getRows` again.
+- Row grouping with `paginationMode="server"` fetches every row in one request (`[0, Number.MAX_SAFE_INTEGER)`, dev warning). Server tree data with `defaultGroupingExpansionDepth` auto-expands and loads lazy nodes (one request per node).
 
 ---
 
@@ -601,8 +602,9 @@ Arrows move between cells (skipping hidden columns); Home/End, Ctrl+Home/End, Pa
 11. **GOTCHAS — bounded height**: virtualization only works if the grid's container has a bounded height. A flex child without `min-height: 0` grows to fit every row, so every row is rendered. Pagination hides this, and row grouping turns pagination off. Use `<div style={{ flex: 1, minHeight: 0 }}>` around `height="100%"`, or pass a fixed pixel `height`. Dev builds log a warning when this happens.
 12. **Pagination is ignored under row grouping** — a grouped grid is one scrollable, virtualized list.
 13. **`valueFormatter` + `renderCell`**: `renderCell` receives `params.formattedValue` (v2.1+), so a custom renderer can reuse the formatter instead of duplicating it.
-14. **`slots.footer`** replaces the pagination area and receives `apiRef`, `aggregationModel`, `aggregationResult`, `rowCount` (filtered data rows incl. pinned rows — leaf rows under grouping; the server total with `paginationMode="server"`), `pagination`, `paginationModel`, `pageSizeOptions` and `onPaginationModelChange`.
+14. **`slots.footer`** replaces the pagination area and receives `apiRef`, `aggregationModel`, `aggregationResult`, `rowCount` (filtered data rows excluding pinned rows in flat grids — data rows under tree data / grouping; the server total with `paginationMode="server"`), `pagination`, `paginationModel`, `pageSizeOptions` and `onPaginationModelChange`.
 15. **v3: no underscore row fields** — `params.row._hasChildren` / `_treeDepth` / … are `undefined` since 3.0.0; use `params.rowMeta?.hasChildren` etc. Under grouping and tree data `params.row` is the consumer's own object; never mutate it in render callbacks. Migration guide: `docs/migration/v2-to-v3.md`.
 16. **Row limit**: the scroll height is `rows × rowHeight` px and browsers cap element height (Chromium 33,554,432 px), so one scrolling grid reaches ~645,000 rows at 52 px. Page or stream beyond that.
 17. **Server modes without dataSource**: with `paginationMode` / `sortingMode` / `filterMode` = `'server'` the grid shows `rows` as given (no slicing, sorting or filtering). Fetch from the change callbacks and control the models.
 18. **`valueFormatter` / `valueGetter` params are `unknown`-typed**: cast (`(value as number).toFixed(2)`) before calling methods, or TypeScript strict mode rejects it.
+19. **Inline `columns` are reused while shallow-equal**: a new array with the same column objects does not re-run filtering/sorting, but mutating a column object in place is not detected — pass new objects when a definition changes.

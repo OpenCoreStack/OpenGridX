@@ -11,7 +11,7 @@ Use the table to find the sections that apply to you. Sections are ordered by ho
 | has columns with `type: 'date'`, `'boolean'`, `'singleSelect'` or `'image'` and no `valueFormatter` / `renderCell` | [§1](#1-cells-are-formatted-by-column-type) |
 | passes `getRowId`, or reads `row.id` on rows that have their own key field | [§2](#2-getrowid-no-longer-writes-an-id-onto-rows) |
 | reads `params.row._hasChildren`, `_treeDepth`, `_isGroupRow` or another underscore field | [§3](#3-underscore-hierarchy-fields-are-no-longer-added-to-rows) |
-| mutates `params.row` inside `renderCell` / `valueGetter` / `valueFormatter` under grouping or tree data | [§4](#4-paramsrow-is-now-your-own-row-object) |
+| mutates `params.row` inside `renderCell` / `valueGetter` / `valueFormatter` under grouping or tree data, mutates `columns` in place, or has a `valueGetter` that is impure or can throw | [§4](#4-paramsrow-is-now-your-own-row-object) |
 | builds filter items in code, relies on empty filter values, or uses the toolbar search / `renderQuickFilter` | [§5](#5-filtering) |
 | sorts numeric strings, dates stored as strings, accented text, or uses the column menu with multi-sort | [§6](#6-sorting) |
 | relies on Tab moving between cells, on Enter in a non-editable cell, or on `colIndex` / `rowIndex` / `aria-*` values | [§7](#7-keyboard-focus-and-aria) |
@@ -192,6 +192,16 @@ const name: GridColDef = {
 
 If you compare row objects by identity (`===`), grouped and flat rows now behave the same: the grid passes your objects through unchanged.
 
+### Column definitions and value getters
+
+| Behaviour | v2 | v3 |
+| :--- | :--- | :--- |
+| Inline `columns` (a new array each render) | every render re-ran filtering and sorting | reused while the definitions are shallow-equal, so mutating a column object **in place** is not detected |
+| Quick filter text | re-read every cell per keystroke | cached per row object, so a `valueGetter` must be pure (same row object, same result) |
+| A `valueGetter` / `valueFormatter` that throws | crashed the grid once the column was sorted, filtered, aggregated, grouped, pivoted or shown in list view | the value reads as `undefined`, with a dev warning once per column |
+
+**Fix it:** pass a new column object (or a new array with new objects) when a definition changes; keep `valueGetter` free of side effects and outside state, and replace a row object when its data changes.
+
 ---
 
 ## 5. Filtering
@@ -267,6 +277,7 @@ Multi-sort:
 | Column menu **Unsort** | cleared every sort key | removes only that column |
 | Column menu **Asc / Desc** on a sorted column, or with `multiSort` | replaced the model | keeps the other keys |
 | Enter / Space on a header with `multiSort` or Shift | always replaced | appends, like a click |
+| Header click that clears the sort of one column while several are sorted | cleared every sort key | removes only that column |
 | `apiRef.current.sortColumn()` | did not update the grid | replaces the model like a header click (appends under `multiSort`) |
 
 **Who is affected:** apps with snapshot tests of sorted output, or server code that expects the old client order.
@@ -341,6 +352,7 @@ Also: the detail panel is `role="row"` > `role="gridcell"`; `ExpandIcon` has `ta
 | Rows-per-page select accessible name | hard-coded "Rows per page" | `localeText.paginationRowsPerPage` |
 | `paginationMode="server"` (and server sort / filter) without a `dataSource` | the grid re-sliced / re-sorted / re-filtered your server page | rows are shown as given |
 | `slots.footer` `rowCount` | page length | server total |
+| `slots.footer` `rowCount` in a flat grid | included pinned rows | excludes pinned rows (under tree data or grouping it counts data rows) |
 | `pagination` with `paginationMode="infinite"` | sliced rows | pager and slicing ignored |
 
 **Who is affected:** controlled `paginationModel` users (you now receive a page correction and must adopt it), and server-paginated grids that relied on the grid's extra slicing.
@@ -378,6 +390,7 @@ export function Orders({ rows, columns }: { rows: GridRowModel[]; columns: GridC
 | `disableMultipleRowSelection` | honoured by row click only | also caps checkboxes, Space and `apiRef`; removes the select-all checkbox |
 | Rows removed from `rows` | their ids stayed selected | pruned; `onRowSelectionModelChange` fires once with the pruned model |
 | An action that leaves the selection as it was (for example Ctrl/Cmd+A when every row is already selected, or `apiRef.current.selectRow(id, true)` on a selected row) | UI handlers fired `onRowSelectionModelChange` with an identical model | does not fire |
+| `apiRef.current.selectRow(s)` with a synthetic id (group, subtotal, auto-parent, pivot Grand Total) or with no effect | selected it / fired | ignored; fires nothing |
 | Clicking an already-selected row | deselected it and fired | unchanged: deselects it and fires |
 | `apiRef.current.getSelectedRows()` inside `onRowSelectionModelChange` | previous selection | the new selection |
 | Group rows | had a checkbox | no checkbox, never selected |
@@ -401,7 +414,8 @@ Pruning applies when the grid owns the rows: no `dataSource`, client pagination 
 | `getSortModel`, `getFilterModel`, `getSelectedRows` | stale | live |
 | `getVisibleRows`, `getAllFilteredRows` | excluded pinned rows | include pinned rows |
 | `getAllFilteredRows` under grouping / tree data | the visible hierarchy, including group rows | every filtered data row, in fully expanded order |
-| `getVisibleColumns` | included hidden columns, definition order | visible columns in display order |
+| `getAllFilteredRows` under tree data with a filter | — | only the rows that match (not their unmatched ancestors); follows screen order when sorting by the hierarchy column |
+| `getVisibleColumns` | included hidden columns, definition order | visible columns in render order: left-pinned, unpinned, right-pinned |
 | `getGroupedExportRows` | dropped collapsed groups' rows, ignored sort and filter | includes collapsed groups, follows sort and filter, subtotals over exported rows |
 | `getAggregationModel` | the internal object | a content-equal copy |
 | `copySelectedRows` | resolved and logged on failure | rejects (see [§19](#19-clipboard)) |
@@ -609,6 +623,7 @@ If you want blanks counted as zero, store `0` in the data or compute the value i
 | `pinnedRows` under tree data or grouping | vanished, leaving a gap | stay in the hierarchy, with a dev warning |
 | Server `sortingMode` / `filterMode` | the hierarchy still filtered and sorted client-side | not re-filtered or re-sorted |
 | `groupingColDef` under `treeData` | ignored | adds the pinned `__group__` column, which takes the hierarchy toggle |
+| Row grouping with a `paginationMode="server"` `dataSource` | grouped only the first page | one request for `[0, Number.MAX_SAFE_INTEGER)`, with a dev warning; make sure your server can return every row |
 
 **Who is affected:** apps with custom `renderCell` that assume it only runs for data rows, apps that parse group ids, and apps whose tree parents were expected to expand on click.
 
@@ -653,6 +668,7 @@ Keep `getTreeDataPath` stable (module scope or `useCallback`); a new function re
 | Infinite scroll request range | `[page * pageSize, page * pageSize + pageSize)` (could skip rows) | `[rows loaded so far, (page + 1) * pageSize)` |
 | Infinite scroll after sort / filter / `pageSize` / `dataSource` change | continued from the current page | restarts at row 0 and fires `onPaginationModelChange({ ...model, page: 0 })` |
 | Tree children request | `endRow: -1` | `endRow: Number.MAX_SAFE_INTEGER`, plus `aggregationModel` |
+| Server tree with `defaultGroupingExpansionDepth` | lazy nodes stayed collapsed | nodes to that depth auto-expand and load, one request per node (`-1` expands everything, which can mean many requests) |
 | Tree children request fails | error overlay covered the grid | node collapses, error logged |
 | Retry button | `window.location.reload()` | re-runs `getRows`; hidden without a `dataSource` |
 | When a refetch happens | any new object identity (`filterModel`, `sortModel`, `aggregationModel`, `dataSource`) | a new `getRows` function or changed content |
@@ -894,7 +910,7 @@ export function ThemedGrid({ children }: { children: ReactNode }) {
 | :--- | :--- | :--- |
 | Pivot row ids | `0`, `1`, `2` … (collided with source row ids) | `__pivot_row__:["North"]` (JSON of the row-field values) |
 | Filters and quick filter | applied to pivot rows | source-column filters and the quick filter apply to source rows (quick filter searches all filterable source columns); filters on generated value columns apply to pivot rows; OR across both kinds acts like AND |
-| Grand Total row | could move when sorting, was selected by select-all | always last, excluded from select-all; absent when there are no rows |
+| Grand Total row | could move when sorting, was selected by select-all | always last, never selectable (click, select-all, `apiRef`); absent when there are no rows |
 | `getRowId` | applied to pivot rows (collapsed them into one) | ignored for pivot rows |
 | `treeData` / `rowGroupingModel` | crashed or regrouped | turned off while pivoting, with a dev warning |
 | `dataSource` | broken output | pivot ignored, with a dev warning |
@@ -919,6 +935,7 @@ export function ThemedGrid({ children }: { children: ReactNode }) {
 | Hidden columns inside a `colSpan` | counted (width, `aria-colspan`, next visible column shifted) | skipped: the span covers the next visible columns |
 | `colSpan` next to a pinned column | could cover a column in another section | clamped to its own pinned section |
 | `rowSpan` across pinned and scrolling rows | crossed | clamped to its row section and to the first row with an expanded detail panel |
+| `rowSpan` at group boundaries | could start on or cross group, subtotal, auto-parent and pivot Grand Total rows | stops at them |
 | `colSpan` `params.value` / `params.colIndex` | raw `row[field]`; index counted system columns in unpinned order | `valueGetter` result; rendered data-column index, left-pinned first (same as `renderCell`) |
 | Span values `1.5` / `Infinity` / `NaN` | fractional ARIA / hang | `1` / to the end / no span |
 | Throwing span callback | unmounted the grid | span 1 for that cell, dev warning |
@@ -1185,7 +1202,7 @@ In Next.js you can instead load the component with `dynamic(() => import('./Orde
 - [ ] Confirm `import '@opencorestack/opengridx/styles'` is in your app root.
 - [ ] Check columns with `type: 'date' | 'boolean' | 'singleSelect' | 'image'`; add a `valueFormatter` where you want the old text (§1).
 - [ ] With `getRowId`: stop reading `row.id`; pass `getRowId` to exports of `selectedRows` (§2).
-- [ ] Replace underscore hierarchy fields with `params.rowMeta` (§3) and remove writes to `params.row` in render callbacks (§4).
+- [ ] Replace underscore hierarchy fields with `params.rowMeta` (§3) and remove writes to `params.row` in render callbacks; replace column objects instead of mutating them and keep `valueGetter` pure (§4).
 - [ ] Review programmatic filter items with empty values, exhaustive `GridFilterOperator` switches, and search expectations (§5).
 - [ ] Update sorted-output snapshots; where you need a custom order, use a `valueGetter` that returns the sort key (§6).
 - [ ] Update keyboard docs/tests for Tab and Enter; stop storing `colIndex` / `rowIndex` (§7).

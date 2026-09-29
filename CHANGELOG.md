@@ -87,6 +87,8 @@ A correctness release: every feature area was audited against its documentation 
 - The toolbar search box stole focus back on re-render.
 - The boolean filter could not select "true" directly; the panel shows the real operator of programmatic items.
 - `initialState.filter` was ignored; the toolbar search and Filters button did nothing without a `filterModel` prop.
+- A `valueGetter` or `valueFormatter` that throws no longer crashes the grid once the column is sorted, filtered, quick-filtered, aggregated, grouped or pivoted, or shown in list view: the value reads as `undefined` and a dev warning is logged once per column.
+- Text typed into the FilterPanel or the toolbar search box just before the panel closes is no longer lost.
 
 #### Editing
 
@@ -124,6 +126,10 @@ A correctness release: every feature area was audited against its documentation 
 - `useGridStateStorage` crashed when storage is blocked, `clearState` was undone, and storage was written on every re-render.
 - `useGridApiRef()` did not type-check against the `apiRef` prop under `@types/react` 18.
 - Changing `rows` and `columns` together (or leaving pivot mode) ran the new columns against the old rows, crashing `valueGetter`s.
+- A controlled `rowSelectionModel` holding an id that is no longer in `rows` fired `onRowSelectionModelChange` on every render and could loop; the pruned selection (and a corrected page) is now reported once, also under StrictMode.
+- `getAggregationResult`, `getAggregationModel`, `getGroupedExportRows` and `scrollToIndexes` are available in a parent's `useLayoutEffect`.
+- `getVisibleColumns` returns columns in render order (left-pinned, unpinned, right-pinned).
+- `apiRef.selectRow` / `selectRows` ignore synthetic ids (group, subtotal, auto-parent and pivot Grand Total rows), and a call that does not change the selection fires nothing. The pivot Grand Total row cannot be selected.
 
 #### Pagination & data source
 
@@ -146,6 +152,8 @@ A correctness release: every feature area was audited against its documentation 
 - Server tree data: children now load with every row, keep the pager total, are not re-filtered or re-sorted under server modes, reload for expanded nodes after a refetch, and a failed children request collapses its node instead of covering the grid.
 - `paginationMode="infinite"` combined with `pagination` sliced the rows.
 - `loading` with rows present showed nothing; it now shows a progress bar (or `slots.loadingOverlay`) over the rows.
+- A `dataSource` response that cannot be processed shows the error overlay instead of loading forever.
+- Row grouping with a `paginationMode="server"` `dataSource` loads every row in one request (with a dev warning) instead of grouping only the first page.
 
 #### Row grouping & tree data
 
@@ -158,6 +166,9 @@ A correctness release: every feature area was audited against its documentation 
 - Tree paths containing `/` collided with deeper paths.
 - Grouping values `null` and `'null'`, `1` and `'1'` fell into the same group.
 - Detail-panel callbacks ran for every rendered row, including group rows; they now run only for expanded data rows, and a throwing `getDetailPanelContent` is contained to its panel.
+- A throwing `getDetailPanelHeight`, `groupingValueFormatter` or `getAggregationPosition` falls back to the default instead of crashing.
+- `getGroupedExportRows` and `getAllFilteredRows` follow screen order when sorting by the hierarchy column.
+- `defaultGroupingExpansionDepth` expands and loads lazy server tree nodes.
 
 #### Aggregation & pivot
 
@@ -208,6 +219,7 @@ A correctness release: every feature area was audited against its documentation 
 - Column group header rows did not follow member columns under `flex` / `%` / `auto` widths, hiding, reordering and pinning; pinned groups scrolled away; non-contiguous groups caused duplicate-key errors.
 - `GridColumnGroup.headerClassName` was ignored.
 - Group header cells expose `aria-colspan` / `aria-colindex`, filler cells are hidden from assistive technology, and `aria-rowcount` counts group header rows.
+- `rowSpan` never starts on or crosses group, subtotal, tree auto-parent or pivot Grand Total rows.
 
 #### Column reorder & resize
 
@@ -262,6 +274,8 @@ A correctness release: every feature area was audited against its documentation 
 - List view passed loading placeholders to `renderCell`, paged incorrectly under tree data, ignored server totals, never fired `onRowsScrollEnd`, and gave `renderCell` no `value`, `formattedValue`, `colDef` or `rowMeta`; `aria-rowindex` restarted every page.
 - List view ignored `loading`, `slots.loadingOverlay`, `slots.noRowsOverlay` and `slots.footer`, and showed "No Data" while loading; `listView` without `listViewColumn` rendered nothing (it now falls back to the grid with a dev warning).
 - List view had no expand chevron or depth indent for tree-data and group parents.
+- List view: `renderCell` errors are contained, group rows get no checkbox and fall back to their label, and "N items" counts data rows.
+- Two column-menu hides or pins in the same tick both apply.
 
 #### Theming
 
@@ -282,6 +296,12 @@ A correctness release: every feature area was audited against its documentation 
 - The README props tables list only real props, with correct defaults; `llms.txt` examples compile and use real APIs.
 - Server-side guides describe the real requests; "millions of rows" is replaced by the browser's height limit (about 645k rows at 52px in Chromium).
 - The theming docs no longer reference a non-existent `themes` export; the API reference and component pages were corrected against the code.
+
+### Performance
+
+- Inline `columns` (a new array each render with the same definitions) no longer re-runs client filtering and sorting.
+- The quick filter no longer re-reads every cell on each keystroke.
+- Faster date formatting.
 
 ### Added
 

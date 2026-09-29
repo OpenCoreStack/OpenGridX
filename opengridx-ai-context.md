@@ -194,7 +194,11 @@ Read `node_modules/@opencorestack/opengridx/docs/migration/v2-to-v3.md`. In shor
 - `getRowId` no longer copies rows or overwrites `row.id`; pass `getRowId` in export options so `selectedRows` match.
 - Behaviour fixes a v2 project may notice: `initialState.filter` is applied; toolbar search/filters work without `filterModel`;
   apiRef setters (`sortColumn`, `setFilterModel`, `setPage`, `selectRows`, …) update the grid and fire callbacks;
-  `getVisibleColumns()` omits hidden columns; `onRowOrderChange` indices are positions in `rows`; `onColumnOrderChange`
+  `getVisibleColumns()` omits hidden columns and returns render order (left-pinned, unpinned, right-pinned);
+  `getAllFilteredRows()` under tree data + a filter returns only matching rows; `selectRow(s)` ignore synthetic ids
+  (group, subtotal, pivot Grand Total — which cannot be selected) and fire nothing on a no-op; `slots.footer` `rowCount`
+  excludes pinned rows in flat grids (data rows under tree data / grouping); row grouping with a `paginationMode="server"`
+  `dataSource` fetches every row in one request; `onRowOrderChange` indices are positions in `rows`; `onColumnOrderChange`
   indices are positions in the full column order (new `onColumnOrderModelChange` gives the whole order); Tab leaves the grid
   outside edit mode; `isCellEditable` also gates double-click and Enter; empty filter values no longer filter; the quick filter
   searches only visible, filterable columns; CSV starts with a BOM and CSV/HTML-Excel neutralise formulas (`escapeFormulas: false`);
@@ -283,7 +287,11 @@ const hasChildren = params.rowMeta?.hasChildren;
 - **Call `apiRef` methods after mount** — `apiRef.current` is never null, but before the grid mounts
   its methods do nothing. Call `apiRef.current.*` inside event handlers or `useEffect`, never during render.
 - **`valueFormatter` / `valueGetter` params are typed `unknown`** — cast before calling methods:
-  `valueFormatter: ({ value }) => (value as number).toFixed(2)`.
+  `valueFormatter: ({ value }) => (value as number).toFixed(2)`. A throwing `valueGetter` / `valueFormatter` reads as
+  `undefined` (dev warning) instead of crashing.
+- **Keep `valueGetter` pure** — the quick filter caches text per row object; replace the row object when its data changes.
+- **Inline `columns` are reused while shallow-equal** — a new array per render is fine, but mutating a column object in
+  place is not detected; pass new column objects when a definition changes.
 - **Browser height limit** — one scrolling grid reaches about 645,000 rows at the default 52 px row height
   (browsers cap element height); page or stream larger datasets.
 

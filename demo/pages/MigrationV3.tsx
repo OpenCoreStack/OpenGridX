@@ -63,6 +63,7 @@ const sections: MigrationSection[] = [
     },
     {
         n: 4, title: 'params.row is now your own row object', points: [
+            <>Inline <code>columns</code> are reused while shallow-equal, so mutating a column object in place is not detected: pass new objects. The quick filter caches text per row object, so <code>valueGetter</code> must be pure. A throwing <code>valueGetter</code> / <code>valueFormatter</code> reads as <code>undefined</code> (dev warning) instead of crashing.</>,
             <>Under row grouping and tree data, <code>params.row</code> is the object you passed in <code>rows</code>, not a copy. Mutating it in <code>renderCell</code> / <code>valueGetter</code> / <code>valueFormatter</code> now changes your data.</>,
         ],
     },
@@ -76,6 +77,7 @@ const sections: MigrationSection[] = [
     },
     {
         n: 6, title: 'Sorting', points: [
+            <>A header click that clears one column&apos;s sort under multi-sort removes only that column.</>,
             <>Numeric strings in number columns and date strings in date columns sort as numbers / dates; text uses <code>Intl.Collator</code> (<code>item9 &lt; item10</code>); NaN / Invalid Date sort with nulls; <code>valueGetter</code> columns sort by computed value.</>,
             <>Shift-click keeps a column's sort priority; column-menu Unsort removes only that column.</>,
         ],
@@ -90,6 +92,7 @@ const sections: MigrationSection[] = [
     },
     {
         n: 8, title: 'Pagination', points: [
+            <><code>slots.footer</code> <code>rowCount</code> excludes pinned rows in flat grids (data rows under tree data / grouping).</>,
             <>Client total counts filtered, unpinned rows. After data shrinks, the grid shows the last page and fires <code>onPaginationModelChange</code> once: adopt it.</>,
             <><code>rowCount</code> is read live; server modes without a <code>dataSource</code> are no longer re-sliced; default page size is the first option when 100 is not offered.</>,
         ],
@@ -104,6 +107,7 @@ const sections: MigrationSection[] = [
     },
     {
         n: 10, title: 'apiRef', points: [
+            <><code>getVisibleColumns</code> returns render order (left-pinned, unpinned, right-pinned). <code>getAllFilteredRows</code> under tree data with a filter returns only matching rows. <code>selectRow(s)</code> ignore synthetic ids and fire nothing when the selection does not change.</>,
             <><code>sortColumn</code>, <code>setFilterModel</code>, <code>setPage</code>, <code>setPageSize</code>, <code>selectRow(s)</code> now change the grid and fire callbacks: remove duplicate state updates.</>,
             <><code>getVisibleRows</code> / <code>getAllFilteredRows</code> include pinned rows; under grouping <code>getAllFilteredRows</code> returns data rows only; <code>getVisibleColumns</code> excludes hidden columns.</>,
         ],
@@ -133,6 +137,7 @@ const sections: MigrationSection[] = [
     },
     {
         n: 14, title: 'Row grouping and tree data', points: [
+            <>Row grouping with a <code>paginationMode="server"</code> <code>dataSource</code> makes one request for <code>[0, Number.MAX_SAFE_INTEGER)</code>.</>,
             <><code>renderCell</code> is called for group, subtotal and auto-parent rows: return <code>undefined</code> to keep the default.</>,
             <>Clicking a real tree-data parent selects it (the chevron, Enter and Alt+Arrow expand). Auto-created parents are <code>{'{ id }'}</code> only: use <code>rowMeta.groupLabel</code>.</>,
             <>Subtotals and counts follow the filter; <code>getAggregationPosition</code> is honoured and called with <code>null</code> for the grand total.</>,
@@ -141,6 +146,7 @@ const sections: MigrationSection[] = [
     },
     {
         n: 15, title: 'Server-side data and infinite scroll', points: [
+            <>Server tree data with <code>defaultGroupingExpansionDepth</code> auto-expands and loads lazy nodes (one request per node; <code>-1</code> can mean many).</>,
             <><code>getRows</code> is called with all-client modes (<code>endRow: Number.MAX_SAFE_INTEGER</code>); server sort / filter with client pagination loads all rows once.</>,
             <>Infinite scroll requests from the rows loaded so far to <code>(page + 1) * pageSize</code>, and restarts at row 0 on sort / filter changes.</>,
             <>Tree children request <code>endRow: Number.MAX_SAFE_INTEGER</code> (was -1); Retry re-runs <code>getRows</code>; refetch only on changed content.</>,
@@ -183,12 +189,14 @@ const sections: MigrationSection[] = [
     },
     {
         n: 21, title: 'Pivot mode', points: [
+            <>The Grand Total row cannot be selected.</>,
             <>Pivot row ids are <code>{'__pivot_row__:["North"]'}</code> (were 0, 1, 2). The Grand Total is always last and never selected.</>,
             <>Source filters apply to source rows; <code>getRowId</code>, tree data and row grouping are ignored while pivoting; pivot is ignored with a <code>dataSource</code>.</>,
         ],
     },
     {
         n: 22, title: 'Cell spanning and column groups', points: [
+            <>Row spans stop at group, subtotal, auto-parent and Grand Total rows.</>,
             <>Spans skip hidden columns and stay inside their pinned section and row section; <code>colSpan</code> receives the <code>valueGetter</code> value and the rendered <code>colIndex</code>.</>,
             <>Header drag-reorder works within a column group; <code>GridColumnGroup.headerClassName</code> is applied.</>,
         ],
