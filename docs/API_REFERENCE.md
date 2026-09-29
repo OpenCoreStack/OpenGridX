@@ -294,6 +294,8 @@ Access these methods via the `apiRef` prop.
 | `setPage(page)` | `void` | Change current page (0-indexed). Fires `onPaginationModelChange`. |
 | `setPageSize(pageSize)` | `void` | Change the page size and go to page 0. Fires `onPaginationModelChange`. |
 | `scrollToIndexes(params)` | `void` | Scroll to specific row/column index. Uses the current layout, also when called from a layout effect right after an update (v3.0+). |
+| `autosizeColumn(field)` | `void` | Fit a column to its header and the cells in the current render window, clamped to `minWidth` (default 50px) / `maxWidth`; same as double-clicking its resize handle. No-op for `resizable: false` or a column that is not rendered. A flex column gets a fixed width (v3.1.0+). |
+| `autosizeColumns(fields?)` | `void` | `autosizeColumn` for several columns; every column when `fields` is omitted (v3.1.0+). |
 | `getAllColumns()` | `GridColDef[]` | Get all defined columns. |
 | `getAggregationResult()` | `Record<string, unknown> \| null` | Get current aggregation results (`null` without an `aggregationModel`, and in pivot mode). Live in a parent's `useLayoutEffect` on mount and current after every update (v3.0+; before, it was installed in a passive effect). The same holds for `getAggregationModel()` and `getGroupedExportRows()`. |
 | `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
@@ -391,8 +393,9 @@ Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative 
 | Property | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `sortable` | `boolean` | `true` | Enable/disable sorting for this column. |
+| `sortComparator` | `(v1, v2, params1, params2) => number` | — | Custom ascending comparator for client-side sorting (v3.1.0+). `v1`/`v2` are `valueGetter` values **including `null`/`undefined`**; `params` are `GridSortCellParams` `{ id, field, row, value }`. Negated for `desc`, chained in multi-sort, used for group ordering under row grouping, tree-data siblings and pivot row labels. Throw / `NaN` reads as 0 (dev warning once). Ignored with `sortingMode="server"`. |
 | `filterable` | `boolean` | `true` | Enable/disable filtering for this column. `false` also removes it from the quick-filter search. |
-| `resizable` | `boolean` | `true` | Allow the user to drag-resize this column. |
+| `resizable` | `boolean` | `true` | Allow the user to drag-resize this column; double-click the handle (or Enter on it) to auto-size to content (v3.1.0+). |
 | `hideable` | `boolean` | `true` | Allow the user to hide this column from the UI. `false` removes it from the Columns panel (unless `showNonHideableColumns`) and removes **Hide Column** from its column menu. |
 | `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. `false` removes the pin actions from its column menu. Does not affect drag-reordering (v3.0+). |
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header kebab/context menu. |

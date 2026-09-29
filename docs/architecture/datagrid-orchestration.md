@@ -56,6 +56,7 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | 29 | `useGridSpanning` | `hooks/features/useGridSpanning.ts` | Row/column spans |
 | 30 | `useGridClipboardApi` | `hooks/core/useGridClipboardApi.ts` | Ctrl/Cmd+C and `copySelectedRows` |
 | 31 | `useGridScrollToIndexesApi` | `hooks/core/useGridScrollToIndexesApi.ts` | `scrollToIndexes` |
+| 31a | `useGridColumnAutosize` | `hooks/core/useGridColumnAutosize.ts` | `autosizeColumn` / `autosizeColumns` on the API, and the resize handle's auto-size handler (v3.1) |
 | 32 | `useGridViewport` | `hooks/core/useGridViewport.ts` | Scroll sync, viewport measurement, viewport callback ref |
 | 33 | `useGridVirtualization` | `hooks/core/useGridVirtualization.ts` | Render window |
 | 34 | `useGridSortHandlers` | `hooks/core/useGridHeaderHandlers.ts` | Header sort / shift-sort |

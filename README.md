@@ -153,8 +153,9 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `colSpan` | `number \| ((params) => number)` | — | Merge cells horizontally. |
 | `rowSpan` | `number \| ((params) => number)` | — | Merge cells vertically. |
 | `sortable` | `boolean` | `true` | Enable/disable column sorting. |
+| `sortComparator` | `(v1, v2, p1, p2) => number` | — | Custom ascending comparator (sees nulls; negated for desc). v3.1.0+ |
 | `filterable` | `boolean` | `true` | Enable/disable column filtering. |
-| `resizable` | `boolean` | `true` | Allow drag-resize. |
+| `resizable` | `boolean` | `true` | Allow drag-resize; double-click the handle to auto-size to content (v3.1.0+). |
 | `hideable` | `boolean` | `true` | Allow hiding via the column panel. |
 | `pinnable` | `boolean` | `true` | Allow pinning via the UI. |
 | `disableColumnMenu` | `boolean` | `false` | Hide the column header context menu. |
@@ -310,6 +311,7 @@ apiRef.current.setPageSize(50)
 
 // Scroll
 apiRef.current.scrollToIndexes({ rowIndex: 100, colIndex: 3 })
+apiRef.current.autosizeColumn('name')   // fit to content (v3.1.0+)
 
 // Clipboard
 apiRef.current.copySelectedRows()      // → Promise<void>, rejects if the clipboard write fails

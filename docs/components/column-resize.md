@@ -8,7 +8,8 @@ OpenGridX supports dynamic column resizing, allowing users to adjust the width o
 - **Keyboard**: with a column header focused, **Alt+ArrowRight** / **Alt+ArrowLeft** widen / narrow the column by 10px (hold **Shift** for 50px). The handle is a `role="separator"` that reports the width in `aria-valuenow` (and `aria-valuemin` / `aria-valuemax`).
 - **Constraints**: `minWidth` and `maxWidth` from your `GridColDef` apply. Without `minWidth` a column can be narrowed to 50px; a column that is already narrower (a 30px icon column) is never snapped up to 50px. Without `maxWidth` there is no upper limit.
 - **Clicks are not resizes**: pressing and releasing the handle without moving it changes nothing (a flex column stays flex), and ending a resize with the pointer over the header never sorts the column.
-- **Double-click** does nothing (it is swallowed, so it does not sort). There is no auto-size to content.
+- **Double-click to auto-size** (v3.1.0+): double-clicking the handle fits the column to its content — the header (title, sort icon, menu button) and the cells rendered right now, i.e. the rows and pinned rows in the current virtualization window, not the whole data set. The width is clamped to `minWidth` (default 50px) and `maxWidth`; a flex column gets a fixed width, like after a manual drag. The double-click never sorts. With the handle focused, **Enter** does the same. Columns with `resizable: false` have no handle and are never auto-sized.
+- **Programmatic auto-size**: `apiRef.current.autosizeColumn(field)` and `apiRef.current.autosizeColumns(fields?)` (every column when `fields` is omitted) use the same measurement. The new width lands in `columnWidths` state like a drag, so `onStateChange` reports it; there is no dedicated resize callback.
 
 ---
 
@@ -33,6 +34,17 @@ const columns: GridColDef[] = [
   { field: 'status', headerName: 'Status', resizable: false },
 ];
 ```
+
+### Auto-size to content
+
+```tsx
+const apiRef = useGridApiRef();
+
+<DataGrid apiRef={apiRef} rows={rows} columns={columns} />
+<button onClick={() => apiRef.current.autosizeColumns()}>Fit all columns</button>
+```
+
+Measurement reads the DOM (each cell's `.ogx__cell-content` laid out at `max-content`, plus the cell's padding and borders), so only rendered rows count: scroll first, or turn off virtualization for a small grid, if off-screen rows are wider. Cells that span several columns (`colSpan`) are skipped.
 
 ---
 

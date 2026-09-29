@@ -80,6 +80,7 @@ const sections: MigrationSection[] = [
             <>A header click that clears one column&apos;s sort under multi-sort removes only that column.</>,
             <>Numeric strings in number columns and date strings in date columns sort as numbers / dates; text uses <code>Intl.Collator</code> (<code>item9 &lt; item10</code>); NaN / Invalid Date sort with nulls; <code>valueGetter</code> columns sort by computed value.</>,
             <>Shift-click keeps a column's sort priority; column-menu Unsort removes only that column.</>,
+            <>For a custom order, since v3.1.0 use <code>GridColDef.sortComparator(v1, v2, params1, params2)</code> (it sees nulls; the grid negates it for desc). On 3.0.x, return a sort key from <code>valueGetter</code> and format it with <code>valueFormatter</code>.</>,
         ],
     },
     {

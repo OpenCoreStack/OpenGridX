@@ -84,6 +84,8 @@ export default function APIDocumentation() {
         { method: 'setFilterModel(model)', return: 'void', desc: 'Set filters; fires onFilterModelChange.' },
         { method: 'setPage(page)', return: 'void', desc: 'Change current page; fires onPaginationModelChange.' },
         { method: 'scrollToIndexes(params)', return: 'void', desc: 'Scroll to specific index.' },
+        { method: 'autosizeColumn(field)', return: 'void', desc: 'Fit a column to its header and rendered cells, clamped to minWidth / maxWidth (v3.1.0+).' },
+        { method: 'autosizeColumns(fields?)', return: 'void', desc: 'autosizeColumn for several (default: all) columns (v3.1.0+).' },
     ];
 
     const columnDefs = [
@@ -114,8 +116,9 @@ export default function APIDocumentation() {
         { name: 'headerClassName', type: 'string', default: '—', desc: 'CSS class(es) added to the header cell of this column.' },
         // Behaviour
         { name: 'sortable', type: 'boolean', default: 'true', desc: 'Allow the column to be sorted.' },
+        { name: 'sortComparator', type: '(v1, v2, params1, params2) => number', default: '-', desc: 'Custom ascending comparator for client-side sorting; sees null values, negated for desc, ignored in server mode (v3.1.0+).' },
         { name: 'filterable', type: 'boolean', default: 'true', desc: 'Include this column in the filter panel and the quick filter.' },
-        { name: 'resizable', type: 'boolean', default: 'true', desc: 'Allow the user to drag-resize this column.' },
+        { name: 'resizable', type: 'boolean', default: 'true', desc: 'Allow the user to drag-resize this column; double-click the handle to auto-size (v3.1.0+).' },
         { name: 'editable', type: 'boolean', default: 'false', desc: 'Allow double-click or Enter to edit cell values (triggers processRowUpdate).' },
         { name: 'hideable', type: 'boolean', default: 'true', desc: 'Allow hiding via column menu / visibility panel.' },
         { name: 'pinnable', type: 'boolean', default: 'true', desc: 'Allow pinning via column menu.' },

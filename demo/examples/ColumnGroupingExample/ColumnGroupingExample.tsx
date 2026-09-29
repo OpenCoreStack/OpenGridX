@@ -115,7 +115,7 @@ export default function ColumnGroupingExample() {
                 <h3>1. Single-level grouping</h3>
                 <p className="col-group-subtext">
                     Quarterly sales data — Q1–Q4 groups, each spanning Sales &amp; Target columns.
-                    Try resizing any column to see the group header adjust.
+                    Try resizing any column to see the group header adjust. Double-click a resize handle to fit the column to its content (v3.1.0+).
                 </p>
                 <DataGrid<QuarterlySales>
                     rows={rows1}

@@ -284,7 +284,7 @@ Multi-sort:
 
 **Who is affected:** apps with snapshot tests of sorted output, or server code that expects the old client order.
 
-**Fix it:** update the snapshots. There is no per-column comparator; to sort by a different key, return that key from a `valueGetter` and format it for display with `valueFormatter` (or sort on the server with `sortingMode="server"`):
+**Fix it:** update the snapshots. Since **v3.1.0** a column can take a custom `sortComparator(v1, v2, params1, params2)` (see `docs/features/sorting-pagination.md`), which is the simplest way to get a custom order. On 3.0.x there is no per-column comparator; to sort by a different key, return that key from a `valueGetter` and format it for display with `valueFormatter` (or sort on the server with `sortingMode="server"`):
 
 ```tsx
 import type { GridColDef, GridRowModel } from '@opencorestack/opengridx';

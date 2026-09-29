@@ -48,6 +48,32 @@ Each active sort column shows a numbered priority badge (`1`, `2`, `3`…) next 
 - A column that mixes kinds of value (numbers and strings, say) is ordered by kind first — numbers, dates, booleans, strings — so the order does not depend on the input order.
 - Ties keep the rows' original order.
 
+### Custom comparator: `sortComparator` (v3.1.0+)
+
+Give a column `sortComparator(v1, v2, params1, params2)` to replace the built-in comparison for that column. Return a negative number when `v1` sorts before `v2` **in ascending order**, a positive number when after, `0` when equal.
+
+```tsx
+const SIZE_ORDER: Record<string, number> = { S: 0, M: 1, L: 2, XL: 3 };
+
+const columns: GridColDef<Product>[] = [
+  {
+    field: 'size',
+    sortComparator: (a, b) => (SIZE_ORDER[String(a)] ?? 99) - (SIZE_ORDER[String(b)] ?? 99),
+  },
+];
+```
+
+- `v1` / `v2` are the cell values **after `valueGetter`** (the same values the built-in sort reads). `params1` / `params2` are `{ id, field, row, value }` (`GridSortCellParams`), for tie-breaking on other fields of the row.
+- **The comparator sees every value, including `null` and `undefined`**, so you decide where empty values go. The built-in "empty values last in asc" rule does not apply to a column with a comparator. (Why: a custom order often has its own idea of "empty" — `'N/A'`, `0`, a sentinel — and hiding nulls from the comparator would make those impossible to place consistently with real nulls.)
+- **Direction**: write the ascending order only. For `desc` the grid negates the result, so values the comparator puts last in asc (nulls, typically) come first in desc — the same as the built-in behaviour.
+- **Multi-sort**: the comparator is one key in the chain; when it returns `0` the next sort key decides, then the original row order.
+- **Row grouping**: sorting by the grouping column (or by the grouping/label column) orders the groups by their grouping value using the grouping column's comparator; for a group row, `params.row` is the synthetic group row. Leaf rows inside a group use the sorted column's comparator.
+- **Tree data**: siblings are sorted with the comparator at every level. Auto-created parents (no row of their own) are compared by label with the built-in comparison.
+- **Pivot**: sorting a pivot row-label column uses that source column's comparator on the label values.
+- Everything that reuses the pipeline order uses it too: `apiRef.getAllFilteredRows()`, exports, clipboard.
+- A comparator that throws, or returns `NaN`, reads as `0` (equal) with a one-time dev warning per column; the grid does not crash.
+- **Ignored with `sortingMode="server"`**: the server sorts, the grid shows `rows` as given.
+
 ```tsx
 // Controlled multi-sort — set programmatically or drive from UI with multiSort:
 const [sortModel, setSortModel] = useState<GridSortItem[]>([

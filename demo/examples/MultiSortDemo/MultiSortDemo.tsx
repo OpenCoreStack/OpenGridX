@@ -31,10 +31,17 @@ const ROWS = [
     { id: 20, name: 'Tina Yamamoto',   department: 'Marketing',   salary:  85000, level: 'Senior' },
 ];
 
+// Seniority order, not alphabetical. The comparator gets every value (null included) in ascending
+// terms; the grid reverses it for desc and chains it with the other sort keys.
+const LEVEL_RANK: Record<string, number> = { Junior: 0, Mid: 1, Senior: 2, Staff: 3 };
+const byLevel = (a: unknown, b: unknown) =>
+    (LEVEL_RANK[String(a)] ?? 99) - (LEVEL_RANK[String(b)] ?? 99);
+
 const columns: GridColDef[] = [
     { field: 'name',       headerName: 'Name',       width: 170 },
     { field: 'department', headerName: 'Department', width: 140 },
-    { field: 'level',      headerName: 'Level',      width: 110 },
+    { field: 'level',      headerName: 'Level',      width: 110, sortComparator: byLevel,
+      description: 'Custom sortComparator: Junior < Mid < Senior < Staff' },
     { field: 'salary',     headerName: 'Salary',     width: 110, type: 'number' },
     { field: 'id',         headerName: 'ID',         width: 60,  sortable: false,
       description: 'Row ID — sortable: false, click should do nothing' },
@@ -57,6 +64,9 @@ export default function MultiSortDemo() {
                 Click <em>Level</em> to add a third sort key — note the existing two stay active.
                 Click <em>Department</em> again to cycle it desc, then again to remove it.
                 Clicking <em>ID</em> should do nothing (sortable: false).
+                <em>Level</em> has a custom <code>sortComparator</code> (v3.1.0+): it sorts by seniority
+                (Junior → Mid → Senior → Staff), not alphabetically.
+                Double-click any header&apos;s resize handle to fit that column to its content.
             </div>
             <div className="multi-sort-state">
                 <span className="multi-sort-label">sortModel:</span>
