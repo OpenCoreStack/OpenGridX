@@ -5,6 +5,31 @@
 
 ---
 
+## [3.0.1] — 2026-09-29
+
+Fixes from a smoke test in a real application (Chromium, Firefox and WebKit).
+
+### Fixed
+
+- **A grid without a `height` prop now fills its container.** Its root was auto-height, so inside a bounded flex layout (a wrapper with `flex: 1; min-height: 0`, with or without `DataGridThemeProvider`) it grew to fit every row and rendered all of them; 50,000 rows froze the tab. The root now gets `height: 100%` and, as a flex item, `flex: 1 1 auto; min-height: 0` (class `ogx--fill`) when neither `height`, `style.height` nor `autoHeight` is set. In an auto-height container it still grows to fit, as before. An explicit `height` is never stretched.
+- **The unbounded-container development warning** is only logged when the viewport is at least as tall as the rows it renders, and names the fixes: a definite container height, `min-height: 0` on every flex or grid ancestor up to the sized one, a `height` prop, or `autoHeight`.
+- **The list view warns in development when it renders more than 2,000 items.** It does not virtualize; README and the list-view guide now say so and recommend pagination.
+- **The whole column resize handle can be grabbed.** The 8px handle straddled the header cell border and the cell's `overflow: hidden` clipped half of it, leaving 3–4px in every engine. It now lies inside its column against the resizing edge (also in the column-group header layout and for right-pinned columns).
+- **Right-pinned columns sit at the right edge** when the columns are narrower than the grid, in the header, column-group rows, body, pinned rows and aggregation footer. They used to follow the last unpinned column, leaving a gap on their right.
+- **List view, Firefox:** the rows container was a Tab stop of its own (Firefox makes scroll containers focusable), so Tab landed on it instead of the focused row. It now has `tabIndex={-1}`.
+
+### Added
+
+- **Typed `apiRef` row getters.** `GridApi<R>` (default `GridRowModel`) and `useGridApiRef<R>()` type `getRow`, `getAllRows`, `getVisibleRows` and `getAllFilteredRows` as your row type. `DataGridProps.apiRef` accepts a typed or an untyped ref, so existing code compiles unchanged.
+
+### Documentation
+
+- README `height` row, Getting Started, virtualization, theming, datagrid and pinning docs describe how the grid fills its container.
+- PDF export: the `font` option is shown up front with a `₹` example, and the size and time of very large exports are documented (50,000 grouped rows ≈ 120 MB, 10–16 s on the main thread); use CSV or `.xlsx` for large exports.
+- README: a rejected `processRowUpdate` keeps the cell in edit mode with the typed value and calls `onProcessRowUpdateError`.
+
+---
+
 ## [3.0.0] — 2026-09-24
 
 A correctness release: every feature area was audited against its documentation and the grid's own behaviour. Most changes are bug fixes, but many of them change observable output (formatted text, exported files, callback indices, request ranges), which is why this is a major version.

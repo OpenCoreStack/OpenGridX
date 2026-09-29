@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 3.0.0
+# Version: 3.0.1
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 
@@ -269,7 +269,7 @@ const apiRef = useGridApiRef();
 <DataGrid apiRef={apiRef} rows={rows} columns={columns} />
 
 // Row access
-apiRef.current.getRow(id)              // → GridRowModel | null
+apiRef.current.getRow(id)              // → R | null with useGridApiRef<R>(), else GridRowModel | null
 apiRef.current.getAllRows()            // → every loaded row
 apiRef.current.getVisibleRows()        // → rows on screen: current page + pinned rows
 apiRef.current.getAllFilteredRows()    // → every filtered + sorted row, all pages (use for exports); tree data + filter: matching rows only
@@ -599,7 +599,7 @@ Arrows move between cells (skipping hidden columns); Home/End, Ctrl+Home/End, Pa
 8. **`initialState.columns.columnWidths`**: accepts `Record<string, number>` to restore saved column widths. Every part of `initialState` is optional.
 9. **`pinnedColumns`** and **`columnWidths`** are independent state — pinning does not reset widths.
 10. **Aggregation**: setting `aggregationModel` alone renders a sticky footer with the totals; with `rowGroupingModel` each group row also shows its own aggregates. `null`/`undefined`, blank strings, booleans and arrays are ignored by sum/avg/min/max; min/max of dates return a `Date`; `valueGetter` columns aggregate the computed value; footer totals go through the column's `valueFormatter` (not for count/unique).
-11. **GOTCHAS — bounded height**: virtualization only works if the grid's container has a bounded height. A flex child without `min-height: 0` grows to fit every row, so every row is rendered. Pagination hides this, and row grouping turns pagination off. Use `<div style={{ flex: 1, minHeight: 0 }}>` around `height="100%"`, or pass a fixed pixel `height`. Dev builds log a warning when this happens.
+11. **GOTCHAS — bounded height**: virtualization only works if the grid's container has a bounded height. A flex child without `min-height: 0` grows to fit every row, so every row is rendered. Pagination hides this, and row grouping turns pagination off. Without a `height` prop the grid fills its container (3.0.1+), so use `<div style={{ flex: 1, minHeight: 0 }}>` around the grid, or pass a fixed pixel `height`. The list view never virtualizes: paginate it. Dev builds log a warning when this happens.
 12. **Pagination is ignored under row grouping** — a grouped grid is one scrollable, virtualized list.
 13. **`valueFormatter` + `renderCell`**: `renderCell` receives `params.formattedValue` (v2.1+), so a custom renderer can reuse the formatter instead of duplicating it.
 14. **`slots.footer`** replaces the pagination area and receives `apiRef`, `aggregationModel`, `aggregationResult`, `rowCount` (filtered data rows excluding pinned rows in flat grids — data rows under tree data / grouping; the server total with `paginationMode="server"`), `pagination`, `paginationModel`, `pageSizeOptions` and `onPaginationModelChange`.

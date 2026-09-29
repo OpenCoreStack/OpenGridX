@@ -8,7 +8,7 @@ that uses the `@opencorestack/opengridx` library. Read it in full before writing
 ## What this library is
 
 `@opencorestack/opengridx` is a zero-dependency, high-performance React DataGrid component.
-Current version: **3.0.0**. It is a full custom implementation — not a wrapper around MUI or any
+Current version: **3.0.1**. It is a full custom implementation — not a wrapper around MUI or any
 other library.
 
 ---
@@ -280,7 +280,7 @@ const hasChildren = params.rowMeta?.hasChildren;
 - **Import the stylesheet** — `import '@opencorestack/opengridx/styles'` once in the app root.
 - **Controlled props need their callback** — `paginationModel` without `onPaginationModelChange` (or `sortModel`
   without `onSortModelChange`) freezes that state. Leave both out to let the grid own it.
-- **Give the grid a bounded height** — in a flex layout wrap it in `<div style={{ flex: 1, minHeight: 0 }}>`.
+- **Give the grid a bounded height** — without a `height` prop the grid fills its container (3.0.1+); in a flex layout wrap it in `<div style={{ flex: 1, minHeight: 0 }}>`.
   Without `min-height: 0` the container grows to fit every row and virtualization is silently off.
   Pagination hides this, and row grouping disables pagination, so it tends to appear only after grouping
   is turned on. Dev builds log a warning.

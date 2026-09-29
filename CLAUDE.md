@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.0.0
+- **Current version:** 3.0.1
 
 ---
 
@@ -147,6 +147,13 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.0.1 — significant changes
+
+- Without a `height` prop the root gets `ogx--fill` (`height: 100%; flex: 1 1 auto; min-height: 0`) and fills its container; in an auto-height container it still grows to fit. The unbounded warning in `useGridDevWarnings` also requires the viewport to be at least as tall as the rows
+- The list view does not virtualize; `useGridDevWarnings` warns above `LIST_VIEW_WARN_THRESHOLD` (2000) items
+- The column resize handle lies inside its header cell (the cell clips overflow); right-pinned columns take `margin-left: auto` on their first cell and `.ogx__content` is `max(100%, totalWidth)` when right-pinned columns exist
+- `GridApi<R>` / `useGridApiRef<R>()` type the row getters; `apiRef` prop accepts `MutableRefObject<GridApi<R>> | MutableRefObject<GridApi>`
 
 ## v3.0.0 — significant changes (breaking)
 
