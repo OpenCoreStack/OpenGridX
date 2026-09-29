@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, cleanup } from '@testing-library/react';
 import { userEvent, page } from 'vitest/browser';
 import '../../styles/opengridx.css';
 import { DataGrid } from './DataGrid';
@@ -17,6 +17,8 @@ function renderGrid(props: Partial<DataGridProps> & { columns: GridColDef[] }, w
     const handle = (field: string) => header(field).querySelector('.ogx-column-resize-handle') as HTMLElement;
     return { ...utils, header, handle };
 }
+
+afterEach(() => { cleanup(); });
 
 const settle = () => new Promise(r => setTimeout(r, 50));
 
@@ -81,9 +83,8 @@ describe('column resize in a real browser', () => {
         });
         const before = header('c').getBoundingClientRect();
         const h = handle('c').getBoundingClientRect();
-        expect(h.left + h.width / 2).toBeCloseTo(before.left, 0);
-        // Grab the handle just inside column c: its outer half is clipped by the header cell, and its
-        // exact centre is the clip edge, which pointer rounding can put on the unpinned header underneath (Firefox does).
+        // The handle lies entirely inside column c, starting at its left edge.
+        expect(h.left).toBeCloseTo(before.left, 0);
         const GRAB = 2;
         // Drag the handle 60px to the left, over column b.
         const b = header('b').getBoundingClientRect();
@@ -144,5 +145,42 @@ describe('column resize in a real browser', () => {
         await settle();
         expect(parentRow().getAttribute('aria-expanded')).toBe('true');
         expect(header().getBoundingClientRect().width).toBeCloseTo(190, 0);
+    });
+
+    /** Every pixel column across the handle's width hits the handle itself. */
+    const hitTestable = (h: HTMLElement) => {
+        const r = h.getBoundingClientRect();
+        const y = r.top + r.height / 2;
+        const misses: number[] = [];
+        for (let x = Math.ceil(r.left) + 0.5; x < r.right; x++) {
+            if (document.elementFromPoint(x, y)?.closest('.ogx-column-resize-handle') !== h) misses.push(x);
+        }
+        return { width: r.width, misses };
+    };
+
+    it('the whole 8px resize handle is grabbable, for unpinned and right-pinned columns', async () => {
+        await page.viewport(1200, 800);
+        const { handle } = renderGrid({
+            columns: ['a', 'b', 'c', 'd'].map(field => ({ field, width: 200 })),
+            pinnedColumns: { right: ['d'] },
+        }, 1000);
+        for (const field of ['a', 'b', 'd']) {
+            const { width, misses } = hitTestable(handle(field));
+            expect(width, field).toBeGreaterThanOrEqual(8);
+            expect(misses, field).toEqual([]);
+        }
+    });
+
+    it('resizes from a grabbable handle in the column-group header layout', async () => {
+        await page.viewport(1200, 800);
+        const { header, handle } = renderGrid({
+            columns: ['name', 'age', 'c', 'd'].map(field => ({ field, width: 200 })),
+            columnGroupingModel: [{ groupId: 'g1', headerName: 'Group 1', children: ['name', 'age'] }],
+        }, 1000);
+        const { misses } = hitTestable(handle('name'));
+        expect(misses).toEqual([]);
+        await userEvent.dragAndDrop(handle('name'), header('age'), { targetPosition: { x: 100, y: 10 } });
+        await settle();
+        expect(header('name').getBoundingClientRect().width).toBeGreaterThan(280);
     });
 });
