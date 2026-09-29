@@ -5,6 +5,16 @@
 
 ---
 
+## [3.2.0] — 2026-09-29
+
+### Added
+
+- **Non-blocking `exportToPdf`** — the export now works in ~30 ms slices and yields to the event loop between them, both while formatting rows (including grouped rows and WinAnsi conversion) and while drawing the table: the body is drawn by a series of `jspdf-autotable` calls that continue on the same page with fixed column widths, the header repeated on every new page and the footer only at the end. Pages, row positions, shading and page breaks are unchanged (verified against a single call in Chromium, Firefox and WebKit). Measured with 50,000 grouped rows in Chromium: longest main-thread block 6.3 s → ~0.4–0.6 s (jsPDF's final save, which cannot be split), total time about the same (~6–7 s), file size unchanged.
+- **`PdfExportOptions.onProgress`** — `({ phase: 'prepare' | 'render' | 'save', done, total }) => void`; new exported type `PdfExportProgress`.
+- **`PdfExportOptions.signal`** — an `AbortSignal`; aborting rejects the promise with a `DOMException` named `'AbortError'` and saves no file.
+- **`PdfExportOptions.maxRows`** (default 20,000) — above it a development-mode `console.warn` recommends `exportToCsv` / `exportToExcelAdvanced`. The export still runs; nothing is thrown.
+- Demo: the PDF export page has a row-count selector, a progress bar and a Cancel button.
+
 ## [3.1.0] — 2026-09-29
 
 ### Added

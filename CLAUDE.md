@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.1.0
+- **Current version:** 3.2.0
 
 ---
 
@@ -147,6 +147,11 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.2.0 — significant changes
+
+- `exportToPdf` is time-sliced (`runPdfExport` + `PdfExportTuning` in `lib/utils/export/exportToPdf.ts`; internal, not exported from the package). Yields use `setTimeout(0)`, not `scheduler.yield()` (which resumes ahead of queued tasks and starves React's scheduler). The body is drawn as several autoTable calls: continuation chunks start at `startY: MARGIN` and a `willDrawPage` hook moves `data.cursor.y` to the previous `finalY` and sets `settings.showHead = 'never'` for that page only (bypasses autoTable's fit-below-startY page break, so breaks match a single call). Chunks are even-sized (alternate shading parity); foot only on the last chunk. `exportToPdf.browser.test.ts` checks drawing ops are identical to a single call
+- New options `onProgress`, `signal` (DOMException `'AbortError'`, nothing saved), `maxRows` (default `PDF_MAX_ROWS_DEFAULT` 20000, dev warning only)
 
 ## v3.1.0 — significant changes
 
