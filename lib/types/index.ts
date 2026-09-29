@@ -912,8 +912,11 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
   /** Callback fired when scrolling reaches the bottom of the grid viewport. */
   onRowsScrollEnd?: (params: GridRowScrollEndParams) => void;
 
-  /** Advanced: Reactive reference to the internal API for imperative control. */
-  apiRef?: React.MutableRefObject<GridApi>;
+  /**
+   * Advanced: reactive reference to the internal API for imperative control. Pass
+   * `useGridApiRef<MyRow>()` to have the row getters typed as `MyRow`; a plain `useGridApiRef()` also works.
+   */
+  apiRef?: React.MutableRefObject<GridApi<R>> | React.MutableRefObject<GridApi>;
 
   /** Custom components to replace internal grid parts. */
   slots?: {
@@ -1052,18 +1055,22 @@ export type GridDetailPanelHeight = number | 'auto';
  * The Imperative API for interacting with the DataGrid.
  * Access this via the `apiRef` prop or a ref passed to the component.
  */
-export interface GridApi {
+/**
+ * The imperative grid API. `R` types the row getters (`getRow`, `getAllRows`, `getVisibleRows`,
+ * `getAllFilteredRows`); it defaults to `GridRowModel`, so `GridApi` alone keeps working.
+ */
+export interface GridApi<R extends GridValidRowModel = GridRowModel> {
   /**
    * Returns the row model with the given ID.
    * @param id The row unique ID.
    */
-  getRow: (id: GridRowId) => GridRowModel | null;
+  getRow: (id: GridRowId) => R | null;
   /** Returns all rows currently loaded into the grid. */
-  getAllRows: () => GridRowModel[];
+  getAllRows: () => R[];
   /** Returns all rows currently visible after filtering and sorting. */
-  getVisibleRows: () => GridRowModel[];
+  getVisibleRows: () => R[];
   /** Returns all filtered and sorted rows, ignoring pagination. Use this for full-dataset exports. */
-  getAllFilteredRows: () => GridRowModel[];
+  getAllFilteredRows: () => R[];
   /**
    * Returns an ordered flat list of `GridGroupedExportRow` entries that mirrors the
    * on-screen grouping tree: group-headers, leaf rows, per-group subtotals, and a

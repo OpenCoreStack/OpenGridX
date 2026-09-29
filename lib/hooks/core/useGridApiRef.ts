@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
-import type { GridApi } from '../../types';
+import type { GridApi, GridRowModel, GridValidRowModel } from '../../types';
 import { createGridApiPlaceholder } from './gridApiPlaceholder';
 
 /**
@@ -15,8 +15,11 @@ import { createGridApiPlaceholder } from './gridApiPlaceholder';
  * which matches `DataGridProps.apiRef` under both @types/react 18 and 19. Left to inference,
  * React 19's types emit `RefObject<GridApi>`, which React 18's types treat as read-only and
  * nullable, so `apiRef={useGridApiRef()}` failed to type-check on React 18.
+ *
+ * Pass your row type to have the row getters typed: `useGridApiRef<Invoice>().current.getRow(id)`
+ * returns `Invoice | null`.
  */
-export function useGridApiRef(): MutableRefObject<GridApi> {
-    const [placeholder] = useState(createGridApiPlaceholder);
-    return useRef<GridApi>(placeholder);
+export function useGridApiRef<R extends GridValidRowModel = GridRowModel>(): MutableRefObject<GridApi<R>> {
+    const [placeholder] = useState(createGridApiPlaceholder<R>);
+    return useRef<GridApi<R>>(placeholder);
 }
