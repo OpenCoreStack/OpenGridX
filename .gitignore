@@ -31,3 +31,6 @@ research/
 
 # Vitest browser-mode failure screenshots
 __screenshots__/
+
+# Local Claude Code settings and agent worktrees
+.claude/
