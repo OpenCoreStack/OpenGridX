@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 3.1.0
+# Version: 3.2.0
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 
@@ -497,10 +497,13 @@ await exportToExcelAdvanced(rows, columns, {
 });
 exportToJson(rows, columns, { fileName: 'export.json' });
 await exportToPdf(rows, columns, { fileName: 'export', title: 'My Report' });
+// 3.2.0+: large PDFs — progress, cancel, size warning (never throws)
+await exportToPdf(rows, columns, { onProgress: ({ phase, done, total }) => {}, signal: controller.signal, maxRows: 20000 });
 await printGrid(rows, columns, 'My Report Title');
 ```
 
 - Every export accepts `selectedRows`, `getRowId` (pass the grid's getRowId so ids match), `aggregationResult` + `aggregationModel` (totals row) and `groupedRows` from `apiRef.current.getGroupedExportRows()`.
+- exportToPdf (3.2.0+) works in ~30 ms slices and yields between them (prepare and render phases), so the page stays responsive; only jsPDF's final save is one synchronous step. `onProgress({ phase: 'prepare'|'render'|'save', done, total })`; `signal` abort rejects with DOMException 'AbortError' and saves nothing; above `maxRows` (default 20000) a dev console.warn recommends exportToCsv / exportToExcelAdvanced. Output (pages, positions) is the same as before.
 - CSV and exportToExcel neutralise formulas: text starting with = + - @ tab or CR gets a leading `'` (`escapeFormulas: false` opts out).
 - exportToExcel writes HTML: a `.xlsx` fileName is saved as `.xls` with a console warning.
 - Columns with `exportable: false` are left out everywhere; `valueGetter` and `valueFormatter` are applied.
