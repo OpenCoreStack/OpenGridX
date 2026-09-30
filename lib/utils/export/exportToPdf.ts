@@ -78,7 +78,7 @@ export interface PdfExportTuning {
     adaptive: boolean;
 }
 
-const DEFAULT_TUNING: PdfExportTuning = { sliceMs: 30, renderChunkRows: 200, adaptive: true };
+const DEFAULT_TUNING: PdfExportTuning = { sliceMs: 30, renderChunkRows: 40, adaptive: true };
 
 /** Default `maxRows`: above this a PDF is tens of MB and takes seconds to build and open. */
 export const PDF_MAX_ROWS_DEFAULT = 20_000;
