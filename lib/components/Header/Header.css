@@ -68,6 +68,18 @@
   font-weight: 600;
   letter-spacing: -0.01em;
 }
+/* Wrapped header title (wrapHeaderText): as many lines as fit in --ogx-header-height, the line count
+   is set inline as -webkit-line-clamp (getHeaderLineClamp). The line-height must match
+   HEADER_WRAP_LINE_HEIGHT in utils/headerWrap.ts. max-height keeps the header at its height even when
+   a theme changes the font or padding. */
+.ogx__header-cell--wrap .ogx__header-cell-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 16px;
+  max-height: calc(var(--ogx-header-height, 56px) - 2 * var(--ogx-grid-cell-padding-y, 8px));
+}
 .ogx__header-cell-aggregation {
   font-size: 0.6rem;
   font-weight: 500;

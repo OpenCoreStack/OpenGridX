@@ -24,6 +24,31 @@ Manages the column headers, sorting triggers, column resizing, and column groupi
 | `focusedCell` | `{ id: GridRowId \| null; field: string } \| null` | The grid's focus position. `id: null` means the header cell of `field` is focused (v3.0; it used to be the string `'HEADER'`, which a real row id could collide with). DOM focus is moved by the grid, not by `<Header />`. |
 | `columnIndexMap` | `Map<string, number>` | Position of each visible data column in render order. Used for `aria-colindex` and the `colIndex` passed to `renderHeader`, so they match the body cells and do not change with horizontal scrolling. |
 
+## ↩️ Wrapped Header Text
+
+By default a header title stays on one line and is cut with an ellipsis. Pass `wrapHeaderText` to `<DataGrid>` (or set `GridColDef.wrapHeaderText` on a column) and long titles wrap instead (v3.3.0+):
+
+```tsx
+const columns: GridColDef[] = [
+  // Keeps one line with an ellipsis even though the grid wraps
+  { field: 'fund', headerName: 'Fund name and share class', wrapHeaderText: false },
+  { field: 'nav', headerName: 'Net asset value per share (USD)', width: 120 },
+];
+
+<DataGrid rows={rows} columns={columns} wrapHeaderText headerHeight={72} />
+```
+
+- **The header keeps `headerHeight`.** It does not grow to fit the title (sticky offsets and virtualization rely on a fixed header height). A wrapped title takes as many lines as fit — 2 at the default 56px, 3 at 72px, 4 at 88px (16px lines inside 8px vertical padding) — and ends in an ellipsis on the last line if it is still longer. Raise `headerHeight` to show more lines. When the column shows an aggregation label under its title, the title gets one line less.
+- **Precedence:** a column's `wrapHeaderText` wins over the grid prop, in both directions.
+- **Tooltip:** a wrapped header shows its full title as the `title` tooltip, unless the column has a `description`, which is shown instead. Only string titles are used; a `renderHeader` result gets no automatic tooltip.
+- **Layout:** the sort icon, the menu button and the resize handle stay where they are and stay clickable; only the title wraps.
+- **Auto-size:** double-clicking the resize handle (or `apiRef.current.autosizeColumn`) still measures the title on one line, so the column grows until the title no longer wraps.
+- **Class:** wrapped header cells get `ogx__header-cell--wrap`; the line count is set inline as `-webkit-line-clamp` on `.ogx__header-cell-title`.
+- **Themes:** the line count assumes the default header font (13px) and cell padding (8px). With a theme that changes `headerFontSize` or `cellPaddingY`, the title is still capped to the header height, but the last visible line may be cut without an ellipsis.
+- Column group header rows are not affected.
+
+`Header` takes the same `wrapHeaderText` prop and a `headerHeight` (default 56) when used on its own.
+
 ## 📐 Column Grouping
 
 The `<Header />` dynamically calculates the nesting depth of your `columnGroupingModel` and renders one group row per level above the main column headers. Group cells are sized from `allColumns`, so they match their member columns' resolved widths; cells over pinned columns are sticky. See [Column Group Headers](../API_REFERENCE.md#️-column-group-headers) for the full behaviour.

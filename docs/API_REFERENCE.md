@@ -17,6 +17,7 @@ The main component for displaying and interacting with data.
 | `getRowId` | `(row: R) => GridRowId` | `row.id` | Returns a unique identifier for each row. It only keys the grid's internal store: rows reach `renderCell`, events, `apiRef` and `processRowUpdate` unchanged, and the id is never written to `row.id` (v3.0+). Pass it to export functions as `getRowId` when you export `selectedRows`. It must not throw: an id is a programming contract, so a throw is not contained (for a `dataSource` row it fails that request with the error overlay). |
 | `rowHeight` | `number` | `52` | Height of each row in pixels. Without it, an enclosing `DataGridThemeProvider`'s `grid.rowHeightStandard` applies (v3.0+). |
 | `headerHeight` | `number` | `56` | Height of the header row. Without it, the theme's `grid.headerHeight` applies (v3.0+). |
+| `wrapHeaderText` | `boolean` | `false` | Wraps header titles onto several lines instead of cutting them with an ellipsis (v3.3.0+). The header keeps `headerHeight`: a title takes as many lines as fit (2 at 56px, 3 at 72px, 4 at 88px) and ends in an ellipsis if it is still longer; raise `headerHeight` to show more lines. Wrapped headers get `ogx__header-cell--wrap` and their full title as the `title` tooltip (unless `description` is set). `GridColDef.wrapHeaderText` overrides it per column. See [Header](components/header.md). |
 | `autoHeight` | `boolean` | `false` | Adjust grid height to match row total. |
 | `overscanRowCount` | `number` | `3` | Minimum rows rendered outside the visible viewport. The grid adapts this upward automatically based on scroll velocity — this prop sets the floor. |
 | `loading` | `boolean` | `false` | With no rows, the body shows skeleton rows (or `slots.loadingOverlay`). With rows already shown, they stay and a progress bar runs along the top of the grid (or `slots.loadingOverlay` is shown over them). Works in list view too. |
@@ -346,6 +347,7 @@ Defines the behavior and appearance of a single column.
 | `flex` | `number` | — | Flex grow factor — distributes remaining space proportionally. When both are set, `flex` wins over `width` until the user resizes the column. |
 | `align` | `'left' \| 'center' \| 'right'` | `'left'` | Horizontal alignment of cell content. |
 | `headerAlign` | `'left' \| 'center' \| 'right'` | `align` | Horizontal alignment of the header cell content. Falls back to the column's `align`, then `'left'`. |
+| `wrapHeaderText` | `boolean` | grid's `wrapHeaderText` | Wraps this column's header title (v3.3.0+). Overrides the grid prop either way: `false` keeps one line with an ellipsis in a wrapping grid. |
 | `zIndex` | `number` | — | CSS `z-index` for the column's cells and header cell (pinned cells default to 3). |
 
 #### Data & Type

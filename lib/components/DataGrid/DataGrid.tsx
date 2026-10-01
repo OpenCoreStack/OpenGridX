@@ -76,6 +76,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         getRowId,
         rowHeight: rowHeightProp,
         headerHeight: headerHeightProp,
+        wrapHeaderText = false,
         autoHeight = false,
         density,
         checkboxSelection = false,
@@ -802,6 +803,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                 onHideColumn={handleHideColumn}
                                 onManageColumns={columnsPanel.openColumnsPanel}
                                 onPinColumn={handlePinColumn}
+                                wrapHeaderText={wrapHeaderText}
+                                headerHeight={headerHeight}
                             />
 
                             <GridPinnedRows<R>

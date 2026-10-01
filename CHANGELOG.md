@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Wrapped header text** — new grid prop `wrapHeaderText` and per-column `GridColDef.wrapHeaderText` (the column wins). Long header titles wrap instead of being cut with an ellipsis, within the existing `headerHeight`: 2 lines at 56px, 3 at 72px, 4 at 88px, with an ellipsis on the last line if the title is still longer. The header never grows on its own; raise `headerHeight` for more lines. Wrapped header cells get the new class `ogx__header-cell--wrap` and show their full title as the `title` tooltip unless the column has a `description`. Sort icon, column menu button and resize handle are unchanged, and column auto-size still fits the title on one line. Demo: *Wrapped Header Text* (`/header-wrap`).
+
 ### Internal
 
 - **GitHub wiki** generated from `docs/` — `scripts/build-wiki.mjs` (`npm run wiki:build`) turns the docs, CHANGELOG and CONTRIBUTING into wiki pages with a sidebar, rewrites relative links to wiki pages (or GitHub URLs for source files and images), and adds hand-written Home, Getting Started and FAQ pages from `wiki/`. `.github/workflows/wiki.yml` publishes it on every push to `main` that touches them.

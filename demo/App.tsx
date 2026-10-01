@@ -43,6 +43,7 @@ const LocaleTextDemo = lazy(() => import('./examples/LocaleTextDemo/LocaleTextDe
 const CellErrorBoundaryDemo = lazy(() => import('./examples/CellErrorBoundaryDemo/CellErrorBoundaryDemo'));
 const PdfExportDemo = lazy(() => import('./examples/PdfExportDemo/PdfExportDemo'));
 const MultiSortDemo = lazy(() => import('./examples/MultiSortDemo/MultiSortDemo'));
+const HeaderWrapDemo = lazy(() => import('./examples/HeaderWrapDemo/HeaderWrapDemo'));
 
 const examplesConfig = [
     // Resources
@@ -63,6 +64,7 @@ const examplesConfig = [
     { path: '/export', name: 'Export Data', component: ExportDemo, category: 'Main features' },
     { path: '/clipboard', name: 'Clipboard Copy', component: ClipboardDemo, category: 'Main features' },
     { path: '/multi-sort', name: 'Multi-Column Sort', component: MultiSortDemo, category: 'Main features' },
+    { path: '/header-wrap', name: 'Wrapped Header Text', component: HeaderWrapDemo, category: 'Main features' },
     { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
     { path: '/editing', name: 'Cell Editing', component: EditingExample, category: 'Main features' },
     { path: '/events', name: 'Events Observer', component: EventsDemo, category: 'Main features' },

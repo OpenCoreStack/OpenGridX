@@ -132,3 +132,53 @@ describe('Header — description tooltip', () => {
         expect(headerCell?.getAttribute('title')).toBeNull();
     });
 });
+
+describe('Header — wrapHeaderText', () => {
+    const headerCell = (container: HTMLElement, field: string) =>
+        container.querySelector(`[role="columnheader"][data-field="${field}"]`) as HTMLElement;
+    const title = (container: HTMLElement, field: string) =>
+        headerCell(container, field).querySelector('.ogx__header-cell-title') as HTMLElement;
+    const wraps = (container: HTMLElement, field: string) =>
+        headerCell(container, field).classList.contains('ogx__header-cell--wrap');
+
+    it('does not wrap by default', () => {
+        const { container } = render(<Header columns={COLUMNS} />);
+        expect(wraps(container, 'name')).toBe(false);
+        expect(title(container, 'name').style.webkitLineClamp).toBe('');
+    });
+
+    it('wraps every column when the grid prop is on, clamped to the lines that fit', () => {
+        const { container } = render(<Header columns={COLUMNS} wrapHeaderText headerHeight={72} />);
+        for (const field of ['name', 'age', 'dept']) {
+            expect(wraps(container, field)).toBe(true);
+            expect(title(container, field).style.webkitLineClamp).toBe('3');
+        }
+    });
+
+    it('lets a column opt out of, or into, wrapping over the grid prop', () => {
+        const on = render(<Header columns={[{ field: 'name', headerName: 'Name', wrapHeaderText: false }, { field: 'age', headerName: 'Age' }]} wrapHeaderText />);
+        expect(wraps(on.container, 'name')).toBe(false);
+        expect(wraps(on.container, 'age')).toBe(true);
+        on.unmount();
+
+        const off = render(<Header columns={[{ field: 'name', headerName: 'Name', wrapHeaderText: true }, { field: 'age', headerName: 'Age' }]} />);
+        expect(wraps(off.container, 'name')).toBe(true);
+        expect(wraps(off.container, 'age')).toBe(false);
+    });
+
+    it('shows the full title as a tooltip when wrapping, unless a description is set', () => {
+        const columns: GridColDef[] = [
+            { field: 'name', headerName: 'Net asset value per share' },
+            { field: 'age', headerName: 'Age', description: 'Age in years' },
+        ];
+        const { container } = render(<Header columns={columns} wrapHeaderText />);
+        expect(headerCell(container, 'name').getAttribute('title')).toBe('Net asset value per share');
+        expect(headerCell(container, 'age').getAttribute('title')).toBe('Age in years');
+    });
+
+    it('takes a line off for the aggregation label', () => {
+        const { container } = render(<Header columns={COLUMNS} wrapHeaderText headerHeight={72} aggregationModel={{ age: 'sum' }} />);
+        expect(title(container, 'age').style.webkitLineClamp).toBe('2');
+        expect(title(container, 'name').style.webkitLineClamp).toBe('3');
+    });
+});

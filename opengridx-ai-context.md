@@ -174,6 +174,14 @@ const columns: GridColDef[] = [
 ];
 ```
 
+### Wrapped header text (3.3.0+)
+
+```tsx
+// Titles wrap within headerHeight (2 lines at 56px, 3 at 72px, 4 at 88px), ellipsis on the last line.
+// The header never grows on its own: raise headerHeight for more lines. Per column override:
+<DataGrid rows={rows} columns={[{ field: 'fund', wrapHeaderText: false }, ...rest]} wrapHeaderText headerHeight={72} />
+```
+
 ### Multi-column sorting
 
 ```tsx

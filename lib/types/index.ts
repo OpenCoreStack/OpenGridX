@@ -144,6 +144,12 @@ export interface GridColDef<R extends GridValidRowModel = GridRowModel> {
   align?: GridAlignment;
   /** Content alignment within the header cell. */
   headerAlign?: GridAlignment;
+  /**
+   * Wraps this column's header title onto several lines instead of cutting it with an ellipsis.
+   * Overrides the grid's `wrapHeaderText`. The header keeps `headerHeight`: the title shows as many
+   * lines as fit and ends in an ellipsis if it is still longer. Raise `headerHeight` for more lines.
+   */
+  wrapHeaderText?: boolean;
   /** If false, sorting is disabled for this column. */
   sortable?: boolean;
   /** If false, filtering is disabled for this column. */
@@ -763,6 +769,13 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
   rowHeight?: number;
   /** Height of the header row in pixels. Defaults to 56. */
   headerHeight?: number;
+  /**
+   * Wraps header titles onto several lines instead of cutting them with an ellipsis. The header
+   * keeps `headerHeight` (2 lines at the default 56px, 3 at 72px, 4 at 88px); a title that still
+   * does not fit ends in an ellipsis. `GridColDef.wrapHeaderText` overrides it per column.
+   * Defaults to `false`.
+   */
+  wrapHeaderText?: boolean;
   /** If true, the grid height will adjust to match the total height of its rows. */
   autoHeight?: boolean;
   /**

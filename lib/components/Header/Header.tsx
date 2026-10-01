@@ -7,6 +7,7 @@ import { isColumnPinned, calculatePinnedPositions, getPinnedEdgeFields } from '.
 import { getRenderedColumnWidth } from '../../utils/columnWidth';
 import { buildColumnGroupRow, getColumnGroupDepth, getColumnGroupPaths } from '../../utils/columnGroups';
 import { ColumnMenu } from './ColumnMenu';
+import { getHeaderLineClamp, shouldWrapHeaderText } from '../../utils/headerWrap';
 
 
 function MenuIcon() {
@@ -69,6 +70,10 @@ export interface HeaderProps<R extends GridRowModel = GridRowModel> {
     onManageColumns?: () => void;
     /** Position of each visible data column in render order, for `colIndex` and `aria-colindex`. */
     columnIndexMap?: Map<string, number>;
+    /** Wraps header titles onto several lines; `GridColDef.wrapHeaderText` overrides it per column. */
+    wrapHeaderText?: boolean;
+    /** Header row height in pixels; sets how many lines a wrapped title may take. Defaults to 56. */
+    headerHeight?: number;
 }
 
 export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps<R>) {
@@ -105,6 +110,8 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         onPinColumn,
         onManageColumns,
         columnIndexMap,
+        wrapHeaderText = false,
+        headerHeight = 56,
     } = props;
 
     const selectAllId = useId();
@@ -411,6 +418,8 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                     const isPinned = pinnedPosition !== null;
                     const isDragging = draggedColumn === colDef.field;
                     const isDragOver = dragOverColumn === colDef.field;
+                    const wraps = shouldWrapHeaderText(colDef.wrapHeaderText, wrapHeaderText);
+                    const aggregationLabel = aggregationModel?.[colDef.field];
 
                     const classNames = [
                         'ogx__header-cell',
@@ -423,6 +432,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         pinnedPosition === 'right' && colDef.field === pinnedEdges.firstRight && 'ogx__header-cell--pinned-right-first',
                         isDragging && 'ogx__header-cell--dragging',
                         isDragOver && 'ogx__header-cell--drag-over',
+                        wraps && 'ogx__header-cell--wrap',
                         isHeaderFocused(colDef.field) && 'ogx__header-cell--focused',
                         colDef.headerClassName
                     ].filter(Boolean).join(' ');
@@ -476,7 +486,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             key={colDef.field}
                             className={classNames}
                             style={style}
-                            title={colDef.description}
+                            title={colDef.description ?? (wraps && typeof headerContent === 'string' ? headerContent : undefined)}
                             onClick={handleHeaderClick}
                             role="columnheader"
                             draggable={!!handleDragStart}
@@ -498,12 +508,15 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                                     </div>
                                 )}
                                 <div className="ogx__header-cell-title-wrapper">
-                                    <span className="ogx__header-cell-title">
+                                    <span
+                                        className="ogx__header-cell-title"
+                                        style={wraps ? { WebkitLineClamp: getHeaderLineClamp(headerHeight, !!aggregationLabel) } : undefined}
+                                    >
                                         {headerContent}
                                     </span>
-                                    {aggregationModel && aggregationModel[colDef.field] && (
+                                    {aggregationLabel && (
                                         <span className="ogx__header-cell-aggregation">
-                                            {aggregationModel[colDef.field]}
+                                            {aggregationLabel}
                                         </span>
                                     )}
                                 </div>
