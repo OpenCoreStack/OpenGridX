@@ -147,7 +147,7 @@ export function pickExportedAggregates<R extends GridRowModel>(
 const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
 // Optional sign, then only digits, separators and whitespace (\s includes NBSP and U+202F):
 // such text cannot reference cells or call functions.
-const PLAIN_NUMBER = /^[-+]?[\d.,\s]*\d[\d.,\s]*%?$/;
+const PLAIN_NUMBER = /^[-+]?(?=[\d.,\s]*\d)[\d.,\s]*%?$/;
 
 /**
  * Neutralise spreadsheet formula injection (CSV injection). Text that starts with `=`, `+`, `-`,
@@ -173,6 +173,15 @@ export function escapeHTML(value: string): string {
         .replace(/'/g, '&#039;');
 }
 
+/** Drops leading and trailing apostrophes (a loop, not a regex: `/'+$/` backtracks on long runs). */
+function stripApostrophes(text: string): string {
+    let start = 0;
+    let end = text.length;
+    while (start < end && text[start] === "'") start++;
+    while (end > start && text[end - 1] === "'") end--;
+    return text.slice(start, end);
+}
+
 const INVALID_SHEET_CHARS = /[\\/?*:[\]]/g;
 const MAX_SHEET_NAME = 31;
 
@@ -183,7 +192,7 @@ const MAX_SHEET_NAME = 31;
  * name is added to `used`.
  */
 export function sanitizeSheetName(name: string | undefined, used: Set<string> = new Set()): string {
-    let base = String(name ?? '').replace(INVALID_SHEET_CHARS, '-').trim().replace(/^'+|'+$/g, '').trim();
+    let base = stripApostrophes(String(name ?? '').replace(INVALID_SHEET_CHARS, '-').trim()).trim();
     if (!base) base = 'Sheet';
     base = base.slice(0, MAX_SHEET_NAME).trim();
     const taken = (candidate: string) => used.has(candidate.toLowerCase()) || candidate.toLowerCase() === 'history';

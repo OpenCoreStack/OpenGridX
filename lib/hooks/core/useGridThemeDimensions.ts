@@ -10,7 +10,7 @@ const COMFORTABLE_ROW_HEIGHT = 72;
 /** A theme height in pixels (`'36px'` or `'36'`); anything else (rem, calc, …) is ignored. */
 export function parseThemePixels(value: string | undefined): number | undefined {
     if (value === undefined) return undefined;
-    const match = /^\s*(\d+(?:\.\d+)?)\s*(px)?\s*$/.exec(value);
+    const match = /^(\d+(?:\.\d+)?)(?:\s*px)?$/.exec(value.trim());
     if (!match) return undefined;
     const px = Number(match[1]);
     return px > 0 ? px : undefined;

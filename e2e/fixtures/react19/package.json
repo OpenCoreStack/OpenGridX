@@ -22,5 +22,8 @@
     "@vitejs/plugin-react": "^5.1.1",
     "typescript": "~5.9.3",
     "vite": "^7.2.4"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

@@ -29,7 +29,7 @@ function measureCell(cell: HTMLElement, content: HTMLElement): number {
  * hidden by a row span are skipped. Returns null when nothing of the column is rendered.
  */
 export function measureColumnContentWidth(root: HTMLElement, field: string): number | null {
-    const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(field) : field.replace(/"/g, '\\"');
+    const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(field) : field.replace(/["\\]/g, '\\$&');
     const ownedByRoot = (el: Element) => el.closest(ROOT_SELECTOR) === root;
     let width: number | null = null;
     const take = (w: number) => { width = width === null ? w : Math.max(width, w); };
