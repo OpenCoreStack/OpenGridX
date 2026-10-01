@@ -47,6 +47,20 @@ jobs:
       - name: Build library (fails if React is bundled)
         run: npm run build:lib
 
+      - name: Package smoke suite (packed tarball in React 18 and 19 apps)
+        run: npm run test:smoke -- --skip-lib
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
       - name: Publish
         run: npm publish --access public
         env:
