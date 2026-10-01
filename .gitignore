@@ -34,3 +34,6 @@ __screenshots__/
 
 # Local Claude Code settings and agent worktrees
 .claude/
+
+# Vitest browser-mode attachments
+.vitest-attachments/
