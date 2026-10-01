@@ -55,14 +55,14 @@ copySelectedCells(): Promise<void>;
 | Shift+Home / Shift+End | Head to the first / last column of its row |
 | Ctrl+Shift+Home / End | Head to the first / last cell of the page |
 | Shift+PageUp / PageDown | Head one page up / down |
-| Ctrl/Cmd+A | Select every data cell on the page (see open question 1) |
+| Ctrl/Cmd+A | Select every data cell on the page (decision 1) |
 | Escape | Collapse the range to the anchor (if not editing) |
 | Ctrl/Cmd+C | Copy the range as TSV |
 | Typing / Enter / F2 | Edit the anchor cell, as today |
 
 **Columns:** only data columns take part. The checkbox, expand, reorder and grouping (`__group__`) columns are never in a range, and clicking them keeps today's behaviour. Column order is the on-screen order: left-pinned, then centre, then right-pinned.
 
-**Rows:** pinned top and bottom rows take part in screen order. Group headers, subtotals, tree auto-parents and the pivot Grand Total are inside the rectangle when they fall between the corners. They are highlighted, but are skipped by copy and will be skipped by paste (see open question 3).
+**Rows:** pinned top and bottom rows take part in screen order. Group headers, subtotals, tree auto-parents and the pivot Grand Total are inside the rectangle when they fall between the corners. They are highlighted, but are skipped by copy and will be skipped by paste (decision 3).
 
 **Spans:** a range touching part of a `colSpan` or `rowSpan` grows to cover the whole span, as Excel does with merged cells. It grows repeatedly until it is stable. In a copy, the span's value sits at its origin cell and the covered positions are empty.
 
@@ -71,7 +71,7 @@ copySelectedCells(): Promise<void>;
 ## Copy
 
 - Ctrl/Cmd+C with `cellSelection` on copies the range: values formatted the way the cells show them (`formatExportValue`), tabs between columns, line breaks between rows, and no header line, which is what Excel and Sheets do for a range.
-- Row copy (`copySelectedRows`, header line included) stays available through `apiRef`. With `cellSelection` on, the shortcut copies the range instead (see open question 2).
+- Row copy (`copySelectedRows`, header line included) stays available through `apiRef`. With `cellSelection` on, the shortcut copies the range instead (decision 2).
 - `exportable: false` columns are copied when they are in the range, because the user chose them on screen. They are only excluded from exports.
 - Large ranges: building the text is linear. Above 100,000 cells a development warning suggests `exportToCsv`. Nothing is truncated.
 
