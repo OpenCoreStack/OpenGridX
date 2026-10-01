@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 3.2.1
+# Version: 3.2.2
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 

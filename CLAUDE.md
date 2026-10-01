@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.2.1
+- **Current version:** 3.2.2
 
 ---
 
@@ -149,6 +149,11 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.2.2 — significant changes
+
+- Regexes that run on cell text or consumer input must be linear (CodeQL scans every push): no adjacent overlapping quantifiers such as `\s*(px)?\s*` or `[\d\s]*\d[\d\s]*`; use a lookahead, trim first, or a plain loop. Tests in `lib/utils/export/exportShared.test.ts` time 50k-char worst cases
+- `exceljs` is a devDependency as well as an optional peer (like `jspdf`); `uuid` is overridden to `^11.1.1` in the root and both e2e fixtures
 
 ## v3.2.1 — significant changes
 

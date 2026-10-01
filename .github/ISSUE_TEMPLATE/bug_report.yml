@@ -34,7 +34,7 @@ body:
     id: version
     attributes:
       label: OpenGridX version
-      placeholder: "3.2.1"
+      placeholder: "3.2.2"
     validations:
       required: true
   - type: dropdown

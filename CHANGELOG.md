@@ -5,6 +5,19 @@
 
 ---
 
+## [3.2.2] — 2026-10-01
+
+### Security
+
+- **Exports no longer slow down on crafted cell text** — the check that tells plain signed numbers ("-12.50") from spreadsheet formulas (CSV/Excel formula-injection guard) could backtrack quadratically on long runs of digits, spaces and separators that end in a non-number character, freezing CSV or Excel export of such a value. It now runs in linear time; results are unchanged. Found by CodeQL.
+- **Sheet names and theme heights** — stripping apostrophes from Excel sheet names and parsing `'36px'`-style theme heights used patterns with the same quadratic worst case; both are linear now, results unchanged.
+- **Column auto-size selector fallback** — where `CSS.escape` is unavailable, field names are now escaped for backslashes as well as quotes.
+
+### Internal
+
+- `exceljs` is a devDependency (it stays an optional peer for consumers), so a regenerated lockfile keeps it.
+- Dev-only dependency alerts: `undici` 7.30.0, `dompurify` 3.4.16, and `uuid` overridden to `^11.1.1` (pulled in by `exceljs` 4.4.0) in the repo and smoke fixtures. Consumers who install `exceljs` themselves still get its `uuid` 8 until `exceljs` updates it.
+
 ## [3.2.1] — 2026-10-01
 
 ### Fixed
