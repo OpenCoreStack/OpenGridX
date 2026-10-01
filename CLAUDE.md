@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.2.0
+- **Current version:** 3.2.1
 
 ---
 
@@ -149,6 +149,11 @@ Full doc: `docs/architecture/grid-row-meta.md`
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.2.1 — significant changes
+
+- Boolean edit checkbox calls `preventDefault()` on mousedown (`GridEditInputCell.tsx`): Safari does not focus a checkbox on click, so the cell blur committed the old value first
+- Package smoke suite `npm run test:smoke` (`e2e/`, `scripts/smoke.mjs`) runs in `ci.yml` (PRs, branches, manual) and before `npm publish`; weekly `nightly.yml`. Fixture lockfiles must not carry an `integrity` field for the tarball
 
 ## v3.2.0 — significant changes
 
