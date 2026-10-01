@@ -490,7 +490,7 @@ Built-in themes: `darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compac
 
 ## 📚 Documentation
 
-Full documentation at 👉 **[opencorestack.github.io/OpenGridX](https://opencorestack.github.io/OpenGridX/)**
+Full documentation at 👉 **[opencorestack.github.io/OpenGridX](https://opencorestack.github.io/OpenGridX/)** · 📖 **[Wiki](https://github.com/OpenCoreStack/OpenGridX/wiki)**
 
 ### 🏛️ Components
 - **[DataGrid](docs/components/datagrid.md)** — Main component props and slots

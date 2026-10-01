@@ -55,7 +55,8 @@
     "test:smoke": "node scripts/smoke.mjs",
     "test:watch": "vitest --project unit",
     "coverage": "vitest run --coverage",
-    "prepublishOnly": "npm run build:lib"
+    "prepublishOnly": "npm run build:lib",
+    "wiki:build": "node scripts/build-wiki.mjs"
   },
   "keywords": [
     "react",

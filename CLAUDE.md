@@ -138,6 +138,9 @@ Full doc: `docs/architecture/grid-row-meta.md`
 | Feature guides (usage patterns, code examples) | `docs/features/<feature>.md` |
 | Full public API reference | `docs/API_REFERENCE.md` |
 | Roadmap and feature status | `docs/roadmap.md` |
+| Wiki-only pages (Home, Getting Started, FAQ) | `wiki/` |
+
+The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` (`.github/workflows/wiki.yml`, on push to `main`). Never edit the wiki directly. A new doc page needs an entry in `SECTIONS` there; `npm run wiki:build` warns about unlisted docs
 
 ---
 

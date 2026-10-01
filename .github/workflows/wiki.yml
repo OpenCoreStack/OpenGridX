@@ -1,0 +1,53 @@
+name: Publish wiki
+
+# Rebuilds the GitHub wiki from docs/ and wiki/ (scripts/build-wiki.mjs) and overwrites it.
+# The wiki must exist first: create any page once in the GitHub UI.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'wiki/**'
+      - 'CHANGELOG.md'
+      - 'CONTRIBUTING.md'
+      - 'package.json'
+      - 'scripts/build-wiki.mjs'
+      - '.github/workflows/wiki.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  wiki:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Build wiki pages
+        run: node scripts/build-wiki.mjs .wiki-build
+
+      - name: Push to the wiki repository
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" .wiki-repo
+          cd .wiki-repo
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R ../.wiki-build/. .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki is up to date"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Sync wiki from ${GITHUB_SHA::7}"
+          git push origin HEAD

@@ -44,3 +44,5 @@ e2e/fixtures/*/node_modules
 e2e/fixtures/*/dist
 test-results/
 playwright-report/
+.wiki-build/
+.wiki-repo/

@@ -45,6 +45,10 @@ Architecture notes: [docs/architecture/datagrid-orchestration.md](docs/architect
 - CSS classes use the `ogx__` BEM prefix, variables `--ogx-*`. Class names are public API: renaming one is a breaking change.
 - No ref mutation during render; no `setState` in an effect when the value can be derived.
 
+## Docs and the wiki
+
+Edit documentation in `docs/` (or `wiki/` for the wiki's Home, Getting Started and FAQ pages). The [GitHub wiki](https://github.com/OpenCoreStack/OpenGridX/wiki) is generated from them on every push to `main`, so edits made directly in the wiki are lost. A new page in `docs/` must be added to `SECTIONS` in `scripts/build-wiki.mjs`; `npm run wiki:build` warns about docs that are not listed and writes the result to `.wiki-build/` for a local look.
+
 ## Tests
 
 See [docs/contributing/testing.md](docs/contributing/testing.md). In short:

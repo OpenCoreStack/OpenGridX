@@ -5,6 +5,12 @@
 
 ---
 
+## [Unreleased]
+
+### Internal
+
+- **GitHub wiki** generated from `docs/` — `scripts/build-wiki.mjs` (`npm run wiki:build`) turns the docs, CHANGELOG and CONTRIBUTING into wiki pages with a sidebar, rewrites relative links to wiki pages (or GitHub URLs for source files and images), and adds hand-written Home, Getting Started and FAQ pages from `wiki/`. `.github/workflows/wiki.yml` publishes it on every push to `main` that touches them.
+
 ## [3.2.2] — 2026-10-01
 
 ### Security
