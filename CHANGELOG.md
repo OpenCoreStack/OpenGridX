@@ -5,6 +5,16 @@
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **Boolean editor in Safari** — clicking the edit checkbox closed the editor without toggling the value. Safari does not focus a checkbox on click, so mousedown moved focus to the cell and the blur committed the unchanged value before the click arrived. The checkbox now keeps focus on mousedown. Found by the new package smoke suite (WebKit).
+
+### Internal
+
+- **Package smoke suite** (`npm run test:smoke`) — packs the library and installs the tarball into strict-TypeScript React 19 and React 18 apps (`e2e/fixtures/`), builds them and runs Playwright Test in Chromium, Firefox and WebKit: rendering, sorting, quick filter, selection, pagination, a 50,000-row grid filling a flex app shell without a `height` prop, row grouping with aggregation, CSV / XLSX / PDF downloads, editors, pinning, column groups, detail panels and the dark theme. Runs in the new `ci.yml` workflow (pull requests), before `npm publish`, and weekly against the newest dependency versions. See `docs/contributing/testing.md`.
+
 ## [3.2.0] — 2026-09-29
 
 ### Added

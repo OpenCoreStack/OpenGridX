@@ -37,3 +37,10 @@ __screenshots__/
 
 # Vitest browser-mode attachments
 .vitest-attachments/
+
+# Package smoke suite (npm run test:smoke)
+.pack/
+e2e/fixtures/*/node_modules
+e2e/fixtures/*/dist
+test-results/
+playwright-report/

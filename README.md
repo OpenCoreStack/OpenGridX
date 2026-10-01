@@ -547,6 +547,18 @@ Most React grids gatekeep essential features like **Row Grouping**, **Excel Expo
 
 ---
 
+## 🧪 Testing (contributors)
+
+```bash
+npm test                # unit tests (jsdom)
+npm run test:browser    # real Chromium, Firefox and WebKit
+npm run test:smoke      # pack the library, install it into React 18/19 apps, run Playwright
+```
+
+Which layer to use, and how the package smoke suite works: [docs/contributing/testing.md](https://github.com/OpenCoreStack/OpenGridX/blob/main/docs/contributing/testing.md).
+
+---
+
 ## 📝 License
 
 MIT © 2026 Open Core Stack

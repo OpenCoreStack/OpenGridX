@@ -1,0 +1,26 @@
+{
+  "name": "opengridx-smoke-react18",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "React 18 consumer fixture for the package smoke suite: installs the packed tarball as a real app does.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@opencorestack/opengridx": "file:../../../.pack/opencorestack-opengridx.tgz",
+    "exceljs": "^4.4.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
+    "react": "~18.3.1",
+    "react-dom": "~18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "~18.3.12",
+    "@types/react-dom": "~18.3.1",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
+  }
+}

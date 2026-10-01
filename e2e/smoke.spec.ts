@@ -1,0 +1,270 @@
+import { readFileSync } from 'node:fs';
+import { test, expect, type ConsoleMessage, type Locator, type Page } from '@playwright/test';
+
+// Package smoke suite: every test drives a production build of a consumer app that installed the
+// packed tarball (see scripts/smoke.mjs). It checks what only a real install can show: the
+// package resolves, its types compile, it renders under React 18 and 19, its CSS lays out, and
+// optional peers (exceljs, jspdf) load from the consumer's node_modules.
+
+/** Console output that is expected and harmless. Keep this list short and explain every entry. */
+const ALLOWED_CONSOLE: RegExp[] = [];
+
+const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing']);
+
+function fixtureOf(projectName: string): string {
+  return projectName.split('-')[1] ?? '';
+}
+
+interface ConsoleRecord {
+  type: string;
+  text: string;
+}
+
+async function openScenario(page: Page, scenario: string): Promise<ConsoleRecord[]> {
+  test.skip(fixtureOf(test.info().project.name) === 'react18' && !REACT18_SCENARIOS.has(scenario), 'React 19 fixture only');
+  const records: ConsoleRecord[] = [];
+  page.on('console', (m: ConsoleMessage) => {
+    const type = m.type();
+    if (type !== 'error' && type !== 'warning') return;
+    const text = m.text();
+    if (ALLOWED_CONSOLE.some((re) => re.test(text))) return;
+    records.push({ type, text });
+  });
+  page.on('pageerror', (e) => records.push({ type: 'pageerror', text: String(e) }));
+  await page.goto(`/?scenario=${scenario}`);
+  try {
+    await expect(page.locator('[role="grid"]').first()).toBeVisible();
+    await expect(centerRow(page, 0)).toBeVisible();
+  } catch (e) {
+    // Surface what the page logged: a render failure usually shows up there first.
+    throw new Error(`grid did not render. Console: ${JSON.stringify(records, null, 2)}\n${String(e)}`);
+  }
+  return records;
+}
+
+function viewport(page: Page): Locator {
+  return page.locator('.ogx__viewport').first();
+}
+
+/** A rendered body row by its center-row index (pinned rows are excluded). */
+function centerRow(page: Page, index: number): Locator {
+  return page.locator(`.ogx__viewport [role="row"][data-rowindex="${index}"]`).first();
+}
+
+function cell(row: Locator, field: string): Locator {
+  return row.locator(`[data-field="${field}"]`).first();
+}
+
+function renderedRows(page: Page): Locator {
+  return page.locator('.ogx__viewport [role="row"][data-rowindex]');
+}
+
+async function scrollToBottom(page: Page): Promise<void> {
+  await viewport(page).evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+}
+
+const parseAmount = (s: string): number => Number(s.replace(/[^0-9.-]/g, ''));
+
+test.describe('package smoke', () => {
+  let consoleRecords: ConsoleRecord[] = [];
+
+  test.afterEach(() => {
+    const records = consoleRecords;
+    consoleRecords = [];
+    expect(records, 'no console errors or warnings').toEqual([]);
+  });
+
+  test('basic: sort, quick filter, selection, pagination', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'basic');
+
+    // Sort by Amount ascending.
+    const amountHeader = page.getByRole('columnheader', { name: 'Amount' }).first();
+    await amountHeader.click();
+    await expect(amountHeader).toHaveAttribute('aria-sort', 'ascending');
+    const sorted = await Promise.all([0, 1, 2, 3].map((i) => cell(centerRow(page, i), 'amount').innerText()));
+    const values = sorted.map(parseAmount);
+    expect(values, `ascending amounts: ${sorted.join(', ')}`).toEqual([...values].sort((a, b) => a - b));
+
+    // Pagination: next page shows different rows.
+    const firstDoc = await cell(centerRow(page, 0), 'docNo').innerText();
+    await page.getByRole('button', { name: /next page/i }).first().click();
+    await expect(cell(centerRow(page, 0), 'docNo')).not.toHaveText(firstDoc);
+    await page.getByRole('button', { name: /previous page/i }).first().click();
+    await expect(cell(centerRow(page, 0), 'docNo')).toHaveText(firstDoc);
+
+    // Quick filter narrows to one customer.
+    await page.getByPlaceholder('Search...').fill('Globex');
+    await expect(async () => {
+      const customers = (await page.locator('.ogx__viewport [data-rowindex] [data-field="customer"]').allInnerTexts()).map((c) => c.trim());
+      expect(customers.length).toBeGreaterThan(0);
+      expect(customers.filter((c) => c !== 'Globex'), 'rows left after quick filter').toEqual([]);
+    }).toPass();
+
+    // Checkbox selection.
+    const boxes = page.getByRole('checkbox', { name: /^Select row/ });
+    // The native input is visually hidden behind the styled box; click the box as a user does.
+    await boxes.nth(0).locator('xpath=..').click();
+    await boxes.nth(1).locator('xpath=..').click();
+    await expect(page.getByTestId('selection-count')).toHaveText('selected: 2');
+  });
+
+  test('flex: fills an ERP flex shell without a height prop and virtualizes 50k rows', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'flex');
+
+    const region = await page.getByTestId('grid-region').boundingBox();
+    const grid = await page.locator('.ogx').first().boundingBox();
+    expect(region && grid).toBeTruthy();
+    if (!region || !grid) return;
+    // The grid fills its flex region (within a pixel) instead of growing to its content.
+    expect(Math.abs(grid.height - region.height), `grid ${grid.height}px vs region ${region.height}px`).toBeLessThan(2);
+    expect(grid.y + grid.height).toBeLessThanOrEqual(900 + 1);
+
+    const vp = await viewport(page).evaluate((el) => ({ client: el.clientHeight, scroll: el.scrollHeight }));
+    expect(vp.client, 'viewport is bounded').toBeLessThan(900);
+    expect(vp.scroll, 'viewport scrolls over all rows').toBeGreaterThan(vp.client * 100);
+
+    await scrollToBottom(page);
+    await expect(page.locator('.ogx__viewport [data-field="docNo"]', { hasText: 'INV-050000' })).toBeVisible();
+    const count = await renderedRows(page).count();
+    expect(count, 'rendered rows at the bottom of 50k').toBeLessThan(100);
+  });
+
+  test('grouping: expand groups, aggregation footer, CSV / XLSX / PDF export', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'grouping');
+
+    const before = await renderedRows(page).count();
+    expect(before, 'collapsed: one row per region').toBe(5);
+    await centerRow(page, 0).getByRole('button').first().click();
+    await expect.poll(() => renderedRows(page).count()).toBeGreaterThan(before);
+    const afterFirst = await renderedRows(page).count();
+    await centerRow(page, 1).getByRole('button').first().click();
+    await expect.poll(() => renderedRows(page).count()).toBeGreaterThan(afterFirst);
+
+    const footer = page.locator('.ogx__aggregation-footer').first();
+    await expect(footer).toBeVisible();
+    await expect(footer).toContainText(/\d/);
+
+    const expectations = [
+      { id: 'export-csv', name: /\.csv$/, min: 50_000, magic: null },
+      { id: 'export-xlsx', name: /\.xlsx$/, min: 20_000, magic: 'PK' },
+      { id: 'export-pdf', name: /\.pdf$/, min: 20_000, magic: '%PDF' },
+    ] as const;
+    for (const e of expectations) {
+      const [download] = await Promise.all([page.waitForEvent('download', { timeout: 30_000 }), page.getByTestId(e.id).click()]);
+      expect(download.suggestedFilename()).toMatch(e.name);
+      const path = await download.path();
+      const bytes = readFileSync(path);
+      expect(bytes.length, `${e.id} size`).toBeGreaterThan(e.min);
+      expect(bytes.length, `${e.id} size`).toBeLessThan(20_000_000);
+      if (e.magic) expect(bytes.subarray(0, e.magic.length).toString('latin1')).toBe(e.magic);
+      if (e.id === 'export-csv') {
+        const text = bytes.toString('utf8');
+        expect(text).toContain('Doc No');
+        expect(text).toContain('INV-000001');
+      }
+    }
+  });
+
+  test('editing: text, valueSetter, singleSelect, date and boolean editors commit', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'editing');
+    const log = page.getByTestId('edit-log');
+
+    // Text editor.
+    const customer = cell(centerRow(page, 0), 'customer');
+    await customer.dblclick();
+    const input = customer.locator('input').first();
+    await input.fill('Smoke Co');
+    await input.press('Enter');
+    await expect(customer).toHaveText('Smoke Co');
+    await expect(log).toContainText('1 customer=Smoke Co');
+
+    // valueSetter: editing Net writes amount = net + tax (tax is 18% of the old amount, so >= 0).
+    const row1 = centerRow(page, 1);
+    const net = cell(row1, 'net');
+    await net.dblclick();
+    const netInput = net.locator('input').first();
+    await netInput.fill('1000');
+    await netInput.press('Enter');
+    await expect(net).toHaveText('1000.00');
+    await expect(log).toContainText(/^2 customer=/m);
+    expect(parseAmount(await cell(row1, 'amount').innerText())).toBeGreaterThan(1000);
+
+    // singleSelect editor: pick an option other than the current one, or nothing is committed.
+    const status = cell(centerRow(page, 2), 'status');
+    const nextStatus = (await status.innerText()).trim() === 'Paid' ? 'Overdue' : 'Paid';
+    await status.dblclick();
+    const select = status.locator('select').first();
+    await select.selectOption(nextStatus);
+    await select.press('Enter');
+    await expect(status).toHaveText(nextStatus);
+    await expect(log).toContainText(new RegExp(`^3 customer=.* status=${nextStatus}`, 'm'));
+
+    // Date editor.
+    const date = cell(centerRow(page, 3), 'date');
+    await date.dblclick();
+    const dateInput = date.locator('input').first();
+    await dateInput.fill('2025-03-15');
+    await dateInput.press('Enter');
+    await expect(log).toContainText(/^4 customer=.* date=2025-03-15/m);
+
+    // Boolean editor: clicking the checkbox toggles and commits.
+    const posted = cell(centerRow(page, 4), 'posted');
+    const wasYes = (await posted.innerText()).trim() === 'Yes';
+    await posted.dblclick();
+    await posted.locator('input[type="checkbox"]').first().click();
+    await expect(posted).toHaveText(wasYes ? 'No' : 'Yes');
+    await expect(log).toContainText(new RegExp(`^5 customer=.* posted=${String(!wasYes)}`, 'm'));
+  });
+
+  test('pinned: pinned columns and rows, column groups, colSpan, detail panel', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'pinned');
+
+    await expect(page.getByRole('columnheader', { name: 'Financials' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Party' }).first()).toBeVisible();
+    await expect(page.locator('.ogx__pinned-rows--top').first()).toContainText('INV-000001');
+    await expect(page.locator('.ogx__pinned-rows--bottom').first()).toContainText('INV-000002');
+
+    // Left-pinned Doc No stays in place while scrolling horizontally.
+    const doc = cell(centerRow(page, 0), 'docNo');
+    const x0 = (await doc.boundingBox())?.x ?? 0;
+    await viewport(page).evaluate((el) => {
+      el.scrollLeft = 300;
+    });
+    await expect.poll(async () => viewport(page).evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+    expect(Math.abs(((await doc.boundingBox())?.x ?? 0) - x0)).toBeLessThan(1);
+    await viewport(page).evaluate((el) => {
+      el.scrollLeft = 0;
+    });
+
+    // colSpan: row id 5 spans Customer over Region.
+    const spanned = page.locator('.ogx__viewport [role="row"]', { hasText: 'INV-000005' }).first();
+    const spanWidth = (await cell(spanned, 'customer').boundingBox())?.width ?? 0;
+    expect(spanWidth).toBeGreaterThan(150 + 100);
+    await expect(spanned.locator('[data-field="region"]')).toHaveCount(0);
+
+    // Detail panel.
+    await centerRow(page, 0).getByRole('button', { name: 'Expand row', exact: true }).click();
+    await expect(page.getByTestId('detail').first()).toBeVisible();
+  });
+
+  test('dark: DataGridThemeProvider applies the dark theme', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'dark');
+    const provider = page.locator('.ogx-theme-provider').first();
+    await expect(provider).toBeVisible();
+    const token = await provider.evaluate((el) => getComputedStyle(el).getPropertyValue('--ogx-grid-background').trim());
+    expect(token.toLowerCase()).toBe('#0f172a');
+    const bg = await viewport(page).evaluate((el) => {
+      let node: Element | null = el;
+      while (node) {
+        const c = getComputedStyle(node).backgroundColor;
+        if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') return c;
+        node = node.parentElement;
+      }
+      return '';
+    });
+    const [r, g, b] = (bg.match(/\d+/g) ?? []).map(Number);
+    expect(r + g + b, `grid background ${bg}`).toBeLessThan(150);
+  });
+});
