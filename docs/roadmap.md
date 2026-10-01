@@ -70,17 +70,74 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 
 ---
 
-## 📅 Upcoming Features
+## 🗓️ Q4 2026 Roadmap (October – December)
 
-### Advanced Data Features
-*   **Interactive Pivot Builder**: Drag-and-drop UI for users to dynamically create pivot tables.
-*   **Advanced Charts Integration**: Inline sparklines and trend visualization.
+**Theme: free spreadsheet editing, with AI you control.** Range selection, paste, undo/redo and a fill handle are paid features in MUI X Premium and AG Grid Enterprise, and clipboard paste (476 👍) and cell range selection (317 👍) are among the most-requested grid features on GitHub. The research behind this plan compared ten competing grids and their AI features.
 
-### Demo Site
-*   **Full source viewer coverage**: Migrate all 32 examples to `DocsLayout` using Vite `?raw` auto-loading (eliminates string-literal source maintenance). See `docs/superpowers/plans/2026-07-29-demo-app-refactor.md`.
-*   **Syntax highlighting**: Prism.js token-based highlighting in the source viewer.
+**Team:** one maintainer plus an AI coding assistant. The plan is sized for that: one headline feature per release, and anything that slips moves to the next release instead of stretching the current one.
+
+**Compatibility:** everything ships in 3.x minor releases. Each new interaction is opt-in through a prop, so existing grids behave exactly as before until the feature is enabled.
+
+### Releases
+
+| Release | Target | Headline | Also in it |
+| :--- | :--- | :--- | :--- |
+| **3.3.0** | 30 Oct | **Cell range selection** (opt-in `cellSelection` prop): mouse drag, Shift+click, Shift+arrows; Ctrl+C / Cmd+C copies the block as TSV | Selection status bar (count, sum, average of selected cells); wrapped header text; React Compiler compatibility check |
+| **3.4.0** | 20 Nov | **Paste from Excel / Google Sheets** into the selection, through `processRowUpdate` (values parsed per column type, non-editable cells skipped, `onClipboardPasteError`). **Undo / redo** for cell edits and pastes (Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y, `apiRef.undo()` / `redo()`) | **AI toolkit, part 1** in a new `@opencorestack/opengridx/ai` entry point: `getGridAiSchema(columns)` (JSON Schema of the filter, sort, grouping, aggregation, pivot and visibility models the columns allow) and `validateGridAiState(json, columns)` (drops unknown fields and operators, coerces values, returns errors) |
+| **3.5.0** | 15 Dec | **AI toolkit, part 2**: `aiAssistant={{ onPrompt }}` prompt panel that calls the app's own model, shows the proposed changes as removable chips and applies them with undo; `createGridAgentTools(apiRef)` (plain tool objects for CopilotKit, the Vercel AI SDK or WebMCP) | Header filter row; **fill handle** as a stretch goal (moves to Q1 2027 if 3.3–3.4 run late) |
+| Freeze | 19 Dec – 5 Jan | Bug fixes only | — |
+
+### Across the quarter
+
+*   **Published benchmark**: reproducible 100k / 1M-row numbers (scroll frame rate, sort and filter time, memory) in `docs/performance.md`.
+*   **Next.js App Router guide**: using the grid from a `'use client'` component, with the stylesheet in `app/layout.tsx`.
+*   **RTL check**: verify right-to-left layouts and document the result.
+*   **Demo site**: source viewer on all examples (`DocsLayout` with Vite `?raw`) and syntax highlighting, done alongside each release's demo page.
+
+### Definition of done for each feature
+
+*   A short design note in `docs/superpowers/specs/` before coding starts (API, keyboard behaviour, ARIA).
+*   Unit tests, browser tests in Chromium, Firefox and WebKit, and a scenario in the package smoke suite.
+*   Keyboard-only and screen-reader pass: the grid stays a single Tab stop and announces selection changes.
+*   API reference, feature guide, demo page, CHANGELOG and `llms.txt` updated (the wiki follows automatically).
+*   Bundle budget: the core bundle grows only by the feature itself; the `/ai` entry point has no dependencies and adds nothing when it is not imported.
+
+### Rules for the AI toolkit
+
+*   OpenGridX never calls an AI service and never bundles an AI SDK. The app passes a function that calls whichever model it uses.
+*   By default only column definitions and grid state are sent, never row data. Example values are opt-in per column and documented as real data.
+*   Model output is always validated against the schema and shown to the user before it changes the grid, with one-click undo.
+*   The schema carries a `schemaVersion`, since apps will cache prompts against it.
+
+### Risks
+
+*   **Range selection touches focus and keyboard handling**, where most v3.0 fixes landed. It is opt-in and gets the longest test cycle; if it slips, 3.4.0 moves rather than shipping paste on an unstable base.
+*   **Undo must cover rejected updates**: a `processRowUpdate` that throws or a paste that partly fails must leave the history consistent.
+*   **Wrong AI filters** that look plausible: the validator, visible chips and undo are required, not optional.
+
+## 🔭 Next (Q1 2027)
+
+*   **Row reordering inside tree data and row groups**, touch-friendly (MUI #4821, 405 👍, not in MUI X).
+*   **Fill handle**, if it does not make 3.5.0.
+*   **Find & highlight** (Ctrl+F through cells), **right-click context menu**, **Excel-style value (set) filter**.
+*   **Calculated columns** (`[price] * [qty]` defined by users).
+*   **Interactive pivot builder**: drag-and-drop panel for pivot and grouping.
+*   **Sparklines** and a charts adapter that passes grid state to any chart library.
+*   **AI toolkit, part 3**: smart paste (unstructured text → pending rows) and `apiRef.getAiContext()` for "summarise selection"; an `opengridx-mcp` docs server for coding assistants.
+*   **Tailwind / shadcn theme preset**, sticky header against page scroll.
+
+### Not planned
+
+*   **Spreadsheet formulas** (`=SUM(A1:A9)`): a formula engine is a product of its own; calculated columns cover most of the need.
+*   **AI on every cell**: the cost grows with each row and results are not reproducible.
+*   **Built-in semantic search or anomaly detection**: large models and app-specific logic; better built by the app on top of the grid.
+*   **Scaled scrolling past ~645,000 rows** and **list-view virtualization**: revisit if users ask.
 
 ## ✅ Implemented Features (Recent)
+
+### 3.x releases *(2026-09-29 → 2026-10-01)*
+- **3.0.0** correctness release (rows never modified, typed generics, React 18 support), **3.0.1** fill-height layout fix, **3.1.0** `sortComparator` and column auto-size, **3.2.0** non-blocking PDF export, **3.2.1** Safari boolean editor fix, **3.2.2** linear-time export regexes. Details in [CHANGELOG.md](../CHANGELOG.md); upgrade guide in [migration/v2-to-v3.md](migration/v2-to-v3.md).
+- Package smoke suite against the packed tarball in React 18 and 19 apps, pull-request CI, community files and a wiki generated from these docs.
 
 ### Consumer defect fixes *(v2.1.0, 2026-09-23)*
 - Row-grouping subtotals now use the shared aggregation functions (nulls ignored, `unique` supported, `availableAggregationFunctions` honoured); `min`/`max` no longer overflow the call stack on very large datasets.
