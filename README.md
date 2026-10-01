@@ -547,7 +547,11 @@ Most React grids gatekeep essential features like **Row Grouping**, **Excel Expo
 
 ---
 
-## 🧪 Testing (contributors)
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](https://github.com/OpenCoreStack/OpenGridX/blob/main/CONTRIBUTING.md) and the [Code of Conduct](https://github.com/OpenCoreStack/OpenGridX/blob/main/CODE_OF_CONDUCT.md). Bugs and feature requests: [open an issue](https://github.com/OpenCoreStack/OpenGridX/issues/new/choose).
+
+### 🧪 Testing
 
 ```bash
 npm test                # unit tests (jsdom)

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/OpenCoreStack/OpenGridX/tree/main/docs
+    about: API reference, feature guides and the v2 → v3 migration guide.
+  - name: Security vulnerability
+    url: https://github.com/OpenCoreStack/OpenGridX/security/advisories/new
+    about: Report privately; please don't open a public issue.

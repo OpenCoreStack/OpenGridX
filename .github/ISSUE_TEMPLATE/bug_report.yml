@@ -1,0 +1,65 @@
+name: Bug report
+description: Something in OpenGridX doesn't work as documented
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please search [existing issues](https://github.com/OpenCoreStack/OpenGridX/issues) first. Upgrading from 2.x? See the [migration guide](https://github.com/OpenCoreStack/OpenGridX/blob/main/docs/migration/v2-to-v3.md).
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: A minimal reproduction link (CodeSandbox, StackBlitz, repo) is the fastest way to a fix.
+      placeholder: |
+        1. Render `<DataGrid rows={…} columns={…} />` with …
+        2. Click …
+        3. See …
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Minimal code
+      description: The smallest `DataGrid` props / columns that show the problem.
+      render: tsx
+  - type: input
+    id: version
+    attributes:
+      label: OpenGridX version
+      placeholder: "3.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: react
+    attributes:
+      label: React version
+      options: ["19", "18", Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: Browsers affected
+      multiple: true
+      options: [Chrome / Edge, Firefox, Safari, Mobile, Not browser-specific]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console errors or warnings
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I reproduced this on the latest version.

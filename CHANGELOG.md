@@ -13,6 +13,7 @@
 
 ### Internal
 
+- **Community files** — `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `CONTRIBUTING.md`, GitHub issue forms (bug report, feature request) and a pull request template.
 - **Package smoke suite** (`npm run test:smoke`) — packs the library and installs the tarball into strict-TypeScript React 19 and React 18 apps (`e2e/fixtures/`), builds them and runs Playwright Test in Chromium, Firefox and WebKit: rendering, sorting, quick filter, selection, pagination, a 50,000-row grid filling a flex app shell without a `height` prop, row grouping with aggregation, CSV / XLSX / PDF downloads, editors, pinning, column groups, detail panels and the dark theme. Runs in the new `ci.yml` workflow (pull requests), before `npm publish`, and weekly against the newest dependency versions. See `docs/contributing/testing.md`.
 
 ## [3.2.0] — 2026-09-29
