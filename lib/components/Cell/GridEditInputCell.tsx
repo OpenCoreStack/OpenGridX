@@ -91,6 +91,9 @@ function BooleanEditor({ value, colDef, onValueChange, onCommit, onCancel }: Gri
                 aria-label={editorLabel(colDef)}
                 checked={!!value}
                 onChange={handleChange}
+                // Safari does not focus checkboxes on click: mousedown moves focus to the cell, the
+                // blur commits the unchanged value and the editor unmounts before the click toggles it.
+                onMouseDown={(e) => e.preventDefault()}
                 onBlur={onCommit}
                 onKeyDown={makeKeyDownHandler(onCommit, onCancel, false)}
             />

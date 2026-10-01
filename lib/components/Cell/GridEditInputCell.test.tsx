@@ -180,6 +180,14 @@ describe('boolean editor', () => {
         expect(processRowUpdate).toHaveBeenCalledTimes(1);
         expect(container.querySelector('.ogx__edit-checkbox')).toBeNull();
     });
+
+    it('keeps focus on mousedown so the click can toggle (Safari does not focus checkboxes)', () => {
+        const { container } = renderGrid<BRow>(rows, cols);
+        fireEvent.doubleClick(cellOf(container, 0, 'ok'));
+        const checkbox = container.querySelector<HTMLInputElement>('.ogx__edit-checkbox')!;
+        // fireEvent returns false when a handler called preventDefault().
+        expect(fireEvent.mouseDown(checkbox)).toBe(false);
+    });
 });
 
 describe('IME composition', () => {
