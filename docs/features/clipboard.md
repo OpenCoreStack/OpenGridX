@@ -17,6 +17,8 @@ Selection and copying follow standard spreadsheet metaphors:
 | :--- | :--- |
 | `Ctrl + C` / `Cmd + C` | Copy currently selected rows to the clipboard. |
 
+> **Cell ranges (v3.3)**: with `cellSelection` on, Ctrl/Cmd+C copies the selected cell range instead (the focused cell at minimum), with no header line. `apiRef.current.copySelectedRows()` still copies rows. See [Cell Range Selection](cell-selection.md).
+
 > **Note**: The shortcut only copies while focus is inside the grid (a cell, a header, the toolbar), so with several grids on a page only the one in use copies, and Ctrl+C elsewhere on the page is never taken over (v3.0). It is also ignored while an input, textarea, or another editable element has focus, and while the page has a text selection, which the browser copies as usual. `apiRef.current.copySelectedRows()` is not affected by focus.
 >
 > The shortcut works with Caps Lock on and on non-Latin keyboard layouts (the key in the "C" position). Ctrl+Shift+C and Ctrl+Alt+C are not copy shortcuts and are left alone. Focus stays where it was after the copy.

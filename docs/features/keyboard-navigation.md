@@ -25,8 +25,20 @@ The grid follows the [WAI-ARIA data grid pattern](https://www.w3.org/WAI/ARIA/ap
 | **Alt+ArrowRight** / **Alt+ArrowLeft** | Tree data / row grouping: expand / collapse the focused row. |
 | **Shift+Space** | Select or deselect the focused row (when rows can be selected: `checkboxSelection`, or click selection not disabled). Synthetic group rows are not selectable. |
 | **Space** | On the row checkbox: toggle the row. On the detail-panel toggle: expand or collapse the panel. Elsewhere it does nothing (it never scrolls the grid). |
-| **Ctrl+A** (Cmd+A) | Select every row, when several rows can be selected. |
-| **Ctrl+C** (Cmd+C) | Copy the selected rows (see [Clipboard](clipboard.md)). |
+| **Ctrl+A** (Cmd+A) | Select every row, when several rows can be selected. With `cellSelection`: select every data cell of the page instead. |
+| **Ctrl+C** (Cmd+C) | Copy the selected rows (see [Clipboard](clipboard.md)). With `cellSelection`: copy the cell range, or the focused cell. |
+
+With [`cellSelection`](cell-selection.md) on (v3.3), on a data cell:
+
+| Key | Action |
+| :--- | :--- |
+| **Shift+Arrow keys** | Extend the cell range by one cell. Unlike plain arrows they do not wrap to the next row. Focus stays on the anchor. |
+| **Shift+Home** / **Shift+End** | Extend to the first / last column of the row. |
+| **Ctrl+Shift+Home** / **Ctrl+Shift+End** (Cmd on macOS) | Extend to the first / last cell of the page. |
+| **Shift+PageUp** / **Shift+PageDown** | Extend one page up / down. |
+| **Escape** | Collapse the range to the anchor (when not editing). |
+
+A plain arrow key after a range collapses it to the newly focused cell. Shift+Space still selects the row.
 
 Arrow, Home/End, PageUp/PageDown and Space are always consumed, so the viewport does not scroll natively when focus cannot move further.
 

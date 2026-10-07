@@ -76,6 +76,7 @@ Without a `height` prop the grid fills its container (`height: 100%`, or the fre
 - **Fully Customizable**: Slots system for replacing any component (pagination, overlays, toolbar).
 - **Export Functionality**: Built-in CSV, Excel (HTML `.xls`, or real `.xlsx` with the optional ExcelJS peer), JSON, PDF (optional jsPDF peer) and Print export.
 - **Clipboard**: `Ctrl+C` / `Cmd+C` copies the selected rows' visible columns as TSV for Excel/Sheets.
+- **Cell Range Selection** (v3.3): drag, Shift+click or Shift+arrows select a rectangle of cells; copy it as TSV and see its count, sum and average in a status bar (`cellSelection`, `showCellSelectionStats`).
 - **Accessibility**: WCAG 2.1 AA — full ARIA roles and keyboard navigation.
 - **Theming**: CSS variable API, `DataGridThemeProvider` with 5 built-in themes (`darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compactTheme`) and custom themes.
 - **Column & Row Reordering**: Drag-and-drop column reordering and row reordering.
@@ -174,6 +175,9 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `disableMultipleRowSelection` | `boolean` | Restrict to single-row selection. |
 | `pinCheckboxColumn` | `boolean` | Keeps the checkbox column visible during horizontal scroll. Default `true`. |
 | `disableClipboardCopy` | `boolean` | Turns off the grid's Ctrl/Cmd+C copy (`apiRef.current.copySelectedRows()` still works). |
+| `cellSelection` | `boolean` | Spreadsheet-style cell range selection; Ctrl/Cmd+C then copies the range (v3.3). |
+| `cellSelectionModel` / `onCellSelectionModelChange` | `GridCellSelectionModel` / `(model, { reason }) => void` | Controlled cell range. |
+| `showCellSelectionStats` | `boolean` | Status bar with count, sum and average of the range. |
 
 ### Sorting & Filtering
 
@@ -315,6 +319,12 @@ apiRef.current.autosizeColumn('name')   // fit to content (v3.1.0+)
 
 // Clipboard
 apiRef.current.copySelectedRows()      // → Promise<void>, rejects if the clipboard write fails
+
+// Cell range selection (cellSelection, v3.3.0+)
+apiRef.current.selectCellRange({ id: 1, field: 'q1' }, { id: 12, field: 'q4' })
+apiRef.current.getSelectedCells()      // → { id, field, value }[]
+apiRef.current.copySelectedCells()     // → Promise<void>
+apiRef.current.clearCellSelection()
 
 // Aggregation
 apiRef.current.getAggregationResult()  // → Record<string, unknown> | null
@@ -510,6 +520,7 @@ Full documentation at 👉 **[opencorestack.github.io/OpenGridX](https://opencor
 - **[Export Guide](docs/features/export-guide.md)** — Excel, CSV, JSON, and Print
 - **[PDF Export](docs/features/pdf-export.md)** — Branded PDF reports
 - **[Clipboard](docs/features/clipboard.md)** — Copy rows as TSV
+- **[Cell Range Selection](docs/features/cell-selection.md)** — Select, total and copy cell ranges
 - **[Keyboard & Accessibility](docs/features/keyboard-navigation.md)** — Keys, focus and ARIA
 - **[Data Source](docs/features/data-source.md)** — Server-side integration
 - **[Loading States](docs/features/loading-states.md)** — Skeleton and shimmer overlays

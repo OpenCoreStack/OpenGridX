@@ -17,6 +17,9 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
   `useGridAggregationApi` and `useGridScrollToIndexesApi` install once per `apiRef` in a layout
   effect and read the latest values from a ref refreshed in a layout effect, so the methods are
   live in a parent's layout effect and never answer from a previous render.
+- `useGridCellSelection` runs after `useGridSpanning` (it needs `getSpanOrigin` and the span caches) and
+  before `useGridKeyboardNavigation`, which receives its Shift-key handlers. `useGridCellSelectionApi` runs
+  after the keyboard hook because it reads and sets `focusedCell`.
 - `useGridLiveRowSelection` prunes the selection, and `useGridPageCorrection` corrects a page past the
   end, in effects that run before the later hooks' effects.
 
@@ -25,7 +28,7 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | # | Hook / util | File | Produces |
 | :- | :--- | :--- | :--- |
 | 0 | `useStableColumns` | `hooks/core/useStableColumns.ts` | The `columns` prop with a stable identity while every column is shallowly equal (inline columns do not re-run the row passes) |
-| 1 | `useGridControlledState` | `hooks/core/useGridControlledState.ts` | Controlled/uncontrolled sort, filter, aggregation, visibility, pinning, pivot, pagination, selection, density |
+| 1 | `useGridControlledState` | `hooks/core/useGridControlledState.ts` | Controlled/uncontrolled sort, filter, aggregation, visibility, pinning, pivot, pagination, selection, density, cell selection (v3.3) |
 | 2 | `useGridPivot` | `hooks/features/useGridPivot.ts` | Pivot rows/columns (or the source ones) and the pipeline filter/sort models |
 | 3 | `resolveGridModes` (pure) | `utils/gridModes.ts` | Which features are in effect: tree data, row grouping, pagination, row reordering, list view, grouping column |
 | 4 | `useGridThemeDimensions` | `hooks/core/useGridThemeDimensions.ts` | Row and header heights (props → theme provider → defaults) |
@@ -54,14 +57,16 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | 27 | `useGridAggregationApi` | `hooks/core/useGridAggregationApi.ts` | `getAggregationResult`, `getAggregationModel`, `getGroupedExportRows` |
 | 28 | `useLayout` | `hooks/core/useLayout.ts` | Row heights, pinned column split, widths |
 | 29 | `useGridSpanning` | `hooks/features/useGridSpanning.ts` | Row/column spans |
-| 30 | `useGridClipboardApi` | `hooks/core/useGridClipboardApi.ts` | Ctrl/Cmd+C and `copySelectedRows` |
+| 29a | `useGridCellSelection` | `hooks/core/useGridCellSelection.ts` | Cell range (v3.3): the model's range resolved against `allRenderableRows` and the data columns of `navigationColumns` (grown over spans), the render rectangle, pointer drag with auto-scroll and Shift+click, the Shift-key handlers for the keyboard hook, copy text, status-bar totals and the debounced live-region text. Inert while `cellSelection` is off |
+| 30 | `useGridClipboardApi` | `hooks/core/useGridClipboardApi.ts` | Ctrl/Cmd+C and `copySelectedRows`; with `cellSelection` the shortcut copies the range (`getCellRangeCopyText`) |
 | 31 | `useGridScrollToIndexesApi` | `hooks/core/useGridScrollToIndexesApi.ts` | `scrollToIndexes` |
 | 31a | `useGridColumnAutosize` | `hooks/core/useGridColumnAutosize.ts` | `autosizeColumn` / `autosizeColumns` on the API, and the resize handle's auto-size handler (v3.1) |
 | 32 | `useGridViewport` | `hooks/core/useGridViewport.ts` | Scroll sync, viewport measurement, viewport callback ref |
 | 33 | `useGridVirtualization` | `hooks/core/useGridVirtualization.ts` | Render window |
 | 34 | `useGridSortHandlers` | `hooks/core/useGridHeaderHandlers.ts` | Header sort / shift-sort |
-| 35 | `useGridKeyboardNavigation` | `hooks/core/useGridKeyboardNavigation.ts` | Focus and keyboard handling |
+| 35 | `useGridKeyboardNavigation` | `hooks/core/useGridKeyboardNavigation.ts` | Focus and keyboard handling; takes `cellSelection.keyboard` (Shift+navigation, Escape, Ctrl/Cmd+A) |
 | 36 | `useGridPointerFocusHandlers` | `hooks/core/useGridFocusHandlers.ts` | Cell and header click focus |
+| 36a | `useGridCellSelectionApi` | `hooks/core/useGridCellSelectionApi.ts` | Keeps the range anchor and the focused cell together (layout effect: a new anchor moves focus; focus moved to another data cell collapses the range), clears a range whose corner is gone (`'dataChange'`), and installs `getCellSelectionModel`, `setCellSelectionModel`, `selectCellRange`, `clearCellSelection`, `getSelectedCells`, `copySelectedCells` (once per `apiRef`, reading the latest values from a ref) |
 | 37 | `useGridColumnMenuHandlers` | `hooks/core/useGridHeaderHandlers.ts` | Column menu Hide / Pin (`pinColumnTo` in `utils/pinning`) |
 | 38 | `useGridAriaRows` | `hooks/core/useGridAriaRows.ts` | `aria-rowcount` and `aria-rowindex` bases |
 | 39 | `useGridSpanRowWindow` | `hooks/features/useGridSpanRenderWindow.ts` | Render window widened to whole row spans |
@@ -77,6 +82,9 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 
 `GridToolbarSlot`, `GridStandaloneColumnPanel`, `GridListView` (list view) or the viewport
 (`Header`, `GridPinnedRows` top, `GridEmptyState`, `GridVirtualRows`, `GridPinnedRows` bottom,
-`GridAggregationFooter`), then `slots.footer` or `GridPaginationArea`, `GridLiveRegion`,
+`GridAggregationFooter`), `GridCellSelectionStatsArea` (`showCellSelectionStats` with `cellSelection`), then `slots.footer` or `GridPaginationArea`, `GridLiveRegion`,
 `GridLoadingOverlay` and `GridErrorOverlay`. The props all three row renderers take alike are built
-once in `DataGrid.tsx` (`rowRenderProps`) and spread into each.
+once in `DataGrid.tsx` (`rowRenderProps`) and spread into each. `rowRenderProps.cellRange` is the cell range's
+render rectangle; each row renderer turns it into a per-row `cellRange` (`getRowCellRange`), `null` for rows
+outside it, and `Row` is memoised with a value comparison of that prop, so a drag only re-renders the rows the
+range enters or leaves.

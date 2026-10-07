@@ -45,6 +45,7 @@ node_modules/@opencorestack/opengridx/docs/features/state-persistence.md
 node_modules/@opencorestack/opengridx/docs/features/loading-states.md
 node_modules/@opencorestack/opengridx/docs/features/data-source.md
 node_modules/@opencorestack/opengridx/docs/features/clipboard.md
+node_modules/@opencorestack/opengridx/docs/features/cell-selection.md
 node_modules/@opencorestack/opengridx/docs/features/keyboard-navigation.md
 node_modules/@opencorestack/opengridx/docs/features/cell-spanning.md
 node_modules/@opencorestack/opengridx/docs/features/list-view.md
@@ -200,6 +201,21 @@ const controller = new AbortController();
 await exportToPdf(rows, columns, { signal: controller.signal, onProgress: p => setProgress(p) });
 ```
 
+### Cell range selection (3.3.0+)
+
+```tsx
+<DataGrid rows={rows} columns={columns} cellSelection showCellSelectionStats height={500}
+  onCellSelectionModelChange={(model, { reason }) => {}} />
+apiRef.current.selectCellRange({ id: 1, field: 'q1' }, { id: 12, field: 'q4' });
+await apiRef.current.copySelectedCells();
+```
+
+Drag, Shift+click and Shift+arrows select a rectangle of data cells; Ctrl/Cmd+C copies it as TSV
+(no header line) instead of the selected rows (`copySelectedRows()` still copies rows). The model stores
+corner ids and fields (`{ anchor, head }[]`), so it follows sorting and is cleared with reason
+`'dataChange'` when a corner disappears. Synthetic rows are highlighted but not copied. Guide:
+`docs/features/cell-selection.md`.
+
 ### Custom sort order and column auto-size (3.1.0+)
 
 ```tsx
@@ -332,7 +348,7 @@ const hasChildren = params.rowMeta?.hasChildren;
 
 ```ts
 // Components
-import { DataGrid, GridToolbar, FilterPanel, ColumnVisibilityPanel, GridTooltip, Pagination,
+import { DataGrid, GridToolbar, FilterPanel, ColumnVisibilityPanel, GridTooltip, Pagination, CellSelectionStats,
          Cell, Row, Header, Skeleton, Button, Input, Checkbox } from '@opencorestack/opengridx';
 
 // Hooks
@@ -356,6 +372,8 @@ import type {
   GridApi, GridInitialState, GridState,
   GridAggregationModel, GridPivotModel, GridTreeNode, GridGroupedExportRow,
   GridDataSource, GridGetRowsParams, GridGetRowsResponse,
+  GridCellSelectionModel, GridCellRange, GridCellCoordinates, GridCellSelectionReason, GridSelectedCell,
+  GridCellSelectionStatsSlotProps,
   GridSlots, GridSlotProps, GridLocaleText, GridListViewColDef, GridColumnGroupingModel,
   GridTheme, DataGridThemeProviderProps,
   GridToolbarProps, ToolbarButtonRenderProps, ToolbarQuickFilterRenderProps,

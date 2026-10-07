@@ -31,7 +31,7 @@ The main component for displaying and interacting with data.
 | `height` | `number \| string` | `undefined` | Total height of the grid. Without it the grid fills its container (`height: 100%`, or `flex: 1 1 auto; min-height: 0` as a flex item; v3.0.1+), and grows to fit every row in an auto-height container. |
 | `density` | `'compact' \| 'standard' \| 'comfortable'` | `'standard'` | Visual row density: compact = the theme's `grid.rowHeightCompact` or 32 px, standard = `rowHeight`, comfortable = the theme's `grid.rowHeightComfortable` or 72 px. |
 | `initialState` | `GridInitialState` | `undefined` | Starting state (sort, filter, pagination, columns, density), read on mount. Seeds the grid's uncontrolled state; see [State Persistence](features/state-persistence.md). |
-| `slots` | `GridSlots` | — | Custom component overrides: `toolbar`, `pagination`, `noRowsOverlay`, `loadingOverlay`, `footer`. See [`GridSlots`](#gridslots-and-gridslotprops) and the [Slots API](customization/slots-api.md). |
+| `slots` | `GridSlots` | — | Custom component overrides: `toolbar`, `pagination`, `noRowsOverlay`, `loadingOverlay`, `footer`, `cellSelectionStats`. See [`GridSlots`](#gridslots-and-gridslotprops) and the [Slots API](customization/slots-api.md). |
 | `slotProps` | `GridSlotProps` | — | Props passed to the slots, keyed like `slots`. `slotProps.toolbar` is typed as `Partial<GridToolbarProps>` (plus any extra keys your own toolbar reads), so `GridToolbar` render props are type-checked (v3.0+). |
 | `filterModel` | `GridFilterModel` | `undefined` | Active filters (controlled). Omit it to let the grid keep its own filter state, seeded from `initialState.filter` and changed by the toolbar or `apiRef.setFilterModel` (v3.0+). |
 | `sortModel` | `GridSortItem[]` | `undefined` | Active sorting. |
@@ -61,6 +61,26 @@ The main component for displaying and interacting with data.
 | `disableRowSelectionOnClick` | `boolean` | `false` | When `true`, clicking a row does not toggle its selection. |
 | `disableMultipleRowSelection` | `boolean` | `false` | When `true`, at most one row can be selected at a time — by click, checkbox, Space or `apiRef` — and the header select-all checkbox is not shown. |
 | `disableClipboardCopy` | `boolean` | `false` | When `true`, Ctrl+C / Cmd+C does not copy the selected rows, so the page or your own handler owns the shortcut. `apiRef.current.copySelectedRows()` still works. See [Clipboard](features/clipboard.md). |
+
+#### Cell Range Selection (v3.3)
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `cellSelection` | `boolean` | `false` | Spreadsheet-style cell ranges: drag (with auto-scroll), Shift+click, Shift+arrow / Home / End / PageUp / PageDown, Ctrl/Cmd+A (every data cell of the page) and Escape (collapse). While on, Ctrl/Cmd+C copies the range (the focused cell at minimum) as TSV without a header line; `apiRef.current.copySelectedRows()` still copies rows. Row selection is not changed by ranges. See [Cell Range Selection](features/cell-selection.md). |
+| `cellSelectionModel` | `GridCellSelectionModel` | — | Controlled cell selection (zero or one range). Ignored while `cellSelection` is off. |
+| `onCellSelectionModelChange` | `(model: GridCellSelectionModel, details: { reason: GridCellSelectionReason }) => void` | — | Fired when the cell selection changes. `reason`: `'pointer'`, `'keyboard'`, `'selectAll'`, `'api'`, `'clear'` or `'dataChange'` (a corner's row or column is no longer displayed, so the range was cleared). |
+| `showCellSelectionStats` | `boolean` | `false` | Status bar under the grid (above the pagination area) with Count of non-empty cells and Sum / Average of the numeric cells, while more than one cell is selected. Replaceable through `slots.cellSelectionStats`. Needs `cellSelection`. |
+
+```ts
+interface GridCellCoordinates { id: GridRowId; field: string }
+interface GridCellRange { anchor: GridCellCoordinates; head: GridCellCoordinates }  // anchor = active cell
+type GridCellSelectionModel = readonly GridCellRange[];
+type GridCellSelectionReason = 'pointer' | 'keyboard' | 'selectAll' | 'api' | 'clear' | 'dataChange';
+interface GridCellSelectionChangeDetails { reason: GridCellSelectionReason }
+interface GridSelectedCell { id: GridRowId; field: string; value: unknown }
+```
+
+Public CSS: `ogx__cell--range`, `ogx__cell--range-top` / `-bottom` / `-left` / `-right`, `ogx--range-dragging` (root, during a drag), `--ogx-range-background`, `--ogx-range-border`. Range cells carry `aria-selected="true"`.
 
 #### Column Visibility
 
@@ -211,6 +231,7 @@ The types of the `slots` and `slotProps` props (v3.0+ exports). Each slot is typ
 | `pagination` | The built-in `Pagination` bar (shown with `pagination`). | `GridPaginationSlotProps` (= `PaginationProps`: `page`, `pageSize`, `rowCount`, `pageSizeOptions`, `onPageChange`, `onPageSizeChange`, `localeText`), then `slotProps.pagination`. |
 | `noRowsOverlay` | The empty-state icon and label (shown when there are no rows and the grid is not loading). | `slotProps.noRowsOverlay` only (`GridOverlaySlotProps`). |
 | `loadingOverlay` | The loading indicator: the skeleton rows while loading with no rows, the progress bar while loading with rows shown (the slot is then shown over them). | `slotProps.loadingOverlay` only (`GridOverlaySlotProps`). |
+| `cellSelectionStats` | The status bar of `showCellSelectionStats` (v3.3). Rendered while more than one cell is selected. | `GridCellSelectionStatsSlotProps`: `apiRef`, `cellCount`, `rowCount`, `columnCount`, `count`, `numericCount`, `sum`, `average` (`null` without numeric cells), then `slotProps.cellSelectionStats`. |
 | `footer` | The pagination area. | `GridFooterSlotProps`: `apiRef`, `aggregationModel`, `aggregationResult`, `rowCount`, `pagination`, `paginationModel`, `pageSizeOptions`, `onPaginationModelChange`, then `slotProps.footer`. `rowCount` is the built-in pager's count (pinned rows excluded, v3.0+); under tree data or row grouping, the filtered data rows. |
 
 ```ts
@@ -302,6 +323,12 @@ Access these methods via the `apiRef` prop.
 | `getAggregationModel()` | `GridAggregationModel \| null` | Get the active aggregation configuration. |
 | `getAllFilteredRows()` | `R[]` | Get every row that passes the filter, sorted, regardless of pagination, including pinned rows. Under row grouping and tree data it returns the data rows (no group rows) in hierarchy order with every group expanded, ordered like the screen (also when sorting by the hierarchy column; v3.0+). With tree data and a filter, ancestors shown only to give a match its context are left out: the result is the set select-all and the aggregation footer act on (v3.0+). Use for full-dataset exports. |
 | `getGroupedExportRows()` | `GridGroupedExportRow[] \| null` | Get a flat ordered list reflecting the active row-grouping tree (group-header, leaf, subtotal, grand-total), sorted and filtered like the screen. Collapsed groups are included with their rows, and subtotals are computed over each group's exported rows. Group-header and subtotal entries carry `groupLabel`, the label the grid shows (v3.0+). Returns `null` when row grouping is not active. |
+| `getCellSelectionModel()` | `GridCellSelectionModel` | The cell selection (`[]` while `cellSelection` is off). Includes a change made earlier in the same tick (v3.3). |
+| `setCellSelectionModel(model)` | `void` | Replace the cell selection (only the first range is kept); focus moves to its anchor. `reason: 'api'` (v3.3). |
+| `selectCellRange(anchor, head)` | `void` | Select the rectangle between two `GridCellCoordinates`; `anchor` becomes the active cell (v3.3). |
+| `clearCellSelection()` | `void` | Empty the cell selection (`reason: 'clear'`) (v3.3). |
+| `getSelectedCells()` | `GridSelectedCell[]` | Cells of the range in display order with values read through `valueGetter`. Synthetic rows and span-covered positions are left out (v3.3). |
+| `copySelectedCells()` | `Promise<void>` | Copy the range (the focused cell when nothing else is selected) as TSV without a header line. Resolves without writing when there is nothing to copy; rejects when the clipboard write fails (v3.3). |
 | `copySelectedRows()` | `Promise<void>` | Copy every selected row that passes the filter (other pages, collapsed groups and pinned rows included) as TSV, with the visible columns in screen order. Resolves without writing when no selected row is found; rejects when the clipboard write fails. |
 
 ---
@@ -440,6 +467,7 @@ The grid's building blocks are exported with their props types (the props types 
 | `Header` | `HeaderProps` | The column header rows. See [Header](components/header.md). |
 | `Row` | `RowProps` | One body row. See [Row](components/row.md). |
 | `Cell` | `CellProps` | One body cell. See [Cell](components/cell.md). |
+| `CellSelectionStats` | `CellSelectionStatsProps` | The default status bar of `showCellSelectionStats` (v3.3), e.g. to wrap in a `cellSelectionStats` slot. |
 | `Skeleton` | `SkeletonProps` | Loading placeholder (`rows`, `columns`, both default 5). |
 | `Button`, `Input`, `Checkbox` | `ButtonProps`, `InputProps`, `CheckboxProps` | The grid's form controls. `Button` defaults to `type="button"`. |
 
@@ -455,7 +483,7 @@ Context provider for overriding the grid's visual system.
 - **`colors`**: `primary`, `primaryDark`, `primaryLight`, `primaryFocus`, `secondary*`, `success`, `warning`, `error`, `info`, `white`, `black`, `gray` (`{ 50 … 900 }`). Toolbar, menu, selection and focus accents derive from `primary*` unless set directly.
 - **`typography`**: `fontFamily`, `fontFamilyMono`, `fontSizeXs` … `fontSizeXl`.
 - **`spacing`**: `xs` … `xxl`. **`borders`**: `widthThin/Medium/Thick`, `radiusSm` … `radiusXl`, `color`, `colorHover`. **`shadows`**: `sm` … `xl`.
-- **`grid`**: surfaces (`background`, `borderColor`, `headerBackground`, `headerText`, `headerHoverBackground`, `headerSortedBackground`, `rowText`, `rowHoverBackground`, `rowAlternateBackground`, `rowSelectedBackground`, `rowSelectedHoverBackground`, `cellFocusBorder`, `pinnedLeftShadow`, `pinnedRightShadow`, `checkboxBg`, `checkboxBorder`), sizing (`rowHeightCompact`, `rowHeightStandard`, `rowHeightComfortable`, `headerHeight` in px, read by the grid's layout; the `rowHeight` / `headerHeight` props win), `cellPaddingX`, `cellPaddingY`, `cellFontSize`, `headerFontSize`.
+- **`grid`**: surfaces (`background`, `borderColor`, `headerBackground`, `headerText`, `headerHoverBackground`, `headerSortedBackground`, `rowText`, `rowHoverBackground`, `rowAlternateBackground`, `rowSelectedBackground`, `rowSelectedHoverBackground`, `cellFocusBorder`, `rangeBackground`, `rangeBorder` (v3.3), `pinnedLeftShadow`, `pinnedRightShadow`, `checkboxBg`, `checkboxBorder`), sizing (`rowHeightCompact`, `rowHeightStandard`, `rowHeightComfortable`, `headerHeight` in px, read by the grid's layout; the `rowHeight` / `headerHeight` props win), `cellPaddingX`, `cellPaddingY`, `cellFontSize`, `headerFontSize`.
 - **`toolbar`**, **`overlays`**, **`scrollbar`** (`thumbColor`, `trackColor`, `size`), **`skeleton`** (`baseColor`, `highlightColor`), **`transitions`**.
 
 Presets: `darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compactTheme`. See [Theming](customization/theming.md).
@@ -692,6 +720,8 @@ interface GridLocaleText {
   paginationOf?: (from: number, to: number, count: number) => string;
   paginationPage?: (page: number, pageCount: number) => string;
   noRowsLabel?: string;
+  /** v3.3: live-region text after a cell range change. Default "12 cells selected, 3 rows by 4 columns". */
+  cellSelectionAnnouncement?: (cellCount: number, rowCount: number, columnCount: number) => string;
 }
 ```
 

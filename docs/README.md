@@ -37,6 +37,7 @@ In-depth guides on the grid's functional capabilities.
 - **[Loading & Performance](features/loading-states.md)** - Skeletons, Lazy, and Infinite loading
 - **[Row Selection](features/selection.md)** - Multi & single choice selection
 - **[Clipboard](features/clipboard.md)** - Copy and Paste grid data
+- **[Cell Range Selection](features/cell-selection.md)** - Spreadsheet-style cell ranges, copy and a sum / average status bar
 - **[Pinning](features/pinning.md)** - Sticky columns and rows
 - **[State Persistence](features/state-persistence.md)** - Save/Restore grid configuration
 - **[Aggregation & Pivot](features/aggregation-pivot.md)** - Data summarization and analytics

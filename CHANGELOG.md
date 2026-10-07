@@ -10,6 +10,17 @@
 ### Added
 
 - **Wrapped header text** — new grid prop `wrapHeaderText` and per-column `GridColDef.wrapHeaderText` (the column wins). Long header titles wrap instead of being cut with an ellipsis, within the existing `headerHeight`: 2 lines at 56px, 3 at 72px, 4 at 88px, with an ellipsis on the last line if the title is still longer. The header never grows on its own; raise `headerHeight` for more lines. Wrapped header cells get the new class `ogx__header-cell--wrap` and show their full title as the `title` tooltip unless the column has a `description`. Sort icon, column menu button and resize handle are unchanged, and column auto-size still fits the title on one line. Demo: *Wrapped Header Text* (`/header-wrap`).
+- **Cell range selection** (`cellSelection`) — select a rectangle of cells as in Excel or Google Sheets: press and drag (the grid auto-scrolls over virtualized rows and columns when the pointer nears or leaves an edge), Shift+click, Shift+Arrow (no row wrap), Shift+Home/End, Ctrl+Shift+Home/End, Shift+PageUp/PageDown, Ctrl/Cmd+A (every data cell of the page) and Escape (collapse to the anchor). Ctrl/Cmd+C copies the range (the focused cell at minimum) as TSV, formatted as shown, without a header line; `apiRef.current.copySelectedRows()` still copies rows. Ranges never change the row selection; the checkbox, detail-panel, reorder and `__group__` columns never join a range. Group rows, subtotals, tree auto-parents and the pivot Grand Total are highlighted but not copied. A range touching part of a `colSpan` / `rowSpan` grows to cover it. Off by default: grids without the prop are unchanged.
+- **`cellSelectionModel` / `onCellSelectionModelChange(model, { reason })`** — controlled or uncontrolled model of `{ anchor, head }` corners addressed by row id and field, so a range follows its rows through sorting; it is cleared (`reason: 'dataChange'`) when a corner is no longer displayed. New types `GridCellCoordinates`, `GridCellRange`, `GridCellSelectionModel`, `GridCellSelectionReason`, `GridCellSelectionChangeDetails`, `GridSelectedCell`.
+- **`GridApi`**: `getCellSelectionModel`, `setCellSelectionModel`, `selectCellRange`, `clearCellSelection`, `getSelectedCells`, `copySelectedCells`.
+- **`showCellSelectionStats`** — a status bar with the Count, Sum and Average of the range (shared aggregation functions), replaceable through `slots.cellSelectionStats` (`GridCellSelectionStatsSlotProps`); the default component is exported as `CellSelectionStats`.
+- **Accessibility** — range cells carry `aria-selected="true"`, focus stays on the anchor, and the live region announces the size ("12 cells selected, 3 rows by 4 columns", debounced 300 ms); translate it with `localeText.cellSelectionAnnouncement`.
+- **Styling** — public classes `ogx__cell--range`, `ogx__cell--range-top|bottom|left|right` (inset outline, no layout shift) and `ogx--range-dragging`; CSS variables `--ogx-range-background` and `--ogx-range-border`, defined in every built-in theme and settable with the theme keys `grid.rangeBackground` / `grid.rangeBorder`.
+- Demo page *Cell Range Selection* and guide `docs/features/cell-selection.md`.
+
+### Changed
+
+- `Row` is now memoised (its `cellRange` prop compared by value), and the row click / checkbox handlers keep their identity across renders, so rows whose props did not change no longer re-render.
 
 ### Internal
 
