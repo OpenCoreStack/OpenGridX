@@ -1,0 +1,28 @@
+.custom-editors-hint {
+    background: var(--ogx-color-primary, #3b82f6);
+    color: #fff;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.custom-editors-log {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--ogx-color-gray-600, #4b5563);
+}
+
+.custom-editors-usage {
+    margin-top: 16px;
+    font-size: 13px;
+}
+
+.custom-editors-usage pre {
+    margin: 8px 0 0;
+    padding: 12px 14px;
+    overflow-x: auto;
+    border-radius: 6px;
+    background: var(--ogx-color-surface-secondary, #f3f4f6);
+    font-size: 12px;
+}

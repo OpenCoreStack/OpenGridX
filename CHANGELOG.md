@@ -5,6 +5,23 @@
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **`Input` forwards `ref`** to its `<input>` (`React.forwardRef`), so `ref` works on React 18 as well as 19 (before, it only reached the `<input>` on React 19, through the props spread). `Input.displayName` is `'Input'`.
+- **`Input` `variant`** — `'field'` (default, unchanged look) or `'cell'`: the wrapper fills its container (width and height 100%, `display: flex`) with no border, radius, background or focus shadow, and the `<input>` uses the cell's font and the editor padding. For custom cell editors in `renderEditCell`; adornments and `error` (an inset `--ogx-color-error` edge, drawn over the editing cell's outline) still work. New public class `ogx-input-wrapper--cell`. An editing cell that holds one stretches its content to the full cell height.
+- **`Input` `inputClassName`** — classes for the `<input>` itself; `className` still goes to the wrapper `<div>`. `error` now also sets `aria-invalid="true"` on the `<input>`.
+- **`Checkbox` forwards `ref`** to its `<input>` (alongside `inputRef`), and takes **`inputClassName`** for the `<input>`; `onMouseDown`, `tabIndex`, `aria-*` and other props reach the `<input>` as before.
+- Demo page *Custom Cell Editors* (`/custom-editors`): price and weight editors built on `<Input variant="cell">` with a `$` / `kg` adornment and an error state; guide section "Building custom editors with `Input`" in `docs/features/editing-reordering.md`.
+
+### Changed
+
+- The toolbar's global search, the column panel's search box, the filter panel's text/date value box and the built-in text, number and date cell editors render through `Input`, so their `<input>` now sits inside a `div.ogx-input-wrapper` and also has the class `ogx-input`. **Selectors with a child combinator such as `.ogx-global-search > input` or `.ogx-filter__controls > input` must become descendant selectors** (`.ogx-global-search input`). The class names on the inputs (`ogx-global-search__input`, `ogx-column-visibility-panel__search-input`, `ogx-filter__value-input`, `ogx__edit-input`, `ogx__edit-input--number`), their ids, names and ARIA attributes are unchanged, and they look the same.
+- The boolean cell editor and the list view's row checkbox are the shared `Checkbox` (the drawn box used by the row-selection column) instead of a native checkbox. The editor's `<input>` keeps `ogx__edit-checkbox` but is visually hidden; click the box (`.ogx-checkbox__box`). The Safari fix from 3.2.1 is kept: mousedown anywhere in the boolean editor is prevented, so focus stays in the editor until the click toggles it. The `.ogx-list-view__checkbox input[type="checkbox"]` size / `accent-color` rule is gone.
+- `Input.css` now loads before the component styles in `opengridx.css` (it was after `ColumnVisibilityPanel.css` and `GridEditInputCell.css`), so component rules that restyle `Input` win at equal specificity. Nothing else in the library's CSS styled `.ogx-input*`.
+- The built-in text, number and date editors now fill the editing cell's full height (they were as tall as their text); the look is unchanged.
+
 ## [3.3.0] — 2026-10-07
 
 ### Added

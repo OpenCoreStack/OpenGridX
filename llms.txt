@@ -356,6 +356,22 @@ const processRowUpdate = (newRow: Person) => {
 
 Double-click or Enter opens the editor; Enter / Tab / blur commits; Escape cancels. An edit whose row scrolls, pages or filters away is committed, not dropped.
 
+Custom editors (3.3.1+): build them on the exported `Input` with `variant="cell"` — it fills the cell with no border/background/focus ring, like the built-in editors. `ref` reaches the `<input>` (forwardRef, React 18 + 19), `inputClassName` styles the `<input>` (`className` the wrapper), `startAdornment` / `endAdornment` add a unit, `error` adds an inset error edge and `aria-invalid`. Stop propagation of the Enter/Escape you handle.
+
+```tsx
+import { Input } from '@opencorestack/opengridx';
+function PriceEditor({ value, onValueChange, onCommit, onCancel }: GridRenderEditCellParams) {
+  const [text, setText] = useState(String(value ?? ''));
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
+  const valid = text.trim() !== '' && Number(text) >= 0;
+  return <Input ref={ref} variant="cell" startAdornment="$" error={!valid} value={text}
+    onChange={e => { setText(e.target.value); const n = Number(e.target.value); if (e.target.value.trim() !== '' && n >= 0) onValueChange(n); }}
+    onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); if (valid) onCommit(); } if (e.key === 'Escape') { e.stopPropagation(); onCancel(); } }}
+    onBlur={() => (valid ? onCommit() : onCancel())} />;
+}
+```
+
 ---
 
 ## SERVER-SIDE DATA SOURCE
@@ -547,6 +563,7 @@ Class names use the `ogx__` BEM prefix, e.g.:
 - Cell ranges (3.3.0+): `ogx__cell--range`, `ogx__cell--range-top|bottom|left|right` (inset box-shadow outline), `ogx--range-dragging` on the root during a drag; variables `--ogx-range-background`, `--ogx-range-border` (theme keys `grid.rangeBackground`, `grid.rangeBorder`)
 - `ogx__header-cell`, `ogx__header-cell--sorted`, `ogx__header-cell--wrap` (wrapHeaderText, 3.3.0+)
 - Sticky wrappers: `ogx__sticky-top` (header + top-pinned rows), `ogx__sticky-bottom` (bottom-pinned rows + aggregation footer)
+- Form controls (3.3.1+): the toolbar search, column-panel search, filter value box and text/number/date editors render through `Input`: the `<input>` keeps its class (`ogx-global-search__input`, `ogx-column-visibility-panel__search-input`, `ogx-filter__value-input`, `ogx__edit-input`) inside a `div.ogx-input-wrapper` (`ogx-input-wrapper--cell` for editors) — use descendant selectors (`.ogx-global-search input`), not `> input`. The boolean editor and list-view row checkbox are the shared `Checkbox` (`.ogx-checkbox__box`; hidden `<input>`)
 
 ---
 

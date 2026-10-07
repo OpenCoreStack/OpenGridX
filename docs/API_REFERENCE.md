@@ -469,7 +469,33 @@ The grid's building blocks are exported with their props types (the props types 
 | `Cell` | `CellProps` | One body cell. See [Cell](components/cell.md). |
 | `CellSelectionStats` | `CellSelectionStatsProps` | The default status bar of `showCellSelectionStats` (v3.3), e.g. to wrap in a `cellSelectionStats` slot. |
 | `Skeleton` | `SkeletonProps` | Loading placeholder (`rows`, `columns`, both default 5). |
-| `Button`, `Input`, `Checkbox` | `ButtonProps`, `InputProps`, `CheckboxProps` | The grid's form controls. `Button` defaults to `type="button"`. |
+| `Button`, `Input`, `Checkbox` | `ButtonProps`, `InputProps`, `CheckboxProps` | The grid's form controls. `Button` defaults to `type="button"`. See [`Input`](#input) and [`Checkbox`](#checkbox) below. |
+
+### `Input`
+A text field: an `<input class="ogx-input">` inside a `<div class="ogx-input-wrapper">` that also holds the adornments. The grid's search boxes, filter value box and text / number / date cell editors render through it. Every other `<input>` attribute (`value`, `onChange`, `type`, `id`, `name`, `aria-*`, …) goes to the `<input>`.
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `ref` | `Ref<HTMLInputElement>` | — | Reaches the `<input>` (`forwardRef`, React 18 and 19). Since v3.3.1. |
+| `variant` | `'field' \| 'cell'` | `'field'` | `'field'`: bordered form field. `'cell'`: fills its container (a grid cell), no border, radius, background or focus shadow, cell font and the editor padding; adds `ogx-input-wrapper--cell`. Since v3.3.1. |
+| `inputClassName` | `string` | — | Classes added to the `<input>` next to `ogx-input`. Since v3.3.1. |
+| `className` | `string` | — | Classes added to the wrapper `<div>`. |
+| `fullWidth` | `boolean` | `false` | Wrapper takes 100% width (`ogx-input-wrapper--full-width`). |
+| `error` | `boolean` | `false` | `ogx-input-wrapper--error` (error border; inset error edge in the cell variant) and `aria-invalid="true"` on the `<input>`. |
+| `startAdornment` / `endAdornment` | `ReactNode` | — | Content before / after the `<input>` (`ogx-input__adornment--start` / `--end`), e.g. a currency or a unit. |
+| `disabled` | `boolean` | — | Disables the `<input>` and adds `ogx-input-wrapper--disabled`. |
+
+### `Checkbox`
+A styled checkbox: a visually hidden `<input type="checkbox" class="ogx-checkbox__input">` and a drawn `.ogx-checkbox__box`, inside a `<label class="ogx-checkbox-wrapper">`. Other props (`checked`, `onChange`, `onMouseDown`, `tabIndex`, `aria-*`, …) go to the `<input>`. The grid's row checkboxes, column panel, list view and boolean cell editor use it.
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `ref` | `Ref<HTMLInputElement>` | — | Reaches the `<input>` (`forwardRef`). Since v3.3.1. |
+| `inputRef` | `Ref<HTMLInputElement>` | — | Also reaches the `<input>` (kept for compatibility). |
+| `inputClassName` | `string` | — | Classes added to the `<input>` next to `ogx-checkbox__input`. Since v3.3.1. |
+| `className` | `string` | — | Classes added to the wrapper `<label>`. |
+| `indeterminate` | `boolean` | `false` | Shows the indeterminate mark and sets the input's `indeterminate`. |
+| `label` | `string` | — | Visible label text after the box; also the accessible name. |
 
 ---
 

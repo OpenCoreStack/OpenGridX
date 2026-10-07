@@ -340,4 +340,13 @@ const purpleTheme: GridTheme = {
 - The dark mode overrides are in the same file under `@media (prefers-color-scheme: dark)`
 - The CSS entry point for the entire library is `lib/styles/opengridx.css` (single barrel import)
 - BEM class prefix: `ogx__` (e.g. `ogx__cell`, `ogx__header-cell`)
+- **Form controls** — the toolbar search, column-panel search, filter value box and the text / number / date cell
+  editors render through the shared `Input` (v3.3.1+): their `<input>` keeps its own class (`ogx-global-search__input`,
+  `ogx-column-visibility-panel__search-input`, `ogx-filter__value-input`, `ogx__edit-input`) and also has `ogx-input`,
+  and sits inside a `div.ogx-input-wrapper`. Target it with a descendant selector (`.ogx-global-search input`), not a
+  child one (`.ogx-global-search > input`). Cell editors' wrappers also have `ogx-input-wrapper--cell` (fills the cell,
+  no border, background or focus shadow; `ogx-input-wrapper--error` adds an inset `--ogx-color-error` edge). The boolean
+  editor and list-view row checkbox are the shared `Checkbox` (`ogx-checkbox-wrapper`, `ogx-checkbox__box`; the `<input>`
+  keeps `ogx__edit-checkbox` and is visually hidden). `Input.css` loads first in `opengridx.css`, so component rules
+  override it at equal specificity.
 - Variable prefix: `--ogx-` (e.g. `--ogx-color-primary`)

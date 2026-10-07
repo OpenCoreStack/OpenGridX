@@ -341,6 +341,12 @@ const hasChildren = params.rowMeta?.hasChildren;
   place is not detected; pass new column objects when a definition changes.
 - **Browser height limit** — one scrolling grid reaches about 645,000 rows at the default 52 px row height
   (browsers cap element height); page or stream larger datasets.
+- **Build custom cell editors on `Input`** (3.3.1+) — `<Input variant="cell" ref={ref} ... />` in `renderEditCell`
+  fills the cell like the built-in editors; `ref` reaches the `<input>` on React 18 and 19, `inputClassName` styles the
+  `<input>`, `error` shows an inset error edge. Guide: `docs/features/editing-reordering.md`.
+- **Style the grid's inputs with descendant selectors** (3.3.1+) — the search boxes, filter value box and text/number/date
+  editors sit inside a `div.ogx-input-wrapper`, so `.ogx-global-search > input` no longer matches; use
+  `.ogx-global-search input` or the input's own class.
 
 ---
 

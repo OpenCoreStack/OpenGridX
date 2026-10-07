@@ -21,6 +21,7 @@ const ExportDemo = lazy(() => import('./examples/ExportDemo/ExportDemo'));
 const AdvancedExcelExportDemo = lazy(() => import('./examples/AdvancedExcelExportDemo/AdvancedExcelExportDemo'));
 const ClipboardDemo = lazy(() => import('./examples/ClipboardDemo/ClipboardDemo'));
 const CellSelectionDemo = lazy(() => import('./examples/CellSelectionDemo/CellSelectionDemo'));
+const CustomEditorsDemo = lazy(() => import('./examples/CustomEditorsDemo/CustomEditorsDemo'));
 const EventsDemo = lazy(() => import('./examples/EventsDemo/EventsDemo'));
 const DataGridTest = lazy(() => import('./examples/DataGridTest/DataGridTest'));
 const ServerSideTreeDemo = lazy(() =>
@@ -69,6 +70,7 @@ const examplesConfig = [
     { path: '/header-wrap', name: 'Wrapped Header Text', component: HeaderWrapDemo, category: 'Main features' },
     { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
     { path: '/editing', name: 'Cell Editing', component: EditingExample, category: 'Main features' },
+    { path: '/custom-editors', name: 'Custom Cell Editors', component: CustomEditorsDemo, category: 'Main features' },
     { path: '/events', name: 'Events Observer', component: EventsDemo, category: 'Main features' },
     { path: '/scroll-to', name: 'Scroll To Indexes', component: ScrollToIndexesDemo, category: 'Main features' },
     { path: '/full-test', name: 'Full Feature Test', component: DataGridTest, category: 'Main features' },

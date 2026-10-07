@@ -115,6 +115,56 @@ const columns: GridColDef[] = [
 
 Enter and Escape keydowns that bubble out of a custom editor also commit and cancel. An error thrown by `renderEditCell` is contained to its cell (the cell shows `⚠`), like `renderCell`.
 
+### Building custom editors with `Input`
+The built-in text, number and date editors are the exported `Input` component with `variant="cell"` (since v3.3.1). Use it in `renderEditCell` and a custom editor looks like the built-in ones: it fills the cell, has no border, background or focus ring of its own (the editing cell's outline shows), and uses the cell's font.
+
+```tsx
+import { useEffect, useRef, useState } from 'react';
+import { Input } from '@opencorestack/opengridx';
+import type { GridColDef, GridRenderEditCellParams } from '@opencorestack/opengridx';
+
+const isAmount = (t: string) => t.trim() !== '' && Number(t) >= 0;
+
+function PriceEditor({ value, onValueChange, onCommit, onCancel }: GridRenderEditCellParams) {
+  const [text, setText] = useState(String(value ?? ''));
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
+  const valid = isAmount(text);
+
+  return (
+    <Input
+      ref={ref}              // reaches the <input>, on React 18 and 19
+      variant="cell"
+      startAdornment="$"     // or endAdornment="kg"
+      error={!valid}         // red inner edge + aria-invalid
+      inputMode="decimal"
+      value={text}
+      onChange={e => {
+        setText(e.target.value);
+        if (isAmount(e.target.value)) onValueChange(Number(e.target.value));
+      }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') { e.stopPropagation(); if (valid) onCommit(); }
+        if (e.key === 'Escape') { e.stopPropagation(); onCancel(); }
+      }}
+      onBlur={() => (valid ? onCommit() : onCancel())}
+    />
+  );
+}
+
+const columns: GridColDef[] = [
+  { field: 'price', type: 'number', editable: true, renderEditCell: params => <PriceEditor {...params} /> },
+];
+```
+
+- `ref` reaches the `<input>` (focus it and select its text when the editor opens, as the built-in editors do).
+- `inputClassName` adds classes to the `<input>`; `className` goes to the `.ogx-input-wrapper` div around it.
+- `error` adds `ogx-input-wrapper--error` (an inset `--ogx-color-error` edge in the cell variant, drawn over the cell outline) and `aria-invalid="true"`.
+- Stop propagation of the Enter / Escape you handle yourself, or the grid also commits / cancels when they bubble out.
+- The grid's boolean editor is the exported `Checkbox`; its `<input>` is visually hidden and `ref` / `inputClassName` reach it.
+
+Live example: the *Custom Cell Editors* demo page (`/custom-editors`).
+
 ### Computed columns (`valueGetter` + `valueSetter`)
 An editable column with a `valueGetter` edits the derived value. Give it a `valueSetter` so the commit can write the value back to the fields it comes from; otherwise the commit writes `row[field]`, which the `valueGetter` ignores, and a development warning is logged.
 
