@@ -18,6 +18,8 @@ import type { GridVisibleRow } from '../../hooks/core/useGridVisibleRows';
 import type { UseRowReorderReturn } from '../../hooks/useRowReorder';
 import type { GridEditingState } from '../../hooks/features/useGridEditing';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
+import type { GridDisplayCellRange } from '../../hooks/core/useGridCellSelection';
+import { getRowCellRange } from '../../utils/cellSelection';
 
 interface RowEditingHandlers {
     editingCell: GridEditingState['editingCell'];
@@ -71,6 +73,10 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     /** Added to a row's rowIndex to get its `aria-rowindex` (header rows and earlier pages included). */
     ariaRowIndexOffset?: number;
     columnIndexMap?: Map<string, number>;
+    /** The selected cell range to draw (`cellSelection`), in renderable-row / data-column indices. */
+    cellRange?: GridDisplayCellRange | null;
+    /** The grid has row spans: rows tell their cells how far the range bottom is. */
+    cellRangeHasRowSpan?: boolean;
 }
 
 export function GridVirtualRows<R extends GridRowModel>({
@@ -115,6 +121,8 @@ export function GridVirtualRows<R extends GridRowModel>({
     loadingOverlay,
     ariaRowIndexOffset,
     columnIndexMap,
+    cellRange,
+    cellRangeHasRowSpan = false,
 }: GridVirtualRowsProps<R>) {
     const skeletonColumns: GridColDef<R>[] = baseColumns.length > 0
         ? baseColumns
@@ -206,6 +214,7 @@ export function GridVirtualRows<R extends GridRowModel>({
                             rowSpanningCaches={rowSpanningCaches}
                             rowHeight={rowHeight}
                             rowMeta={rowMetaMap.get(id)}
+                            cellRange={getRowCellRange(cellRange, actualIndex, cellRangeHasRowSpan)}
                         />
                     ))
                 )}

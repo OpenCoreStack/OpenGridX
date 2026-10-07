@@ -51,6 +51,10 @@ export function useGridRowInteractions<R extends GridRowModel>(
         selectableRowIds,
     });
 
+    // Depend on the selection callbacks, not the object around them (a new one each render), so the
+    // handlers keep their identity and memoised rows do not re-render.
+    const { clickRow, toggleRow } = rowSelection;
+
     const handleRowClick = useCallback((rowParams: GridRowParams<R>) => {
         const { id } = rowParams;
 
@@ -66,16 +70,16 @@ export function useGridRowInteractions<R extends GridRowModel>(
 
         // The pivot Grand Total is clickable (onRowClick) but, like any synthetic row, not selectable.
         if (!disableRowSelectionOnClick && !isSyntheticRowId(id, rowMetaMap)) {
-            rowSelection.clickRow(id);
+            clickRow(id);
         }
-    }, [isHierarchyEnabled, activeHierarchyHandlers, onRowClick, rowMetaMap, disableRowSelectionOnClick, rowSelection]);
+    }, [isHierarchyEnabled, activeHierarchyHandlers, onRowClick, rowMetaMap, disableRowSelectionOnClick, clickRow]);
 
     // Honors disableMultipleRowSelection like a row click does. Synthetic group / subtotal rows
     // and the pivot Grand Total are not data: their ids never enter the selection model.
     const handleSelectionChange = useCallback((rowId: GridRowId, isSelected: boolean) => {
         if (isSyntheticRowId(rowId, rowMetaMap)) return;
-        rowSelection.toggleRow(rowId, isSelected);
-    }, [rowMetaMap, rowSelection]);
+        toggleRow(rowId, isSelected);
+    }, [rowMetaMap, toggleRow]);
 
     return { rowSelection, handleRowClick, handleSelectionChange };
 }

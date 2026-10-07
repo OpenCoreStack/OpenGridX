@@ -1,0 +1,31 @@
+/* Status bar of showCellSelectionStats (v3.3). The area keeps its height while no range is selected. */
+.ogx__cell-selection-stats-area {
+  flex: 0 0 auto;
+  min-height: 32px;
+  border-top: var(--ogx-border-width-thin, 1px) solid var(--ogx-grid-border-color);
+  background: var(--ogx-grid-header-background);
+  color: var(--ogx-grid-header-text);
+  font-size: var(--ogx-font-size-sm);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  box-sizing: border-box;
+}
+.ogx__cell-selection-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--ogx-spacing-lg, 16px);
+  padding: 4px 16px;
+}
+.ogx__cell-selection-stat {
+  display: inline-flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+.ogx__cell-selection-stat-label {
+  opacity: 0.75;
+}
+.ogx__cell-selection-stat-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

@@ -14,6 +14,7 @@ import {
     isSystemField,
 } from '../../utils/focus';
 import type { FocusedCell } from '../../utils/focus';
+import { isRangeColumnField } from '../../utils/cellSelection';
 import type { GridRowModel, GridRowId, GridColDef, GridCellParams, GridSortItem, GridSortDirection, GridRowParams, GridRowMeta } from '../../types';
 import type { GridEditingState } from '../features/useGridEditing';
 
@@ -93,6 +94,21 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
      * Navigation skips the cells of the focused span and lands on span origins.
      */
     getSpanOrigin?: (rowId: GridRowId, field: string) => { rowId: GridRowId; field: string } | null;
+    /**
+     * Cell range selection (`cellSelection`), absent while it is off. Shift+navigation keys on a
+     * data cell move the range's head (focus stays on the anchor), Escape collapses the range and
+     * Ctrl/Cmd+A selects every data cell instead of every row.
+     */
+    cellSelection?: GridKeyboardCellSelection;
+}
+
+export interface GridKeyboardCellSelection {
+    /** Returns whether the key was used. */
+    extendSelection: (key: string, withModifier: boolean, pageSize: number, from: FocusedCell) => boolean;
+    /** Returns whether a multi-cell range was collapsed. */
+    collapseSelection: () => boolean;
+    /** Returns whether anything was selected. */
+    selectAllCells: () => boolean;
 }
 
 export interface UseGridKeyboardNavigationReturn {
@@ -170,6 +186,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         pinExpandColumn = true,
         rowHeight,
         getSpanOrigin,
+        cellSelection,
     } = params;
 
     const [storedFocus, setFocusedCell] = useState<FocusedCell | null>(null);
@@ -419,11 +436,19 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
 
         // Tab is not captured outside edit mode: the grid is a single tab stop and Tab leaves it
         // (or reaches focusable content inside cells and detail panels).
+        if (key === 'Escape' && cellSelection?.collapseSelection()) {
+            event.preventDefault();
+            return;
+        }
         if (key === 'Tab' || key === 'Escape') return;
         // Enter and Space activate a control rendered inside a cell.
         if (targetKind === 'control' && (key === 'Enter' || isSpace)) return;
 
         if ((event.ctrlKey || event.metaKey) && (key === 'a' || key === 'A')) {
+            if (cellSelection) {
+                if (cellSelection.selectAllCells()) event.preventDefault();
+                return;
+            }
             if (!rowSelectionEnabled || !multipleRowSelectionEnabled || !handleSelectAll) return;
             event.preventDefault();
             handleSelectAll(true);
@@ -496,6 +521,12 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         const withModifier = event.ctrlKey || event.metaKey;
         const page = pagination ? pageSize : 10;
 
+        // Shift+navigation on a data cell extends the cell range; focus stays on its anchor.
+        if (cellSelection && event.shiftKey && id !== null && isRangeColumnField(field)
+            && cellSelection.extendSelection(key, withModifier, page, focusedCell)) {
+            return;
+        }
+
         const step = (r: number, c: number): { r: number; c: number } => {
             switch (key) {
                 case 'ArrowRight': return c + 1 > lastCol ? { r: r + 1, c: 0 } : { r, c: c + 1 };
@@ -558,6 +589,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         scrollCellIntoView,
         getSpanOrigin,
         getRowId,
+        cellSelection,
     ]);
 
     return {

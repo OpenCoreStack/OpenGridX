@@ -15,6 +15,8 @@ import type {
     GridRowMeta,
 } from '../../types';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
+import type { GridDisplayCellRange } from '../../hooks/core/useGridCellSelection';
+import { getRowCellRange } from '../../utils/cellSelection';
 import type { GridEditingState } from '../../hooks/features/useGridEditing';
 
 interface PinnedRowEditingHandlers {
@@ -58,6 +60,10 @@ export interface GridPinnedRowsProps<R extends GridRowModel> {
     /** `aria-rowindex` of the first of these rows. */
     ariaRowIndexBase?: number;
     columnIndexMap?: Map<string, number>;
+    /** The selected cell range to draw (`cellSelection`), in renderable-row / data-column indices. */
+    cellRange?: GridDisplayCellRange | null;
+    /** The grid has row spans: rows tell their cells how far the range bottom is. */
+    cellRangeHasRowSpan?: boolean;
     /** Pinned rows are edited like any other row. */
     editingHandlers?: PinnedRowEditingHandlers;
     isCellEditable?: (params: GridCellParams<R>) => boolean;
@@ -103,6 +109,8 @@ export function GridPinnedRows<R extends GridRowModel>({
     editingHandlers,
     isCellEditable,
     rowReordering = false,
+    cellRange,
+    cellRangeHasRowSpan = false,
 }: GridPinnedRowsProps<R>) {
     if (rows.length === 0) return null;
 
@@ -148,6 +156,7 @@ export function GridPinnedRows<R extends GridRowModel>({
                     onEditCellValueChange={editingHandlers?.setEditCellValue}
                     isCellEditable={isCellEditable}
                     rowReordering={rowReordering}
+                    cellRange={getRowCellRange(cellRange, rowIndex, cellRangeHasRowSpan)}
                 />
                 );
             })}

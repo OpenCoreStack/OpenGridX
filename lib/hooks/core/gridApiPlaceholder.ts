@@ -32,5 +32,11 @@ export function createGridApiPlaceholder<R extends GridValidRowModel = GridRowMo
         autosizeColumn: noop,
         autosizeColumns: noop,
         copySelectedRows: () => Promise.resolve(),
+        getCellSelectionModel: () => [],
+        setCellSelectionModel: noop,
+        selectCellRange: noop,
+        clearCellSelection: noop,
+        getSelectedCells: () => [],
+        copySelectedCells: () => Promise.resolve(),
     };
 }

@@ -159,6 +159,10 @@ export interface GridThemeGrid {
   rowSelectedBackground?: string;
   rowSelectedHoverBackground?: string;
     cellFocusBorder?: string;
+    /** Tint over a selected cell range (`--ogx-range-background`). Default: the primary colour at 12%. @since v3.3 */
+    rangeBackground?: string;
+    /** Outline of a selected cell range (`--ogx-range-border`). Default: the primary colour. @since v3.3 */
+    rangeBorder?: string;
     pinnedLeftShadow?: string;
   pinnedRightShadow?: string;
     checkboxBg?: string;

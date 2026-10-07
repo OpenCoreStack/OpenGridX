@@ -9,6 +9,8 @@ const primaryDerived: Record<string, string> = {
     '--ogx-grid-row-selected-background': 'var(--ogx-color-primary-light)',
     '--ogx-grid-row-selected-hover-background': 'color-mix(in srgb, var(--ogx-color-primary) 14%, var(--ogx-color-primary-light))',
     '--ogx-grid-cell-focus-border': 'var(--ogx-color-primary)',
+    '--ogx-range-background': 'color-mix(in srgb, var(--ogx-color-primary) 12%, transparent)',
+    '--ogx-range-border': 'var(--ogx-color-primary)',
     '--ogx-toolbar-btn-primary-bg': 'var(--ogx-color-primary)',
     '--ogx-toolbar-btn-primary-hover': 'var(--ogx-color-primary-dark)',
     '--ogx-toolbar-input-focus-border': 'var(--ogx-color-primary)',
@@ -281,6 +283,8 @@ function themeToCSS(theme: GridTheme): Record<string, string> {
         set('--ogx-grid-row-selected-background', g.rowSelectedBackground);
         set('--ogx-grid-row-selected-hover-background', g.rowSelectedHoverBackground);
         set('--ogx-grid-cell-focus-border', g.cellFocusBorder);
+        set('--ogx-range-background', g.rangeBackground);
+        set('--ogx-range-border', g.rangeBorder);
         set('--ogx-grid-pinned-left-shadow', g.pinnedLeftShadow);
         set('--ogx-grid-pinned-right-shadow', g.pinnedRightShadow);
         set('--ogx-checkbox-bg', g.checkboxBg);

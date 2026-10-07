@@ -13,6 +13,8 @@ import { tryGetCellValue } from '../../utils/values';
 import { isSyntheticRowId } from '../../utils/syntheticRows';
 import { getRenderedColumnWidth } from '../../utils/columnWidth';
 import { DEFAULT_DETAIL_PANEL_HEIGHT } from '../../utils/detailPanel';
+import { GROUPING_COLUMN_FIELD, getCellRangeFlags, isSameRowCellRange } from '../../utils/cellSelection';
+import type { GridRowCellRange } from '../../utils/cellSelection';
 
 /** Sticky system cells (drag handle, detail toggle, checkbox) sit above scrolled, spanned and focused cells. */
 const SYSTEM_CELL_Z_INDEX = 12;
@@ -96,9 +98,14 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
     columnIndexMap?: Map<string, number>;
     /** 1-based `aria-rowindex` of this row in the whole grid (header rows included). Defaults to `rowIndex + 2`. */
     ariaRowIndex?: number;
+    /**
+     * The part of the selected cell range (`cellSelection`) in this row, or `null` / absent when the
+     * row is outside it. @since v3.3
+     */
+    cellRange?: GridRowCellRange | null;
 }
 
-export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
+function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     const {
         row,
         rowId: rowIdProp,
@@ -144,6 +151,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         rowMeta,
         columnIndexMap,
         ariaRowIndex,
+        cellRange,
     } = props;
 
     const id = rowIdProp ?? row.id;
@@ -437,6 +445,14 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         || (pinnedPosition === 'right' && colDef.field === pinnedEdges.firstRight);
                     const rowSpan = rowSpanningCaches?.spannedCells[id]?.[colDef.field];
                     const isHiddenByRowSpan = rowSpanningCaches?.hiddenCells[id]?.[colDef.field] || false;
+                    const rangeFlags = cellRange && !isHiddenByRowSpan && colDef.field !== GROUPING_COLUMN_FIELD
+                        ? getCellRangeFlags(
+                            cellRange,
+                            colIndex,
+                            colSpanInfo && !colSpanInfo.spannedByColSpan ? colSpanInfo.cellProps.colSpan : 1,
+                            rowSpan ?? 1,
+                        )
+                        : undefined;
 
                     return (
                         <Cell
@@ -468,6 +484,7 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             isHiddenByRowSpan={isHiddenByRowSpan}
                             rowMeta={rowMeta}
                             valueError={valueError}
+                            rangeFlags={rangeFlags}
                         />
                     );
                 })}
@@ -490,3 +507,23 @@ export function Row<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
         </>
     );
 }
+
+/**
+ * Shallow prop comparison, except `cellRange`, which is compared by value: a row inside a cell range
+ * gets a new range object on every render, but only re-renders when its part of the range changes.
+ */
+function areRowPropsEqual<R extends GridRowModel>(prev: RowProps<R>, next: RowProps<R>): boolean {
+    const prevKeys = Object.keys(prev) as (keyof RowProps<R>)[];
+    if (prevKeys.length !== Object.keys(next).length) return false;
+    for (const key of prevKeys) {
+        if (key === 'cellRange') {
+            if (!isSameRowCellRange(prev.cellRange, next.cellRange)) return false;
+        } else if (!Object.is(prev[key], next[key])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/** One grid row. Memoised: rows whose props did not change (for example outside a dragged cell range) do not re-render. */
+export const Row = React.memo(RowImpl, areRowPropsEqual) as typeof RowImpl;

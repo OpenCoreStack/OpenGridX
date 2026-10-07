@@ -7,6 +7,7 @@ import { GridEditInputCell } from './GridEditInputCell';
 import { CellErrorBoundary } from './CellErrorBoundary';
 import { formatValueByType } from '../../utils/values';
 import { attempt } from '../../utils/attempt';
+import { RANGE_BOTTOM, RANGE_CELL, RANGE_LEFT, RANGE_RIGHT, RANGE_TOP } from '../../utils/cellSelection';
 
 export interface CellProps<R extends GridRowModel = GridRowModel> {
     onCellClick?: (params: GridCellParams<R>) => void;
@@ -47,6 +48,11 @@ export interface CellProps<R extends GridRowModel = GridRowModel> {
     rowMeta?: GridRowMeta;
     /** The error the column's valueGetter threw for this cell (computed by Row); shown as a cell error. */
     valueError?: unknown;
+    /**
+     * Place of the cell in the selected cell range (`cellSelection`), as bit flags: in range 1, top
+     * edge 2, bottom 4, left 8, right 16. 0 or absent: not in a range. @since v3.3
+     */
+    rangeFlags?: number;
 }
 
 interface FormattedValue {
@@ -83,7 +89,8 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         rowSpan: rowSpanProp,
         isHiddenByRowSpan,
         rowMeta,
-        valueError
+        valueError,
+        rangeFlags = 0,
     } = props;
 
     // All hooks must come before any early returns (Rules of Hooks)
@@ -223,6 +230,11 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
         isPinned && isPinnedEdge && `ogx__cell--pinned-${pinnedPosition}-${pinnedPosition === 'left' ? 'last' : 'first'}`,
         isEditing && 'ogx__cell--editing',
         (rowSpanProp && rowSpanProp > 1) && 'ogx__cell--spanned',
+        (rangeFlags & RANGE_CELL) !== 0 && 'ogx__cell--range',
+        (rangeFlags & RANGE_TOP) !== 0 && 'ogx__cell--range-top',
+        (rangeFlags & RANGE_BOTTOM) !== 0 && 'ogx__cell--range-bottom',
+        (rangeFlags & RANGE_LEFT) !== 0 && 'ogx__cell--range-left',
+        (rangeFlags & RANGE_RIGHT) !== 0 && 'ogx__cell--range-right',
         resolvedCellClassName
     ].filter(Boolean).join(' ');
 
@@ -265,6 +277,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
             data-colindex={colIndex}
             {...(colSpan > 1 ? { 'aria-colspan': colSpan } : {})}
             {...(rowSpan > 1 ? { 'aria-rowspan': rowSpan } : {})}
+            {...((rangeFlags & RANGE_CELL) !== 0 ? { 'aria-selected': true } : {})}
         >
             <div className="ogx__cell-content">
                 {isEditing && (onCellValueChange || onValueChange) && onEditStop ? (

@@ -21,6 +21,8 @@ export const darkTheme: GridTheme = {
     rowSelectedBackground: '#1e3a5f',  
     rowSelectedHoverBackground: '#1d4ed8', 
     cellFocusBorder: '#60a5fa',
+    rangeBackground: 'rgba(96, 165, 250, 0.18)',
+    rangeBorder: '#60a5fa',
     checkboxBg: '#1e293b',            
     checkboxBorder: '#64748b',         
   },
@@ -92,6 +94,8 @@ export const roseTheme: GridTheme = {
     rowSelectedBackground: '#ffe4e6',
     rowSelectedHoverBackground: '#fecdd3',
     cellFocusBorder: '#e11d48',
+    rangeBackground: 'rgba(225, 29, 72, 0.10)',
+    rangeBorder: '#e11d48',
   },
 };
 
@@ -110,6 +114,8 @@ export const emeraldTheme: GridTheme = {
     rowSelectedBackground: '#d1fae5',
     rowSelectedHoverBackground: '#a7f3d0',
     cellFocusBorder: '#059669',
+    rangeBackground: 'rgba(5, 150, 105, 0.12)',
+    rangeBorder: '#059669',
   },
 };
 
@@ -128,6 +134,8 @@ export const amberTheme: GridTheme = {
     rowSelectedBackground: '#fef3c7',
     rowSelectedHoverBackground: '#fde68a',
     cellFocusBorder: '#d97706',
+    rangeBackground: 'rgba(217, 119, 6, 0.12)',
+    rangeBorder: '#d97706',
   },
 };
 

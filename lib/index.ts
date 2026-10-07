@@ -21,6 +21,8 @@ export type { GridToolbarProps, ToolbarButtonRenderProps, ToolbarQuickFilterRend
 export { GridTooltip } from './components/Tooltip/Tooltip';
 export type { GridTooltipProps } from './components/Tooltip/Tooltip';
 export { ColumnVisibilityPanel } from './components/ColumnVisibilityPanel/ColumnVisibilityPanel';
+export { CellSelectionStats } from './components/CellSelectionStats/CellSelectionStats';
+export type { CellSelectionStatsProps } from './components/CellSelectionStats/CellSelectionStats';
 export type { ColumnVisibilityPanelProps } from './components/ColumnVisibilityPanel/ColumnVisibilityPanel';
 
 export { useGridApiRef } from './hooks/core/useGridApiRef';
@@ -99,6 +101,13 @@ export type {
     GridPinnedPosition,
     GridColumnVisibilityModel,
     GridRowSelectionModel,
+    GridCellCoordinates,
+    GridCellRange,
+    GridCellSelectionModel,
+    GridCellSelectionReason,
+    GridCellSelectionChangeDetails,
+    GridSelectedCell,
+    GridCellSelectionStatsSlotProps,
     GridColumnOrder,
     GridColumnOrderChangeParams,
     GridRowOrderChangeParams,

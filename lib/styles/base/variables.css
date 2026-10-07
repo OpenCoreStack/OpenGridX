@@ -93,7 +93,10 @@
   --ogx-grid-row-selected-background: var(--ogx-color-primary-light);
   --ogx-grid-row-selected-hover-background: #dbeafe; 
   --ogx-grid-cell-focus-border: var(--ogx-color-primary);
-  --ogx-grid-pinned-left-shadow: 4px 0 24px -4px rgba(0, 0, 0, 0.05); 
+  /* Cell range selection (cellSelection, v3.3): tint over the range and its outline. */
+  --ogx-range-background: rgba(59, 130, 246, 0.12);
+  --ogx-range-border: var(--ogx-color-primary);
+  --ogx-grid-pinned-left-shadow: 4px 0 24px -4px rgba(0, 0, 0, 0.05);
   --ogx-grid-pinned-right-shadow: -4px 0 24px -4px rgba(0, 0, 0, 0.05);
   --ogx-skeleton-base: #f0f0f0;
   --ogx-skeleton-highlight: #f8f8f8;
@@ -142,6 +145,8 @@
     --ogx-grid-row-selected-background: #1e3a5f;
     --ogx-grid-row-selected-hover-background: #1d4ed8;
     --ogx-grid-cell-focus-border: #60a5fa;
+    --ogx-range-background: rgba(96, 165, 250, 0.18);
+    --ogx-range-border: #60a5fa;
     --ogx-checkbox-bg: #1e293b;
     --ogx-checkbox-border: #64748b;
     --ogx-grid-pinned-left-shadow: 4px 0 24px -4px rgba(0, 0, 0, 0.3);

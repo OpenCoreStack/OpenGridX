@@ -28,6 +28,36 @@
 .ogx__cell--editable {
   cursor: text;
 }
+/*
+ * Cell range selection (cellSelection, v3.3). The tint is a background image, so it also covers
+ * pinned cells' own background; the outline is an inset box-shadow, so the layout never shifts.
+ */
+.ogx__cell--range {
+  background-image: linear-gradient(var(--ogx-range-background), var(--ogx-range-background));
+  box-shadow:
+    var(--ogx-range-edge-top, 0 0 0 0 transparent),
+    var(--ogx-range-edge-bottom, 0 0 0 0 transparent),
+    var(--ogx-range-edge-left, 0 0 0 0 transparent),
+    var(--ogx-range-edge-right, 0 0 0 0 transparent);
+}
+.ogx__cell--range-top {
+  --ogx-range-edge-top: inset 0 2px 0 0 var(--ogx-range-border);
+}
+.ogx__cell--range-bottom {
+  --ogx-range-edge-bottom: inset 0 -2px 0 0 var(--ogx-range-border);
+}
+.ogx__cell--range-left {
+  --ogx-range-edge-left: inset 2px 0 0 0 var(--ogx-range-border);
+}
+.ogx__cell--range-right {
+  --ogx-range-edge-right: inset -2px 0 0 0 var(--ogx-range-border);
+}
+/* While a pointer drag selects cells, the browser must not select text as well. */
+.ogx--range-dragging,
+.ogx--range-dragging * {
+  -webkit-user-select: none;
+  user-select: none;
+}
 .ogx__cell--editing {
   padding: 0;
   overflow: visible;

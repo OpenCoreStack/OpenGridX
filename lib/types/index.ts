@@ -664,6 +664,68 @@ export interface GridPaginationModel {
 
 export type GridRowSelectionModel = GridRowId[];
 
+/** One cell, addressed by its row id and column field. @since v3.3 */
+export interface GridCellCoordinates {
+  id: GridRowId;
+  field: string;
+}
+
+/**
+ * A rectangle of cells between two corners. `anchor` is the active cell: it keeps focus, is the cell
+ * an edit starts in, and stays put while the range is extended. `head` is the corner that moves with
+ * Shift+arrows or the pointer, and the one scrolled into view. A single cell has `anchor` equal to `head`.
+ * @since v3.3
+ */
+export interface GridCellRange {
+  anchor: GridCellCoordinates;
+  head: GridCellCoordinates;
+}
+
+/**
+ * The cell selection: zero or one range in 3.3 (the array form leaves room for several ranges later).
+ * Corners are ids and fields, so the rectangle follows its corner rows through sorting and filtering.
+ * @since v3.3
+ */
+export type GridCellSelectionModel = readonly GridCellRange[];
+
+/** What changed the cell selection. @since v3.3 */
+export type GridCellSelectionReason = 'pointer' | 'keyboard' | 'selectAll' | 'api' | 'clear' | 'dataChange';
+
+/** Second argument of `onCellSelectionModelChange`. @since v3.3 */
+export interface GridCellSelectionChangeDetails {
+  reason: GridCellSelectionReason;
+}
+
+/** One cell of the selected range, as returned by `apiRef.getSelectedCells()`. @since v3.3 */
+export interface GridSelectedCell {
+  id: GridRowId;
+  field: string;
+  /** The cell's value, read through the column's `valueGetter`. */
+  value: unknown;
+}
+
+/**
+ * Props the grid passes to `slots.cellSelectionStats` (the status bar of `showCellSelectionStats`),
+ * before `slotProps.cellSelectionStats` is merged over them. Rendered only while more than one cell
+ * is selected.
+ * @since v3.3
+ */
+export interface GridCellSelectionStatsSlotProps {
+  apiRef: React.MutableRefObject<GridApi>;
+  /** Cells in the rectangle (rows × columns), synthetic rows and span-covered positions included. */
+  cellCount: number;
+  rowCount: number;
+  columnCount: number;
+  /** Non-empty cells of data rows. */
+  count: number;
+  /** Cells holding a number. */
+  numericCount: number;
+  /** Sum of the numeric cells, or `null` when there are none. */
+  sum: number | null;
+  /** Average of the numeric cells, or `null` when there are none. */
+  average: number | null;
+}
+
 export interface GridPinnedColumns {
   left?: string[];
   right?: string[];
@@ -751,6 +813,12 @@ export interface GridLocaleText {
     paginationPage?: (page: number, pageCount: number) => string;
     /** Empty-state label. When set, overrides the `noRowsLabel` prop on DataGrid. Default: `"No Data"` */
     noRowsLabel?: string;
+    /**
+     * Screen-reader announcement after the cell range changes (`cellSelection`). Receives (cells, rows,
+     * columns). Default: `` (c, r, col) => `${c} cells selected, ${r} rows by ${col} columns` `` (singular for 1).
+     * @since v3.3
+     */
+    cellSelectionAnnouncement?: (cellCount: number, rowCount: number, columnCount: number) => string;
 }
 
 /**
@@ -852,6 +920,24 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
    * the shortcut. `apiRef.current.copySelectedRows()` still works. Default: false.
    */
   disableClipboardCopy?: boolean;
+
+  /**
+   * Lets users select a rectangle of cells (drag, Shift+click, Shift+arrows, Ctrl/Cmd+A) and copy it
+   * with Ctrl/Cmd+C as tab-separated text. While on, Ctrl/Cmd+C copies the cell range (the focused
+   * cell at minimum) instead of the selected rows; `apiRef.copySelectedRows()` still copies rows.
+   * Default: false. @since v3.3
+   */
+  cellSelection?: boolean;
+  /** Controlled cell selection (zero or one range). Needs `cellSelection`. @since v3.3 */
+  cellSelectionModel?: GridCellSelectionModel;
+  /** Fired when the cell selection changes, with what changed it. @since v3.3 */
+  onCellSelectionModelChange?: (model: GridCellSelectionModel, details: GridCellSelectionChangeDetails) => void;
+  /**
+   * Shows a status bar under the grid with the count of non-empty cells and the sum and average of the
+   * numeric cells in the range, while more than one cell is selected. Replaceable through
+   * `slots.cellSelectionStats`. Needs `cellSelection`. Default: false. @since v3.3
+   */
+  showCellSelectionStats?: boolean;
 
   /** Loading state. With no rows the body shows skeleton rows (or `slots.loadingOverlay`); with rows, they stay and a progress bar (or `slots.loadingOverlay`) is shown over them. */
   loading?: boolean;
@@ -1005,6 +1091,11 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
      * Receives `GridFooterSlotProps` (plus `slotProps.footer`).
      */
     footer?: React.ComponentType<GridFooterSlotProps & Record<string, unknown>>;
+    /**
+     * Replaces the status bar of `showCellSelectionStats`. Receives `GridCellSelectionStatsSlotProps`
+     * (plus `slotProps.cellSelectionStats`). @since v3.3
+     */
+    cellSelectionStats?: React.ComponentType<GridCellSelectionStatsSlotProps & Record<string, unknown>>;
   };
   /** Properties passed directly to custom slots. */
   slotProps?: {
@@ -1020,6 +1111,8 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
     loadingOverlay?: GridOverlaySlotProps;
     /** Merged over the `GridFooterSlotProps` the grid passes to the footer slot. */
     footer?: Partial<GridFooterSlotProps> & Record<string, unknown>;
+    /** Merged over the `GridCellSelectionStatsSlotProps` the grid passes to the status bar. */
+    cellSelectionStats?: Partial<GridCellSelectionStatsSlotProps> & Record<string, unknown>;
   };
 
   /** When true, renders the grid as a single-column list of cards. Perfect for mobile/responsive views. */
@@ -1211,4 +1304,28 @@ export interface GridApi<R extends GridValidRowModel = GridRowModel> {
    * in which case nothing is written) and rejects when the clipboard write fails.
    */
   copySelectedRows: () => Promise<void>;
+
+  /** The cell selection (`[]` when `cellSelection` is off or nothing is selected). @since v3.3 */
+  getCellSelectionModel: () => GridCellSelectionModel;
+  /**
+   * Replaces the cell selection (only the first range is kept) and moves focus to its anchor.
+   * Does nothing while `cellSelection` is off. @since v3.3
+   */
+  setCellSelectionModel: (model: GridCellSelectionModel) => void;
+  /** Selects the rectangle between two cells; `anchor` becomes the active cell. @since v3.3 */
+  selectCellRange: (anchor: GridCellCoordinates, head: GridCellCoordinates) => void;
+  /** Empties the cell selection. Focus stays where it is. @since v3.3 */
+  clearCellSelection: () => void;
+  /**
+   * Cells of the current range in display order (row by row, columns in screen order), values read
+   * through the column's `valueGetter`. Synthetic rows (group headers, subtotals, tree auto-parents, the
+   * pivot Grand Total) and positions covered by a span are left out. @since v3.3
+   */
+  getSelectedCells: () => GridSelectedCell[];
+  /**
+   * Copies the cell range (the focused cell when nothing is selected) as tab-separated text, formatted
+   * the way the cells show it, with no header line. Resolves without writing when there is nothing to
+   * copy; rejects when the clipboard write fails. @since v3.3
+   */
+  copySelectedCells: () => Promise<void>;
 }

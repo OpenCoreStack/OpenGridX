@@ -7,6 +7,9 @@ import type {
     GridPaginationModel,
     GridAggregationModel,
     GridPivotModel,
+    GridCellSelectionModel,
+    GridCellSelectionChangeDetails,
+    GridCellSelectionReason,
 } from '../../types';
 import type { GridInitialState, GridDensityState } from '../../state/types';
 
@@ -42,6 +45,9 @@ export interface UseGridControlledStateParams {
     onRowSelectionModelChange?: (model: GridRowId[]) => void;
 
     density?: GridDensity;
+
+    cellSelectionModel?: GridCellSelectionModel;
+    onCellSelectionModelChange?: (model: GridCellSelectionModel, details: GridCellSelectionChangeDetails) => void;
 }
 
 export interface UseGridControlledStateReturn {
@@ -94,7 +100,16 @@ export interface UseGridControlledStateReturn {
 
     // density (prop, else initialState.density, else 'standard')
     density: GridDensity;
+
+    // cell selection
+    cellSelectionModel: GridCellSelectionModel;
+    /** Sets the internal model when uncontrolled and fires onCellSelectionModelChange. */
+    handleCellSelectionModelChange: (model: GridCellSelectionModel, reason: GridCellSelectionReason) => void;
+    /** Like `getPendingRowSelectionModel`, for the cell selection. Stable identity. */
+    getPendingCellSelectionModel: () => GridCellSelectionModel | null;
 }
+
+const EMPTY_CELL_SELECTION_MODEL: GridCellSelectionModel = [];
 
 const EMPTY_PIVOT_MODEL: GridPivotModel = { rowFields: [], columnFields: [], valueFields: [] };
 const DEFAULT_PAGE_SIZE = 100;
@@ -128,6 +143,8 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange,
         density: propDensity,
+        cellSelectionModel: propCellSelectionModel,
+        onCellSelectionModelChange,
     } = params;
 
     // ── Sort ─────────────────────────────────────────────────────────────────
@@ -248,6 +265,23 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
     const [initialDensity] = useState<GridDensity>(() => initialState?.density?.density ?? 'standard');
     const density = propDensity ?? initialDensity;
 
+    // ── Cell selection ───────────────────────────────────────────────────────
+    const isCellSelectionControlled = propCellSelectionModel !== undefined;
+    const [internalCellSelectionModel, setInternalCellSelectionModel] = useState<GridCellSelectionModel>(EMPTY_CELL_SELECTION_MODEL);
+    const cellSelectionModel = isCellSelectionControlled ? propCellSelectionModel : internalCellSelectionModel;
+
+    const pendingCellSelectionRef = useRef<GridCellSelectionModel | null>(null);
+    useLayoutEffect(() => {
+        pendingCellSelectionRef.current = null;
+    });
+    const getPendingCellSelectionModel = useCallback(() => pendingCellSelectionRef.current, []);
+
+    const handleCellSelectionModelChange = useCallback((model: GridCellSelectionModel, reason: GridCellSelectionReason) => {
+        pendingCellSelectionRef.current = model;
+        if (!isCellSelectionControlled) setInternalCellSelectionModel(model);
+        onCellSelectionModelChange?.(model, { reason });
+    }, [isCellSelectionControlled, onCellSelectionModelChange]);
+
     return {
         sortModel: sortModel as GridSortItem[],
         isSortControlled,
@@ -281,5 +315,9 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
         getPendingRowSelectionModel,
 
         density,
+
+        cellSelectionModel,
+        handleCellSelectionModelChange,
+        getPendingCellSelectionModel,
     };
 }

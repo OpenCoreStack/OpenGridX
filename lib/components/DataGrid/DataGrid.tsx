@@ -52,6 +52,9 @@ import { useGridAggregationApi } from '../../hooks/core/useGridAggregationApi';
 import { useGridClipboardApi } from '../../hooks/core/useGridClipboardApi';
 import { useGridScrollToIndexesApi } from '../../hooks/core/useGridScrollToIndexesApi';
 import { useGridColumnAutosize } from '../../hooks/core/useGridColumnAutosize';
+import { useGridCellSelection } from '../../hooks/core/useGridCellSelection';
+import { useGridCellSelectionApi } from '../../hooks/core/useGridCellSelectionApi';
+import { GridCellSelectionStatsArea } from '../CellSelectionStats/GridCellSelectionStatsArea';
 import { useGridSortHandlers, useGridColumnMenuHandlers } from '../../hooks/core/useGridHeaderHandlers';
 import { useGridKeyboardMode, useGridPointerFocusHandlers } from '../../hooks/core/useGridFocusHandlers';
 import { getPaginationRowCount, pickPaginationLocaleText } from '../../utils/pagination';
@@ -83,6 +86,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         disableRowSelectionOnClick = false,
         disableMultipleRowSelection = false,
         disableClipboardCopy = false,
+        cellSelection: cellSelectionProp = false,
+        cellSelectionModel: propCellSelectionModel,
+        onCellSelectionModelChange,
+        showCellSelectionStats = false,
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange: propOnRowSelectionModelChange,
         onRowClick,
@@ -185,6 +192,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange: propOnRowSelectionModelChange,
         density,
+        cellSelectionModel: propCellSelectionModel,
+        onCellSelectionModelChange,
     });
 
     const {
@@ -494,12 +503,34 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         [layout.leftPinnedCols, layout.unpinnedColsWithWidth, layout.rightPinnedCols]
     );
 
+    // Cell range selection (cellSelection): the range, pointer drag and Shift-keys, copy text, totals.
+    const cellSelection = useGridCellSelection<R>({
+        enabled: cellSelectionProp && !listView,
+        model: controlledState.cellSelectionModel,
+        onModelChange: controlledState.handleCellSelectionModelChange,
+        getPendingModel: controlledState.getPendingCellSelectionModel,
+        allRenderableRows,
+        getRowId: getRowIdOf,
+        navigationColumns,
+        columnIndexMap,
+        spanning,
+        rowMetaMap,
+        layout,
+        rowHeight: effectiveRowHeight,
+        pinnedTopRowCount: pinnedTopRows.length,
+        viewportRef,
+        containerRef,
+        localeText,
+        showStats: showCellSelectionStats,
+    });
+
     useGridClipboardApi({
         apiRef,
         columns: renderedDataColumns as unknown as GridColDef[],
         getRowId: getRowIdOf,
         containerRef,
         disableKeyboardShortcut: disableClipboardCopy,
+        getCellRangeCopyText: cellSelection.enabled ? cellSelection.getCopyText : undefined,
     });
     useGridScrollToIndexesApi<R>({ apiRef, viewportRef, layout, rowHeight: effectiveRowHeight });
     const handleColumnAutosize = useGridColumnAutosize<R>({ apiRef, containerRef, columns: orderedColumns, onColumnResize: handleColumnResize });
@@ -542,11 +573,23 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         pinCheckboxColumn,
         pinExpandColumn,
         rowHeight: effectiveRowHeight,
+        cellSelection: cellSelection.keyboard,
     });
 
     const { handleCellClick, handleHeaderClick } = useGridPointerFocusHandlers<R>({
         ensureGridFocus, setKeyboardMode, setFocusedCell, getRowId: getRowIdOf, onCellClick,
     });
+    // Keeps the range anchor and the focused cell together; installs the cell selection API.
+    useGridCellSelectionApi({
+        apiRef,
+        selection: cellSelection,
+        model: controlledState.cellSelectionModel,
+        getPendingModel: controlledState.getPendingCellSelectionModel,
+        focusedCell,
+        setFocusedCell,
+        containerRef,
+    });
+
     const { handleHideColumn, handlePinColumn } = useGridColumnMenuHandlers({
         columnVisibilityModel,
         onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
@@ -659,6 +702,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowSpanningCaches: spanning.rowSpanningCaches,
         rowHeight: effectiveRowHeight,
         rowMetaMap,
+        cellRange: cellSelection.displayRange,
+        cellRangeHasRowSpan: cellSelection.hasRowSpan,
     };
 
     return (
@@ -747,11 +792,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                     aria-label={ariaLabel || 'Data grid'}
                     aria-rowcount={ariaRows.rowCount}
                     aria-colcount={navigationColumns.length}
-                    aria-multiselectable={rowSelectionEnabled && !disableMultipleRowSelection}
+                    aria-multiselectable={(rowSelectionEnabled && !disableMultipleRowSelection) || cellSelection.enabled}
                     aria-busy={effectiveLoading}
                     tabIndex={viewportTabIndex}
                     onKeyDownCapture={() => { setKeyboardMode(true); }}
                     onMouseDownCapture={handleMouseDownCapture}
+                    onMouseDown={cellSelection.handleMouseDown}
+                    onClickCapture={cellSelection.handleClickCapture}
                     onKeyDown={handleKeyDown}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
@@ -884,6 +931,15 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 </div>
             )}
 
+            {cellSelection.enabled && showCellSelectionStats && (
+                <GridCellSelectionStatsArea
+                    stats={cellSelection.stats}
+                    apiRef={gridData.apiRef}
+                    slot={slots?.cellSelectionStats}
+                    slotProps={slotProps?.cellSelectionStats}
+                />
+            )}
+
             {FooterSlot && (
                 <FooterSlot
                     apiRef={gridData.apiRef}
@@ -918,6 +974,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 filteredRowCount={filteredRows.length}
                 dataRowCount={dataRows.length}
                 filterModel={filterModel}
+                cellSelectionAnnouncement={cellSelection.announcement}
             />
 
             {showLoadingOverRows && (

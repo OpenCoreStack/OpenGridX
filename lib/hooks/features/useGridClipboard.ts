@@ -27,6 +27,11 @@ export interface UseGridClipboardProps {
   getRootElement?: () => HTMLElement | null;
   /** Turns the Ctrl/Cmd+C shortcut off. `copySelectedRows` still works. */
   disableKeyboardShortcut?: boolean;
+  /**
+   * When given, Ctrl/Cmd+C writes the text it returns instead of copying the selected rows, and
+   * writes nothing when it returns `null` (cell range selection).
+   */
+  getShortcutText?: () => string | null;
 }
 
 /** Grid-made columns that never hold row data. */
@@ -56,6 +61,39 @@ export function buildClipboardTsv(rows: GridRowModel[], columns: GridColDef[]): 
       .join('\t')
   );
   return [header, ...lines].join('\n');
+}
+
+/** A cell value formatted the way the cell shows it; a valueFormatter that throws gives the raw text. */
+function formatCopyValue(row: GridRowModel, col: GridColDef): string {
+  const value = getCellValue(row, col.field, col);
+  try {
+    return formatExportValue(row, col, value);
+  } catch {
+    return value == null ? '' : String(value);
+  }
+}
+
+/**
+ * A cell range as Excel and Google Sheets copy it: tabs between columns, line breaks between rows and
+ * no header line. `rows` are the data rows of the range (synthetic rows already left out); a position
+ * for which `isCovered` returns true (covered by a span whose origin sits elsewhere) is left empty.
+ */
+export function buildRangeTsv(
+  rows: readonly GridRowModel[],
+  columns: readonly GridColDef[],
+  isCovered?: (row: GridRowModel, col: GridColDef) => boolean,
+): string {
+  const lines: string[] = new Array(rows.length);
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r];
+    const cells: string[] = new Array(columns.length);
+    for (let c = 0; c < columns.length; c++) {
+      const col = columns[c];
+      cells[c] = isCovered?.(row, col) ? '' : escapeTsvField(formatCopyValue(row, col));
+    }
+    lines[r] = cells.join('\t');
+  }
+  return lines.join('\n');
 }
 
 /**
@@ -98,7 +136,7 @@ function copyTextSynchronous(text: string): boolean {
  * Writes text to the clipboard: the async Clipboard API when there is one, the execCommand
  * fallback when it is missing or rejects. Rejects when neither worked.
  */
-async function writeToClipboard(text: string): Promise<void> {
+export async function writeToClipboard(text: string): Promise<void> {
   const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
   if (clipboard && typeof clipboard.writeText === 'function') {
     try {
@@ -180,7 +218,14 @@ export function useGridClipboard(props: UseGridClipboardProps) {
       const selection = window.getSelection();
       if (selection && !selection.isCollapsed && selection.toString() !== '') return;
 
-      copySelectedRows().catch((err: unknown) => {
+      const { getShortcutText } = latestRef.current;
+      const copy = getShortcutText
+        ? () => {
+          const text = getShortcutText();
+          return text === null ? Promise.resolve() : writeToClipboard(text);
+        }
+        : copySelectedRows;
+      copy().catch((err: unknown) => {
         console.error('[OpenGridX] Failed to copy to clipboard:', err);
       });
     };
