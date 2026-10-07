@@ -57,3 +57,46 @@
 .ogx-input-wrapper--disabled .ogx-input {
   cursor: not-allowed;
 }
+
+/* ── Cell variant: an editor that fills a grid cell ───────────────────── */
+.ogx-input-wrapper--cell {
+  /* Not positioned: the editing cell's focus outline must stay painted over the editor. */
+  position: static;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: none;
+}
+.ogx-input-wrapper--cell:hover:not(.ogx-input-wrapper--disabled),
+.ogx-input-wrapper--cell:focus-within:not(.ogx-input-wrapper--disabled) {
+  box-shadow: none;
+}
+.ogx-input-wrapper--cell .ogx-input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: normal;
+  color: inherit;
+}
+.ogx-input-wrapper--cell .ogx-input__adornment--start {
+  padding-left: 10px;
+}
+.ogx-input-wrapper--cell .ogx-input__adornment--start + .ogx-input {
+  padding-left: 4px;
+}
+.ogx-input-wrapper--cell .ogx-input__adornment--end {
+  padding-right: 10px;
+}
+.ogx-input-wrapper--cell.ogx-input-wrapper--error,
+.ogx-input-wrapper--cell.ogx-input-wrapper--error:focus-within:not(.ogx-input-wrapper--disabled) {
+  /* Positioned, so the error edge is painted over the cell's focus outline. */
+  position: relative;
+  box-shadow: inset 0 0 0 2px var(--ogx-color-error);
+}

@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useId } from 'react';
 import { Checkbox } from '../ui/Checkbox';
+import { Input } from '../ui/Input';
 import type { GridColDef, GridRowModel, GridValidRowModel } from '../../types';
 
 
@@ -115,9 +116,9 @@ export function ColumnVisibilityPanel<R extends GridValidRowModel = GridRowModel
             <div className="ogx-column-visibility-panel__search-section">
                 <div className="ogx-column-visibility-panel__search-container">
                     <SearchIcon />
-                    <input
+                    <Input
                         autoComplete="off"
-                        className="ogx-column-visibility-panel__search-input"
+                        inputClassName="ogx-column-visibility-panel__search-input"
                         placeholder="Search"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}

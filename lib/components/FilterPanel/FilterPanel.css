@@ -115,10 +115,24 @@
   border-radius: var(--ogx-border-radius-sm);
   font-family: var(--ogx-font-family);
   font-size: var(--ogx-font-size-xs);
+  line-height: revert;
   background: var(--ogx-grid-background);
   color: var(--ogx-grid-row-text);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+/* The text/date value box renders through the shared Input: the <input> keeps its own border,
+   so the wrapper draws nothing and only takes the input's place in the row. */
+.ogx-filter__controls .ogx-input-wrapper {
+  flex: 1;
+  min-width: 60px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  transition: none;
+}
+.ogx-filter__controls .ogx-input-wrapper:focus-within {
+  box-shadow: none;
 }
 .ogx-filter__value-input::placeholder {
   color: var(--ogx-overlay-text, var(--ogx-color-gray-400));

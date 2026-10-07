@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import { Input } from '../ui/Input';
 
 
 interface GlobalSearchProps {
@@ -143,9 +144,9 @@ export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', 
             <div className="ogx-global-search__icon-wrapper">
                 <SearchIcon />
             </div>
-            <input
+            <Input
                 ref={inputRef}
-                className="ogx-global-search__input"
+                inputClassName="ogx-global-search__input"
                 value={localValue}
                 onChange={(e) => setLocalValue(e.target.value)}
                 onFocus={handleFocus}

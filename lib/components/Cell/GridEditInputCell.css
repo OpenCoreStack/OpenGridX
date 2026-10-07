@@ -28,6 +28,15 @@
     outline: none;
 }
 
+/* The built-in editors render through <Input variant="cell">: keep their own font, colour and
+   padding over the variant's inherited ones (this file loads after Input.css). */
+.ogx-input-wrapper--cell .ogx__edit-input {
+    padding: 0 10px;
+    font-family: var(--ogx-font-family, inherit);
+    font-size: var(--ogx-grid-cell-font-size, 14px);
+    color: var(--ogx-grid-row-text, #1e293b);
+}
+
 /* ── Number input — hide spinners ────────────────────────────────────── */
 .ogx__edit-input--number::-webkit-inner-spin-button,
 .ogx__edit-input--number::-webkit-outer-spin-button {
@@ -54,9 +63,8 @@
     outline: 2px solid var(--ogx-color-primary, #2563eb);
     outline-offset: -2px;
 }
-.ogx__edit-checkbox {
-    width: 18px;
-    height: 18px;
+/* The editor is the shared Checkbox: `.ogx__edit-checkbox` sits on its visually hidden <input>,
+   the drawn box is `.ogx-checkbox__box`. */
+.ogx__edit-boolean .ogx-checkbox-wrapper {
     cursor: pointer;
-    accent-color: var(--ogx-color-primary, #2563eb);
 }

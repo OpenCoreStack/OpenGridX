@@ -66,6 +66,11 @@
   outline-offset: -2px;
   background-color: var(--ogx-grid-background);
 }
+/* An <Input variant="cell"> editor (the built-in text/number/date ones, or a renderEditCell) takes
+   the full cell height, so its error edge and click area cover the cell. */
+.ogx__cell--editing > .ogx__cell-content:has(.ogx-input-wrapper--cell) {
+  align-self: stretch;
+}
 .ogx__cell--align-left {
   justify-content: flex-start;
   text-align: left;

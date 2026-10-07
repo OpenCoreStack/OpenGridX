@@ -175,6 +175,8 @@ test.describe('package smoke', () => {
     const customer = cell(centerRow(page, 0), 'customer');
     await customer.dblclick();
     const input = customer.locator('input').first();
+    // The editor's ref reaches the <input> through the shared Input (forwardRef: React 18 too).
+    await expect(input).toBeFocused();
     await input.fill('Smoke Co');
     await input.press('Enter');
     await expect(customer).toHaveText('Smoke Co');
@@ -185,6 +187,7 @@ test.describe('package smoke', () => {
     const net = cell(row1, 'net');
     await net.dblclick();
     const netInput = net.locator('input').first();
+    await expect(netInput).toBeFocused();
     await netInput.fill('1000');
     await netInput.press('Enter');
     await expect(net).toHaveText('1000.00');
@@ -205,15 +208,18 @@ test.describe('package smoke', () => {
     const date = cell(centerRow(page, 3), 'date');
     await date.dblclick();
     const dateInput = date.locator('input').first();
+    await expect(dateInput).toBeFocused();
     await dateInput.fill('2025-03-15');
     await dateInput.press('Enter');
     await expect(log).toContainText(/^4 customer=.* date=2025-03-15/m);
 
-    // Boolean editor: clicking the checkbox toggles and commits.
+    // Boolean editor: clicking the checkbox toggles and commits (the 3.2.1 WebKit regression).
+    // It is the shared Checkbox: the <input> is visually hidden, the pointer lands on the drawn box.
     const posted = cell(centerRow(page, 4), 'posted');
     const wasYes = (await posted.innerText()).trim() === 'Yes';
     await posted.dblclick();
-    await posted.locator('input[type="checkbox"]').first().click();
+    await expect(posted.getByRole('checkbox')).toBeFocused();
+    await posted.locator('.ogx-checkbox__box').first().click();
     await expect(posted).toHaveText(wasYes ? 'No' : 'Yes');
     await expect(log).toContainText(new RegExp(`^5 customer=.* posted=${String(!wasYes)}`, 'm'));
   });

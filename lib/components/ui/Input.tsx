@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -6,23 +5,39 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
     error?: boolean;
     startAdornment?: React.ReactNode;
     endAdornment?: React.ReactNode;
+    /** Classes added to the `<input>` itself, next to `ogx-input`. `className` goes to the wrapper. */
+    inputClassName?: string;
+    /**
+     * `'field'` (default): a bordered form field. `'cell'`: fills a grid cell with no border,
+     * background or focus ring, in the cell's font, for use in `renderEditCell`.
+     */
+    variant?: 'field' | 'cell';
 }
 
-export const Input: React.FC<InputProps> = ({
+/**
+ * A text field: an `<input>` inside an `.ogx-input-wrapper` that holds the adornments.
+ * `ref` reaches the `<input>` (React 18 and 19).
+ */
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input({
     fullWidth = false,
     error = false,
     startAdornment,
     endAdornment,
     className = '',
+    inputClassName = '',
+    variant = 'field',
     ...props
-}) => {
+}, ref) {
     const wrapperClassNames = [
         'ogx-input-wrapper',
+        variant === 'cell' && 'ogx-input-wrapper--cell',
         fullWidth && 'ogx-input-wrapper--full-width',
         error && 'ogx-input-wrapper--error',
         props.disabled && 'ogx-input-wrapper--disabled',
         className
     ].filter(Boolean).join(' ');
+
+    const inputClassNames = ['ogx-input', inputClassName].filter(Boolean).join(' ');
 
     return (
         <div className={wrapperClassNames}>
@@ -32,7 +47,9 @@ export const Input: React.FC<InputProps> = ({
                 </div>
             )}
             <input
-                className="ogx-input"
+                ref={ref}
+                className={inputClassNames}
+                aria-invalid={error ? true : undefined}
                 {...props}
             />
             {endAdornment && (
@@ -42,4 +59,6 @@ export const Input: React.FC<InputProps> = ({
             )}
         </div>
     );
-};
+});
+
+Input.displayName = 'Input';

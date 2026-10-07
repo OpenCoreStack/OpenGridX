@@ -1,5 +1,7 @@
 @import './base/variables.css';
 @import './base/reset.css';
+/* Shared primitives first, so component styles that restyle them win on equal specificity. */
+@import '../components/ui/Input.css';
 @import '../components/DataGrid/DataGrid.css';
 @import '../components/Header/Header.css';
 @import '../components/Row/Row.css';
@@ -16,7 +18,6 @@
 @import '../components/ui/Checkbox.css';
 @import '../components/ui/DragHandleIcon.css';
 @import '../components/ui/ExpandIcon.css';
-@import '../components/ui/Input.css';
 @import '../components/Toolbar/GridToolbar.css';
 @import '../components/Toolbar/PivotPanel.css';
 @import '../components/FilterPanel/FilterPanel.css';

@@ -65,11 +65,9 @@
   border-right: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
 }
 
-.ogx-list-view__checkbox input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+/* The row checkbox is the shared Checkbox (its <input> is visually hidden). */
+.ogx-list-view__checkbox .ogx-checkbox-wrapper {
   cursor: pointer;
-  accent-color: var(--ogx-color-primary);
 }
 
 /* ─── Cell content area ───────────────────────────────────────────────────── */

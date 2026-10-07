@@ -4,7 +4,10 @@ import React from 'react';
 export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
     indeterminate?: boolean;
     label?: string;
+    /** A ref to the `<input>`; the forwarded `ref` reaches it as well. */
     inputRef?: React.Ref<HTMLInputElement>;
+    /** Classes added to the `<input>` itself, next to `ogx-checkbox__input`. `className` goes to the wrapper `<label>`. */
+    inputClassName?: string;
 }
 
 /** Points a callback or object ref at `element`. Outside the component, so it does not mutate a prop in render scope. */
@@ -16,13 +19,18 @@ function assignRef(ref: React.Ref<HTMLInputElement> | undefined, element: HTMLIn
     }
 }
 
-export const Checkbox: React.FC<CheckboxProps> = ({
+/**
+ * A styled checkbox: a visually hidden `<input type="checkbox">` inside a `<label>`. Other props
+ * (`onChange`, `onMouseDown`, `tabIndex`, `aria-*`, …) go to the `<input>`, and so does `ref`.
+ */
+export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox({
     indeterminate = false,
     label,
     className = '',
+    inputClassName = '',
     inputRef,
     ...props
-}) => {
+}, forwardedRef) {
     const internalRef = React.useRef<HTMLInputElement>(null);
 
     // Combine refs
@@ -30,7 +38,8 @@ export const Checkbox: React.FC<CheckboxProps> = ({
         internalRef.current = element;
 
         assignRef(inputRef, element);
-    }, [inputRef]);
+        assignRef(forwardedRef, element);
+    }, [inputRef, forwardedRef]);
 
     React.useEffect(() => {
         if (internalRef.current) {
@@ -51,7 +60,7 @@ export const Checkbox: React.FC<CheckboxProps> = ({
             <input
                 ref={setRef}
                 type="checkbox"
-                className="ogx-checkbox__input"
+                className={['ogx-checkbox__input', inputClassName].filter(Boolean).join(' ')}
                 {...props}
             />
             <span className="ogx-checkbox__box">
@@ -69,4 +78,6 @@ export const Checkbox: React.FC<CheckboxProps> = ({
             {label && <span className="ogx-checkbox__label">{label}</span>}
         </label>
     );
-};
+});
+
+Checkbox.displayName = 'Checkbox';

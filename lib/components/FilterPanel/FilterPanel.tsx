@@ -8,6 +8,7 @@ import type {
 } from '../../types';
 import { getOperatorsForType, NO_VALUE_OPERATORS } from '../../utils/filtering';
 import { toLocalDateString } from '../../utils/values';
+import { Input } from '../ui/Input';
 
 
 export interface FilterPanelProps {
@@ -251,10 +252,10 @@ const FilterRow: React.FC<{
         );
     } else if (showValue) {
         valueControl = (
-            <input
+            <Input
                 id={`${filterId}-val`}
                 name={`filter-val-${col.field}`}
-                className={valueClassName}
+                inputClassName={valueClassName}
                 type={col.type === 'date' ? 'date' : 'text'}
                 value={draft ?? toInputText(item?.value, col)}
                 onChange={(e) => setDraft(e.target.value)}

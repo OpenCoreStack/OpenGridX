@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { GridColDef, GridRenderEditCellParams } from '../../types';
+import { Input } from '../ui/Input';
+import { Checkbox } from '../ui/Checkbox';
 
 export type GridEditInputCellProps = GridRenderEditCellParams;
 
@@ -34,10 +36,11 @@ function TextEditor({ value, colDef, onValueChange, onCommit, onCancel }: GridEd
     useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
 
     return (
-        <input
+        <Input
             ref={ref}
+            variant="cell"
             type="text"
-            className="ogx__edit-input"
+            inputClassName="ogx__edit-input"
             aria-label={editorLabel(colDef)}
             value={local}
             onChange={e => { setLocal(e.target.value); onValueChange(e.target.value); }}
@@ -54,10 +57,11 @@ function NumberEditor({ value, colDef, onValueChange, onCommit, onCancel }: Grid
     useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
 
     return (
-        <input
+        <Input
             ref={ref}
+            variant="cell"
             type="number"
-            className="ogx__edit-input ogx__edit-input--number"
+            inputClassName="ogx__edit-input ogx__edit-input--number"
             aria-label={editorLabel(colDef)}
             value={local}
             onChange={e => {
@@ -83,16 +87,17 @@ function BooleanEditor({ value, colDef, onValueChange, onCommit, onCancel }: Gri
     };
 
     return (
-        <div className="ogx__edit-boolean">
-            <input
+        // Safari does not focus checkboxes on click: mousedown moves focus to the cell, the blur
+        // commits the unchanged value and the editor unmounts before the click toggles it. The
+        // pointer lands on the drawn box (or around it), not the hidden input, so the whole editor
+        // keeps focus where it is.
+        <div className="ogx__edit-boolean" onMouseDown={(e) => e.preventDefault()}>
+            <Checkbox
                 ref={ref}
-                type="checkbox"
-                className="ogx__edit-checkbox"
+                inputClassName="ogx__edit-checkbox"
                 aria-label={editorLabel(colDef)}
                 checked={!!value}
                 onChange={handleChange}
-                // Safari does not focus checkboxes on click: mousedown moves focus to the cell, the
-                // blur commits the unchanged value and the editor unmounts before the click toggles it.
                 onMouseDown={(e) => e.preventDefault()}
                 onBlur={onCommit}
                 onKeyDown={makeKeyDownHandler(onCommit, onCancel, false)}
@@ -126,6 +131,7 @@ function SelectEditor({ value, colDef, onValueChange, onCommit, onCancel }: Grid
     const showEmptyChoice = selectedIndex === -1;
 
     return (
+        // Raw <select>: there is no shared Select component yet.
         <select
             ref={ref}
             className="ogx__edit-select"
@@ -196,10 +202,11 @@ function DateEditor({ value, colDef, onValueChange, onCommit, onCancel }: GridEd
     useEffect(() => { ref.current?.focus(); }, []);
 
     return (
-        <input
+        <Input
             ref={ref}
+            variant="cell"
             type="date"
-            className="ogx__edit-input"
+            inputClassName="ogx__edit-input"
             aria-label={editorLabel(colDef)}
             value={local}
             onChange={e => { setLocal(e.target.value); onValueChange(fromDateInputValue(e.target.value, initialValue)); }}

@@ -74,6 +74,7 @@
     font-family: var(--ogx-font-family, system-ui, sans-serif);
     font-size: var(--ogx-font-size-sm, 13px);
     color: var(--ogx-toolbar-input-text, var(--ogx-grid-row-text, #1e293b));
+    line-height: revert;
     outline: none;
     opacity: 0;
     pointer-events: none;
@@ -86,6 +87,21 @@
 .ogx-global-search__input::placeholder {
     color: var(--ogx-color-gray-400, #94a3b8);
     font-size: var(--ogx-font-size-sm, 13px);
+}
+
+/* The input renders through the shared Input: its wrapper is the flex item and the container
+   draws the box, so the wrapper has none of its own. */
+.ogx-global-search .ogx-input-wrapper {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    transition: none;
+}
+.ogx-global-search .ogx-input-wrapper:focus-within {
+    box-shadow: none;
 }
 
 /* ─── Clear button ────────────────────────────────────────────────────────── */

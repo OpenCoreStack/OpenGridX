@@ -30,6 +30,8 @@
 }
 
 .ogx-column-visibility-panel__search-input {
+  padding: revert;
+  line-height: revert;
   border: none;
   background: none;
   outline: none;
@@ -37,6 +39,18 @@
   font-size: var(--ogx-font-size-md);
   color: var(--ogx-overlay-text, var(--ogx-color-gray-900));
   flex: 1;
+}
+
+/* The search box renders through the shared Input: the container draws the box. */
+.ogx-column-visibility-panel__search-container .ogx-input-wrapper {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  transition: none;
+}
+.ogx-column-visibility-panel__search-container .ogx-input-wrapper:focus-within {
+  box-shadow: none;
 }
 
 .ogx-column-visibility-panel__search-input::placeholder {

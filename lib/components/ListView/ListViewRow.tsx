@@ -1,6 +1,7 @@
 import React from 'react';
 import { formatValueByType, getCellValue, getFormattedValue } from '../../utils/values';
 import { ExpandIcon } from '../ui/ExpandIcon';
+import { Checkbox } from '../ui/Checkbox';
 import { CellErrorBoundary } from '../Cell/CellErrorBoundary';
 import { isSyntheticRowId } from '../../utils/syntheticRows';
 import type { GridColDef, GridRowModel, GridRowId, GridRowMeta, GridListViewColDef, GridRenderCellParams } from '../../types';
@@ -92,8 +93,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
         >
             {checkboxSelection && (
                 <div className="ogx-list-view__checkbox" onClick={(e) => e.stopPropagation()}>
-                    {!isSyntheticRow && <input
-                        type="checkbox"
+                    {!isSyntheticRow && <Checkbox
                         checked={isSelected}
                         onChange={handleCheckboxChange}
                         aria-label={`Select row ${id}`}
