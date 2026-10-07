@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 3.2.2
+# Version: 3.3.0
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 
@@ -78,6 +78,7 @@ export default function App() {
 | localeText        | GridLocaleText | —  | Override pager / no-rows strings: paginationRowsPerPage, paginationOf(from,to,count), paginationPage(page,count), noRowsLabel |
 | rowHeight         | number    | 52      | Row height in pixels                   |
 | headerHeight      | number    | 56      | Header height in pixels                |
+| wrapHeaderText    | boolean   | false   | Wrap header titles within headerHeight (2 lines at 56px, 3 at 72, 4 at 88; ellipsis on the last line). Header never grows: raise headerHeight for more lines. Class ogx__header-cell--wrap. Per column: GridColDef.wrapHeaderText (3.3.0+) |
 | loading           | boolean   | false   | No rows: skeleton rows (or slots.loadingOverlay). Rows shown: they stay, a progress bar (.ogx__loading-bar) runs along the top, or slots.loadingOverlay is shown over them |
 | noRowsLabel       | string    | 'No Data' | Empty state message                  |
 | density           | 'compact'/'standard'/'comfortable' | 'standard' | 32px / rowHeight / 72px rows |
@@ -92,6 +93,10 @@ export default function App() {
 | onRowSelectionModelChange  | (model: GridRowId[]) => void  | Selection change callback. Also fires once with ids of removed rows pruned (client-owned rows) |
 | disableRowSelectionOnClick | boolean                       | Prevent click toggling selection    |
 | disableClipboardCopy       | boolean                       | Turn off the grid's Ctrl/Cmd+C copy (copySelectedRows still works) |
+| cellSelection              | boolean (3.3.0+)              | Spreadsheet-style cell ranges: drag (auto-scrolls), Shift+click, Shift+arrows/Home/End/PageUp/PageDown, Ctrl/Cmd+A = every data cell of the page, Escape collapses. Ctrl/Cmd+C then copies the range as TSV (no header line) instead of the selected rows. Ranges never change the row selection |
+| cellSelectionModel         | GridCellSelectionModel        | Controlled range: readonly { anchor: { id, field }, head: { id, field } }[] (0 or 1 range). Corners are ids/fields: the range follows sorting; cleared ('dataChange') when a corner is no longer displayed |
+| onCellSelectionModelChange | (model, { reason }) => void   | reason: 'pointer' | 'keyboard' | 'selectAll' | 'api' | 'clear' | 'dataChange' |
+| showCellSelectionStats     | boolean                       | Status bar: Count (non-empty), Sum and Average (numeric) of the range; slots.cellSelectionStats replaces it |
 
 ### Sorting
 | Prop              | Type                        | Description                     |
@@ -247,6 +252,7 @@ There are no getRowClassName / getCellClassName / theme props: use GridColDef.ce
 | rowSpan           | number / (params) => number                            | Cell row span (clamped to the row section) |
 | align             | 'left'/'center'/'right'                                | Cell content alignment                     |
 | headerAlign       | 'left'/'center'/'right'                                | Header content alignment                   |
+| wrapHeaderText    | boolean                                                | Wrap this header title; overrides the grid prop (3.3.0+) |
 | sortable          | boolean (default true)                                 | Enable sorting                             |
 | sortComparator    | (v1, v2, params1, params2) => number                   | Custom ascending comparator (3.1.0+). v1/v2 are valueGetter values incl. null/undefined; params { id, field, row, value }. Negated for desc; multi-sort tie-break chain; groups by grouping value; tree siblings; pivot row labels. Throw/NaN = 0. Ignored in server sortingMode |
 | filterable        | boolean (default true)                                 | Enable filtering and quick search          |
@@ -306,6 +312,14 @@ apiRef.current.autosizeColumns(fields?)
 // Clipboard
 apiRef.current.copySelectedRows()      // → Promise<void>; rejects if the write fails. Copies every selected row that passes
                                        //   the filter (all pages, collapsed groups, pinned rows), visible columns in screen order
+
+// Cell range selection (cellSelection, 3.3.0+); inert while cellSelection is off
+apiRef.current.selectCellRange({ id: 1, field: 'a' }, { id: 5, field: 'c' }) // anchor = active cell
+apiRef.current.setCellSelectionModel(model)
+apiRef.current.getCellSelectionModel()  // → GridCellSelectionModel
+apiRef.current.getSelectedCells()      // → { id, field, value }[]; synthetic rows and span-covered cells left out
+apiRef.current.copySelectedCells()     // → Promise<void>; TSV, no header line
+apiRef.current.clearCellSelection()
 
 // Aggregation
 apiRef.current.getAggregationResult()  // → Record<string, unknown> | null (null in pivot mode)
@@ -530,7 +544,8 @@ Derived tokens (e.g. `--ogx-grid-cell-focus-border`, which defaults to the prima
 Class names use the `ogx__` BEM prefix, e.g.:
 - `ogx__row`, `ogx__row--selected`, `ogx__row--even`, `ogx__row--odd`
 - `ogx__cell`, `ogx__cell--focused`, `ogx__cell--editing`
-- `ogx__header-cell`, `ogx__header-cell--sorted`
+- Cell ranges (3.3.0+): `ogx__cell--range`, `ogx__cell--range-top|bottom|left|right` (inset box-shadow outline), `ogx--range-dragging` on the root during a drag; variables `--ogx-range-background`, `--ogx-range-border` (theme keys `grid.rangeBackground`, `grid.rangeBorder`)
+- `ogx__header-cell`, `ogx__header-cell--sorted`, `ogx__header-cell--wrap` (wrapHeaderText, 3.3.0+)
 - Sticky wrappers: `ogx__sticky-top` (header + top-pinned rows), `ogx__sticky-bottom` (bottom-pinned rows + aggregation footer)
 
 ---
