@@ -392,6 +392,8 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         return field === undefined ? null : { id, field };
     }, []);
 
+    // The auto-scroll loop schedules the next frame through this ref: a callback cannot name itself.
+    const runDragFrameRef = useRef<(allowScroll: boolean) => void>(() => {});
     const runDragFrame = useCallback((allowScroll: boolean) => {
         const drag = dragRef.current;
         const viewport = latestRef.current.viewportRef.current;
@@ -440,8 +442,11 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         if (canScrollY) viewport.scrollTop += dy;
         if (canScrollX) viewport.scrollLeft += dx;
         // Keep going while the pointer rests in the edge zone; the next frame picks the new head.
-        drag.frame = requestAnimationFrame(() => runDragFrame(true));
+        drag.frame = requestAnimationFrame(() => runDragFrameRef.current(true));
     }, [headAtPoint, setRange]);
+    useLayoutEffect(() => {
+        runDragFrameRef.current = runDragFrame;
+    }, [runDragFrame]);
 
     const startDrag = useCallback((anchor: GridCellCoordinates, head: GridCellCoordinates, x: number, y: number, doc: Document) => {
         dragRef.current?.stop();

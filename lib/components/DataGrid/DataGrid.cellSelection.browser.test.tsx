@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, cleanup, act } from '@testing-library/react';
 import { userEvent, commands, page } from 'vitest/browser';
+import { useLayoutEffect } from 'react';
 import type { ReactNode } from 'react';
 import '../../styles/opengridx.css';
 import { DataGrid } from '../../index';
@@ -75,7 +76,7 @@ function renderGrid(props: Partial<DataGridProps<Row>> & { rows: Row[]; columns:
     const models: GridCellSelectionModel[] = [];
     function Harness() {
         const apiRef = useGridApiRef();
-        holder.api = apiRef;
+        useLayoutEffect(() => { holder.api = apiRef; }, [apiRef]);
         return (
             <Box {...box}>
                 <DataGrid<Row>
