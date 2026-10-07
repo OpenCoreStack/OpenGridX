@@ -35,6 +35,7 @@ export default function Home(_props: HomeProps) {
         { icon: '📏', name: 'Dynamic Resizing', desc: 'User-driven column width adjustments with constraints.' },
         { icon: '🖱️', name: 'Multi-Selection', desc: 'Robust row selection with checkbox support and range select.' },
         { icon: '⌨️', name: 'Clipboard API', desc: 'Full TSV-formatted copy support for Excel/Google Sheets.' },
+        { icon: '🔲', name: 'Cell Range Selection', desc: 'Drag, Shift+click or Shift+arrows to select cells; live count, sum and average; copy as TSV.' },
         { icon: '📐', name: 'Row & Cell Spanning', desc: 'Merge adjacent cells based on value similarity or rules.' },
         { icon: '⌛', name: 'Loading Overlays', desc: 'Professional skeleton screens and shimmer effects for data transitions.' },
         { icon: '♿', name: 'A11Y Optimized', desc: 'Full WCAG 2.1 compliance with screen reader and keyboard navigation support.' },

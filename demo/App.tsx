@@ -20,6 +20,7 @@ const CustomPaginationDemo = lazy(() => import('./examples/CustomPagination/Cust
 const ExportDemo = lazy(() => import('./examples/ExportDemo/ExportDemo'));
 const AdvancedExcelExportDemo = lazy(() => import('./examples/AdvancedExcelExportDemo/AdvancedExcelExportDemo'));
 const ClipboardDemo = lazy(() => import('./examples/ClipboardDemo/ClipboardDemo'));
+const CellSelectionDemo = lazy(() => import('./examples/CellSelectionDemo/CellSelectionDemo'));
 const EventsDemo = lazy(() => import('./examples/EventsDemo/EventsDemo'));
 const DataGridTest = lazy(() => import('./examples/DataGridTest/DataGridTest'));
 const ServerSideTreeDemo = lazy(() =>
@@ -63,6 +64,7 @@ const examplesConfig = [
     { path: '/pdf-export', name: 'PDF Export', component: PdfExportDemo, category: 'Main features' },
     { path: '/export', name: 'Export Data', component: ExportDemo, category: 'Main features' },
     { path: '/clipboard', name: 'Clipboard Copy', component: ClipboardDemo, category: 'Main features' },
+    { path: '/cell-selection', name: 'Cell Range Selection', component: CellSelectionDemo, category: 'Main features' },
     { path: '/multi-sort', name: 'Multi-Column Sort', component: MultiSortDemo, category: 'Main features' },
     { path: '/header-wrap', name: 'Wrapped Header Text', component: HeaderWrapDemo, category: 'Main features' },
     { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
