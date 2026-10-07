@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.2.2
+- **Current version:** 3.3.0
 
 ---
 
@@ -152,6 +152,17 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.3.0 — significant changes
+
+- **Cell range selection** (`cellSelection`, design: `docs/superpowers/specs/2026-10-01-cell-range-selection-design.md`). `useGridCellSelection` runs after `useGridSpanning` and before `useGridKeyboardNavigation` (feeds it `cellSelection.keyboard`); `useGridCellSelectionApi` runs after `useGridPointerFocusHandlers`, keeps the anchor in sync with `focusedCell` and installs the six `apiRef` methods. Pure helpers in `lib/utils/cellSelection.ts`
+- The model stores corner row ids + fields and is resolved each render against `allRenderableRows` and the data columns of `navigationColumns`, so a range follows sorting; a missing corner clears it with reason `'dataChange'`. Only the first range is used. `isRangeColumnField` excludes system fields and `__group__`; synthetic rows are highlighted but skipped by copy and `getSelectedCells`
+- `Row` is `React.memo` (`areRowPropsEqual`, `cellRange` compared by value); row renderers pass `getRowCellRange(...)`, `null` outside the range. **Handlers passed to rows must keep a stable identity**, or every row re-renders
+- With `cellSelection` on, the Ctrl/Cmd+C shortcut copies the range (or the focused cell) through `useGridClipboard`'s `getShortcutText`, no header line; `copySelectedRows` is unchanged. A drag clears the page text selection (WebKit otherwise extends it outside the grid and takes over Ctrl+C)
+- Browser tests drive held-mouse drags with the Playwright-backed `commands.pointerMoveTo` / `pointerDown` / `pointerUp` from `vitest.config.ts`
+- **Wrapped header text**: `wrapHeaderText` (grid) and `GridColDef.wrapHeaderText` (column wins); `lib/utils/headerWrap.ts` (`getHeaderLineClamp`, `HEADER_WRAP_LINE_HEIGHT` 16 must match `Header.css`). The header never grows; class `ogx__header-cell--wrap`
+- **React Compiler**: ESLint runs `react-hooks` `recommended-latest` (only `set-state-in-effect` off). `npm run check:compiler` should report only `useGridDataSource` (try/finally) plus the two `'use no memo'` wrappers (`InlineToolbar`, `CellRenderTarget` — they call consumer functions that may use hooks). `REACT_COMPILER=1 npx vitest run …` tests `lib/` compiled. In components and hooks: no `?.`/`??`/`||`/ternaries inside `try` (use `attempt()` from `lib/utils/attempt.ts`), no `try/finally`, no callback naming itself (go through a ref), default array/object props as module-level constants
+- Vitest's unit project excludes `.claude/**` (agent worktrees)
 
 ## v3.2.2 — significant changes
 
