@@ -34,7 +34,7 @@ Vitest tests import `lib/` source directly, so they cannot catch packaging mista
 3. Build each fixture: `tsc` in strict mode with `skipLibCheck: false` against the shipped types, then `vite build`. The build is itself a typing test.
 4. `playwright test` (`e2e/playwright.config.ts`): Chromium, Firefox and WebKit against `vite preview` of each fixture (ports 4319 and 4318).
 
-Scenarios are selected with `?scenario=`: `basic`, `flex`, `grouping`, `editing` (both fixtures), `pinned`, `dark` (React 19 only). Every test fails on any console error or warning.
+Scenarios are selected with `?scenario=`: `basic`, `flex`, `grouping`, `editing`, `range` (both fixtures), `pinned`, `dark` (React 19 only). Every test fails on any console error or warning.
 
 Useful variants:
 

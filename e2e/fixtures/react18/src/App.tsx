@@ -3,6 +3,7 @@ import Basic from './scenarios/Basic';
 import Flex from './scenarios/Flex';
 import Grouping from './scenarios/Grouping';
 import Editing from './scenarios/Editing';
+import Range from './scenarios/Range';
 
 // React 18 runs the scenarios most sensitive to the JSX runtime and React APIs; the rest are
 // React-version independent and covered by the React 19 fixture.
@@ -11,6 +12,7 @@ const scenarios: Record<string, ComponentType> = {
   flex: Flex,
   grouping: Grouping,
   editing: Editing,
+  range: Range,
 };
 
 export default function App() {

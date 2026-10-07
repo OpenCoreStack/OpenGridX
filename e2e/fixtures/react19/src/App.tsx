@@ -3,6 +3,7 @@ import Basic from './scenarios/Basic';
 import Flex from './scenarios/Flex';
 import Grouping from './scenarios/Grouping';
 import Editing from './scenarios/Editing';
+import Range from './scenarios/Range';
 import Pinned from './scenarios/Pinned';
 import Dark from './scenarios/Dark';
 
@@ -11,6 +12,7 @@ const scenarios: Record<string, ComponentType> = {
   flex: Flex,
   grouping: Grouping,
   editing: Editing,
+  range: Range,
   pinned: Pinned,
   dark: Dark,
 };

@@ -10,6 +10,30 @@ const setColorScheme: BrowserCommand<['light' | 'dark' | null]> = async (ctx, co
     await ctx.page.emulateMedia({ colorScheme });
 };
 
+// Low-level mouse for drag tests (Playwright input, so it works in every engine). The pointer moves
+// to a point of an element in the test iframe (its centre, or x / y in the iframe's CSS pixels from
+// its top-left corner, which may lie outside it), and the left button is pressed and released apart,
+// so a test can hold it down while the grid auto-scrolls.
+const pointerMoveTo: BrowserCommand<[selector: string, x?: number, y?: number]> = async (ctx, selector, x, y) => {
+    const locator = ctx.iframe.locator(selector).first();
+    if (x === undefined || y === undefined) {
+        await locator.hover({ force: true });
+        return;
+    }
+    const box = await locator.boundingBox();
+    if (!box) throw new Error(`pointerMoveTo: ${selector} is not rendered`);
+    // The test iframe can be drawn scaled: page pixels per CSS pixel of the element.
+    const cssWidth = await locator.evaluate((el) => el.getBoundingClientRect().width);
+    const scale = cssWidth > 0 ? box.width / cssWidth : 1;
+    await ctx.page.mouse.move(box.x + x * scale, box.y + y * scale);
+};
+const pointerDown: BrowserCommand<[]> = async (ctx) => {
+    await ctx.page.mouse.down();
+};
+const pointerUp: BrowserCommand<[]> = async (ctx) => {
+    await ctx.page.mouse.up();
+};
+
 const BROWSER_TESTS = 'lib/**/*.browser.test.{ts,tsx}';
 
 // REACT_COMPILER=1 runs the suites against lib/ compiled by React Compiler (tests stay as written).
@@ -54,7 +78,7 @@ export default defineConfig({
                         enabled: true,
                         headless: true,
                         provider: playwright(),
-                        commands: { setColorScheme },
+                        commands: { setColorScheme, pointerMoveTo, pointerDown, pointerUp },
                         instances: [{ browser: 'chromium' }, { browser: 'firefox' }, { browser: 'webkit' }],
                     },
                 },

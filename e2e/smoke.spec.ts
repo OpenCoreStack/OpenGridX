@@ -9,7 +9,7 @@ import { test, expect, type ConsoleMessage, type Locator, type Page } from '@pla
 /** Console output that is expected and harmless. Keep this list short and explain every entry. */
 const ALLOWED_CONSOLE: RegExp[] = [];
 
-const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing']);
+const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range']);
 
 function fixtureOf(projectName: string): string {
   return projectName.split('-')[1] ?? '';
@@ -216,6 +216,47 @@ test.describe('package smoke', () => {
     await posted.locator('input[type="checkbox"]').first().click();
     await expect(posted).toHaveText(wasYes ? 'No' : 'Yes');
     await expect(log).toContainText(new RegExp(`^5 customer=.* posted=${String(!wasYes)}`, 'm'));
+  });
+
+  test('range: dragging selects a cell range and Ctrl+C copies it as TSV', async ({ page }) => {
+    // Capture what the grid writes: the real clipboard needs permissions that differ per engine.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __copied: string[] };
+      w.__copied = [];
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: (text: string) => {
+            w.__copied.push(text);
+            return Promise.resolve();
+          },
+        },
+      });
+    });
+    consoleRecords = await openScenario(page, 'range');
+
+    const start = await cell(centerRow(page, 0), 'docNo').boundingBox();
+    const end = await cell(centerRow(page, 2), 'customer').boundingBox();
+    expect(start && end).toBeTruthy();
+    if (!start || !end) return;
+    await page.mouse.move(start.x + 10, start.y + start.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(end.x + 10, end.y + end.height / 2, { steps: 6 });
+    await page.mouse.up();
+
+    await expect(page.getByTestId('range-log')).toHaveText('pointer 1:docNo-3:customer');
+    await expect(page.locator('.ogx__viewport .ogx__cell--range')).toHaveCount(9);
+    await expect(page.locator('[data-stat="count"]').first()).toHaveText('9');
+
+    await page.keyboard.press('Control+c');
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __copied: string[] }).__copied.length)).toBe(1);
+    const copied = await page.evaluate(() => (window as unknown as { __copied: string[] }).__copied[0]);
+    const expected: string[] = [];
+    for (const i of [0, 1, 2]) {
+      const texts = await Promise.all(['docNo', 'date', 'customer'].map(async (f) => (await cell(centerRow(page, i), f).innerText()).trim()));
+      expected.push(texts.join('\t'));
+    }
+    expect(copied).toBe(expected.join('\n'));
   });
 
   test('pinned: pinned columns and rows, column groups, colSpan, detail panel', async ({ page }) => {
