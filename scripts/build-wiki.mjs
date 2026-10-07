@@ -75,6 +75,7 @@ const SECTIONS = [
     ['Contributing', [
         ['CONTRIBUTING.md', 'Contributing', 'Contributing'],
         ['docs/contributing/testing.md', 'Testing', 'Testing'],
+        ['docs/contributing/react-compiler.md', 'React-Compiler', 'React Compiler'],
         ['docs/roadmap.md', 'Roadmap', 'Roadmap'],
         ['docs/architecture/datagrid-orchestration.md', 'Architecture-DataGrid-Orchestration', 'DataGrid orchestration'],
         ['docs/architecture/grid-row-meta.md', 'Architecture-GridRowMeta', 'GridRowMeta'],

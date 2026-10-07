@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, cleanup, act, fireEvent } from '@testing-library/react';
+import { useLayoutEffect } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { DataGrid, useGridApiRef } from '../../index';
 import type { GridApi, GridColDef, GridColumnPinning, GridDataSource, GridGetRowsResponse, GridRowId, GridRowModel, GridSortItem } from '../../types';
@@ -43,7 +44,7 @@ function withApi(render: (api: RefObject<GridApi>) => ReactNode) {
     const holder: { api: RefObject<GridApi> | null } = { api: null };
     const Grid = () => {
         const api = useGridApiRef();
-        holder.api = api;
+        useLayoutEffect(() => { holder.api = api; }, [api]);
         return <>{render(api)}</>;
     };
     return { Grid, api: () => holder.api!.current };

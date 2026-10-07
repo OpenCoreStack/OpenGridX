@@ -7,6 +7,15 @@ export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputE
     inputRef?: React.Ref<HTMLInputElement>;
 }
 
+/** Points a callback or object ref at `element`. Outside the component, so it does not mutate a prop in render scope. */
+function assignRef(ref: React.Ref<HTMLInputElement> | undefined, element: HTMLInputElement | null): void {
+    if (typeof ref === 'function') {
+        ref(element);
+    } else if (ref) {
+        (ref as React.MutableRefObject<HTMLInputElement | null>).current = element;
+    }
+}
+
 export const Checkbox: React.FC<CheckboxProps> = ({
     indeterminate = false,
     label,
@@ -20,11 +29,7 @@ export const Checkbox: React.FC<CheckboxProps> = ({
     const setRef = React.useCallback((element: HTMLInputElement | null) => {
         internalRef.current = element;
 
-        if (typeof inputRef === 'function') {
-            inputRef(element);
-        } else if (inputRef) {
-            (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = element;
-        }
+        assignRef(inputRef, element);
     }, [inputRef]);
 
     React.useEffect(() => {

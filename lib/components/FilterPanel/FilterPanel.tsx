@@ -107,7 +107,8 @@ const FilterRow: React.FC<{
     onChange: (item: GridFilterItem | null) => void;
 }> = ({ col, item, resetToken, onChange }) => {
     const filterId = useId();
-    const typeOperators = getOperatorsForType(col.type);
+    // Memoized so React Compiler treats the list as frozen and can keep the callbacks below memoized.
+    const typeOperators = useMemo(() => getOperatorsForType(col.type), [col.type]);
     const defaultOperator = typeOperators[0];
     const currentOperator: GridFilterOperator = item?.operator ?? defaultOperator;
     // An operator set programmatically that the column type does not list is still shown, so the

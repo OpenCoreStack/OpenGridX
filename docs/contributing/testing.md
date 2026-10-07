@@ -10,6 +10,8 @@ Three layers, from fastest to closest to a real consumer.
 
 Other gates: `npm run lint`, `npm run typecheck` (lib, tests, demo, e2e), `npm run build:lib` (also checks that React stays external).
 
+React Compiler compatibility: `npm run check:compiler`, and `REACT_COMPILER=1` in front of any Vitest command runs it against `lib/` compiled. See [React Compiler compatibility](react-compiler.md).
+
 One-time setup for the browser and smoke suites:
 
 ```bash

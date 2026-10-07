@@ -11,7 +11,7 @@ export default defineConfig([
     files: ['**/*.{js,jsx}'],
     extends: [
       js.configs.recommended,
-      reactHooks.configs.flat.recommended,
+      reactHooks.configs.flat['recommended-latest'],
       reactRefresh.configs.vite,
     ],
     languageOptions: {
@@ -32,7 +32,7 @@ export default defineConfig([
     extends: [
       js.configs.recommended,
       ...tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
+      reactHooks.configs.flat['recommended-latest'],
     ],
     languageOptions: {
       ecmaVersion: 2020,
@@ -47,13 +47,10 @@ export default defineConfig([
       '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'off',
       'no-unused-vars': 'off',
-      // New react-hooks v7 rules — turned off because these patterns are intentional in this codebase:
-      // apiRef mutation is the established imperative API pattern
-      'react-hooks/immutability': 'off',
-      // setState inside effects is used for tree/grouping initialization
+      // The React Compiler rules of react-hooks v7 are on (see docs/contributing/react-compiler.md),
+      // except set-state-in-effect: the toolbar panels measure their anchor in an effect to position
+      // themselves, which the rule reports although it is the intended use of an effect.
       'react-hooks/set-state-in-effect': 'off',
-      // React Compiler is not installed in this project
-      'react-hooks/preserve-manual-memoization': 'off',
     },
   },
 ])

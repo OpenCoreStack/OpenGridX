@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import type { GridColDef, GridRowId, GridRowModel } from '../../types';
+import { attempt } from '../../utils/attempt';
 
 export interface GridEditingState {
     editingCell: {
@@ -95,6 +96,10 @@ export function useGridEditing<R extends GridRowModel>(params: UseGridEditingPar
         setEditingCellState(next);
     }, []);
 
+    // The in-flight branch below re-runs the commit through this ref: a callback that refers to
+    // itself is read before its declaration, which React Compiler rejects.
+    const commitRef = useRef<((token: number, cell: EditingCell) => Promise<void>) | null>(null);
+
     const commit = useCallback((token: number, cell: EditingCell): Promise<void> => {
         const inFlight = pendingRef.current.get(token);
         if (inFlight) {
@@ -103,7 +108,7 @@ export function useGridEditing<R extends GridRowModel>(params: UseGridEditingPar
             return inFlight.promise.then(() => {
                 const now = editingCellRef.current;
                 if (sessionRef.current !== token || !now || isSameValue(now.value, inFlight.value)) return;
-                return commit(token, now);
+                return commitRef.current?.(token, now);
             });
         }
 
@@ -159,18 +164,19 @@ export function useGridEditing<R extends GridRowModel>(params: UseGridEditingPar
             if (pendingRef.current.get(token) === entry) pendingRef.current.delete(token);
         };
 
-        let result: unknown;
-        try {
-            const colDef = columns?.find(c => c.field === cell.field);
+        const colDef = columns?.find(c => c.field === cell.field);
+        const outcome = attempt<unknown>(() => {
             const newRow = buildEditedRow(existingRow, cell, colDef, warnedFieldsRef.current);
-            result = processRowUpdate ? processRowUpdate(newRow, existingRow) : newRow;
-        } catch (error) {
+            return processRowUpdate ? processRowUpdate(newRow, existingRow) : newRow;
+        });
+        if (!outcome.ok) {
             // Consumer code (valueSetter / processRowUpdate) threw: report it, keep the editor open.
             finish();
-            report(error);
+            report(outcome.error);
             settle();
             return promise;
         }
+        const result = outcome.value;
 
         const complete = (processed: unknown) => {
             finish();
@@ -194,6 +200,9 @@ export function useGridEditing<R extends GridRowModel>(params: UseGridEditingPar
         }
         return promise;
     }, [setEditingCell]);
+    useLayoutEffect(() => {
+        commitRef.current = commit;
+    }, [commit]);
 
     const startCellEdit = useCallback((editParams: { id: GridRowId; field: string; value: unknown }) => {
         const current = editingCellRef.current;

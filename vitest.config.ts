@@ -12,8 +12,17 @@ const setColorScheme: BrowserCommand<['light' | 'dark' | null]> = async (ctx, co
 
 const BROWSER_TESTS = 'lib/**/*.browser.test.{ts,tsx}';
 
+// REACT_COMPILER=1 runs the suites against lib/ compiled by React Compiler (tests stay as written).
+// See docs/contributing/react-compiler.md.
+const reactCompiler = process.env.REACT_COMPILER
+    ? { babel: { plugins: [['babel-plugin-react-compiler', {
+        target: '19',
+        sources: (filename: string) => /[\\/]lib[\\/]/.test(filename) && !/\.test\.tsx?$/.test(filename),
+    }]] } }
+    : undefined;
+
 export default defineConfig({
-    plugins: [react()],
+    plugins: [react(reactCompiler)],
     test: {
         coverage: {
             provider: 'v8',

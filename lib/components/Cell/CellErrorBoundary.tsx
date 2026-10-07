@@ -3,7 +3,10 @@ import React from 'react';
 // Must live at module scope (not inline) so React sees a stable component type.
 // Calling renderFn() here puts the throw one level BELOW CellErrorBoundary,
 // which is required — a component cannot catch errors thrown in its own render().
+// `renderFn` runs the consumer's renderCell, which may call hooks, so it must run on every render:
+// 'use no memo' stops React Compiler from memoizing the call (see GridToolbarSlot's InlineToolbar).
 function CellRenderTarget({ renderFn }: { renderFn: () => React.ReactNode }) {
+    'use no memo';
     return <>{renderFn()}</>;
 }
 

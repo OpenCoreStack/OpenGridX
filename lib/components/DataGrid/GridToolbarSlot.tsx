@@ -25,8 +25,13 @@ function isPlainFunctionComponent(component: React.ComponentType<ToolbarProps>):
  * Runs a plain function toolbar inside its own fiber. The caller keys this element on the
  * function's source, so the fiber (and every hook in it) survives when the consumer redefines
  * the same toolbar inline on each render, but remounts when a different toolbar is passed.
+ *
+ * `render` calls hooks, so it must run on every render. React Compiler would memoize the call
+ * like any other and skip it when `render` and `toolbarProps` are unchanged, which breaks the
+ * toolbar's hooks; `'use no memo'` keeps this wrapper out of the compiler.
  */
 function InlineToolbar({ render, toolbarProps }: InlineToolbarProps) {
+    'use no memo';
     return <>{render(toolbarProps)}</>;
 }
 

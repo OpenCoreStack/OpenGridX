@@ -474,9 +474,11 @@ function FilterPanelWrapper({
 }
 
 const EMPTY_PIVOT: GridPivotModel = { rowFields: [], columnFields: [], valueFields: [] };
+// Module-level default, so `columns` is the same frozen value on every render (React Compiler).
+const NO_COLUMNS: GridColDef[] = [];
 
 export function GridToolbar({
-    columns = [],
+    columns = NO_COLUMNS,
     baseColumns,
     aggregationModel = {},
     onAggregationModelChange,
@@ -504,7 +506,7 @@ export function GridToolbar({
     // At most one panel is open. Every way the Columns panel closes (its button, a custom
     // button, another panel opening, click-outside, Escape) reports onColumnsPanelClose, so the
     // grid can ask for it again with forceColumnsOpen.
-    const [openPanel, setOpenPanel] = useState<ToolbarPanel | null>(null);
+    const [openPanel, setOpenPanel] = useState<ToolbarPanel | null>(forceColumnsOpen ? 'columns' : null);
     const aggOpen = openPanel === 'summaries';
     const pivotOpen = openPanel === 'pivot';
     const colsOpen = openPanel === 'columns';
@@ -517,9 +519,13 @@ export function GridToolbar({
     const togglePanel = (panel: ToolbarPanel) => switchPanel(openPanel === panel ? null : panel);
     const closePanel = (panel: ToolbarPanel) => { if (openPanel === panel) switchPanel(null); };
 
-    useEffect(() => {
+    // forceColumnsOpen turning true opens the Columns panel. Adjusted during render (not in an
+    // effect) so the panel opens in the same commit.
+    const [seenForceColumnsOpen, setSeenForceColumnsOpen] = useState(forceColumnsOpen);
+    if (seenForceColumnsOpen !== forceColumnsOpen) {
+        setSeenForceColumnsOpen(forceColumnsOpen);
         if (forceColumnsOpen) setOpenPanel('columns');
-    }, [forceColumnsOpen]);
+    }
 
     // Tell the grid this toolbar shows the Columns panel for the column menu; it can only do so
     // when the grid's forceColumnsOpen reaches it and the Columns panel is enabled.

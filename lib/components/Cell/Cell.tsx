@@ -6,6 +6,7 @@ import type { CellColSpanInfo } from '../../hooks/features/useGridSpanning';
 import { GridEditInputCell } from './GridEditInputCell';
 import { CellErrorBoundary } from './CellErrorBoundary';
 import { formatValueByType } from '../../utils/values';
+import { attempt } from '../../utils/attempt';
 
 export interface CellProps<R extends GridRowModel = GridRowModel> {
     onCellClick?: (params: GridCellParams<R>) => void;
@@ -99,12 +100,12 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
     // formatter, written for data rows, is only called for the values they do hold.
     const isSyntheticRow = rowMeta?.isGroupRow === true;
     const { formattedValue, error: formatError } = React.useMemo<FormattedValue>(() => {
-        if (colDef.valueFormatter && !(isSyntheticRow && value == null)) {
-            try {
-                return { formattedValue: colDef.valueFormatter({ value, row, field: colDef.field }) };
-            } catch (error) {
-                return { formattedValue: '', error: error ?? new Error('valueFormatter failed') };
-            }
+        const formatter = colDef.valueFormatter;
+        if (formatter && !(isSyntheticRow && value == null)) {
+            const result = attempt(() => formatter({ value, row, field: colDef.field }));
+            return result.ok
+                ? { formattedValue: result.value }
+                : { formattedValue: '', error: result.error ?? new Error('valueFormatter failed') };
         }
 
         // Without a formatter the column type decides: locale date, Yes / No, singleSelect label.
@@ -113,12 +114,10 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
 
     const resolvedCellClassName = React.useMemo(() => {
         if (!colDef.cellClassName) return '';
-        if (typeof colDef.cellClassName === 'function') {
-            try {
-                return colDef.cellClassName({ value, formattedValue, row, field: colDef.field, colDef, rowIndex, colIndex, rowMeta }) || '';
-            } catch {
-                return '';
-            }
+        const getClassName = colDef.cellClassName;
+        if (typeof getClassName === 'function') {
+            const result = attempt(() => getClassName({ value, formattedValue, row, field: colDef.field, colDef, rowIndex, colIndex, rowMeta }));
+            return (result.ok && result.value) || '';
         }
         return colDef.cellClassName;
     }, [colDef, value, formattedValue, row, rowIndex, colIndex, rowMeta]);

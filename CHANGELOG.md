@@ -13,6 +13,7 @@
 
 ### Internal
 
+- **React Compiler compatibility checked** — the library works in apps that use React Compiler, and when `lib/` itself is compiled (unit and browser suites pass with `REACT_COMPILER=1`). Fixed what the compiler rejected: a prop mutated in `Checkbox`, a self-referencing callback in `useGridEditing`, memoization the compiler could not keep in `FilterPanel` / `GridToolbar`, value expressions inside `try` in `Cell` / `useAggregation` / `useGridEditing`, and `GridToolbar`'s `forceColumnsOpen` effect. `InlineToolbar` (`slots.toolbar`) and `CellRenderTarget` (`renderCell`) are marked `'use no memo'`: compiled, they skipped the consumer's toolbar / cell function on re-render and broke its hooks. ESLint uses `react-hooks` `recommended-latest` (7.1.1) with `immutability` and `preserve-manual-memoization` on; new `npm run check:compiler`. Findings, remaining issues and how to re-run: `docs/contributing/react-compiler.md`.
 - **GitHub wiki** generated from `docs/` — `scripts/build-wiki.mjs` (`npm run wiki:build`) turns the docs, CHANGELOG and CONTRIBUTING into wiki pages with a sidebar, rewrites relative links to wiki pages (or GitHub URLs for source files and images), and adds hand-written Home, Getting Started and FAQ pages from `wiki/`. `.github/workflows/wiki.yml` publishes it on every push to `main` that touches them.
 
 ## [3.2.2] — 2026-10-01

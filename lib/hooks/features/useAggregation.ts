@@ -108,14 +108,16 @@ export function useAggregation<R extends GridRowModel>(
 
         let cancelled = false;
         const request = latestRequestRef.current;
+        // Built outside the try: React Compiler cannot compile `??` inside a try statement yet.
+        const query = {
+            sortModel: request.sortModel ?? [],
+            filterModel: request.filterModel ?? { items: [] },
+            groupKeys: [],
+            aggregationModel: request.aggregationModel,
+        };
         let pending: Promise<GridAggregationResult>;
         try {
-            pending = Promise.resolve(getAggregations({
-                sortModel: request.sortModel ?? [],
-                filterModel: request.filterModel ?? { items: [] },
-                groupKeys: [],
-                aggregationModel: request.aggregationModel,
-            }));
+            pending = Promise.resolve(getAggregations(query));
         } catch (err) {
             pending = Promise.reject(err);
         }
