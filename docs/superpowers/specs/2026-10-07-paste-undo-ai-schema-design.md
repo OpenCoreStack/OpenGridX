@@ -1,6 +1,6 @@
 # Paste, undo/redo and AI toolkit part 1 — design (3.4.0)
 
-Status: **draft for review** · Target: 3.4.0 (20 Nov 2026) · Roadmap: `docs/roadmap.md` → Q4 2026 · Builds on: `2026-10-01-cell-range-selection-design.md` (3.3.0)
+Status: **approved 2026-10-07** · Target: 3.4.0 (shipped as soon as built; also carries the shared `Input`/`Checkbox` work) · Roadmap: `docs/roadmap.md` → Q4 2026 · Builds on: `2026-10-01-cell-range-selection-design.md` (3.3.0)
 
 Three features in one release. They share one foundation: a **batch edit**, meaning a set of cell changes committed together through the existing `valueSetter` → `processRowUpdate` → store pipeline. Paste and Delete produce batch edits, and undo/redo replays them. The AI toolkit is independent and ships as a separate entry point.
 
@@ -173,10 +173,10 @@ const { state, errors } = validateGridAiState(modelOutput, columns);
 - **Guides:** `docs/features/clipboard.md` (paste section), new `docs/features/undo-redo.md` and `docs/features/ai-toolkit.md`, with the wiki `SECTIONS` updated.
 - **References:** API reference, keyboard table, CHANGELOG and `llms.txt`.
 
-## Decisions needed
+## Decisions (approved 2026-10-07)
 
-1. **Paste on by default with `cellSelection`?** Proposal: yes, for editable columns (they already go through `processRowUpdate`), with `disableClipboardPaste` to opt out. Alternative: a separate opt-in `clipboardPaste` prop. That is safer for 3.3.0 adopters, but it's one more prop to discover.
-2. **Undo/redo opt-in?** Proposal: yes, `undoRedo` defaults to off. Apps may already bind Ctrl+Z, and undo writes data through `processRowUpdate`.
-3. **One `processRowUpdate` per row?** Proposal: yes, rows in parallel. A future `processRowsUpdate(batch)` for one server round-trip is noted for later.
-4. **Stale undo entries?** Proposal: skip the changed cells and apply the rest. Alternative: refuse the whole action if any cell changed.
-5. **Delete clears a range?** Proposal: yes, in this release, since it is a batch edit and undoable. Alternative: wait for 3.5.0.
+1. **Paste is on with `cellSelection`** for editable columns; `disableClipboardPaste` opts out. An editable cell already accepts user edits through `processRowUpdate`; paste is one more way to make that edit, not a new permission.
+2. **Undo/redo is opt-in** (`undoRedo`, default off): apps may already own Ctrl+Z, and undo writes data.
+3. **One `processRowUpdate` per row**, rows in parallel, failures isolated per row. A batch `processRowsUpdate` stays a later addition.
+4. **Stale undo entries skip only the changed cells** (reason `'changed'`, missing rows `'missing'`) and apply the rest.
+5. **Delete / Backspace clears a multi-cell range** in 3.4.0, as one undoable batch edit (`disableRangeClear` opts out).
