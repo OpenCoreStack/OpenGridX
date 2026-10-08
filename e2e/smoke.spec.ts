@@ -9,7 +9,7 @@ import { test, expect, type ConsoleMessage, type Locator, type Page } from '@pla
 /** Console output that is expected and harmless. Keep this list short and explain every entry. */
 const ALLOWED_CONSOLE: RegExp[] = [];
 
-const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range']);
+const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range', 'paste']);
 
 function fixtureOf(projectName: string): string {
   return projectName.split('-')[1] ?? '';
@@ -222,6 +222,36 @@ test.describe('package smoke', () => {
     await posted.locator('.ogx-checkbox__box').first().click();
     await expect(posted).toHaveText(wasYes ? 'No' : 'Yes');
     await expect(log).toContainText(new RegExp(`^5 customer=.* posted=${String(!wasYes)}`, 'm'));
+  });
+
+  test('paste: Ctrl/Cmd+V pastes clipboard TSV, Ctrl/Cmd+Z undoes and Ctrl/Cmd+Shift+Z redoes', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'paste');
+    // Put the TSV on the browser's own clipboard with the copy shortcut.
+    const source = page.getByTestId('source');
+    await source.focus();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.press('ControlOrMeta+c');
+
+    const first = cell(centerRow(page, 1), 'sku');
+    await first.click();
+    await expect(first).toBeFocused();
+    await page.keyboard.press('ControlOrMeta+v');
+
+    await expect(page.getByTestId('paste-log')).toHaveText('updated 2 skipped 0');
+    await expect(first).toHaveText('Widget');
+    await expect(cell(centerRow(page, 1), 'qty')).toHaveText('1200');
+    await expect(cell(centerRow(page, 2), 'price')).toHaveText('4');
+    await expect(page.locator('.ogx__viewport .ogx__cell--range')).toHaveCount(6);
+    await expect(page.getByTestId('history-log')).toHaveText('1 true false');
+
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(first).toHaveText('SKU-2');
+    await expect(cell(centerRow(page, 2), 'price')).toHaveText('30');
+    await expect(page.getByTestId('history-log')).toHaveText('0 false true');
+
+    await page.keyboard.press('ControlOrMeta+Shift+z');
+    await expect(first).toHaveText('Widget');
+    await expect(page.getByTestId('history-log')).toHaveText('1 true false');
   });
 
   test('range: dragging selects a cell range and Ctrl+C copies it as TSV', async ({ page }) => {
