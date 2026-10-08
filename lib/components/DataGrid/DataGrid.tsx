@@ -27,6 +27,9 @@ import { useDataGrid } from '../../hooks/core/useDataGrid';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useGridHierarchy } from '../../hooks/core/useGridHierarchy';
 import { useGridEditing } from '../../hooks/features/useGridEditing';
+import { useGridBatchEdit } from '../../hooks/features/useGridBatchEdit';
+import { useGridClipboardPaste } from '../../hooks/core/useGridClipboardPaste';
+import { useGridUndoRedo, useGridEditCommitChannel, UNDO_HISTORY_LIMIT } from '../../hooks/core/useGridUndoRedo';
 import { useGridSpanning } from '../../hooks/features/useGridSpanning';
 import { useGridSpanRowWindow, useGridSpanColumnWindow } from '../../hooks/features/useGridSpanRenderWindow';
 import { useColumnGroupReorderGuard } from '../../hooks/features/useColumnGroupReorderGuard';
@@ -90,6 +93,12 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         cellSelectionModel: propCellSelectionModel,
         onCellSelectionModelChange,
         showCellSelectionStats = false,
+        disableClipboardPaste = false,
+        disableRangeClear = false,
+        onClipboardPaste,
+        onBeforeClipboardPaste,
+        undoRedo = false,
+        onHistoryChange,
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange: propOnRowSelectionModelChange,
         onRowClick,
@@ -271,7 +280,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         syncRows: !dataSource,
     });
     const {
-        state, apiRef, setRows, replaceRow, setColumns, setDimensions, setDataSourceLoading, setDataSourceError,
+        state, apiRef, setRows, replaceRows, setColumns, setDimensions, setDataSourceLoading, setDataSourceError,
         setRowCount
     } = gridData;
 
@@ -295,6 +304,18 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         getAggregationPosition, columnLookup, filterMode, sortingMode,
     });
 
+    // Commits (single edits and batch edits) reach the undo/redo history created further down.
+    const editCommitChannel = useGridEditCommitChannel();
+    // Batch edits (paste, range clear, undo, redo): one processRowUpdate per row, one store update.
+    const batchEdit = useGridBatchEdit<R>({
+        rowsLookup: state.rows.idRowsLookup as unknown as ReadonlyMap<GridRowId, R>,
+        columns: activeColumns,
+        processRowUpdate,
+        onProcessRowUpdateError,
+        replaceRows: replaceRows as unknown as (rows: ReadonlyMap<GridRowId, R>) => void,
+        onCommitted: editCommitChannel.emit,
+    });
+
     const editingHandlers = useGridEditing({
         rows: effectiveRows,
         getRowId: getRowIdOf,
@@ -306,8 +327,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             // after an awaited processRowUpdate, by which time the rows prop (or a dataSource
             // fetch) may have replaced the rows this render saw. The returned row is stored as is
             // (the grid never writes an id onto it), even if it does not carry its key itself.
-            replaceRow(rowId, updatedRow);
+            batchEdit.storeRow(rowId, updatedRow);
         },
+        onCommitted: (changes) => editCommitChannel.emit(changes, 'edit'),
     });
 
     // The selection without ids of removed rows. Only client-owned rows are pruned: a server page
@@ -588,6 +610,44 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         focusedCell,
         setFocusedCell,
         containerRef,
+    });
+
+    // Ctrl/Cmd+V and Delete on a range (cellSelection); apiRef.pasteText.
+    useGridClipboardPaste<R>({
+        apiRef, containerRef, viewportRef,
+        selection: cellSelection,
+        disableClipboardPaste, disableRangeClear,
+        focusedCell,
+        allRenderableRows,
+        getRowId: getRowIdOf,
+        navigationColumns: navigationColumns as unknown as GridColDef<R>[],
+        isCellEditable,
+        rowMetaMap,
+        getSpanOrigin: spanning.getSpanOrigin,
+        isEditing: editingHandlers.editingCell !== null,
+        batchEdit,
+        onClipboardPaste,
+        onBeforeClipboardPaste,
+    });
+
+    // Undo / redo (undoRedo): history of committed edits, keys and apiRef methods.
+    useGridUndoRedo<R>({
+        apiRef,
+        enabled: Boolean(undoRedo),
+        limit: (typeof undoRedo === 'object' && undoRedo.limit) || UNDO_HISTORY_LIMIT,
+        onHistoryChange,
+        channel: editCommitChannel,
+        batchEdit,
+        isEditing: editingHandlers.editingCell !== null,
+        containerRef, viewportRef,
+        selection: cellSelection,
+        setFocusedCell,
+        allRenderableRows,
+        getRowId: getRowIdOf,
+        navigationColumns: navigationColumns as unknown as GridColDef<R>[],
+        layout,
+        rowHeight: effectiveRowHeight,
+        pinnedTopRowCount: pinnedTopRows.length,
     });
 
     const { handleHideColumn, handlePinColumn } = useGridColumnMenuHandlers({

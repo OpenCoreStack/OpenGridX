@@ -18,6 +18,7 @@ type GetRowId = (row: GridRowModel) => GridRowId;
 type GridAction =
   | { type: 'SET_ROWS'; payload: GridRowModel[] | ((prev: GridRowModel[]) => GridRowModel[]); getRowId: GetRowId }
   | { type: 'REPLACE_ROW'; id: GridRowId; row: GridRowModel }
+  | { type: 'REPLACE_ROWS'; rows: ReadonlyMap<GridRowId, GridRowModel> }
   | { type: 'SET_COLUMNS'; payload: GridColDef[] }
   | { type: 'SET_DIMENSIONS'; payload: { viewportWidth: number; viewportHeight: number } }
   | { type: 'SET_DATASOURCE_LOADING'; payload: boolean }
@@ -128,6 +129,26 @@ function gridReducer(state: GridState, action: GridAction): GridState {
       const idByRow = new Map(state.rows.idByRow);
       idByRow.delete(previous);
       idByRow.set(action.row, action.id);
+      return {
+        ...state,
+        rows: { ...state.rows, idRowsLookup, idByRow },
+      };
+    }
+
+    case 'REPLACE_ROWS': {
+      // A batch edit (paste, range clear, undo, redo): every stored row in one update.
+      let changed = false;
+      const idRowsLookup = new Map(state.rows.idRowsLookup);
+      const idByRow = new Map(state.rows.idByRow);
+      for (const [id, row] of action.rows) {
+        const previous = idRowsLookup.get(id);
+        if (previous === undefined) continue;
+        changed = true;
+        idRowsLookup.set(id, row);
+        idByRow.delete(previous);
+        idByRow.set(row, id);
+      }
+      if (!changed) return state;
       return {
         ...state,
         rows: { ...state.rows, idRowsLookup, idByRow },
@@ -270,6 +291,11 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
     dispatch({ type: 'REPLACE_ROW', id, row });
   }, []);
 
+  /** Replaces several stored rows in one update (a batch edit); ids no longer stored are ignored. */
+  const replaceRows = useCallback((rowsById: ReadonlyMap<GridRowId, GridRowModel>) => {
+    if (rowsById.size > 0) dispatch({ type: 'REPLACE_ROWS', rows: rowsById });
+  }, []);
+
   const setColumns = useCallback((newColumns: GridColDef[]) => {
     dispatch({ type: 'SET_COLUMNS', payload: newColumns });
   }, []);
@@ -307,6 +333,7 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
     apiRef,
     setRows,
     replaceRow,
+    replaceRows,
     setColumns,
     setDimensions,
     setDataSourceLoading,

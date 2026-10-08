@@ -179,6 +179,14 @@ export interface GridColDef<R extends GridValidRowModel = GridRowModel> {
    */
   valueSetter?(params: GridValueSetterParams<R>): R;
   /**
+   * Turns pasted text into this column's value (clipboard paste), instead of the default parser for
+   * the column `type` (see `docs/features/clipboard.md`). Use it for locales such as `1.234,5` or for
+   * custom codes. Throw (or return `undefined`) to reject the text: the cell is skipped with reason
+   * `'invalidValue'`. The value then goes through `valueSetter` and `processRowUpdate` like an edit.
+   * @since v3.4
+   */
+  valueParser?(text: string, params: GridValueParserParams<R>): unknown;
+  /**
    * Custom ascending comparator for client-side sorting by this column, used instead of the built-in
    * type-aware comparison. `v1` / `v2` are the cell values (`valueGetter` applied) and **include
    * `null` / `undefined`**, so the comparator decides where empty values go. The grid reverses the
@@ -298,6 +306,14 @@ export interface GridValueGetterParams<R extends GridValidRowModel = GridRowMode
   field: string;
   /** The raw value from the row object. */
   value: unknown;
+}
+
+/** Parameters passed to `GridColDef.valueParser`. @since v3.4 */
+export interface GridValueParserParams<R extends GridValidRowModel = GridRowModel> {
+  /** The row the text is pasted into, as stored now. */
+  row: R;
+  field: string;
+  colDef: GridColDef<R>;
 }
 
 /**
@@ -803,6 +819,54 @@ export interface GridRowScrollEndParams {
   viewportHeight: number;
 }
 
+/**
+ * Why a cell of a batch edit (paste, range clear, undo, redo) was not written:
+ * - `'notEditable'`: the column is not `editable`, `isCellEditable` returned false, or the row is a
+ *   synthetic row (group header, subtotal, tree auto-parent, pivot Grand Total);
+ * - `'invalidValue'`: the pasted text does not parse for the column type (or `valueParser` rejected it);
+ * - `'changed'`: undo/redo only, the cell no longer holds the value the history recorded;
+ * - `'missing'`: undo/redo only, the row is gone.
+ * @since v3.4
+ */
+export type GridEditSkipReason = 'notEditable' | 'invalidValue' | 'changed' | 'missing';
+
+/** What a batch edit (paste, range clear, undo, redo) did. @since v3.4 */
+export interface GridBatchEditResult {
+  /** Rows whose `processRowUpdate` succeeded and that were stored, in the order they were first touched. */
+  updated: GridRowId[];
+  /** Rows whose `valueSetter` or `processRowUpdate` threw or rejected (also reported to `onProcessRowUpdateError`). */
+  failed: { id: GridRowId; error: unknown }[];
+  /** Cells that were not written, with the reason. */
+  skipped: { id: GridRowId; field: string; reason: GridEditSkipReason }[];
+}
+
+/** `onClipboardPaste` details: the batch edit result plus the text that was pasted. @since v3.4 */
+export interface GridClipboardPasteResult extends GridBatchEditResult {
+  text: string;
+}
+
+/** `onBeforeClipboardPaste` params. @since v3.4 */
+export interface GridBeforeClipboardPasteParams {
+  /** The clipboard text (`text/plain`). */
+  text: string;
+  /** The cell the paste starts from (the range's top-left cell, or the focused cell). */
+  anchor: GridCellCoordinates | null;
+}
+
+/** `onHistoryChange` params. @since v3.4 */
+export interface GridHistoryChangeParams {
+  canUndo: boolean;
+  canRedo: boolean;
+  /** Number of actions that can be undone. */
+  size: number;
+}
+
+/** `undoRedo` options. @since v3.4 */
+export interface GridUndoRedoOptions {
+  /** How many actions are kept; the oldest is dropped beyond it. Default: 100. */
+  limit?: number;
+}
+
 /** Overrideable user-visible strings for internationalisation. All fields are optional; defaults match the built-in English strings. */
 export interface GridLocaleText {
     /** Label before the rows-per-page select. Default: `"Rows per page:"` */
@@ -938,6 +1002,39 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
    * `slots.cellSelectionStats`. Needs `cellSelection`. Default: false. @since v3.3
    */
   showCellSelectionStats?: boolean;
+
+  /**
+   * With `cellSelection` on, Ctrl/Cmd+V pastes tab-separated text (Excel, Google Sheets) into the
+   * editable cells from the range's top-left cell (or the focused cell), through `valueSetter` and
+   * `processRowUpdate`. `true` turns the shortcut off; `apiRef.pasteText()` still works. Default: false.
+   * @since v3.4
+   */
+  disableClipboardPaste?: boolean;
+  /**
+   * Fired after every paste with the result (`updated` rows, `failed` rows, `skipped` cells and why)
+   * and the pasted text. @since v3.4
+   */
+  onClipboardPaste?: (result: GridClipboardPasteResult) => void;
+  /**
+   * Called before a paste is applied. Return `false` to cancel it, or a string to paste instead of the
+   * clipboard text. A throw cancels the paste. @since v3.4
+   */
+  onBeforeClipboardPaste?: (params: GridBeforeClipboardPasteParams) => boolean | string;
+  /**
+   * With `cellSelection` on, Delete / Backspace on a range of more than one cell empties its editable
+   * cells (`null`, or `''` in string columns) as one edit. `true` turns that off. Default: false.
+   * @since v3.4
+   */
+  disableRangeClear?: boolean;
+  /**
+   * Undo and redo of cell edits, pastes and range clears: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y while
+   * focus is in the grid and no editor is open, and `apiRef.undo()` / `redo()`. Undo and redo write
+   * through `valueSetter` and `processRowUpdate`, like an edit. `{ limit }` sets how many actions are
+   * kept (default 100). Default: false. @since v3.4
+   */
+  undoRedo?: boolean | GridUndoRedoOptions;
+  /** Fired when what can be undone or redone changes (`undoRedo`). @since v3.4 */
+  onHistoryChange?: (params: GridHistoryChangeParams) => void;
 
   /** Loading state. With no rows the body shows skeleton rows (or `slots.loadingOverlay`); with rows, they stay and a progress bar (or `slots.loadingOverlay`) is shown over them. */
   loading?: boolean;
@@ -1328,4 +1425,21 @@ export interface GridApi<R extends GridValidRowModel = GridRowModel> {
    * copy; rejects when the clipboard write fails. @since v3.3
    */
   copySelectedCells: () => Promise<void>;
+
+  /**
+   * Pastes tab-separated text as Ctrl/Cmd+V does: from `anchor` (default: the range's top-left cell,
+   * else the focused cell), with `onBeforeClipboardPaste` and `onClipboardPaste`. Works with
+   * `disableClipboardPaste`. Resolves once every row's `processRowUpdate` has settled. @since v3.4
+   */
+  pasteText: (text: string, anchor?: GridCellCoordinates) => Promise<GridBatchEditResult>;
+  /** Undoes the last action (`undoRedo`). Resolves with what was written. @since v3.4 */
+  undo: () => Promise<GridBatchEditResult>;
+  /** Redoes the last undone action (`undoRedo`). @since v3.4 */
+  redo: () => Promise<GridBatchEditResult>;
+  /** Whether there is an action to undo. @since v3.4 */
+  canUndo: () => boolean;
+  /** Whether there is an undone action to redo. @since v3.4 */
+  canRedo: () => boolean;
+  /** Forgets every action (undo and redo). @since v3.4 */
+  clearHistory: () => void;
 }

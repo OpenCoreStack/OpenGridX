@@ -1,6 +1,15 @@
 import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import type { GridColDef, GridRowId, GridRowModel } from '../../types';
 import { attempt } from '../../utils/attempt';
+import { getCellValue } from '../../utils/values';
+import {
+    buildEditedRow,
+    invalidProcessedRowError,
+    isPromiseLike,
+    isSameValue,
+    reportEditError,
+} from '../../utils/editing/commit';
+import type { GridCellChange } from '../../utils/editing/commit';
 
 export interface GridEditingState {
     editingCell: {
@@ -23,6 +32,12 @@ export interface UseGridEditingParams<R extends GridRowModel> {
      * grid resolved with getRowId), not on a field of the returned row.
      */
     onRowChange?: (newRow: R, id: GridRowId) => void;
+    /**
+     * Receives the cell change once `processRowUpdate` succeeded and the row was stored (undo/redo
+     * history): the value before and the stored value, both read through `getCellValue`. Not called
+     * when the stored value equals the previous one.
+     */
+    onCommitted?: (changes: GridCellChange[]) => void;
 }
 
 export interface StopCellEditParams {
@@ -45,18 +60,6 @@ interface PendingCommit {
 }
 
 const RESOLVED: Promise<void> = Promise.resolve();
-
-/** A misuse of the editing contract (e.g. processRowUpdate returned nothing), as opposed to a consumer rejection. */
-class OpenGridXEditError extends Error {}
-
-function isSameValue(a: unknown, b: unknown): boolean {
-    if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
-    return Object.is(a, b);
-}
-
-function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
-    return typeof value === 'object' && value !== null && typeof (value as { then?: unknown }).then === 'function';
-}
 
 /**
  * Cell edit sessions and their commits.
@@ -126,24 +129,21 @@ export function useGridEditing<R extends GridRowModel>(params: UseGridEditingPar
             return RESOLVED;
         }
 
-        const report = (error: unknown) => {
-            const onError = latestRef.current.onProcessRowUpdateError;
-            if (onError) {
-                onError(error);
-            } else if (process.env.NODE_ENV !== 'production' && error instanceof OpenGridXEditError) {
-                console.error(error.message);
-            }
-        };
+        const report = (error: unknown) => reportEditError(error, latestRef.current.onProcessRowUpdateError);
+        const colDef = columns?.find(c => c.field === cell.field);
 
         const apply = (processed: unknown) => {
             if (typeof processed !== 'object' || processed === null) {
-                report(new OpenGridXEditError(
-                    `[OpenGridX] processRowUpdate must return the updated row object (or a Promise of it); ` +
-                    `it returned ${processed === null ? 'null' : typeof processed}. The edit was not saved and the editor stays open.`
-                ));
+                report(invalidProcessedRowError(processed, 'The edit was not saved and the editor stays open.'));
                 return;
             }
             latestRef.current.onRowChange?.(processed as R, cell.id);
+            const { onCommitted } = latestRef.current;
+            if (onCommitted) {
+                const before = getCellValue(existingRow, cell.field, colDef);
+                const after = getCellValue(processed as R, cell.field, colDef);
+                if (!isSameValue(before, after)) onCommitted([{ id: cell.id, field: cell.field, before, after }]);
+            }
             const now = editingCellRef.current;
             if (sessionRef.current !== token || !now) return;
             if (isSameValue(now.value, cell.value)) {
@@ -164,7 +164,6 @@ export function useGridEditing<R extends GridRowModel>(params: UseGridEditingPar
             if (pendingRef.current.get(token) === entry) pendingRef.current.delete(token);
         };
 
-        const colDef = columns?.find(c => c.field === cell.field);
         const outcome = attempt<unknown>(() => {
             const newRow = buildEditedRow(existingRow, cell, colDef, warnedFieldsRef.current);
             return processRowUpdate ? processRowUpdate(newRow, existingRow) : newRow;
@@ -245,24 +244,4 @@ export function useGridEditing<R extends GridRowModel>(params: UseGridEditingPar
         stopCellEdit,
         setEditCellValue
     }), [editingCell, startCellEdit, stopCellEdit, setEditCellValue]);
-}
-
-function buildEditedRow<R extends GridRowModel>(
-    row: R,
-    cell: EditingCell,
-    colDef: GridColDef<R> | undefined,
-    warnedFields: Set<string>
-): R {
-    if (colDef?.valueSetter) {
-        return colDef.valueSetter({ value: cell.value, row, field: cell.field });
-    }
-    if (colDef?.valueGetter && process.env.NODE_ENV !== 'production' && !warnedFields.has(cell.field)) {
-        warnedFields.add(cell.field);
-        console.warn(
-            `[OpenGridX] Column "${cell.field}" is editable and has a valueGetter but no valueSetter. ` +
-            `The edited value was written to row["${cell.field}"], which the valueGetter may ignore, so the cell ` +
-            'can keep showing the old value. Add a valueSetter that maps the value back onto the row.'
-        );
-    }
-    return { ...row, [cell.field]: cell.value };
 }

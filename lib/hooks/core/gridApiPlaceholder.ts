@@ -1,6 +1,7 @@
-import type { GridApi, GridRowModel, GridValidRowModel } from '../../types';
+import type { GridApi, GridBatchEditResult, GridRowModel, GridValidRowModel } from '../../types';
 
 const noop = () => {};
+const emptyEditResult = (): Promise<GridBatchEditResult> => Promise.resolve({ updated: [], failed: [], skipped: [] });
 
 /**
  * A complete GridApi whose methods are safe no-ops. `useGridApiRef()` starts with one so
@@ -38,5 +39,11 @@ export function createGridApiPlaceholder<R extends GridValidRowModel = GridRowMo
         clearCellSelection: noop,
         getSelectedCells: () => [],
         copySelectedCells: () => Promise.resolve(),
+        pasteText: emptyEditResult,
+        undo: emptyEditResult,
+        redo: emptyEditResult,
+        canUndo: () => false,
+        canRedo: () => false,
+        clearHistory: noop,
     };
 }

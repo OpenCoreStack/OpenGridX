@@ -116,6 +116,11 @@ export interface UseGridCellSelectionReturn {
     reportFocus: (cell: FocusedCell | null) => void;
     /** Sets the model, keeping only the first range, unless it is unchanged. */
     setModel: (model: GridCellSelectionModel, reason: GridCellSelectionReason) => void;
+    /**
+     * The current range (a pending model included) and where it lies, read at call time. Its indices
+     * address the renderable rows and the range columns of `navigationColumns` (`isRangeColumnField`).
+     */
+    getCurrentRange: () => { range: GridCellSelectionModel[number] | null; resolved: ResolvedCellRange | null };
 }
 
 interface DragState {
@@ -598,6 +603,7 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         stats,
         reportFocus,
         setModel,
+        getCurrentRange: currentRange,
     };
 }
 
