@@ -97,6 +97,12 @@ export default function App() {
 | cellSelectionModel         | GridCellSelectionModel        | Controlled range: readonly { anchor: { id, field }, head: { id, field } }[] (0 or 1 range). Corners are ids/fields: the range follows sorting; cleared ('dataChange') when a corner is no longer displayed |
 | onCellSelectionModelChange | (model, { reason }) => void   | reason: 'pointer' | 'keyboard' | 'selectAll' | 'api' | 'clear' | 'dataChange' |
 | showCellSelectionStats     | boolean                       | Status bar: Count (non-empty), Sum and Average (numeric) of the range; slots.cellSelectionStats replaces it |
+| disableClipboardPaste      | boolean (3.4.0+)              | With cellSelection, Ctrl/Cmd+V pastes TSV (Excel/Sheets) into editable cells: one value fills a range; a block goes from the range's top-left (or focused) cell, cut to the range and grid edges; no rows created. Parsed per column type, then valueSetter + processRowUpdate once per row. true = shortcut off (apiRef.pasteText still works) |
+| onClipboardPaste           | (result) => void (3.4.0+)     | After every paste: { updated: id[], failed: {id, error}[], skipped: {id, field, reason: 'notEditable'/'invalidValue'}[], text } |
+| onBeforeClipboardPaste     | ({ text, anchor }) => boolean / string | Return false to cancel, a string to paste instead; a throw cancels |
+| disableRangeClear          | boolean (3.4.0+)              | With cellSelection, Delete/Backspace on a multi-cell range empties editable cells ('' strings, null otherwise) as one edit; true = off |
+| undoRedo                   | boolean / { limit } (3.4.0+)  | Undo/redo of edits, pastes, range clears (default off, 100 actions). Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y on a cell with no editor open. Recorded only after processRowUpdate succeeds; replayed through valueSetter + processRowUpdate; cells changed since are skipped ('changed', compared by value), removed rows ('missing') |
+| onHistoryChange            | ({ canUndo, canRedo, size }) => void | History change (size = undoable actions) |
 
 ### Sorting
 | Prop              | Type                        | Description                     |
@@ -245,6 +251,7 @@ There are no getRowClassName / getCellClassName / theme props: use GridColDef.ce
 | renderEditCell    | (params: GridRenderEditCellParams<R>) => ReactNode     | Custom editor: call params.onValueChange(v), params.onCommit(), params.onCancel() |
 | valueGetter       | ({row, field, value}) => unknown                       | Computed value; used by sort, filter, quick search, aggregation, copy, export. Must be pure (quick filter caches per row object); a throw reads as undefined + dev warning |
 | valueSetter       | ({value, row, field}) => R                             | Write an edited value back onto the row (editable valueGetter columns) |
+| valueParser       | (text, { row, field, colDef }) => unknown              | Paste parser for this column (3.4.0+), e.g. "1.234,5" → 1234.5. Throw/undefined skips the cell ('invalidValue'). Default by type: number "1,234.5"/"12%"/"$5"; date ISO or Date.parse (keeps the cell's kind); boolean true/false/yes/no/1/0; singleSelect value or label; empty → null ('' for strings) |
 | valueFormatter    | ({value, row, field}) => string                        | Format display value (value is `unknown`: cast before calling methods) |
 | cellClassName     | string / (params) => string                            | CSS class on cells                         |
 | headerClassName   | string                                                 | CSS class on header cell                   |
@@ -320,6 +327,14 @@ apiRef.current.getCellSelectionModel()  // → GridCellSelectionModel
 apiRef.current.getSelectedCells()      // → { id, field, value }[]; synthetic rows and span-covered cells left out
 apiRef.current.copySelectedCells()     // → Promise<void>; TSV, no header line
 apiRef.current.clearCellSelection()
+
+// Paste and undo/redo (3.4.0+)
+apiRef.current.pasteText(text, anchor?) // → Promise<GridBatchEditResult>; anchor default: range top-left, else focused cell
+apiRef.current.undo()                   // → Promise<GridBatchEditResult> (undoRedo)
+apiRef.current.redo()
+apiRef.current.canUndo()                // → boolean
+apiRef.current.canRedo()
+apiRef.current.clearHistory()
 
 // Aggregation
 apiRef.current.getAggregationResult()  // → Record<string, unknown> | null (null in pivot mode)

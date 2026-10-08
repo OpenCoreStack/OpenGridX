@@ -36,8 +36,9 @@ In-depth guides on the grid's functional capabilities.
 - **[Editing & Reordering](features/editing-reordering.md)** - Inline edits and Drag-and-Drop
 - **[Loading & Performance](features/loading-states.md)** - Skeletons, Lazy, and Infinite loading
 - **[Row Selection](features/selection.md)** - Multi & single choice selection
-- **[Clipboard](features/clipboard.md)** - Copy and Paste grid data
+- **[Clipboard](features/clipboard.md)** - Copy rows and ranges, paste from Excel / Sheets, clear a range with Delete
 - **[Cell Range Selection](features/cell-selection.md)** - Spreadsheet-style cell ranges, copy and a sum / average status bar
+- **[Undo & Redo](features/undo-redo.md)** - Ctrl+Z / Ctrl+Shift+Z for edits, pastes and range clears
 - **[Pinning](features/pinning.md)** - Sticky columns and rows
 - **[State Persistence](features/state-persistence.md)** - Save/Restore grid configuration
 - **[Aggregation & Pivot](features/aggregation-pivot.md)** - Data summarization and analytics

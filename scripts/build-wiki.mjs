@@ -48,6 +48,7 @@ const SECTIONS = [
         ['docs/features/selection.md', 'Row-Selection', 'Row Selection'],
         ['docs/features/clipboard.md', 'Clipboard', 'Clipboard'],
         ['docs/features/cell-selection.md', 'Cell-Range-Selection', 'Cell Range Selection'],
+        ['docs/features/undo-redo.md', 'Undo-Redo', 'Undo & Redo'],
         ['docs/features/pinning.md', 'Pinning', 'Pinning'],
         ['docs/features/state-persistence.md', 'State-Persistence', 'State Persistence'],
         ['docs/features/aggregation-pivot.md', 'Aggregation-and-Pivot', 'Aggregation & Pivot'],

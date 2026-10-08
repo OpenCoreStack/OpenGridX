@@ -519,8 +519,9 @@ Full documentation at 👉 **[opencorestack.github.io/OpenGridX](https://opencor
 - **[Infinite Scroll](docs/features/infinite-scroll.md)** — Seamless lazy-loading
 - **[Export Guide](docs/features/export-guide.md)** — Excel, CSV, JSON, and Print
 - **[PDF Export](docs/features/pdf-export.md)** — Branded PDF reports
-- **[Clipboard](docs/features/clipboard.md)** — Copy rows as TSV
+- **[Clipboard](docs/features/clipboard.md)** — Copy rows as TSV, paste from Excel / Sheets, clear a range with Delete
 - **[Cell Range Selection](docs/features/cell-selection.md)** — Select, total and copy cell ranges
+- **[Undo & Redo](docs/features/undo-redo.md)** — Undo and redo edits, pastes and range clears
 - **[Keyboard & Accessibility](docs/features/keyboard-navigation.md)** — Keys, focus and ARIA
 - **[Data Source](docs/features/data-source.md)** — Server-side integration
 - **[Loading States](docs/features/loading-states.md)** — Skeleton and shimmer overlays

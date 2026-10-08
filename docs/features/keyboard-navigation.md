@@ -37,6 +37,17 @@ With [`cellSelection`](cell-selection.md) on (v3.3), on a data cell:
 | **Ctrl+Shift+Home** / **Ctrl+Shift+End** (Cmd on macOS) | Extend to the first / last cell of the page. |
 | **Shift+PageUp** / **Shift+PageDown** | Extend one page up / down. |
 | **Escape** | Collapse the range to the anchor (when not editing). |
+| **Ctrl+V** (Cmd+V) | Paste tab-separated text into the editable cells from the range's top-left cell (v3.4, see [Clipboard](clipboard.md#-paste-from-excel-and-google-sheets-v34)). Off with `disableClipboardPaste`. |
+| **Delete** / **Backspace** | On a range of more than one cell: empty its editable cells in one edit (v3.4). Off with `disableRangeClear`. |
+
+With `undoRedo` on (v3.4, see [Undo & Redo](undo-redo.md)), while focus is on a cell and no editor is open:
+
+| Key | Action |
+| :--- | :--- |
+| **Ctrl+Z** (Cmd+Z) | Undo the last edit, paste or range clear. |
+| **Ctrl+Shift+Z** (Cmd+Shift+Z) or **Ctrl+Y** | Redo. |
+
+Inside an open editor these keys belong to the input (its own paste and undo).
 
 A plain arrow key after a range collapses it to the newly focused cell. Shift+Space still selects the row.
 

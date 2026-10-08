@@ -82,6 +82,35 @@ interface GridSelectedCell { id: GridRowId; field: string; value: unknown }
 
 Public CSS: `ogx__cell--range`, `ogx__cell--range-top` / `-bottom` / `-left` / `-right`, `ogx--range-dragging` (root, during a drag), `--ogx-range-background`, `--ogx-range-border`. Range cells carry `aria-selected="true"`.
 
+#### Paste and Range Clear (v3.4)
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `disableClipboardPaste` | `boolean` | `false` | With `cellSelection` on, Ctrl/Cmd+V pastes tab-separated text into the editable cells (through `valueSetter` and `processRowUpdate`, once per row). `true` turns the shortcut off; `apiRef.current.pasteText()` still works. See [Clipboard](features/clipboard.md#-paste-from-excel-and-google-sheets-v34). |
+| `onClipboardPaste` | `(result: GridClipboardPasteResult) => void` | — | Fired after every paste, once every row has settled: `{ updated, failed, skipped, text }`. |
+| `onBeforeClipboardPaste` | `(params: GridBeforeClipboardPasteParams) => boolean \| string` | — | Runs before a paste with `{ text, anchor }`. Return `false` to cancel, a string to paste instead. A throw cancels the paste. |
+| `disableRangeClear` | `boolean` | `false` | With `cellSelection`, Delete / Backspace on a range of more than one cell empties its editable cells (`''` for strings, `null` otherwise) as one edit. `true` turns that off. |
+
+#### Undo / Redo (v3.4)
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `undoRedo` | `boolean \| GridUndoRedoOptions` | `false` | History of committed edits, pastes and range clears: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y (focus on a cell, no editor open) and `apiRef.undo()` / `redo()`. Undo and redo write through `valueSetter` and `processRowUpdate`; cells changed since are skipped (`'changed'`). `{ limit }`: actions kept, default 100. See [Undo & Redo](features/undo-redo.md). |
+| `onHistoryChange` | `(params: GridHistoryChangeParams) => void` | — | Fired when `canUndo`, `canRedo` or `size` (actions that can be undone) changes. |
+
+```ts
+type GridEditSkipReason = 'notEditable' | 'invalidValue' | 'changed' | 'missing';
+interface GridBatchEditResult {
+  updated: GridRowId[];                                   // rows stored (processRowUpdate succeeded)
+  failed: { id: GridRowId; error: unknown }[];            // also sent to onProcessRowUpdateError
+  skipped: { id: GridRowId; field: string; reason: GridEditSkipReason }[];
+}
+interface GridClipboardPasteResult extends GridBatchEditResult { text: string }
+interface GridBeforeClipboardPasteParams { text: string; anchor: GridCellCoordinates | null }
+interface GridHistoryChangeParams { canUndo: boolean; canRedo: boolean; size: number }
+interface GridUndoRedoOptions { limit?: number }
+```
+
 #### Column Visibility
 
 | Prop | Type | Default | Description |
@@ -329,6 +358,11 @@ Access these methods via the `apiRef` prop.
 | `clearCellSelection()` | `void` | Empty the cell selection (`reason: 'clear'`) (v3.3). |
 | `getSelectedCells()` | `GridSelectedCell[]` | Cells of the range in display order with values read through `valueGetter`. Synthetic rows and span-covered positions are left out (v3.3). |
 | `copySelectedCells()` | `Promise<void>` | Copy the range (the focused cell when nothing else is selected) as TSV without a header line. Resolves without writing when there is nothing to copy; rejects when the clipboard write fails (v3.3). |
+| `pasteText(text, anchor?)` | `Promise<GridBatchEditResult>` | Paste tab-separated text as Ctrl/Cmd+V does, from `anchor` (default: the range's top-left cell, else the focused cell), with `onBeforeClipboardPaste` / `onClipboardPaste`. Works with `disableClipboardPaste` and without `cellSelection` (then pass `anchor` or focus a cell) (v3.4). |
+| `undo()` | `Promise<GridBatchEditResult>` | Undo the last action (`undoRedo`); resolves once every row has settled (v3.4). |
+| `redo()` | `Promise<GridBatchEditResult>` | Redo the last undone action (v3.4). |
+| `canUndo()` / `canRedo()` | `boolean` | Whether there is an action to undo / redo (v3.4). |
+| `clearHistory()` | `void` | Forget every undo and redo action (v3.4). |
 | `copySelectedRows()` | `Promise<void>` | Copy every selected row that passes the filter (other pages, collapsed groups and pinned rows included) as TSV, with the visible columns in screen order. Resolves without writing when no selected row is found; rejects when the clipboard write fails. |
 
 ---
@@ -385,6 +419,7 @@ Defines the behavior and appearance of a single column.
 | `valueOptions` | `Array<string \| number \| { value: unknown; label: string }>` | — | Allowed values for `type: 'singleSelect'` — the filter panel offers them as a (multi-)select, and the edit cell uses them; cells and exports show the option's label. |
 | `valueGetter` | `(params: GridValueGetterParams) => unknown` | — | Derive a computed value from the row object. Runs before `valueFormatter` and `renderCell`. Client-side sorting, column filters and the quick filter use this value, and editors start from it (double-click and Enter alike). Keep it pure: the quick filter caches each row's search text per row object and column set. A getter that throws for a row shows an error in that cell and reads as `undefined` for sorting, filtering, aggregation, grouping, pivot and list view (v3.0+, with a one-time development warning per column); before, it crashed the grid once the column was sorted, filtered or aggregated. |
 | `valueSetter` | `(params: GridValueSetterParams) => R` | — | v3.0+. Maps an edited value back onto the row (`{ value, row, field }` → updated row) when an edit is committed. Needed for editable `valueGetter` columns; without it the commit writes `row[field]` and a development warning is logged. |
+| `valueParser` | `(text: string, params: GridValueParserParams) => unknown` | — | v3.4+. Turns pasted text into this column's value instead of the default parser for its `type` (`{ row, field, colDef }`). Throw or return `undefined` to skip the cell (`'invalidValue'`). See [Clipboard](features/clipboard.md#valueparser). |
 | `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format the value into a display string (e.g. currency, dates). Does not affect editing, sorting or column filters; the quick filter also searches the formatted text. A formatter that throws leaves the value unformatted (the quick filter searches the raw value; v3.0+). |
 
 #### Rendering
@@ -839,6 +874,15 @@ Passed to `valueSetter` (v3.0+).
 | `value` | `unknown` | The committed value from the editor. |
 | `row` | `R` | The row as it was before the edit. |
 | `field` | `string` | The column field name. |
+
+### `GridValueParserParams<R>`
+Passed to `valueParser` (v3.4+).
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `row` | `R` | The row the text is pasted into, as stored now. |
+| `field` | `string` | The column field name. |
+| `colDef` | `GridColDef<R>` | The column. |
 
 ### `GridColumnOrderChangeParams`
 Passed to `onColumnOrderChange`.

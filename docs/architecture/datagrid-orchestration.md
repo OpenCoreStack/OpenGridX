@@ -20,6 +20,11 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 - `useGridCellSelection` runs after `useGridSpanning` (it needs `getSpanOrigin` and the span caches) and
   before `useGridKeyboardNavigation`, which receives its Shift-key handlers. `useGridCellSelectionApi` runs
   after the keyboard hook because it reads and sets `focusedCell`.
+- `useGridBatchEdit` is created before `useGridEditing` (single edits store through it, so an undo right after an
+  edit reads the stored row before the next render). The history hook needs the focus and selection hooks, so it runs
+  late (36c); commits reach it through `useGridEditCommitChannel` (12a), whose listener it sets in a layout effect.
+  `useGridClipboardPaste` (36b) and `useGridUndoRedo` listen for keys on the grid root with native listeners, which
+  fire before React's delegated `onKeyDown` of the viewport; they act only on cell targets with no editor open.
 - `useGridLiveRowSelection` prunes the selection, and `useGridPageCorrection` corrects a page past the
   end, in effects that run before the later hooks' effects.
 
@@ -40,7 +45,9 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | 10 | `useGridRowIdOf` | `hooks/core/useGridRowIdOf.ts` | `getRowIdOf` and its stable event-handler twin |
 | 11 | `useGridApiRefBinding` | `hooks/core/useGridApiRefBinding.ts` | Binds the `apiRef` prop (layout effect) |
 | 12 | `useGridHierarchy` | `hooks/core/useGridHierarchy.ts` | `useTreeData` + `useRowGrouping`, the active handlers and `rowMetaMap` |
-| 13 | `useGridEditing` | `hooks/features/useGridEditing.ts` | Cell editing state and handlers |
+| 12a | `useGridEditCommitChannel` | `hooks/core/useGridUndoRedo.ts` | Stable `emit` / `setListener` pair: the commit paths below report stored changes through `emit`, and `useGridUndoRedo` (36c) registers the listener (v3.4) |
+| 12b | `useGridBatchEdit` | `hooks/features/useGridBatchEdit.ts` | Batch edits (v3.4): `applyEdits` runs `valueSetter` → `processRowUpdate` once per row (rows in parallel, failures isolated and sent to `onProcessRowUpdateError`) and stores every successful row in one `replaceRows` update; `getRow` sees rows stored since the last render; `storeRow` stores a single edit |
+| 13 | `useGridEditing` | `hooks/features/useGridEditing.ts` | Cell editing state and handlers; stores through `useGridBatchEdit.storeRow` and reports the committed change to the channel |
 | 14 | `useGridLiveRowSelection` | `hooks/core/useGridLiveRowSelection.ts` | Selection without removed rows |
 | 15 | `useGridDataSource` | `hooks/features/useGridDataSource.ts` | Server fetching |
 | 16 | `useServerTreeChildren` | `hooks/features/useServerTreeChildren.ts` | Lazy server tree children |
@@ -67,6 +74,8 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | 35 | `useGridKeyboardNavigation` | `hooks/core/useGridKeyboardNavigation.ts` | Focus and keyboard handling; takes `cellSelection.keyboard` (Shift+navigation, Escape, Ctrl/Cmd+A) |
 | 36 | `useGridPointerFocusHandlers` | `hooks/core/useGridFocusHandlers.ts` | Cell and header click focus |
 | 36a | `useGridCellSelectionApi` | `hooks/core/useGridCellSelectionApi.ts` | Keeps the range anchor and the focused cell together (layout effect: a new anchor moves focus; focus moved to another data cell collapses the range), clears a range whose corner is gone (`'dataChange'`), and installs `getCellSelectionModel`, `setCellSelectionModel`, `selectCellRange`, `clearCellSelection`, `getSelectedCells`, `copySelectedCells` (once per `apiRef`, reading the latest values from a ref) |
+| 36b | `useGridClipboardPaste` | `hooks/core/useGridClipboardPaste.ts` | Paste and range clear (v3.4): `paste` and Delete/Backspace listeners on the grid root (only for cell targets, not editors or nested grids), TSV parsing (`utils/parsing.ts`), placement against the renderable rows and range columns (`utils/editing/targets.ts`), the batch edit, the new selection, `onBeforeClipboardPaste` / `onClipboardPaste`, and `apiRef.pasteText`. Inert without `cellSelection` except for `pasteText` |
+| 36c | `useGridUndoRedo` | `hooks/core/useGridUndoRedo.ts` | History (v3.4, `undoRedo`): records the channel's changes, replays them as batch edits with an `expect` value per cell (stale cells skipped), queues undo/redo, selects and scrolls to the affected cells, Ctrl/Cmd+Z / Shift+Z / Ctrl+Y on the grid root, `onHistoryChange`, and `apiRef.undo` / `redo` / `canUndo` / `canRedo` / `clearHistory` |
 | 37 | `useGridColumnMenuHandlers` | `hooks/core/useGridHeaderHandlers.ts` | Column menu Hide / Pin (`pinColumnTo` in `utils/pinning`) |
 | 38 | `useGridAriaRows` | `hooks/core/useGridAriaRows.ts` | `aria-rowcount` and `aria-rowindex` bases |
 | 39 | `useGridSpanRowWindow` | `hooks/features/useGridSpanRenderWindow.ts` | Render window widened to whole row spans |

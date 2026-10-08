@@ -46,6 +46,7 @@ node_modules/@opencorestack/opengridx/docs/features/loading-states.md
 node_modules/@opencorestack/opengridx/docs/features/data-source.md
 node_modules/@opencorestack/opengridx/docs/features/clipboard.md
 node_modules/@opencorestack/opengridx/docs/features/cell-selection.md
+node_modules/@opencorestack/opengridx/docs/features/undo-redo.md
 node_modules/@opencorestack/opengridx/docs/features/keyboard-navigation.md
 node_modules/@opencorestack/opengridx/docs/features/cell-spanning.md
 node_modules/@opencorestack/opengridx/docs/features/list-view.md
@@ -216,6 +217,26 @@ corner ids and fields (`{ anchor, head }[]`), so it follows sorting and is clear
 `'dataChange'` when a corner disappears. Synthetic rows are highlighted but not copied. Guide:
 `docs/features/cell-selection.md`.
 
+### Paste, range clear and undo/redo (3.4.0+)
+
+```tsx
+<DataGrid rows={rows} columns={columns} cellSelection undoRedo
+  processRowUpdate={saveRow}
+  onClipboardPaste={({ updated, skipped, failed }) => {}}
+  onHistoryChange={({ canUndo, canRedo }) => {}} />
+// column: { field: 'price', type: 'number', editable: true, valueParser: (text) => parseEuro(text) }
+await apiRef.current.pasteText('a\tb\nc\td');
+await apiRef.current.undo();
+```
+
+With `cellSelection`, Ctrl/Cmd+V pastes TSV into **editable** cells only (parsed per column `type`, or by
+`valueParser`), Delete/Backspace empties a multi-cell range. Both go through `valueSetter` and
+`processRowUpdate` **once per row** and store all rows in one update; a failing row goes to
+`onProcessRowUpdateError` and does not block the others. `undoRedo` (opt-in) records an action only
+after `processRowUpdate` succeeded and replays it through `processRowUpdate`, so the app persists undo
+like any edit; cells changed since are skipped with reason `'changed'`. Opt out with
+`disableClipboardPaste` / `disableRangeClear`. Guides: `docs/features/clipboard.md`, `docs/features/undo-redo.md`.
+
 ### Custom sort order and column auto-size (3.1.0+)
 
 ```tsx
@@ -374,7 +395,8 @@ import type {
   GridSortItem, GridSortModel, GridFilterModel, GridFilterItem, GridFilterGroup, GridFilterOperator,
   GridPaginationModel, GridColumnPinning, GridRowPinning, GridColumnVisibilityModel,
   GridRowParams, GridCellParams, GridRenderCellParams, GridRenderEditCellParams,
-  GridValueGetterParams, GridValueSetterParams, GridValueFormatterParams,
+  GridValueGetterParams, GridValueSetterParams, GridValueFormatterParams, GridValueParserParams,
+  GridBatchEditResult, GridClipboardPasteResult, GridEditSkipReason, GridHistoryChangeParams, GridUndoRedoOptions,
   GridApi, GridInitialState, GridState,
   GridAggregationModel, GridPivotModel, GridTreeNode, GridGroupedExportRow,
   GridDataSource, GridGetRowsParams, GridGetRowsResponse,
