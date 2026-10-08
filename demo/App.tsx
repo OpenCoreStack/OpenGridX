@@ -21,6 +21,8 @@ const ExportDemo = lazy(() => import('./examples/ExportDemo/ExportDemo'));
 const AdvancedExcelExportDemo = lazy(() => import('./examples/AdvancedExcelExportDemo/AdvancedExcelExportDemo'));
 const ClipboardDemo = lazy(() => import('./examples/ClipboardDemo/ClipboardDemo'));
 const CellSelectionDemo = lazy(() => import('./examples/CellSelectionDemo/CellSelectionDemo'));
+const ClipboardPasteDemo = lazy(() => import('./examples/ClipboardPasteDemo/ClipboardPasteDemo'));
+const UndoRedoDemo = lazy(() => import('./examples/UndoRedoDemo/UndoRedoDemo'));
 const CustomEditorsDemo = lazy(() => import('./examples/CustomEditorsDemo/CustomEditorsDemo'));
 const EventsDemo = lazy(() => import('./examples/EventsDemo/EventsDemo'));
 const DataGridTest = lazy(() => import('./examples/DataGridTest/DataGridTest'));
@@ -66,6 +68,8 @@ const examplesConfig = [
     { path: '/export', name: 'Export Data', component: ExportDemo, category: 'Main features' },
     { path: '/clipboard', name: 'Clipboard Copy', component: ClipboardDemo, category: 'Main features' },
     { path: '/cell-selection', name: 'Cell Range Selection', component: CellSelectionDemo, category: 'Main features' },
+    { path: '/clipboard-paste', name: 'Paste from Excel', component: ClipboardPasteDemo, category: 'Main features' },
+    { path: '/undo-redo', name: 'Undo & Redo', component: UndoRedoDemo, category: 'Main features' },
     { path: '/multi-sort', name: 'Multi-Column Sort', component: MultiSortDemo, category: 'Main features' },
     { path: '/header-wrap', name: 'Wrapped Header Text', component: HeaderWrapDemo, category: 'Main features' },
     { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
