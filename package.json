@@ -12,6 +12,11 @@
       "import": "./dist/opengridx.es.js",
       "require": "./dist/opengridx.umd.js"
     },
+    "./ai": {
+      "types": "./dist/ai.d.ts",
+      "import": "./dist/ai.es.js",
+      "require": "./dist/ai.cjs"
+    },
     "./styles": {
       "types": "./dist/opengridx.css.d.ts",
       "default": "./dist/opengridx.css"
@@ -23,6 +28,7 @@
     "!lib/**/*.test.ts",
     "!lib/**/*.test.tsx",
     "!lib/**/__screenshots__",
+    "!lib/**/__snapshots__",
     "docs/architecture",
     "docs/assets",
     "docs/components",
@@ -45,7 +51,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --project tsconfig.build.json && vite build",
-    "build:lib": "tsc --project tsconfig.build.json && vite build --config vite.config.lib.js && cp lib/styles/opengridx.css.d.ts dist/opengridx.css.d.ts && node scripts/check-bundle.mjs",
+    "build:lib": "tsc --project tsconfig.build.json && vite build --config vite.config.lib.js && vite build --config vite.config.lib.js --mode ai && cp lib/styles/opengridx.css.d.ts dist/opengridx.css.d.ts && node scripts/check-bundle.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p e2e/tsconfig.json",
     "preview": "vite preview",
