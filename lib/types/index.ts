@@ -248,6 +248,16 @@ export interface GridColDef<R extends GridValidRowModel = GridRowModel> {
    * @default true
    */
   exportable?: boolean;
+
+  /**
+   * Example values for this column, put into the schema from `getGridAiSchema`
+   * (`@opencorestack/opengridx/ai`) to help a language model write filters ("Acme" → `customer`).
+   * **These values are sent to the model.** The grid never reads row data for the schema; only what
+   * you list here leaves the app, so list nothing private. Strings, numbers and booleans are used
+   * (at most 10); other values are ignored. Not used by the grid itself.
+   * @since v3.4
+   */
+  aiExamples?: unknown[];
 }
 
 /** Column definition used exclusively in List View mode. */

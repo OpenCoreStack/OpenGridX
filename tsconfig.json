@@ -23,7 +23,8 @@
 
     /* The demo imports the package by name; Vite aliases it to lib/index.ts (vite.config.js). */
     "paths": {
-      "@opencorestack/opengridx": ["./lib/index.ts"]
+      "@opencorestack/opengridx": ["./lib/index.ts"],
+      "@opencorestack/opengridx/ai": ["./lib/ai/index.ts"]
     }
   },
   "include": ["lib", "demo", "src"],

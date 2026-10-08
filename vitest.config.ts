@@ -87,6 +87,8 @@ export default defineConfig({
     },
     resolve: {
         alias: {
+            // The /ai entry point first: an alias also matches the subpaths of its key.
+            '@opencorestack/opengridx/ai': fileURLToPath(new URL('./lib/ai/index.ts', import.meta.url)),
             '@opencorestack/opengridx': fileURLToPath(new URL('./lib/index.ts', import.meta.url)),
         },
     },

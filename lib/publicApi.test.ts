@@ -16,6 +16,7 @@ import * as publicApi from './index';
 
 const ROOT = path.resolve(__dirname, '..');
 const LIB_INDEX = path.join(ROOT, 'lib', 'index.ts');
+const LIB_AI_INDEX = path.join(ROOT, 'lib', 'ai', 'index.ts');
 const API_REFERENCE = path.join(ROOT, 'docs', 'API_REFERENCE.md');
 const COMPONENT_DOCS_DIR = path.join(ROOT, 'docs', 'components');
 const SNIPPET_DIR = path.join(ROOT, 'lib', '__public_api_snippets__');
@@ -50,7 +51,7 @@ function createProgram(snippets: Record<string, string>): ts.Program {
     };
     host.fileExists = (fileName) => files.has(path.resolve(fileName)) || fileExists(fileName);
     host.readFile = (fileName) => files.get(path.resolve(fileName)) ?? readFile(fileName);
-    return ts.createProgram([LIB_INDEX, ...files.keys()], COMPILER_OPTIONS, host);
+    return ts.createProgram([LIB_INDEX, LIB_AI_INDEX, ...files.keys()], COMPILER_OPTIONS, host);
 }
 
 function diagnosticsOf(program: ts.Program, name: string): string[] {
@@ -128,15 +129,18 @@ const SNIPPETS: Record<string, string> = {
     `,
 };
 
-/** Every name the package root exports (values and types). */
-function readRootExports(program: ts.Program): Set<string> {
+/** Every name an entry point (the package root, or `/ai`) exports (values and types). */
+function readEntryExports(program: ts.Program, file: string = LIB_INDEX): Set<string> {
     const checker = program.getTypeChecker();
-    const entry = program.getSourceFile(LIB_INDEX);
-    if (!entry) throw new Error('lib/index.ts is missing from the program');
+    const entry = program.getSourceFile(file);
+    if (!entry) throw new Error(`${file} is missing from the program`);
     const moduleSymbol = checker.getSymbolAtLocation(entry);
-    if (!moduleSymbol) throw new Error('lib/index.ts has no module symbol');
+    if (!moduleSymbol) throw new Error(`${file} has no module symbol`);
     return new Set(checker.getExportsOfModule(moduleSymbol).map((s) => s.getName()));
 }
+
+/** Types of the `@opencorestack/opengridx/ai` entry point: exported from there, not from the root. */
+const AI_TYPE_NAME = /^GridAi[A-Z]/;
 
 const readDoc = (file: string) => fs.readFileSync(file, 'utf8');
 const componentDocs = fs.readdirSync(COMPONENT_DOCS_DIR)
@@ -155,10 +159,12 @@ function listMarkdown(dir: string): string[] {
 const sampleDocs = [...listMarkdown(path.join(ROOT, 'docs')), path.join(ROOT, 'README.md')]
     .map((file) => ({ file: path.relative(ROOT, file), text: readDoc(file) }));
 
-/** Names imported from the package in the docs' code samples. */
-function documentedImports(): Map<string, string> {
+/** Names imported from the package (or its `/ai` entry point) in the docs' code samples. */
+function documentedImports(subpath: '' | '/ai' = ''): Map<string, string> {
     const found = new Map<string, string>();
-    const importRe = /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+['"]@opencorestack\/opengridx['"]/g;
+    const importRe = subpath === '/ai'
+        ? /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+['"]@opencorestack\/opengridx\/ai['"]/g
+        : /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+['"]@opencorestack\/opengridx['"]/g;
     for (const { file, text } of sampleDocs) {
         for (const match of text.matchAll(importRe)) {
             const list = match[1].replace(/\/\/[^\n]*/g, '');
@@ -204,13 +210,23 @@ function documentedFunctions(): Map<string, string> {
 
 describe('public API matches the reference docs', () => {
     const program = createProgram(SNIPPETS);
-    const rootExports = readRootExports(program);
+    const rootExports = readEntryExports(program);
+    const aiExports = readEntryExports(program, LIB_AI_INDEX);
 
     it('exports every type the docs name', () => {
         const missing = [...documentedTypeNames()]
-            .filter(([name]) => !rootExports.has(name))
+            .filter(([name]) => !(AI_TYPE_NAME.test(name) ? aiExports : rootExports).has(name))
             .map(([name, file]) => `${name} (${file})`);
         expect(missing).toEqual([]);
+    });
+
+    it('exports every name the docs import from the ai entry point, and the root does not', () => {
+        const imports = documentedImports('/ai');
+        expect(imports.size).toBeGreaterThan(1);
+        const problems = [...imports]
+            .filter(([name]) => !aiExports.has(name) || rootExports.has(name))
+            .map(([name, file]) => `${name} (${file})`);
+        expect(problems).toEqual([]);
     });
 
     it('exports every name the docs import from the package', () => {

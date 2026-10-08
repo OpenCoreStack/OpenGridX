@@ -1,0 +1,827 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`getGridAiSchema > matches the snapshot for a minimal column set without descriptions 1`] = `
+{
+  "$defs": {
+    "filterGroup1": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/filterItem",
+              },
+              {
+                "$ref": "#/$defs/filterGroup2",
+              },
+            ],
+          },
+          "type": "array",
+        },
+        "logicOperator": {
+          "enum": [
+            "and",
+            "or",
+          ],
+        },
+      },
+      "required": [
+        "logicOperator",
+        "items",
+      ],
+      "type": "object",
+    },
+    "filterGroup2": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/filterItem",
+              },
+              {
+                "$ref": "#/$defs/filterGroup3",
+              },
+            ],
+          },
+          "type": "array",
+        },
+        "logicOperator": {
+          "enum": [
+            "and",
+            "or",
+          ],
+        },
+      },
+      "required": [
+        "logicOperator",
+        "items",
+      ],
+      "type": "object",
+    },
+    "filterGroup3": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/filterItem",
+          },
+          "type": "array",
+        },
+        "logicOperator": {
+          "enum": [
+            "and",
+            "or",
+          ],
+        },
+      },
+      "required": [
+        "logicOperator",
+        "items",
+      ],
+      "type": "object",
+    },
+    "filterItem": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "field": {
+              "const": "name",
+            },
+            "operator": {
+              "enum": [
+                "contains",
+                "equals",
+                "startsWith",
+                "endsWith",
+                "isEmpty",
+                "isNotEmpty",
+              ],
+            },
+            "value": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "field",
+            "operator",
+          ],
+          "type": "object",
+        },
+      ],
+    },
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "aggregationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "count",
+          ],
+        },
+      },
+      "type": "object",
+    },
+    "columnVisibilityModel": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "boolean",
+        },
+      },
+      "type": "object",
+    },
+    "filterModel": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/filterItem",
+              },
+              {
+                "$ref": "#/$defs/filterGroup1",
+              },
+            ],
+          },
+          "type": "array",
+        },
+        "logicOperator": {
+          "enum": [
+            "and",
+            "or",
+          ],
+        },
+        "quickFilterValues": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+      },
+      "type": "object",
+    },
+    "pivotModel": {
+      "additionalProperties": false,
+      "properties": {
+        "columnFields": {
+          "items": {
+            "enum": [
+              "name",
+            ],
+          },
+          "type": "array",
+          "uniqueItems": true,
+        },
+        "rowFields": {
+          "items": {
+            "enum": [
+              "name",
+            ],
+          },
+          "type": "array",
+          "uniqueItems": true,
+        },
+        "valueFields": {
+          "items": {
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "aggFn": {
+                    "enum": [
+                      "count",
+                    ],
+                  },
+                  "field": {
+                    "const": "name",
+                  },
+                },
+                "required": [
+                  "field",
+                  "aggFn",
+                ],
+                "type": "object",
+              },
+            ],
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "rowFields",
+        "columnFields",
+        "valueFields",
+      ],
+      "type": "object",
+    },
+    "rowGroupingModel": {
+      "items": {
+        "enum": [
+          "name",
+        ],
+      },
+      "type": "array",
+      "uniqueItems": true,
+    },
+    "sortModel": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "enum": [
+              "name",
+            ],
+          },
+          "sort": {
+            "enum": [
+              "asc",
+              "desc",
+            ],
+          },
+        },
+        "required": [
+          "field",
+          "sort",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
+  },
+  "schemaVersion": 1,
+  "title": "OpenGridX grid state",
+  "type": "object",
+}
+`;
+
+exports[`getGridAiSchema > matches the snapshot for a sales column set 1`] = `
+{
+  "$defs": {
+    "filterGroup1": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/filterItem",
+              },
+              {
+                "$ref": "#/$defs/filterGroup2",
+              },
+            ],
+          },
+          "type": "array",
+        },
+        "logicOperator": {
+          "enum": [
+            "and",
+            "or",
+          ],
+        },
+      },
+      "required": [
+        "logicOperator",
+        "items",
+      ],
+      "type": "object",
+    },
+    "filterGroup2": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/filterItem",
+              },
+              {
+                "$ref": "#/$defs/filterGroup3",
+              },
+            ],
+          },
+          "type": "array",
+        },
+        "logicOperator": {
+          "enum": [
+            "and",
+            "or",
+          ],
+        },
+      },
+      "required": [
+        "logicOperator",
+        "items",
+      ],
+      "type": "object",
+    },
+    "filterGroup3": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/filterItem",
+          },
+          "type": "array",
+        },
+        "logicOperator": {
+          "enum": [
+            "and",
+            "or",
+          ],
+        },
+      },
+      "required": [
+        "logicOperator",
+        "items",
+      ],
+      "type": "object",
+    },
+    "filterItem": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "Region (Sales region): isEmpty and isNotEmpty take no value",
+          "properties": {
+            "field": {
+              "const": "region",
+            },
+            "operator": {
+              "enum": [
+                "contains",
+                "equals",
+                "startsWith",
+                "endsWith",
+                "isEmpty",
+                "isNotEmpty",
+              ],
+            },
+            "value": {
+              "examples": [
+                "North",
+                "South",
+              ],
+              "type": "string",
+            },
+          },
+          "required": [
+            "field",
+            "operator",
+          ],
+          "type": "object",
+        },
+        {
+          "additionalProperties": false,
+          "description": "Revenue (Order revenue in USD): isEmpty and isNotEmpty take no value",
+          "properties": {
+            "field": {
+              "const": "amt_usd",
+            },
+            "operator": {
+              "enum": [
+                "=",
+                "!=",
+                ">",
+                ">=",
+                "<",
+                "<=",
+                "isEmpty",
+                "isNotEmpty",
+              ],
+            },
+            "value": {
+              "type": "number",
+            },
+          },
+          "required": [
+            "field",
+            "operator",
+          ],
+          "type": "object",
+        },
+        {
+          "additionalProperties": false,
+          "description": "Order date: isEmpty and isNotEmpty take no value",
+          "properties": {
+            "field": {
+              "const": "date",
+            },
+            "operator": {
+              "enum": [
+                "is",
+                "not",
+                "after",
+                "onOrAfter",
+                "before",
+                "onOrBefore",
+                "isEmpty",
+                "isNotEmpty",
+              ],
+            },
+            "value": {
+              "format": "date",
+              "type": "string",
+            },
+          },
+          "required": [
+            "field",
+            "operator",
+          ],
+          "type": "object",
+        },
+        {
+          "additionalProperties": false,
+          "description": "Paid",
+          "properties": {
+            "field": {
+              "const": "paid",
+            },
+            "operator": {
+              "enum": [
+                "is",
+              ],
+            },
+            "value": {
+              "type": "boolean",
+            },
+          },
+          "required": [
+            "field",
+            "operator",
+          ],
+          "type": "object",
+        },
+        {
+          "additionalProperties": false,
+          "description": "Status: isAnyOf takes an array",
+          "properties": {
+            "field": {
+              "const": "status",
+            },
+            "operator": {
+              "enum": [
+                "isAnyOf",
+                "is",
+                "not",
+              ],
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "Open",
+                    "pd",
+                  ],
+                },
+                {
+                  "items": {
+                    "enum": [
+                      "Open",
+                      "pd",
+                    ],
+                  },
+                  "type": "array",
+                },
+              ],
+            },
+          },
+          "required": [
+            "field",
+            "operator",
+          ],
+          "type": "object",
+        },
+      ],
+    },
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Grid state to apply. Include only the parts the user asked to change.",
+  "properties": {
+    "aggregationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "amt_usd": {
+          "description": "Revenue (Order revenue in USD)",
+          "enum": [
+            "sum",
+            "avg",
+            "count",
+            "min",
+            "max",
+            "unique",
+          ],
+        },
+        "date": {
+          "description": "Order date",
+          "enum": [
+            "count",
+          ],
+        },
+        "paid": {
+          "description": "Paid",
+          "enum": [
+            "count",
+          ],
+        },
+        "qty": {
+          "description": "Qty",
+          "enum": [
+            "sum",
+            "max",
+          ],
+        },
+        "region": {
+          "description": "Region (Sales region)",
+          "enum": [
+            "count",
+          ],
+        },
+        "status": {
+          "description": "Status",
+          "enum": [
+            "count",
+          ],
+        },
+      },
+      "type": "object",
+    },
+    "columnVisibilityModel": {
+      "additionalProperties": false,
+      "description": "false hides a column",
+      "properties": {
+        "amt_usd": {
+          "description": "Revenue (Order revenue in USD)",
+          "type": "boolean",
+        },
+        "date": {
+          "description": "Order date",
+          "type": "boolean",
+        },
+        "qty": {
+          "description": "Qty",
+          "type": "boolean",
+        },
+        "region": {
+          "description": "Region (Sales region)",
+          "type": "boolean",
+        },
+        "status": {
+          "description": "Status",
+          "type": "boolean",
+        },
+      },
+      "type": "object",
+    },
+    "filterModel": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/filterItem",
+              },
+              {
+                "$ref": "#/$defs/filterGroup1",
+              },
+            ],
+          },
+          "type": "array",
+        },
+        "logicOperator": {
+          "enum": [
+            "and",
+            "or",
+          ],
+        },
+        "quickFilterValues": {
+          "description": "Words a row must contain, in any column",
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+      },
+      "type": "object",
+    },
+    "pivotModel": {
+      "additionalProperties": false,
+      "properties": {
+        "columnFields": {
+          "items": {
+            "enum": [
+              "region",
+              "amt_usd",
+              "date",
+              "paid",
+              "qty",
+            ],
+          },
+          "type": "array",
+          "uniqueItems": true,
+        },
+        "rowFields": {
+          "items": {
+            "enum": [
+              "region",
+              "amt_usd",
+              "date",
+              "paid",
+              "qty",
+            ],
+          },
+          "type": "array",
+          "uniqueItems": true,
+        },
+        "valueFields": {
+          "items": {
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "description": "Region (Sales region)",
+                "properties": {
+                  "aggFn": {
+                    "enum": [
+                      "count",
+                    ],
+                  },
+                  "field": {
+                    "const": "region",
+                  },
+                },
+                "required": [
+                  "field",
+                  "aggFn",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "description": "Revenue (Order revenue in USD)",
+                "properties": {
+                  "aggFn": {
+                    "enum": [
+                      "sum",
+                      "avg",
+                      "count",
+                      "min",
+                      "max",
+                    ],
+                  },
+                  "field": {
+                    "const": "amt_usd",
+                  },
+                },
+                "required": [
+                  "field",
+                  "aggFn",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "description": "Order date",
+                "properties": {
+                  "aggFn": {
+                    "enum": [
+                      "count",
+                    ],
+                  },
+                  "field": {
+                    "const": "date",
+                  },
+                },
+                "required": [
+                  "field",
+                  "aggFn",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "description": "Paid",
+                "properties": {
+                  "aggFn": {
+                    "enum": [
+                      "count",
+                    ],
+                  },
+                  "field": {
+                    "const": "paid",
+                  },
+                },
+                "required": [
+                  "field",
+                  "aggFn",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "description": "Status",
+                "properties": {
+                  "aggFn": {
+                    "enum": [
+                      "count",
+                    ],
+                  },
+                  "field": {
+                    "const": "status",
+                  },
+                },
+                "required": [
+                  "field",
+                  "aggFn",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "description": "Qty",
+                "properties": {
+                  "aggFn": {
+                    "enum": [
+                      "sum",
+                      "max",
+                    ],
+                  },
+                  "field": {
+                    "const": "qty",
+                  },
+                },
+                "required": [
+                  "field",
+                  "aggFn",
+                ],
+                "type": "object",
+              },
+            ],
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "rowFields",
+        "columnFields",
+        "valueFields",
+      ],
+      "type": "object",
+    },
+    "rowGroupingModel": {
+      "description": "Outermost first",
+      "items": {
+        "enum": [
+          "region",
+          "amt_usd",
+          "date",
+          "paid",
+          "qty",
+        ],
+      },
+      "type": "array",
+      "uniqueItems": true,
+    },
+    "sortModel": {
+      "description": "Most significant first",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "enum": [
+              "region",
+              "amt_usd",
+              "paid",
+              "status",
+              "qty",
+            ],
+          },
+          "sort": {
+            "enum": [
+              "asc",
+              "desc",
+            ],
+          },
+        },
+        "required": [
+          "field",
+          "sort",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
+  },
+  "schemaVersion": 1,
+  "title": "OpenGridX grid state",
+  "type": "object",
+}
+`;
