@@ -216,7 +216,41 @@ export function useGridClipboardPaste<R extends GridRowModel>(params: UseGridCli
             const kind = classifyKeyTarget(event.target, viewport);
             return kind === 'grid' || kind === 'control';
         };
+        // Some engines (WebKit on Linux) only fire `paste` on an editable element, never on a focused
+        // cell. On the paste shortcut, focus moves to an off-screen textarea for that one event, so the
+        // browser's paste lands there and bubbles to the root; focus then goes back to the cell.
+        let capture: { textarea: HTMLTextAreaElement; restore: HTMLElement | null; timer: number } | null = null;
+        const endCapture = () => {
+            if (!capture) return;
+            const { textarea, restore, timer } = capture;
+            capture = null;
+            window.clearTimeout(timer);
+            const hadFocus = document.activeElement === textarea;
+            textarea.remove();
+            if (hadFocus && restore && restore.isConnected) restore.focus({ preventScroll: true });
+        };
+        const startCapture = () => {
+            endCapture();
+            const textarea = document.createElement('textarea');
+            textarea.setAttribute('aria-hidden', 'true');
+            textarea.tabIndex = -1;
+            textarea.className = 'ogx__paste-capture';
+            textarea.style.cssText = 'position:fixed;top:0;left:-10000px;width:1px;height:1px;opacity:0;';
+            root.appendChild(textarea);
+            const restore = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            // No paste event within the timeout (an empty or non-text clipboard): give focus back anyway.
+            capture = { textarea, restore, timer: window.setTimeout(endCapture, 250) };
+            textarea.focus({ preventScroll: true });
+        };
+        const isCaptureTarget = (event: Event) => capture !== null && event.target === capture.textarea;
         const onPaste = (event: ClipboardEvent) => {
+            if (isCaptureTarget(event)) {
+                const text = event.clipboardData ? event.clipboardData.getData('text/plain') : '';
+                event.preventDefault();
+                endCapture();
+                if (text !== '') void paste(text, undefined, true);
+                return;
+            }
             if (!pasteEnabled || !ownsTarget(event)) return;
             if (!latestRef.current.navigationColumns.some(c => c.editable)) return;
             const text = event.clipboardData ? event.clipboardData.getData('text/plain') : '';
@@ -225,6 +259,10 @@ export function useGridClipboardPaste<R extends GridRowModel>(params: UseGridCli
             void paste(text, undefined, true);
         };
         const onKeyDown = (event: KeyboardEvent) => {
+            if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && (event.key === 'v' || event.key === 'V' || event.code === 'KeyV')) {
+                if (pasteEnabled && ownsTarget(event) && latestRef.current.navigationColumns.some(c => c.editable)) startCapture();
+                return;
+            }
             if (!clearEnabled || (event.key !== 'Delete' && event.key !== 'Backspace')) return;
             if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
             if (!ownsTarget(event)) return;
@@ -233,6 +271,7 @@ export function useGridClipboardPaste<R extends GridRowModel>(params: UseGridCli
         root.addEventListener('paste', onPaste);
         root.addEventListener('keydown', onKeyDown);
         return () => {
+            endCapture();
             root.removeEventListener('paste', onPaste);
             root.removeEventListener('keydown', onKeyDown);
         };
