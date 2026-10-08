@@ -229,11 +229,14 @@ describe('DataGrid scrolling in a real browser', () => {
             await frame();
             rerender(<Tall listView={false} rows={rows} />);
             await expect.poll(() => bodyRows(container)).toBeGreaterThan(0);
-            await settle();
+            // The viewport is measured by a ResizeObserver after it mounts; on a slow machine the first
+            // render window can still be the pre-measure one, so wait for the rows to reach the bottom.
             const vp = viewport(container);
-            const vpRect = vp.getBoundingClientRect();
-            const lastBottom = Math.max(...Array.from(container.querySelectorAll<HTMLElement>('.ogx__rows [role="row"]')).map(r => r.getBoundingClientRect().bottom));
-            expect(lastBottom).toBeGreaterThanOrEqual(vpRect.top + vp.clientHeight);
+            const gap = () => {
+                const lastBottom = Math.max(...Array.from(container.querySelectorAll<HTMLElement>('.ogx__rows [role="row"]')).map(r => r.getBoundingClientRect().bottom));
+                return lastBottom - (vp.getBoundingClientRect().top + vp.clientHeight);
+            };
+            await expect.poll(gap, { timeout: 3000 }).toBeGreaterThanOrEqual(0);
         });
 
         it('shows the rows at the scroll position after switching list view off again', async () => {
