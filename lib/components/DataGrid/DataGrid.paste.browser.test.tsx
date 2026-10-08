@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import { userEvent, page, server } from 'vitest/browser';
-import { Profiler, useState } from 'react';
+import { Profiler, useLayoutEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import '../../styles/opengridx.css';
 import { DataGrid } from '../../index';
@@ -50,7 +50,7 @@ function renderGrid(props: Props = {}) {
     function Harness() {
         const apiRef = useGridApiRef();
         const [rows, setRows] = useState(ROWS);
-        holder.api = apiRef;
+        useLayoutEffect(() => { holder.api = apiRef; }, [apiRef]);
         return (
             <Box>
                 <DataGrid<Row>
@@ -181,19 +181,29 @@ describe('paste performance', () => {
 
         const holder: { api: { current: GridApi<Wide> } | null } = { api: null };
         let commits = 0;
-        let lastCommitAt = 0;
+        // The first commit that shows pasted values: its number since the paste, and when it happened.
+        let dataCommit = 0;
+        let dataCommitAt = 0;
+        const gridRoot: { el: HTMLElement | null } = { el: null };
         function Harness() {
             const apiRef = useGridApiRef<Wide>();
-            holder.api = apiRef;
+            useLayoutEffect(() => { holder.api = apiRef; }, [apiRef]);
             return (
                 <Box>
-                    <Profiler id="grid" onRender={() => { commits += 1; lastCommitAt = performance.now(); }}>
+                    <Profiler id="grid" onRender={() => {
+                        commits += 1;
+                        if (dataCommit === 0 && gridRoot.el && textAt(gridRoot.el, 0, 'c0') === '1') {
+                            dataCommit = commits;
+                            dataCommitAt = performance.now();
+                        }
+                    }}>
                         <DataGrid<Wide> rows={rows} columns={cols} apiRef={apiRef} cellSelection />
                     </Profiler>
                 </Box>
             );
         }
         const { container } = render(<Harness />);
+        gridRoot.el = container;
         await expect.poll(() => cellAt(container, 0, 'c0')).not.toBeNull();
         await settle();
         holder.api!.current.selectCellRange({ id: 0, field: 'c0' }, { id: 0, field: 'c0' });
@@ -203,12 +213,13 @@ describe('paste performance', () => {
         const start = performance.now();
         const result = await holder.api!.current.pasteText(text);
         await expect.poll(() => textAt(container, 0, 'c0')).toBe('1');
-        const elapsed = lastCommitAt - start;
+        const elapsed = dataCommitAt - start;
 
         expect(result.updated).toHaveLength(1000);
         expect(holder.api!.current.getRow(999)).toMatchObject({ c9: 10000 });
-        // The selection change and the rows land in the same commit.
-        expect(commits).toBe(1);
+        // One store update: the first commit after the paste holds the selection and every row (later
+        // commits, such as the debounced live-region text, are not part of the paste).
+        expect(dataCommit).toBe(1);
         // Chromium is the reference; Firefox and WebKit run the same work more slowly in CI.
         const bound = server.browser === 'chromium' ? 300 : 1000;
         expect(elapsed).toBeLessThan(bound);

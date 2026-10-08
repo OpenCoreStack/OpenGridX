@@ -43,8 +43,8 @@ function renderGrid(props: Props = {}) {
                 columns={COLS}
                 apiRef={apiRef}
                 cellSelection
-                processRowUpdate={(newRow, oldRow) => {
-                    const stored = processRowUpdate(newRow, oldRow);
+                processRowUpdate={(newRow) => {
+                    const stored = processRowUpdate(newRow);
                     setRows(prev => prev.map(r => (r.id === stored.id ? stored : r)));
                     return stored;
                 }}
