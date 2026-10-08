@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.3.0
+- **Current version:** 3.4.0
 
 ---
 
@@ -152,6 +152,17 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.4.0 — significant changes
+
+- **Batch edits**: paste, range clear, undo and redo commit through `useGridBatchEdit.applyEdits` — one `processRowUpdate` per row (rows in parallel, a failing row reported through `onProcessRowUpdateError` without blocking others) and one `REPLACE_ROWS` store update for all successful rows. `getRow` sees rows stored since the last render. Single edits store through `storeRow`. Shared helpers in `lib/utils/editing/commit.ts`; edit targets (rows × range columns, same indices as `cellSelection.getCurrentRange().resolved`) in `lib/utils/editing/targets.ts`
+- **Hook order** (see `docs/architecture/datagrid-orchestration.md`): `useGridEditCommitChannel` (12a) and `useGridBatchEdit` (12b) before `useGridEditing`; `useGridClipboardPaste` (36b) after `useGridCellSelectionApi`, then `useGridUndoRedo` (36c). Commits reach the history through the channel's `emit(changes, source)`; history ignores `'undo'` / `'redo'` sources
+- Paste, Delete/Backspace and Ctrl/Cmd+Z / Shift+Z / Ctrl+Y are **native listeners on the grid root**, gated by `classifyKeyTarget` (`'grid'` / `'control'`) and no open editor, so an editor's own paste and undo keep working
+- **History**: an action is recorded only after `processRowUpdate` succeeds, as `{ id, field, before, after }` with `after` read from the stored row via `getCellValue`. Undo writes `before` expecting `after` (redo the reverse); stale cells are skipped `'changed'`, removed rows `'missing'`; values are compared, not row identity
+- **Parsing**: `lib/utils/parsing.ts` (`parseTsv`, per-type `parse*Text`, `parseValueByType`, `parseCellText` with `valueParser`) is pure and the single parser for paste and `/ai` (`lib/ai/coerce.ts` only adds typed-JSON handling on top). Keep its regexes linear
+- **`/ai` entry point** (`lib/ai/`, no React, no dependencies): ships as `dist/ai.es.js`, `dist/ai.cjs` (`.cjs` because the package is `"type": "module"`) and `dist/ai.d.ts`, built by a second `vite.config.lib.js` run (`--mode ai`). `check-bundle` enforces no imports, no react, ≤ 5 KB gzipped (≈ 4.6 KB now) and that the core bundles don't contain the marker `'OpenGridX grid state'`. Demo, Vitest and tsconfig alias `@opencorestack/opengridx/ai` before the root alias. `lib/ai/columns.ts` is the single source of which columns each part allows; the validator reads own keys only, never `__proto__`, caps lists at 200 and errors at 100, and never throws (fuzz test)
+- **Shared inputs**: `Input` is `forwardRef` with `variant: 'field' | 'cell'` and `inputClassName` (`className` stays on the wrapper); `error` sets `aria-invalid`. Built-in search boxes, the filter value box and text/number/date editors render through `Input`; the boolean editor and list-view checkbox through `Checkbox` (hidden `<input>`: tests click `.ogx-checkbox__box`). The boolean editor needs `preventDefault` on mousedown on the whole `.ogx__edit-boolean` div. Browser tests that click styled controls must import `lib/styles/opengridx.css`
+- Browser paste tests copy from a textarea and press the paste shortcut (`ControlOrMeta+V`); Firefox drops `clipboardData` on a synthetic `ClipboardEvent`
 
 ## v3.3.0 — significant changes
 
