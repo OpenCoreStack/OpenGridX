@@ -397,6 +397,21 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         return field === undefined ? null : { id, field };
     }, []);
 
+    /** The row whose band holds `centerY` (px from the top of the unpinned rows), with `field`. */
+    const headRowAtOffset = useCallback((centerY: number, field: string): GridCellCoordinates | null => {
+        const { context: ctx, layout, pinnedTopRowCount } = latestRef.current;
+        const heights = layout.cumulativeHeights;
+        if (!ctx || heights.length === 0 || centerY < 0) return null;
+        let lo = 0;
+        let hi = heights.length - 1;
+        while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (heights[mid] > centerY) hi = mid; else lo = mid + 1;
+        }
+        const id = ctx.rowIds[lo + pinnedTopRowCount];
+        return id === undefined ? null : { id, field };
+    }, []);
+
     // The auto-scroll loop schedules the next frame through this ref: a callback cannot name itself.
     const runDragFrameRef = useRef<(allowScroll: boolean) => void>(() => {});
     const runDragFrame = useCallback((allowScroll: boolean) => {
@@ -421,7 +436,14 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         const x = clamp(drag.x, box.left + 1, box.left + width - 2);
         let y = drag.y;
         if (y < box.top || y > box.top + height || y < headerBottom) y = clamp(y, bodyTop + 1, Math.max(bodyTop + 1, bodyBottom - 2));
-        const head = headAtPoint(viewport, x, y);
+        // During fast auto-scroll the rows under the pointer may not be rendered yet (virtualization
+        // lags a frame or more on a slow machine), so the hit test finds no cell. Work out the row from
+        // the scroll position and the row heights instead, keeping the column the head already has.
+        const canHitTest = typeof viewport.ownerDocument.elementFromPoint === 'function';
+        const hit = headAtPoint(viewport, x, y);
+        const head = hit ?? (canHitTest && drag.moved
+            ? headRowAtOffset(y - box.top - (stickyTop ? stickyTop.getBoundingClientRect().height : 0) + viewport.scrollTop, drag.head.field)
+            : null);
         if (head && !isSameCoordinates(head, drag.head)) {
             drag.head = head;
             if (!drag.moved && !isSameCoordinates(head, drag.anchor)) {
@@ -448,7 +470,7 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         if (canScrollX) viewport.scrollLeft += dx;
         // Keep going while the pointer rests in the edge zone; the next frame picks the new head.
         drag.frame = requestAnimationFrame(() => runDragFrameRef.current(true));
-    }, [headAtPoint, setRange]);
+    }, [headAtPoint, headRowAtOffset, setRange]);
     useLayoutEffect(() => {
         runDragFrameRef.current = runDragFrame;
     }, [runDragFrame]);
