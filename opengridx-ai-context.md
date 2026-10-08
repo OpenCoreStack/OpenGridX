@@ -47,6 +47,7 @@ node_modules/@opencorestack/opengridx/docs/features/data-source.md
 node_modules/@opencorestack/opengridx/docs/features/clipboard.md
 node_modules/@opencorestack/opengridx/docs/features/cell-selection.md
 node_modules/@opencorestack/opengridx/docs/features/undo-redo.md
+node_modules/@opencorestack/opengridx/docs/features/ai-toolkit.md
 node_modules/@opencorestack/opengridx/docs/features/keyboard-navigation.md
 node_modules/@opencorestack/opengridx/docs/features/cell-spanning.md
 node_modules/@opencorestack/opengridx/docs/features/list-view.md
@@ -236,6 +237,22 @@ With `cellSelection`, Ctrl/Cmd+V pastes TSV into **editable** cells only (parsed
 after `processRowUpdate` succeeded and replays it through `processRowUpdate`, so the app persists undo
 like any edit; cells changed since are skipped with reason `'changed'`. Opt out with
 `disableClipboardPaste` / `disableRangeClear`. Guides: `docs/features/clipboard.md`, `docs/features/undo-redo.md`.
+### AI toolkit: schema and validator (3.4.0+)
+
+```ts
+import { getGridAiSchema, validateGridAiState } from '@opencorestack/opengridx/ai';
+
+const schema = getGridAiSchema(columns);            // JSON Schema of the state the columns allow
+// app → its own model: { prompt, schema, currentState } (structured output)
+const { state, errors } = validateGridAiState(modelReply, columns);
+if (state.filterModel) setFilterModel(state.filterModel);
+```
+
+A separate entry point with no React and no dependencies; the grid calls no AI service. Never apply a
+model reply directly: `validateGridAiState` drops unknown fields, wrong operators and bad enum values
+(with `{ path, message }` errors) and coerces values. The schema reads no rows; only
+`GridColDef.aiExamples` (opt-in) and `valueOptions` send data values to the model. Guide:
+`docs/features/ai-toolkit.md`.
 
 ### Custom sort order and column auto-size (3.1.0+)
 
@@ -409,6 +426,10 @@ import type {
   CsvExportOptions, ExcelExportOptions, JsonExportOptions, PrintOptions, PdfExportOptions, PdfExportProgress,
   ExcelAdvancedExportOptions, UseGridStateStorageOptions,
 } from '@opencorestack/opengridx';
+
+// AI toolkit (3.4.0+): a separate entry point
+import { getGridAiSchema, validateGridAiState } from '@opencorestack/opengridx/ai';
+import type { GridAiState, GridAiSchema, GridAiValidationError } from '@opencorestack/opengridx/ai';
 ```
 
 ---

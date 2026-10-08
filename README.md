@@ -77,6 +77,7 @@ Without a `height` prop the grid fills its container (`height: 100%`, or the fre
 - **Export Functionality**: Built-in CSV, Excel (HTML `.xls`, or real `.xlsx` with the optional ExcelJS peer), JSON, PDF (optional jsPDF peer) and Print export.
 - **Clipboard**: `Ctrl+C` / `Cmd+C` copies the selected rows' visible columns as TSV for Excel/Sheets.
 - **Cell Range Selection** (v3.3): drag, Shift+click or Shift+arrows select a rectangle of cells; copy it as TSV and see its count, sum and average in a status bar (`cellSelection`, `showCellSelectionStats`).
+- **AI Toolkit** (v3.4): `@opencorestack/opengridx/ai` turns your columns into a JSON Schema for your own model and validates its reply before the grid applies it (`getGridAiSchema`, `validateGridAiState`). No AI SDK, no row data sent by default.
 - **Accessibility**: WCAG 2.1 AA — full ARIA roles and keyboard navigation.
 - **Theming**: CSS variable API, `DataGridThemeProvider` with 5 built-in themes (`darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compactTheme`) and custom themes.
 - **Column & Row Reordering**: Drag-and-drop column reordering and row reordering.
@@ -522,6 +523,7 @@ Full documentation at 👉 **[opencorestack.github.io/OpenGridX](https://opencor
 - **[Clipboard](docs/features/clipboard.md)** — Copy rows as TSV, paste from Excel / Sheets, clear a range with Delete
 - **[Cell Range Selection](docs/features/cell-selection.md)** — Select, total and copy cell ranges
 - **[Undo & Redo](docs/features/undo-redo.md)** — Undo and redo edits, pastes and range clears
+- **[AI Toolkit](docs/features/ai-toolkit.md)** — Schema and validator for driving the grid from your own model
 - **[Keyboard & Accessibility](docs/features/keyboard-navigation.md)** — Keys, focus and ARIA
 - **[Data Source](docs/features/data-source.md)** — Server-side integration
 - **[Loading States](docs/features/loading-states.md)** — Skeleton and shimmer overlays

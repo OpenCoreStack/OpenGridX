@@ -63,6 +63,7 @@ const SECTIONS = [
         ['docs/features/toolbar-customization.md', 'Toolbar-Customization', 'Toolbar Customization'],
         ['docs/features/export-guide.md', 'Export-Guide', 'Export (CSV, Excel, JSON, Print)'],
         ['docs/features/pdf-export.md', 'PDF-Export', 'PDF Export'],
+        ['docs/features/ai-toolkit.md', 'AI-Toolkit', 'AI Toolkit (Schema & Validator)'],
     ]],
     ['Customization', [
         ['docs/customization/theming.md', 'Theming', 'Theming'],

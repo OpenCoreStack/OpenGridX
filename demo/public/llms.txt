@@ -272,6 +272,7 @@ There are no getRowClassName / getCellClassName / theme props: use GridColDef.ce
 | groupingValueFormatter | ({field, value}) => string                        | Group row label (default "field: value")   |
 | aggregable        | boolean                                                | false = no aggregation. Summaries panel offers number columns + aggregable: true |
 | availableAggregationFunctions | string[]                                   | Restrict aggregation functions for this column |
+| aiExamples        | unknown[]                                              | Example values put into getGridAiSchema's schema (3.4.0+). SENT TO THE MODEL: real data, opt-in. Primitives only, max 10. Unused by the grid |
 
 ---
 
@@ -552,6 +553,27 @@ await printGrid(rows, columns, 'My Report Title');
 - CSV and exportToExcel neutralise formulas: text starting with = + - @ tab or CR gets a leading `'` (`escapeFormulas: false` opts out).
 - exportToExcel writes HTML: a `.xlsx` fileName is saved as `.xls` with a console warning.
 - Columns with `exportable: false` are left out everywhere; `valueGetter` and `valueFormatter` are applied.
+
+---
+
+## AI TOOLKIT (@opencorestack/opengridx/ai, 3.4.0+)
+
+Separate entry point: no React, no dependencies, ~4.5 kB gzip; never loaded by the core import. OpenGridX calls no AI service: the app sends { prompt, schema, currentState } to its own model (structured output) and validates the reply.
+
+```ts
+import { getGridAiSchema, validateGridAiState } from '@opencorestack/opengridx/ai';
+
+const schema = getGridAiSchema(columns, { include: ['filter', 'sort', 'grouping', 'aggregation'] });
+const reply = await fetch('/api/grid-assistant', { method: 'POST', body: JSON.stringify({ prompt, schema, currentState }) });
+const { state, errors } = validateGridAiState(await reply.text(), columns);
+if (state.filterModel) setFilterModel(state.filterModel);   // apply only the parts present
+if (state.sortModel) setSortModel(state.sortModel);
+```
+
+- getGridAiSchema(columns, { include?, exclude?, descriptions = true, examples = true }) → JSON Schema draft 2020-12 with `schemaVersion: 1`. Parts (option name → key): filter → filterModel (items as oneOf per field, AND/OR groups ≤ 3 levels, quickFilterValues), sort → sortModel, grouping → rowGroupingModel, aggregation → aggregationModel, pivot → pivotModel, columnVisibility → columnVisibilityModel. Fields from filterable / sortable / groupable / hideable / aggregable !== false; operators = the column type's filter operators; aggregation: number (or aggregable: true) columns get sum/avg/count/min/max/unique, others count, limited by availableAggregationFunctions; singleSelect valueOptions become enums. Fields starting with `__` are skipped. Deterministic; reads no rows.
+- validateGridAiState(json | jsonString, columns, { include?, exclude? }) → { state: GridAiState, errors: { path, message }[] }. Drops unknown parts, fields, disallowed fields, wrong operators, enum values outside the list; coerces values like clipboard paste ("1,200"/"$1,200" → 1200, "12%" → 0.12, yes/no/1/0 → boolean, dates → "YYYY-MM-DD", singleSelect by value or label, case-insensitive); removes empty groups; lists capped at 200 entries, errors at 100. Never throws; never reads `__proto__`.
+- Privacy: no row data by default; `aiExamples` and `valueOptions` ARE sent; always apply `state`, never the raw reply.
+- Types (from /ai): GridAiColumn, GridAiPart, GridAiSchema, GridAiSchemaOptions, GridAiState, GridAiValidateOptions, GridAiValidationError, GridAiValidationResult.
 
 ---
 

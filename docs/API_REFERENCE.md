@@ -468,6 +468,7 @@ Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative 
 | `groupingValueFormatter` | `(params: { field: string; value: unknown }) => string` | — | Custom formatter for group-header labels when this column is the active grouping field. Falls back to `"field: value"` when omitted or when it throws (v3.0+). |
 | `aggregable` | `boolean` | — | Whether this column can be aggregated. Unset, the toolbar's Summaries panel and the pivot panel's value fields offer it only for `type: 'number'` columns; `true` offers it for any type. `false` keeps it out of both panels, and an `aggregationModel` or `pivotModel` entry naming it is ignored (no footer total, group aggregate, pivot value or export total). |
 | `availableAggregationFunctions` | `string[]` | all built-ins | Restrict which aggregation functions are computed and available for this column (e.g. `['sum', 'avg']`). Functions outside this list are skipped even if set in `aggregationModel` or a pivot value field, the toolbar's Summaries panel and the pivot panel offer only these. |
+| `aiExamples` | `unknown[]` | — | Example values put into the schema from `getGridAiSchema` (`@opencorestack/opengridx/ai`) to help a model write filters. **These values are sent to the model**: the schema never reads row data, so only what you list here leaves the app. Strings, numbers and booleans, at most 10. Not used by the grid itself (v3.4.0+). |
 
 ---
 
@@ -485,6 +486,32 @@ Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative 
 In every exporter, a non-empty `selectedRows` takes precedence over `groupedRows` (the selected rows are exported flat) and the totals are recomputed over the selected rows (v3.0+). See the [Export Guide](features/export-guide.md#selection-grouping-and-totals).
 
 Every exporter takes `columns` typed for your rows (`GridColDef<R>[]`) or untyped (`GridColDef[]`), and its options also accept `getRowId?: (row: R) => GridRowId`. Pass the grid's `getRowId` when you use one: `selectedRows` holds those ids, and since v3.0 the grid no longer copies them onto `row.id`.
+
+---
+
+## 🤖 AI Toolkit (`@opencorestack/opengridx/ai`)
+
+A separate entry point (v3.4.0+) with no React import and no dependencies; the core package never loads it. It does not call any AI service: the app sends the schema to its own model and validates the reply. Guide: [AI Toolkit](features/ai-toolkit.md).
+
+```ts
+import { getGridAiSchema, validateGridAiState } from '@opencorestack/opengridx/ai';
+import type { GridAiState, GridAiValidationError } from '@opencorestack/opengridx/ai';
+```
+
+| Function | Return | Description |
+| :--- | :--- | :--- |
+| `getGridAiSchema(columns, options?)` | `GridAiSchema` | JSON Schema (draft 2020-12, `schemaVersion: 1`) of the `filterModel` (nested AND/OR groups up to 3 levels, `quickFilterValues`), `sortModel`, `rowGroupingModel`, `aggregationModel`, `pivotModel` and `columnVisibilityModel` the columns allow, honouring `filterable`, `sortable`, `groupable`, `hideable`, `aggregable`, `availableAggregationFunctions` and `valueOptions`. Operators per column come from the column type. Reads column definitions only, never rows; deterministic for the same input. |
+| `validateGridAiState(json, columns, options?)` | `GridAiValidationResult` | `{ state, errors }`. `json` is an object or a JSON string. Drops unknown parts, fields, operators and enum values (each with an `{ path, message }` error), coerces values to the column type (`"1,200"` → `1200`, dates → `"YYYY-MM-DD"`), removes empty filter groups. Never throws. |
+
+`GridAiSchemaOptions`: `include` / `exclude` (`GridAiPart[]`: `'filter' \| 'sort' \| 'grouping' \| 'aggregation' \| 'pivot' \| 'columnVisibility'`; `exclude` wins), `descriptions` (default `true`: each column's `headerName` and `description` go into the schema), `examples` (default `true`: the columns' `aiExamples` go into the schema). `GridAiValidateOptions` takes `include` / `exclude`; parts outside them are dropped with an error.
+
+| Type | Description |
+| :--- | :--- |
+| `GridAiColumn` | The column properties the toolkit reads. A `GridColDef` (typed or untyped) is accepted as is. Fields starting with `__` (system columns) are skipped. |
+| `GridAiSchema` | The returned JSON Schema object: `$schema`, `schemaVersion: 1`, `title`, `type: 'object'`, `properties` (one per offered part) and `$defs`. |
+| `GridAiState` | The validated state: `filterModel?`, `sortModel?`, `rowGroupingModel?`, `aggregationModel?`, `pivotModel?`, `columnVisibilityModel?`, the same types the grid's props take. Only parts present in the reply are set. |
+| `GridAiValidationError` | `{ path: string; message: string }`, e.g. `{ path: 'filterModel.items[2].field', message: 'Unknown field "revenue"' }`. At most 100 are listed. |
+| `GridAiValidationResult` | `{ state: GridAiState; errors: GridAiValidationError[] }` |
 
 ---
 
