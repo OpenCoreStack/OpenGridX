@@ -5,6 +5,7 @@ import Grouping from './scenarios/Grouping';
 import Editing from './scenarios/Editing';
 import Range from './scenarios/Range';
 import Paste from './scenarios/Paste';
+import Ai from './scenarios/Ai';
 import Pinned from './scenarios/Pinned';
 import Dark from './scenarios/Dark';
 
@@ -15,6 +16,7 @@ const scenarios: Record<string, ComponentType> = {
   editing: Editing,
   range: Range,
   paste: Paste,
+  ai: Ai,
   pinned: Pinned,
   dark: Dark,
 };

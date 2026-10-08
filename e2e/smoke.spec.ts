@@ -9,7 +9,7 @@ import { test, expect, type ConsoleMessage, type Locator, type Page } from '@pla
 /** Console output that is expected and harmless. Keep this list short and explain every entry. */
 const ALLOWED_CONSOLE: RegExp[] = [];
 
-const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range', 'paste']);
+const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range', 'paste', 'ai']);
 
 function fixtureOf(projectName: string): string {
   return projectName.split('-')[1] ?? '';
@@ -293,6 +293,38 @@ test.describe('package smoke', () => {
       expected.push(texts.join('\t'));
     }
     expect(copied).toBe(expected.join('\n'));
+  });
+
+  test('ai: the /ai entry point builds a schema, validates a model reply and the grid applies it', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'ai');
+
+    await expect(page.getByTestId('ai-schema')).toHaveText('v1: filterModel,sortModel,rowGroupingModel,aggregationModel');
+    const state = JSON.parse(await page.getByTestId('ai-state').innerText()) as unknown;
+    expect(state).toEqual({
+      filterModel: {
+        items: [
+          { field: 'region', operator: 'equals', value: 'North' },
+          { field: 'amount', operator: '>', value: 5000 },
+        ],
+      },
+      sortModel: [{ field: 'amount', sort: 'desc' }],
+    });
+    await expect(page.getByTestId('ai-errors').locator('li')).toHaveText([
+      'filterModel.items[2].field: Unknown field "revenue"',
+      /^filterModel\.items\[3\]\.operator: "contains" is not one of isAnyOf, is, not$/,
+      'rowModel: Unknown part',
+    ]);
+
+    await page.getByTestId('ai-apply').click();
+    await expect(page.getByRole('columnheader', { name: 'Amount' }).first()).toHaveAttribute('aria-sort', 'descending');
+    await expect(async () => {
+      const regions = (await page.locator('.ogx__viewport [data-rowindex] [data-field="region"]').allInnerTexts()).map((r) => r.trim());
+      expect(regions.length).toBeGreaterThan(0);
+      expect(regions.filter((r) => r !== 'North'), 'rows left after the applied filter').toEqual([]);
+    }).toPass();
+    const amounts = (await Promise.all([0, 1, 2, 3].map((i) => cell(centerRow(page, i), 'amount').innerText()))).map(parseAmount);
+    expect(amounts.every((a) => a > 5000), `amounts over 5000: ${amounts.join(', ')}`).toBe(true);
+    expect(amounts).toEqual([...amounts].sort((a, b) => b - a));
   });
 
   test('pinned: pinned columns and rows, column groups, colSpan, detail panel', async ({ page }) => {
