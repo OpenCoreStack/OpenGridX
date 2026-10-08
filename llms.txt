@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 3.3.0
+# Version: 3.4.0
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 
@@ -97,6 +97,12 @@ export default function App() {
 | cellSelectionModel         | GridCellSelectionModel        | Controlled range: readonly { anchor: { id, field }, head: { id, field } }[] (0 or 1 range). Corners are ids/fields: the range follows sorting; cleared ('dataChange') when a corner is no longer displayed |
 | onCellSelectionModelChange | (model, { reason }) => void   | reason: 'pointer' | 'keyboard' | 'selectAll' | 'api' | 'clear' | 'dataChange' |
 | showCellSelectionStats     | boolean                       | Status bar: Count (non-empty), Sum and Average (numeric) of the range; slots.cellSelectionStats replaces it |
+| disableClipboardPaste      | boolean (3.4.0+)              | With cellSelection, Ctrl/Cmd+V pastes TSV (Excel/Sheets) into editable cells: one value fills a range; a block goes from the range's top-left (or focused) cell, cut to the range and grid edges; no rows created. Parsed per column type, then valueSetter + processRowUpdate once per row. true = shortcut off (apiRef.pasteText still works) |
+| onClipboardPaste           | (result) => void (3.4.0+)     | After every paste: { updated: id[], failed: {id, error}[], skipped: {id, field, reason: 'notEditable'/'invalidValue'}[], text } |
+| onBeforeClipboardPaste     | ({ text, anchor }) => boolean / string | Return false to cancel, a string to paste instead; a throw cancels |
+| disableRangeClear          | boolean (3.4.0+)              | With cellSelection, Delete/Backspace on a multi-cell range empties editable cells ('' strings, null otherwise) as one edit; true = off |
+| undoRedo                   | boolean / { limit } (3.4.0+)  | Undo/redo of edits, pastes, range clears (default off, 100 actions). Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y on a cell with no editor open. Recorded only after processRowUpdate succeeds; replayed through valueSetter + processRowUpdate; cells changed since are skipped ('changed', compared by value), removed rows ('missing') |
+| onHistoryChange            | ({ canUndo, canRedo, size }) => void | History change (size = undoable actions) |
 
 ### Sorting
 | Prop              | Type                        | Description                     |
@@ -245,6 +251,7 @@ There are no getRowClassName / getCellClassName / theme props: use GridColDef.ce
 | renderEditCell    | (params: GridRenderEditCellParams<R>) => ReactNode     | Custom editor: call params.onValueChange(v), params.onCommit(), params.onCancel() |
 | valueGetter       | ({row, field, value}) => unknown                       | Computed value; used by sort, filter, quick search, aggregation, copy, export. Must be pure (quick filter caches per row object); a throw reads as undefined + dev warning |
 | valueSetter       | ({value, row, field}) => R                             | Write an edited value back onto the row (editable valueGetter columns) |
+| valueParser       | (text, { row, field, colDef }) => unknown              | Paste parser for this column (3.4.0+), e.g. "1.234,5" → 1234.5. Throw/undefined skips the cell ('invalidValue'). Default by type: number "1,234.5"/"12%"/"$5"; date ISO or Date.parse (keeps the cell's kind); boolean true/false/yes/no/1/0; singleSelect value or label; empty → null ('' for strings) |
 | valueFormatter    | ({value, row, field}) => string                        | Format display value (value is `unknown`: cast before calling methods) |
 | cellClassName     | string / (params) => string                            | CSS class on cells                         |
 | headerClassName   | string                                                 | CSS class on header cell                   |
@@ -265,6 +272,7 @@ There are no getRowClassName / getCellClassName / theme props: use GridColDef.ce
 | groupingValueFormatter | ({field, value}) => string                        | Group row label (default "field: value")   |
 | aggregable        | boolean                                                | false = no aggregation. Summaries panel offers number columns + aggregable: true |
 | availableAggregationFunctions | string[]                                   | Restrict aggregation functions for this column |
+| aiExamples        | unknown[]                                              | Example values put into getGridAiSchema's schema (3.4.0+). SENT TO THE MODEL: real data, opt-in. Primitives only, max 10. Unused by the grid |
 
 ---
 
@@ -321,6 +329,14 @@ apiRef.current.getSelectedCells()      // → { id, field, value }[]; synthetic 
 apiRef.current.copySelectedCells()     // → Promise<void>; TSV, no header line
 apiRef.current.clearCellSelection()
 
+// Paste and undo/redo (3.4.0+)
+apiRef.current.pasteText(text, anchor?) // → Promise<GridBatchEditResult>; anchor default: range top-left, else focused cell
+apiRef.current.undo()                   // → Promise<GridBatchEditResult> (undoRedo)
+apiRef.current.redo()
+apiRef.current.canUndo()                // → boolean
+apiRef.current.canRedo()
+apiRef.current.clearHistory()
+
 // Aggregation
 apiRef.current.getAggregationResult()  // → Record<string, unknown> | null (null in pivot mode)
 apiRef.current.getAggregationModel()   // → GridAggregationModel | null
@@ -355,6 +371,22 @@ const processRowUpdate = (newRow: Person) => {
 ```
 
 Double-click or Enter opens the editor; Enter / Tab / blur commits; Escape cancels. An edit whose row scrolls, pages or filters away is committed, not dropped.
+
+Custom editors (3.3.1+): build them on the exported `Input` with `variant="cell"` — it fills the cell with no border/background/focus ring, like the built-in editors. `ref` reaches the `<input>` (forwardRef, React 18 + 19), `inputClassName` styles the `<input>` (`className` the wrapper), `startAdornment` / `endAdornment` add a unit, `error` adds an inset error edge and `aria-invalid`. Stop propagation of the Enter/Escape you handle.
+
+```tsx
+import { Input } from '@opencorestack/opengridx';
+function PriceEditor({ value, onValueChange, onCommit, onCancel }: GridRenderEditCellParams) {
+  const [text, setText] = useState(String(value ?? ''));
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
+  const valid = text.trim() !== '' && Number(text) >= 0;
+  return <Input ref={ref} variant="cell" startAdornment="$" error={!valid} value={text}
+    onChange={e => { setText(e.target.value); const n = Number(e.target.value); if (e.target.value.trim() !== '' && n >= 0) onValueChange(n); }}
+    onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); if (valid) onCommit(); } if (e.key === 'Escape') { e.stopPropagation(); onCancel(); } }}
+    onBlur={() => (valid ? onCommit() : onCancel())} />;
+}
+```
 
 ---
 
@@ -524,6 +556,27 @@ await printGrid(rows, columns, 'My Report Title');
 
 ---
 
+## AI TOOLKIT (@opencorestack/opengridx/ai, 3.4.0+)
+
+Separate entry point: no React, no dependencies, ~4.5 kB gzip; never loaded by the core import. OpenGridX calls no AI service: the app sends { prompt, schema, currentState } to its own model (structured output) and validates the reply.
+
+```ts
+import { getGridAiSchema, validateGridAiState } from '@opencorestack/opengridx/ai';
+
+const schema = getGridAiSchema(columns, { include: ['filter', 'sort', 'grouping', 'aggregation'] });
+const reply = await fetch('/api/grid-assistant', { method: 'POST', body: JSON.stringify({ prompt, schema, currentState }) });
+const { state, errors } = validateGridAiState(await reply.text(), columns);
+if (state.filterModel) setFilterModel(state.filterModel);   // apply only the parts present
+if (state.sortModel) setSortModel(state.sortModel);
+```
+
+- getGridAiSchema(columns, { include?, exclude?, descriptions = true, examples = true }) → JSON Schema draft 2020-12 with `schemaVersion: 1`. Parts (option name → key): filter → filterModel (items as oneOf per field, AND/OR groups ≤ 3 levels, quickFilterValues), sort → sortModel, grouping → rowGroupingModel, aggregation → aggregationModel, pivot → pivotModel, columnVisibility → columnVisibilityModel. Fields from filterable / sortable / groupable / hideable / aggregable !== false; operators = the column type's filter operators; aggregation: number (or aggregable: true) columns get sum/avg/count/min/max/unique, others count, limited by availableAggregationFunctions; singleSelect valueOptions become enums. Fields starting with `__` are skipped. Deterministic; reads no rows.
+- validateGridAiState(json | jsonString, columns, { include?, exclude? }) → { state: GridAiState, errors: { path, message }[] }. Drops unknown parts, fields, disallowed fields, wrong operators, enum values outside the list; coerces values like clipboard paste ("1,200"/"$1,200" → 1200, "12%" → 0.12, yes/no/1/0 → boolean, dates → "YYYY-MM-DD", singleSelect by value or label, case-insensitive); removes empty groups; lists capped at 200 entries, errors at 100. Never throws; never reads `__proto__`.
+- Privacy: no row data by default; `aiExamples` and `valueOptions` ARE sent; always apply `state`, never the raw reply.
+- Types (from /ai): GridAiColumn, GridAiPart, GridAiSchema, GridAiSchemaOptions, GridAiState, GridAiValidateOptions, GridAiValidationError, GridAiValidationResult.
+
+---
+
 ## CSS CUSTOMIZATION
 
 All CSS variables use the `--ogx-` prefix and are declared on `:root` by the stylesheet. Override them on a wrapper (or use DataGridThemeProvider, which sets the same variables):
@@ -547,6 +600,7 @@ Class names use the `ogx__` BEM prefix, e.g.:
 - Cell ranges (3.3.0+): `ogx__cell--range`, `ogx__cell--range-top|bottom|left|right` (inset box-shadow outline), `ogx--range-dragging` on the root during a drag; variables `--ogx-range-background`, `--ogx-range-border` (theme keys `grid.rangeBackground`, `grid.rangeBorder`)
 - `ogx__header-cell`, `ogx__header-cell--sorted`, `ogx__header-cell--wrap` (wrapHeaderText, 3.3.0+)
 - Sticky wrappers: `ogx__sticky-top` (header + top-pinned rows), `ogx__sticky-bottom` (bottom-pinned rows + aggregation footer)
+- Form controls (3.3.1+): the toolbar search, column-panel search, filter value box and text/number/date editors render through `Input`: the `<input>` keeps its class (`ogx-global-search__input`, `ogx-column-visibility-panel__search-input`, `ogx-filter__value-input`, `ogx__edit-input`) inside a `div.ogx-input-wrapper` (`ogx-input-wrapper--cell` for editors) — use descendant selectors (`.ogx-global-search input`), not `> input`. The boolean editor and list-view row checkbox are the shared `Checkbox` (`.ogx-checkbox__box`; hidden `<input>`)
 
 ---
 
