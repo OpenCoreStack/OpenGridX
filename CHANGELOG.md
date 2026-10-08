@@ -36,6 +36,10 @@
 - `GridApi` has six new members (`pasteText`, `undo`, `redo`, `canUndo`, `canRedo`, `clearHistory`); an object written to satisfy `GridApi` by hand must add them. `useGridApiRef()`'s placeholder has no-op versions.
 - A committed single-cell edit is stored through the same path as batch edits; behaviour is unchanged.
 
+### Fixed
+
+- **Cell range selection: a drag that auto-scrolled could end short of the pointer** (since 3.3.0). Dragging past the bottom of the grid scrolls it; on a slow machine the rows scrolled into view were not rendered yet when the pointer was hit-tested, so the range's head stayed on an earlier row (and the release could leave it there). When no cell is under the pointer during a drag, the head row is now worked out from the scroll position and the row heights.
+
 ## [3.3.0] — 2026-10-07
 
 ### Added
