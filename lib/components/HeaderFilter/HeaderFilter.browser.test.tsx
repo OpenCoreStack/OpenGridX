@@ -202,7 +202,7 @@ describe('header filter row (real browser)', () => {
         const index = Number(rowsBelowHeader[0].getAttribute('data-rowindex'));
         const middle = rowsBelowHeader[Math.floor(rowsBelowHeader.length / 2)];
         const steps = Number(middle.getAttribute('data-rowindex')) - index + 1;
-        await userEvent.click(middle.querySelector<HTMLElement>('[data-field="qty"]')!);
+        await userEvent.click(middle.querySelector<HTMLElement>('[data-field="name"]')!); // unique text: the click locator is built from it
         for (let i = 0; i < steps; i++) await userEvent.keyboard('{ArrowUp}');
         await settle();
         expect((document.activeElement as HTMLElement).closest('[role="row"]')?.getAttribute('data-rowindex')).toBe(String(index - 1));
