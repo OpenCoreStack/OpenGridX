@@ -113,6 +113,28 @@ interface GridHistoryChangeParams { canUndo: boolean; canRedo: boolean; size: nu
 interface GridUndoRedoOptions { limit?: number }
 ```
 
+#### Fill Handle (v3.5)
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `disableFillHandle` | `boolean` | `false` | With `cellSelection` on, the range's bottom-right cell carries a fill handle: dragging it down, up, right or left (one direction; auto-scrolls; touch works) fills the new cells from the range, continuing numbers and dates with an exactly equal step and repeating anything else; Alt at release copies. Ctrl/Cmd+D fills down from the range's top row and Ctrl/Cmd+R right from its left column. Writes through `valueSetter` and `processRowUpdate` once per row, as one undo step; non-editable and synthetic cells are skipped (`'notEditable'`). `true` hides the handle and leaves the keys to the browser. See [Fill Handle](features/fill-handle.md). |
+| `onFill` | `(result: GridFillResult) => void` | — | Fired after every fill, once every row has settled: `{ updated, failed, skipped, direction }`. |
+
+```ts
+type GridFillDirection = 'down' | 'up' | 'right' | 'left';
+interface GridFillResult extends GridBatchEditResult { direction: GridFillDirection }
+interface GridFillValueParams<R> {
+  row: R; id: GridRowId; field: string; colDef: GridColDef<R>;
+  direction: GridFillDirection;
+  sourceValues: unknown[];  // the line's source values in fill order
+  index: number;            // 0 for the cell next to the source
+  value: unknown;           // what the grid would write
+  copy: boolean;            // Alt held, or Ctrl/Cmd+D / Ctrl/Cmd+R
+}
+```
+
+Public CSS: `ogx__cell-fill-handle` (24 × 24 px hit area in the corner cell; the visible square is its `::after`), `--ogx-fill-handle-color` (defaults to `--ogx-range-border`; theme key `grid.fillHandleColor`).
+
 #### Column Visibility
 
 | Prop | Type | Default | Description |
@@ -453,6 +475,7 @@ Defines the behavior and appearance of a single column.
 | `valueOptions` | `Array<string \| number \| { value: unknown; label: string }>` | — | Allowed values for `type: 'singleSelect'` — the filter panel offers them as a (multi-)select, and the edit cell uses them; cells and exports show the option's label. |
 | `valueGetter` | `(params: GridValueGetterParams) => unknown` | — | Derive a computed value from the row object. Runs before `valueFormatter` and `renderCell`. Client-side sorting, column filters and the quick filter use this value, and editors start from it (double-click and Enter alike). Keep it pure: the quick filter caches each row's search text per row object and column set. A getter that throws for a row shows an error in that cell and reads as `undefined` for sorting, filtering, aggregation, grouping, pivot and list view (v3.0+, with a one-time development warning per column); before, it crashed the grid once the column was sorted, filtered or aggregated. |
 | `valueSetter` | `(params: GridValueSetterParams) => R` | — | v3.0+. Maps an edited value back onto the row (`{ value, row, field }` → updated row) when an edit is committed. Needed for editable `valueGetter` columns; without it the commit writes `row[field]` and a development warning is logged. |
+| `fillValue` | `(params: GridFillValueParams) => unknown` | — | v3.5+. Decides what a fill (handle drag, Ctrl/Cmd+D, Ctrl/Cmd+R) writes into a cell of this column. `params.value` is the grid's choice (series, pattern or copy); return it to keep it. A throw skips the cell (`'invalidValue'`). See [Fill Handle](features/fill-handle.md#gridcoldeffillvalue). |
 | `valueParser` | `(text: string, params: GridValueParserParams) => unknown` | — | v3.4+. Turns pasted text into this column's value instead of the default parser for its `type` (`{ row, field, colDef }`). Throw or return `undefined` to skip the cell (`'invalidValue'`). See [Clipboard](features/clipboard.md#valueparser). |
 | `valueFormatter` | `(params: GridValueFormatterParams) => string` | — | Format the value into a display string (e.g. currency, dates). Does not affect editing, sorting or column filters; the quick filter also searches the formatted text. A formatter that throws leaves the value unformatted (the quick filter searches the raw value; v3.0+). |
 

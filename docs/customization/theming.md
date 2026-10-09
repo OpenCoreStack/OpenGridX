@@ -83,7 +83,7 @@ interface GridTheme {
   spacing?:     GridThemeSpacing;
   borders?:     GridThemeBorders;
   shadows?:     GridThemeShadows;
-  grid?:        GridThemeGrid;        // surfaces, heights (px), cellPaddingX/Y, cellFontSize, headerFontSize, rangeBackground, rangeBorder, …
+  grid?:        GridThemeGrid;        // surfaces, heights (px), cellPaddingX/Y, cellFontSize, headerFontSize, rangeBackground, rangeBorder, fillHandleColor, …
   toolbar?:     GridThemeToolbar;
   overlays?:    GridThemeOverlays;
   scrollbar?:   GridThemeScrollbar;
@@ -216,6 +216,7 @@ All sub-theme types (`GridThemeColors`, `GridThemeGrayScale`, `GridThemeTypograp
 | `--ogx-grid-cell-focus-border` | `#3b82f6` | `#60a5fa` | Keyboard focus ring |
 | `--ogx-range-background` | `rgba(59, 130, 246, 0.12)` | `rgba(96, 165, 250, 0.18)` | Tint over a selected cell range (`cellSelection`, v3.3). Theme key `grid.rangeBackground` |
 | `--ogx-range-border` | `var(--ogx-color-primary)` | `#60a5fa` | Outline of a selected cell range, drawn as an inset box-shadow on `ogx__cell--range-top/-bottom/-left/-right` (v3.3). Theme key `grid.rangeBorder` |
+| `--ogx-fill-handle-color` | `var(--ogx-range-border)` | `var(--ogx-range-border)` | The fill handle square (`ogx__cell-fill-handle`, v3.5). Unset in the stylesheet, where it falls back to `--ogx-range-border`; every theme of `DataGridThemeProvider` sets it to `var(--ogx-range-border)`. Theme key `grid.fillHandleColor` |
 | `--ogx-grid-pinned-left-shadow` | `4px 0 24px...` | (darker) | Shadow on left-pinned columns |
 | `--ogx-grid-pinned-right-shadow` | `-4px 0 24px...` | (darker) | Shadow on right-pinned columns |
 | `--ogx-checkbox-bg` | — | `#1e293b` | Checkbox background (dark only) |

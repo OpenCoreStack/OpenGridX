@@ -528,7 +528,8 @@ Full documentation at 👉 **[opencorestack.github.io/OpenGridX](https://opencor
 - **[Clipboard](docs/features/clipboard.md)** — Copy rows as TSV, paste from Excel / Sheets, clear a range with Delete
 - **[Cell Range Selection](docs/features/cell-selection.md)** — Select, total and copy cell ranges
 - **[Undo & Redo](docs/features/undo-redo.md)** — Undo and redo edits, pastes and range clears
-- **[AI Toolkit](docs/features/ai-toolkit.md)** — Schema and validator for driving the grid from your own model, the **Ask AI** panel (`aiAssistant`) and agent tools
+- **[Fill Handle](docs/features/fill-handle.md)** — Drag the range corner to fill a series or copy; Ctrl+D / Ctrl+R
+- **[AI Toolkit](docs/features/ai-toolkit.md)** — Schema and validator for driving the grid from your own model
 - **[Keyboard & Accessibility](docs/features/keyboard-navigation.md)** — Keys, focus and ARIA
 - **[Data Source](docs/features/data-source.md)** — Server-side integration
 - **[Loading States](docs/features/loading-states.md)** — Skeleton and shimmer overlays

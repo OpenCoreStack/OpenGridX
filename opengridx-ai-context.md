@@ -48,6 +48,7 @@ node_modules/@opencorestack/opengridx/docs/features/data-source.md
 node_modules/@opencorestack/opengridx/docs/features/clipboard.md
 node_modules/@opencorestack/opengridx/docs/features/cell-selection.md
 node_modules/@opencorestack/opengridx/docs/features/undo-redo.md
+node_modules/@opencorestack/opengridx/docs/features/fill-handle.md
 node_modules/@opencorestack/opengridx/docs/features/ai-toolkit.md
 node_modules/@opencorestack/opengridx/docs/features/keyboard-navigation.md
 node_modules/@opencorestack/opengridx/docs/features/cell-spanning.md
@@ -257,6 +258,22 @@ With `cellSelection`, Ctrl/Cmd+V pastes TSV into **editable** cells only (parsed
 after `processRowUpdate` succeeded and replays it through `processRowUpdate`, so the app persists undo
 like any edit; cells changed since are skipped with reason `'changed'`. Opt out with
 `disableClipboardPaste` / `disableRangeClear`. Guides: `docs/features/clipboard.md`, `docs/features/undo-redo.md`.
+
+### Fill handle (3.5.0+)
+
+```tsx
+<DataGrid rows={rows} columns={columns} cellSelection undoRedo processRowUpdate={saveRow}
+  onFill={({ direction, updated, skipped }) => {}} />
+// column: { field: 'jan', type: 'number', editable: true, fillValue: ({ value }) => Math.round(value as number) }
+```
+
+With `cellSelection`, the range's bottom-right cell carries a fill handle (`ogx__cell-fill-handle`). Dragging it
+down, up, right or left fills the new cells from the range: numbers and dates with an **exactly equal step**
+continue as a series, anything else repeats (one cell copies); Alt at release copies; Escape cancels.
+Ctrl/Cmd+D fills down from the range's top row, Ctrl/Cmd+R right from its left column (no editor open).
+Like a paste: `valueSetter` + `processRowUpdate` once per row, one store update, one undo step; non-editable
+and synthetic cells are skipped (`'notEditable'`), a throwing `fillValue` skips its cell (`'invalidValue'`).
+Values are typed, so `valueParser` is not used. `disableFillHandle` opts out. Guide: `docs/features/fill-handle.md`.
 ### AI toolkit: schema and validator (3.4.0+)
 
 ```ts
@@ -457,6 +474,7 @@ import type {
   GridRowParams, GridCellParams, GridRenderCellParams, GridRenderEditCellParams,
   GridValueGetterParams, GridValueSetterParams, GridValueFormatterParams, GridValueParserParams,
   GridBatchEditResult, GridClipboardPasteResult, GridEditSkipReason, GridHistoryChangeParams, GridUndoRedoOptions,
+  GridFillResult, GridFillDirection, GridFillValueParams,
   GridApi, GridInitialState, GridState,
   GridAggregationModel, GridPivotModel, GridTreeNode, GridGroupedExportRow,
   GridDataSource, GridGetRowsParams, GridGetRowsResponse,

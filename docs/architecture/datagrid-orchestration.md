@@ -25,6 +25,8 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
   late (36c); commits reach it through `useGridEditCommitChannel` (12a), whose listener it sets in a layout effect.
   `useGridClipboardPaste` (36b) and `useGridUndoRedo` listen for keys on the grid root with native listeners, which
   fire before React's delegated `onKeyDown` of the viewport; they act only on cell targets with no editor open.
+  `useGridFillHandle` (36d) does the same for Ctrl/Cmd+D and Ctrl/Cmd+R; its fills commit through the batch edit
+  with source `'fill'`, so the history records them like a paste.
 - `useGridLiveRowSelection` prunes the selection, and `useGridPageCorrection` corrects a page past the
   end, in effects that run before the later hooks' effects.
 
@@ -76,6 +78,7 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | 36a | `useGridCellSelectionApi` | `hooks/core/useGridCellSelectionApi.ts` | Keeps the range anchor and the focused cell together (layout effect: a new anchor moves focus; focus moved to another data cell collapses the range), clears a range whose corner is gone (`'dataChange'`), and installs `getCellSelectionModel`, `setCellSelectionModel`, `selectCellRange`, `clearCellSelection`, `getSelectedCells`, `copySelectedCells` (once per `apiRef`, reading the latest values from a ref) |
 | 36b | `useGridClipboardPaste` | `hooks/core/useGridClipboardPaste.ts` | Paste and range clear (v3.4): `paste` and Delete/Backspace listeners on the grid root (only for cell targets, not editors or nested grids), TSV parsing (`utils/parsing.ts`), placement against the renderable rows and range columns (`utils/editing/targets.ts`), the batch edit, the new selection, `onBeforeClipboardPaste` / `onClipboardPaste`, and `apiRef.pasteText`. Inert without `cellSelection` except for `pasteText` |
 | 36c | `useGridUndoRedo` | `hooks/core/useGridUndoRedo.ts` | History (v3.4, `undoRedo`): records the channel's changes, replays them as batch edits with an `expect` value per cell (stale cells skipped), queues undo/redo, selects and scrolls to the affected cells, Ctrl/Cmd+Z / Shift+Z / Ctrl+Y on the grid root, `onHistoryChange`, and `apiRef.undo` / `redo` / `canUndo` / `canRedo` / `clearHistory` |
+| 36d | `useGridFillHandle` | `hooks/core/useGridFillHandle.ts` | Fill handle (v3.5, `cellSelection` without `disableFillHandle`): where the handle is drawn (`rowRenderProps.fillHandle`, the range's bottom-right cell or its span origin), a `pointerdown` listener on the viewport for `.ogx__cell-fill-handle` that runs `cellSelection.startTrackedDrag` (the range drag's hit testing, auto-scroll and slow-machine fallback, on pointer events so touch works), the fill itself (`utils/editing/fill.ts`: series detection, lines, `GridColDef.fillValue`) as one batch edit with source `'fill'`, the new selection, `onFill`, and Ctrl/Cmd+D / Ctrl/Cmd+R on the grid root |
 | 37 | `useGridColumnMenuHandlers` | `hooks/core/useGridHeaderHandlers.ts` | Column menu Hide / Pin (`pinColumnTo` in `utils/pinning`) |
 | 38 | `useGridAriaRows` | `hooks/core/useGridAriaRows.ts` | `aria-rowcount` and `aria-rowindex` bases |
 | 39 | `useGridSpanRowWindow` | `hooks/features/useGridSpanRenderWindow.ts` | Render window widened to whole row spans |
@@ -97,4 +100,5 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 once in `DataGrid.tsx` (`rowRenderProps`) and spread into each. `rowRenderProps.cellRange` is the cell range's
 render rectangle; each row renderer turns it into a per-row `cellRange` (`getRowCellRange`), `null` for rows
 outside it, and `Row` is memoised with a value comparison of that prop, so a drag only re-renders the rows the
-range enters or leaves.
+range enters or leaves. `rowRenderProps.fillHandle` (v3.5) adds `fillHandleCol` to the one row that draws the fill
+handle (a single selected cell gets an empty column interval, so it draws the handle but no range).

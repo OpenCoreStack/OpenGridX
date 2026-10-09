@@ -39,6 +39,9 @@ With [`cellSelection`](cell-selection.md) on (v3.3), on a data cell:
 | **Escape** | Collapse the range to the anchor (when not editing). |
 | **Ctrl+V** (Cmd+V) | Paste tab-separated text into the editable cells from the range's top-left cell (v3.4, see [Clipboard](clipboard.md#-paste-from-excel-and-google-sheets-v34)). Off with `disableClipboardPaste`. |
 | **Delete** / **Backspace** | On a range of more than one cell: empty its editable cells in one edit (v3.4). Off with `disableRangeClear`. |
+| **Ctrl+D** (Cmd+D) | Fill down: copy the range's top row into the rows below it, in one edit (v3.5, see [Fill Handle](fill-handle.md)). The browser's bookmark shortcut does not fire. Off with `disableFillHandle`. |
+| **Ctrl+R** (Cmd+R) | Fill right: copy the range's left column into the columns right of it, in one edit (v3.5). The browser's reload shortcut does not fire. Off with `disableFillHandle`. |
+| **Escape** during a fill-handle drag | Cancel the fill: nothing is written and the range goes back (v3.5). |
 
 With `undoRedo` on (v3.4, see [Undo & Redo](undo-redo.md)), while focus is on a cell and no editor is open:
 

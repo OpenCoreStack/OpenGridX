@@ -40,6 +40,7 @@ In-depth guides on the grid's functional capabilities.
 - **[Clipboard](features/clipboard.md)** - Copy rows and ranges, paste from Excel / Sheets, clear a range with Delete
 - **[Cell Range Selection](features/cell-selection.md)** - Spreadsheet-style cell ranges, copy and a sum / average status bar
 - **[Undo & Redo](features/undo-redo.md)** - Ctrl+Z / Ctrl+Shift+Z for edits, pastes and range clears
+- **[Fill Handle](features/fill-handle.md)** - Drag the range corner to continue a series or copy, Ctrl+D / Ctrl+R
 - **[Pinning](features/pinning.md)** - Sticky columns and rows
 - **[State Persistence](features/state-persistence.md)** - Save/Restore grid configuration
 - **[Aggregation & Pivot](features/aggregation-pivot.md)** - Data summarization and analytics

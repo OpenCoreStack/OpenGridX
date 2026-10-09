@@ -103,6 +103,8 @@ export default function App() {
 | disableRangeClear          | boolean (3.4.0+)              | With cellSelection, Delete/Backspace on a multi-cell range empties editable cells ('' strings, null otherwise) as one edit; true = off |
 | undoRedo                   | boolean / { limit } (3.4.0+)  | Undo/redo of edits, pastes, range clears (default off, 100 actions). Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y on a cell with no editor open. Recorded only after processRowUpdate succeeds; replayed through valueSetter + processRowUpdate; cells changed since are skipped ('changed', compared by value), removed rows ('missing') |
 | onHistoryChange            | ({ canUndo, canRedo, size }) => void | History change (size = undoable actions) |
+| disableFillHandle          | boolean (3.5.0+)              | With cellSelection, the range's bottom-right cell has a fill handle: drag down/up/right/left (one direction; auto-scroll; touch) fills the new cells from the range — numbers and dates with an exactly equal step continue (2,4 → 6,8; 15 Jan,15 Feb → 15 Mar; 5 Oct,6 Oct → 7 Oct), anything else repeats, one cell copies; Alt at release copies; Escape cancels. Ctrl/Cmd+D fills down from the range's top row, Ctrl/Cmd+R right from its left column. valueSetter + processRowUpdate once per row, one undo step, non-editable/synthetic cells skipped ('notEditable'). true = no handle, keys left to the browser |
+| onFill                     | (result) => void (3.5.0+)     | After every fill: { updated, failed, skipped, direction: 'down'/'up'/'right'/'left' } |
 
 ### Sorting
 | Prop              | Type                        | Description                     |
@@ -255,6 +257,7 @@ There are no getRowClassName / getCellClassName / theme props: use GridColDef.ce
 | valueGetter       | ({row, field, value}) => unknown                       | Computed value; used by sort, filter, quick search, aggregation, copy, export. Must be pure (quick filter caches per row object); a throw reads as undefined + dev warning |
 | valueSetter       | ({value, row, field}) => R                             | Write an edited value back onto the row (editable valueGetter columns) |
 | valueParser       | (text, { row, field, colDef }) => unknown              | Paste parser for this column (3.4.0+), e.g. "1.234,5" → 1234.5. Throw/undefined skips the cell ('invalidValue'). Default by type: number "1,234.5"/"12%"/"$5"; date ISO or Date.parse (keeps the cell's kind); boolean true/false/yes/no/1/0; singleSelect value or label; empty → null ('' for strings) |
+| fillValue         | ({ value, sourceValues, index, direction, copy, row, id, field, colDef }) => unknown | Fill handle (3.5.0+): what a fill writes into this column's cell. value = the grid's choice (series / pattern / copy); return it to keep it. Throw skips the cell ('invalidValue') |
 | valueFormatter    | ({value, row, field}) => string                        | Format display value (value is `unknown`: cast before calling methods) |
 | cellClassName     | string / (params) => string                            | CSS class on cells                         |
 | headerClassName   | string                                                 | CSS class on header cell                   |
@@ -633,6 +636,7 @@ Class names use the `ogx__` BEM prefix, e.g.:
 - `ogx__row`, `ogx__row--selected`, `ogx__row--even`, `ogx__row--odd`
 - `ogx__cell`, `ogx__cell--focused`, `ogx__cell--editing`
 - Cell ranges (3.3.0+): `ogx__cell--range`, `ogx__cell--range-top|bottom|left|right` (inset box-shadow outline), `ogx--range-dragging` on the root during a drag; variables `--ogx-range-background`, `--ogx-range-border` (theme keys `grid.rangeBackground`, `grid.rangeBorder`)
+- Fill handle (3.5.0+): `ogx__cell-fill-handle` (24px hit area in the corner cell, visible square is `::after`), variable `--ogx-fill-handle-color` (defaults to `--ogx-range-border`; theme key `grid.fillHandleColor`)
 - `ogx__header-cell`, `ogx__header-cell--sorted`, `ogx__header-cell--wrap` (wrapHeaderText, 3.3.0+)
 - Header filter row (3.5.0+): `ogx__header-filter-row`, `ogx__header-filter-cell` (`--focused`, `--active`, `--custom`, `--empty`, `--system`, `--pinned*`), `ogx__header-filter-operator`, `ogx__header-filter-menu`, `ogx__header-filter-input-wrapper` / `ogx__header-filter-input`, `ogx__header-filter-select`, `ogx__header-filter-clear`, `ogx__header-filter-custom`; height variable `--ogx-header-filter-height`
 - Sticky wrappers: `ogx__sticky-top` (header + top-pinned rows), `ogx__sticky-bottom` (bottom-pinned rows + aggregation footer)

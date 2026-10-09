@@ -115,6 +115,8 @@ function MyStats({ count, sum }: GridCellSelectionStatsSlotProps) {
 | `ogx--range-dragging` | On the grid root during a pointer drag (`user-select: none`). |
 | `--ogx-range-background` | Range tint. Theme key `grid.rangeBackground`. |
 | `--ogx-range-border` | Range outline. Theme key `grid.rangeBorder`. |
+| `ogx__cell-fill-handle` | The fill handle on the range's bottom-right cell (v3.5, see [Fill Handle](fill-handle.md)). |
+| `--ogx-fill-handle-color` | Fill handle colour; defaults to the range outline. Theme key `grid.fillHandleColor` (v3.5). |
 
 All five built-in themes define both variables. A custom `DataGridThemeProvider` theme derives them from `colors.primary` unless it sets them.
 
@@ -124,8 +126,12 @@ All five built-in themes define both variables. A custom `DataGridThemeProvider`
 - DOM focus stays on the anchor. The grid stays a single Tab stop.
 - After each change the polite live region announces the size, for example "12 cells selected, 3 rows by 4 columns", debounced to 300 ms. Translate it with `localeText.cellSelectionAnnouncement(cells, rows, columns)`.
 
+## Fill handle (v3.5)
+
+The range's bottom-right cell carries a fill handle: drag it to continue a series or repeat the range into the next cells, or press Ctrl/Cmd+D / Ctrl/Cmd+R. See [Fill Handle](fill-handle.md); `disableFillHandle` turns it off.
+
 ## Not in 3.3
 
-Paste, Delete-to-clear and undo (planned for 3.4), the fill handle, several ranges at once (Ctrl+drag), touch selection (on touch a drag scrolls) and ranges across pages.
+Paste, Delete-to-clear and undo (added in 3.4), the fill handle (added in 3.5), several ranges at once (Ctrl+drag), touch selection (on touch a drag scrolls; the fill handle accepts touch drags) and ranges across pages.
 
-See also: [Clipboard](clipboard.md), [Keyboard Navigation](keyboard-navigation.md), [Theming](../customization/theming.md).
+See also: [Fill Handle](fill-handle.md), [Clipboard](clipboard.md), [Undo & Redo](undo-redo.md), [Keyboard Navigation](keyboard-navigation.md), [Theming](../customization/theming.md).
