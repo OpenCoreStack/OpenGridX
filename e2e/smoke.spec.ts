@@ -413,6 +413,8 @@ test.describe('package smoke', () => {
     await page.getByTestId('ai-run-tool').click();
     await expect(page.getByTestId('ai-tool-result')).toHaveText('{"ok":true,"applied":{"sortModel":[{"field":"amount","sort":"asc"}]}}');
     await expect(page.getByRole('columnheader', { name: 'Amount' }).first()).toHaveAttribute('aria-sort', 'ascending');
+  });
+
   test('header-filters: typing and selects filter the rows, ArrowDown reaches the filter row', async ({ page }) => {
     consoleRecords = await openScenario(page, 'header-filters');
     const filterCell = (field: string) => page.locator(`.ogx__header-filter-row [data-field="${field}"]`).first();
