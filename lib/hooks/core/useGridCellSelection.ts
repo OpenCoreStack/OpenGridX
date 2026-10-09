@@ -132,7 +132,7 @@ interface DragState {
     y: number;
     frame: number;
     moved: boolean;
-    /** Ends the drag; `cancelled` unless the button was released normally. */
+    /** Ends the drag; `cancelled` unless the button was released normally (tracked drags: Escape cancels). */
     stop: (cancelled?: boolean, altKey?: boolean) => void;
     /** A tracked drag (fill handle): told the cell under the pointer each frame instead of moving the range. */
     onTrack?: (head: GridCellCoordinates, x: number, y: number) => void;
@@ -546,6 +546,13 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         const onCancel = (event: Event) => {
             if (isOwnEvent(event as MouseEvent)) dragRef.current?.stop();
         };
+        // Escape abandons a tracked drag (the fill writes nothing).
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape' || !dragRef.current) return;
+            event.preventDefault();
+            event.stopPropagation();
+            dragRef.current.stop();
+        };
         const view = doc.defaultView;
         const onBlur = () => dragRef.current?.stop();
         let ended = false;
@@ -557,7 +564,10 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
                 drag.frame = 0;
                 doc.removeEventListener(moveType, onMove, true);
                 doc.removeEventListener(upType, onUp, true);
-                if (tracked) doc.removeEventListener('pointercancel', onCancel, true);
+                if (tracked) {
+                    doc.removeEventListener('pointercancel', onCancel, true);
+                    doc.removeEventListener('keydown', onKeyDown, true);
+                }
                 view?.removeEventListener('blur', onBlur);
                 latestRef.current.containerRef.current?.classList.remove(RANGE_DRAGGING_CLASS);
                 if (dragRef.current === drag) dragRef.current = null;
@@ -570,7 +580,10 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         dragRef.current = drag;
         doc.addEventListener(moveType, onMove, true);
         doc.addEventListener(upType, onUp, true);
-        if (tracked) doc.addEventListener('pointercancel', onCancel, true);
+        if (tracked) {
+            doc.addEventListener('pointercancel', onCancel, true);
+            doc.addEventListener('keydown', onKeyDown, true);
+        }
         view?.addEventListener('blur', onBlur);
     }, [runDragFrame]);
 

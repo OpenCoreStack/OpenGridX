@@ -203,6 +203,25 @@ describe('fill handle: drag', () => {
         expect(g.api().getCellSelectionModel()).toEqual(range(1, 'qty', 2, 'qty'));
     });
 
+    it('Escape during the drag cancels it: nothing is written and the range is restored', async () => {
+        const g = renderGrid();
+        act(() => g.api().selectCellRange({ id: 1, field: 'qty' }, { id: 2, field: 'qty' }));
+        const handle = g.container.querySelector('.ogx__cell-fill-handle') as HTMLElement;
+        const target = cellAt(g.container, 4, 'qty');
+        const original = document.elementFromPoint;
+        document.elementFromPoint = () => target;
+        fireEvent.pointerDown(handle, { pointerId: 5, button: 0, clientX: 0, clientY: 0 });
+        fireEvent.pointerMove(document, { pointerId: 5, buttons: 1, clientX: 0, clientY: 90 });
+        await nextFrame();
+        expect(g.api().getCellSelectionModel()).toEqual(range(1, 'qty', 5, 'qty'));
+        fireEvent.keyDown(document, { key: 'Escape' });
+        fireEvent.pointerUp(document, { pointerId: 5, button: 0, clientX: 0, clientY: 90 });
+        await settle();
+        document.elementFromPoint = original;
+        expect(g.rows()).toEqual(BASE_ROWS);
+        expect(g.api().getCellSelectionModel()).toEqual(range(1, 'qty', 2, 'qty'));
+    });
+
     it('a cancelled pointer (pointercancel) writes nothing', async () => {
         const g = renderGrid();
         act(() => g.api().selectCellRange({ id: 1, field: 'qty' }, { id: 2, field: 'qty' }));
