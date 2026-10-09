@@ -88,9 +88,10 @@ export function GridAiAssistantPanel(props: GridAiAssistantPanelProps) {
                         <MicIcon />
                     </Button>
                 )}
+                {/* Separate keys: one reused <button> would turn into the submit button during the Stop click and submit again. */}
                 {running
-                    ? <Button size="small" variant="outlined" onClick={thenFocusInput(stop)}>Stop</Button>
-                    : <Button size="small" variant="contained" color="primary" type="submit" disabled={text.trim() === ''}>Ask</Button>}
+                    ? <Button key="stop" size="small" variant="outlined" onClick={thenFocusInput(stop)}>Stop</Button>
+                    : <Button key="ask" size="small" variant="contained" color="primary" type="submit" disabled={text.trim() === ''}>Ask</Button>}
             </form>
 
             {suggestions.length > 0 && (
