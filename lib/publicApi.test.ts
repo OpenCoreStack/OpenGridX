@@ -139,8 +139,12 @@ function readEntryExports(program: ts.Program, file: string = LIB_INDEX): Set<st
     return new Set(checker.getExportsOfModule(moduleSymbol).map((s) => s.getName()));
 }
 
-/** Types of the `@opencorestack/opengridx/ai` entry point: exported from there, not from the root. */
-const AI_TYPE_NAME = /^GridAi[A-Z]/;
+/**
+ * Types of the `@opencorestack/opengridx/ai` entry point (`GridAi*`, and the agent tools' `GridAgent*`):
+ * exported from there, not from the root. The state and assistant types are declared in lib/types (the
+ * grid's `aiAssistant` prop uses them) and re-exported by `/ai`.
+ */
+const AI_TYPE_NAME = /^Grid(?:Ai|Agent)[A-Z]/;
 
 const readDoc = (file: string) => fs.readFileSync(file, 'utf8');
 const componentDocs = fs.readdirSync(COMPONENT_DOCS_DIR)
@@ -227,6 +231,15 @@ describe('public API matches the reference docs', () => {
             .filter(([name]) => !aiExports.has(name) || rootExports.has(name))
             .map(([name, file]) => `${name} (${file})`);
         expect(problems).toEqual([]);
+    });
+
+    it('re-exports the AI state and assistant types from the ai entry point (moved to lib/types in v3.5)', () => {
+        const moved = [
+            'GridAiState', 'GridAiPart', 'GridAiValidationError', 'GridAiPromptContext', 'GridAiPromptResult',
+            'GridAiHistoryEntry', 'GridAiAssistantOptions', 'GridAiAssistantPanelProps', 'GridAiAssistantStatus', 'GridAiChip',
+        ];
+        expect(moved.filter((name) => !aiExports.has(name))).toEqual([]);
+        expect(['createGridAiPromptHandler', 'createGridAgentTools', 'GridAgentTool'].filter((name) => !aiExports.has(name))).toEqual([]);
     });
 
     it('exports every name the docs import from the package', () => {

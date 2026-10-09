@@ -9,7 +9,7 @@ import { test, expect, type ConsoleMessage, type Locator, type Page } from '@pla
 /** Console output that is expected and harmless. Keep this list short and explain every entry. */
 const ALLOWED_CONSOLE: RegExp[] = [];
 
-const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range', 'paste', 'ai']);
+const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range', 'paste', 'ai', 'ai-assistant']);
 
 function fixtureOf(projectName: string): string {
   return projectName.split('-')[1] ?? '';
@@ -325,6 +325,49 @@ test.describe('package smoke', () => {
     const amounts = (await Promise.all([0, 1, 2, 3].map((i) => cell(centerRow(page, i), 'amount').innerText()))).map(parseAmount);
     expect(amounts.every((a) => a > 5000), `amounts over 5000: ${amounts.join(', ')}`).toBe(true);
     expect(amounts).toEqual([...amounts].sort((a, b) => b - a));
+  });
+
+  test('ai-assistant: the prompt panel applies a validated reply from a mock callModel, with chips and Undo; agent tools', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'ai-assistant');
+    const regions = async () => (await page.locator('.ogx__viewport [data-rowindex] [data-field="region"]').allInnerTexts()).map((r) => r.trim());
+
+    const askButton = page.getByRole('button', { name: 'Ask AI' });
+    await askButton.click();
+    const dialog = page.getByRole('dialog', { name: 'Ask AI' });
+    const prompt = dialog.getByRole('textbox', { name: 'Prompt' });
+    await expect(prompt).toBeFocused();
+    await prompt.fill('north, biggest first');
+    await prompt.press('Enter');
+
+    await expect(dialog.locator('.ogx-ai-chip__label')).toHaveText(['Region equals North', 'Sort: Amount, descending', 'Hide: Tax']);
+    await expect(dialog).toContainText('Showing the North, biggest first.');
+    await expect(page.getByRole('columnheader', { name: 'Amount' }).first()).toHaveAttribute('aria-sort', 'descending');
+    await expect(page.getByRole('columnheader', { name: 'Tax' })).toHaveCount(0);
+    await expect(async () => {
+      const list = await regions();
+      expect(list.length).toBeGreaterThan(0);
+      expect(list.filter((r) => r !== 'North')).toEqual([]);
+    }).toPass();
+
+    // Removing a chip re-applies the reply without it.
+    await dialog.getByRole('button', { name: 'Remove Region equals North' }).click();
+    await expect(async () => expect((await regions()).some((r) => r !== 'North')).toBe(true)).toPass();
+    await expect(page.getByRole('columnheader', { name: 'Amount' }).first()).toHaveAttribute('aria-sort', 'descending');
+
+    // Undo restores the state from before the reply.
+    await dialog.getByRole('button', { name: 'Undo' }).click();
+    await expect(page.getByRole('columnheader', { name: 'Amount' }).first()).not.toHaveAttribute('aria-sort', 'descending');
+    await expect(page.getByRole('columnheader', { name: 'Tax' })).toHaveCount(1);
+
+    await prompt.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(askButton).toBeFocused();
+
+    // Agent tools from the same package entry point.
+    await expect(page.getByTestId('ai-tools')).toHaveText('get_grid_state,set_filter,set_sort,set_grouping,set_aggregation,set_column_visibility,clear_filters');
+    await page.getByTestId('ai-run-tool').click();
+    await expect(page.getByTestId('ai-tool-result')).toHaveText('{"ok":true,"applied":{"sortModel":[{"field":"amount","sort":"asc"}]}}');
+    await expect(page.getByRole('columnheader', { name: 'Amount' }).first()).toHaveAttribute('aria-sort', 'ascending');
   });
 
   test('pinned: pinned columns and rows, column groups, colSpan, detail panel', async ({ page }) => {
