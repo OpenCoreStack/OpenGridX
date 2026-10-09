@@ -1,9 +1,13 @@
 import { useLayoutEffect, useRef } from 'react';
 import type {
+    GridAggregationModel,
     GridApi,
     GridColDef,
+    GridColumnVisibilityModel,
     GridFilterModel,
     GridPaginationModel,
+    GridPivotModel,
+    GridRowGroupingModel,
     GridRowId,
     GridRowModel,
     GridSortItem,
@@ -45,6 +49,16 @@ export interface UseGridApiMethodsParams {
     getAllFilteredRows: () => GridRowModel[];
     /** Columns on screen, in display order. */
     visibleColumns: GridColDef[];
+
+    // v3.5: the remaining models, for the setters and getGridAiState.
+    rowGroupingModel: GridRowGroupingModel;
+    onRowGroupingModelChange: (model: GridRowGroupingModel) => void;
+    aggregationModel: GridAggregationModel;
+    onAggregationModelChange: (model: GridAggregationModel) => void;
+    columnVisibilityModel: GridColumnVisibilityModel;
+    onColumnVisibilityModelChange: (model: GridColumnVisibilityModel) => void;
+    pivotModel: GridPivotModel;
+    onPivotModelChange: (model: GridPivotModel) => void;
 }
 
 /**
@@ -111,5 +125,30 @@ export function useGridApiMethods(params: UseGridApiMethodsParams): void {
         api.getVisibleRows = () => latest().getVisibleRows();
         api.getAllFilteredRows = () => latest().getAllFilteredRows();
         api.getVisibleColumns = () => latest().visibleColumns;
+
+        api.setSortModel = (model) => {
+            latestRef.current = { ...latest(), sortModel: model };
+            latest().onSortModelChange(model);
+        };
+        api.setRowGroupingModel = (model) => {
+            latestRef.current = { ...latest(), rowGroupingModel: model };
+            latest().onRowGroupingModelChange(model);
+        };
+        api.setAggregationModel = (model) => {
+            latestRef.current = { ...latest(), aggregationModel: model };
+            latest().onAggregationModelChange(model);
+        };
+        api.setColumnVisibilityModel = (model) => {
+            latestRef.current = { ...latest(), columnVisibilityModel: model };
+            latest().onColumnVisibilityModelChange(model);
+        };
+        api.setPivotModel = (model) => {
+            latestRef.current = { ...latest(), pivotModel: model };
+            latest().onPivotModelChange(model);
+        };
+        api.getGridAiState = () => {
+            const { filterModel, sortModel, rowGroupingModel, aggregationModel, pivotModel, columnVisibilityModel } = latest();
+            return { filterModel, sortModel, rowGroupingModel, aggregationModel, pivotModel, columnVisibilityModel };
+        };
     }, [apiRef]);
 }

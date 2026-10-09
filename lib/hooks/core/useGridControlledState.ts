@@ -7,11 +7,13 @@ import type {
     GridPaginationModel,
     GridAggregationModel,
     GridPivotModel,
+    GridRowGroupingModel,
     GridCellSelectionModel,
     GridCellSelectionChangeDetails,
     GridCellSelectionReason,
 } from '../../types';
 import type { GridInitialState, GridDensityState } from '../../state/types';
+import { EMPTY_ROW_GROUPING_MODEL } from '../../utils/gridModes';
 
 export type GridDensity = GridDensityState['density'];
 
@@ -26,6 +28,9 @@ export interface UseGridControlledStateParams {
 
     aggregationModel?: GridAggregationModel;
     onAggregationModelChange?: (model: GridAggregationModel) => void;
+
+    rowGroupingModel?: GridRowGroupingModel;
+    onRowGroupingModelChange?: (model: GridRowGroupingModel) => void;
 
     columnVisibilityModel?: Record<string, boolean>;
     onColumnVisibilityModelChange?: (model: Record<string, boolean>) => void;
@@ -67,6 +72,11 @@ export interface UseGridControlledStateReturn {
     // aggregation
     aggregationModel: GridAggregationModel;
     handleAggregationModelChange: (model: GridAggregationModel) => void;
+
+    // row grouping (v3.5: a controlled/uncontrolled pair)
+    rowGroupingModel: GridRowGroupingModel;
+    /** Sets the internal model when uncontrolled and fires onRowGroupingModelChange. */
+    handleRowGroupingModelChange: (model: GridRowGroupingModel) => void;
 
     // column visibility
     columnVisibilityModel: Record<string, boolean>;
@@ -131,6 +141,8 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
         onFilterModelChange,
         aggregationModel: propAggregationModel,
         onAggregationModelChange,
+        rowGroupingModel: propRowGroupingModel,
+        onRowGroupingModelChange,
         columnVisibilityModel: propColumnVisibilityModel,
         onColumnVisibilityModelChange,
         pinnedColumns: propPinnedColumns,
@@ -189,6 +201,18 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
         if (!isAggregationControlled) setInternalAggregationModel(model);
         onAggregationModelChange?.(model);
     }, [isAggregationControlled, onAggregationModelChange]);
+
+    // ── Row grouping ─────────────────────────────────────────────────────────
+    // A passed rowGroupingModel controls grouping and is used as is (the hierarchy hooks memoise on
+    // it); without one the grid keeps its own model, changed through apiRef and the AI assistant.
+    const isRowGroupingControlled = propRowGroupingModel !== undefined;
+    const [internalRowGroupingModel, setInternalRowGroupingModel] = useState<GridRowGroupingModel>(EMPTY_ROW_GROUPING_MODEL);
+    const rowGroupingModel = (isRowGroupingControlled ? propRowGroupingModel : internalRowGroupingModel) || EMPTY_ROW_GROUPING_MODEL;
+
+    const handleRowGroupingModelChange = useCallback((model: GridRowGroupingModel) => {
+        if (!isRowGroupingControlled) setInternalRowGroupingModel(model);
+        onRowGroupingModelChange?.(model);
+    }, [isRowGroupingControlled, onRowGroupingModelChange]);
 
     // ── Column visibility ────────────────────────────────────────────────────
     const isColumnVisibilityControlled = propColumnVisibilityModel !== undefined;
@@ -294,6 +318,9 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
 
         aggregationModel,
         handleAggregationModelChange,
+
+        rowGroupingModel,
+        handleRowGroupingModelChange,
 
         columnVisibilityModel,
         handleColumnVisibilityModelChange,

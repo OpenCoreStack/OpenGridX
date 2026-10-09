@@ -43,7 +43,7 @@ import { GridLoadingOverlay } from './GridLoadingOverlay';
 import { GridPinnedRows } from './GridPinnedRows';
 import { GridVirtualRows } from './GridVirtualRows';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
-import { resolveGridModes, EMPTY_ROW_GROUPING_MODEL } from '../../utils/gridModes';
+import { resolveGridModes } from '../../utils/gridModes';
 import { useGridGroupingColumn } from '../../hooks/core/useGridGroupingColumn';
 import { useGridRowIdOf, getDefaultRowId } from '../../hooks/core/useGridRowIdOf';
 import { useGridApiRefBinding } from '../../hooks/core/useGridApiRefBinding';
@@ -138,6 +138,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         groupingColDef,
 
         rowGroupingModel: propRowGroupingModel,
+        onRowGroupingModelChange,
 
         aggregationModel: propAggregationModel,
         onAggregationModelChange,
@@ -182,7 +183,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const columns = useStableColumns(columnsProp);
 
     const effectiveNoRowsLabel = localeText?.noRowsLabel ?? noRowsLabel;
-    const rowGroupingModel = propRowGroupingModel || EMPTY_ROW_GROUPING_MODEL;
 
     const controlledState = useGridControlledState({
         initialState,
@@ -192,6 +192,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onFilterModelChange,
         aggregationModel: propAggregationModel,
         onAggregationModelChange,
+        rowGroupingModel: propRowGroupingModel,
+        onRowGroupingModelChange,
         columnVisibilityModel: propColumnVisibilityModel,
         onColumnVisibilityModelChange,
         pinnedColumns: propPinnedColumns,
@@ -213,6 +215,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         selectedRowIds: selectionModelRowIds,
         handleRowSelectionModelChange,
         density: effectiveDensity,
+        rowGroupingModel, handleRowGroupingModelChange,
     } = controlledState;
 
     const pivot = useGridPivot({
@@ -459,6 +462,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
             dataRows,
         }),
         visibleColumns: renderOrderedColumns as unknown as GridColDef[],
+        rowGroupingModel,
+        onRowGroupingModelChange: handleRowGroupingModelChange,
+        aggregationModel,
+        onAggregationModelChange: handleAggregationModelChange,
+        columnVisibilityModel,
+        onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
+        pivotModel: currentPivotModel,
+        onPivotModelChange: handlePivotModelChange,
     });
 
     // Indices address the consumer's own rows, whatever the sort, filter, page or pinning.
