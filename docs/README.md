@@ -50,7 +50,7 @@ In-depth guides on the grid's functional capabilities.
 - **[Infinite Scroll](features/infinite-scroll.md)** - Advanced performance loading
 - **[Data Source](features/data-source.md)** - Server-side fetching and SSR
 - **[Export Guide](features/export-guide.md)** - Excel, CSV, JSON, and Print
-- **[AI Toolkit](features/ai-toolkit.md)** - JSON Schema of the grid state for your own model, and a validator for its replies (`@opencorestack/opengridx/ai`)
+- **[AI Toolkit](features/ai-toolkit.md)** - JSON Schema of the grid state for your own model, a validator for its replies, the **Ask AI** panel (`aiAssistant`) and tools for AI agents (`@opencorestack/opengridx/ai`)
 
 ---
 

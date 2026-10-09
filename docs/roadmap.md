@@ -84,7 +84,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 | :--- | :--- | :--- | :--- |
 | **3.3.0** ✅ | shipped 7 Oct | **Cell range selection** (opt-in `cellSelection` prop): mouse drag, Shift+click, Shift+arrows; Ctrl+C / Cmd+C copies the block as TSV | Selection status bar (count, sum, average of selected cells); wrapped header text; React Compiler compatibility check |
 | **3.4.0** ✅ | shipped 8 Oct | **Paste from Excel / Google Sheets** into the selection, through `processRowUpdate` (values parsed per column type or `valueParser`, non-editable cells skipped, `onClipboardPaste` summary); **Delete clears a range**; built-in inputs and editors use the shared `Input` / `Checkbox` (`Input variant="cell"`). **Undo / redo** for cell edits and pastes (Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y, `apiRef.undo()` / `redo()`) | **AI toolkit, part 1** in a new `@opencorestack/opengridx/ai` entry point: `getGridAiSchema(columns)` (JSON Schema of the filter, sort, grouping, aggregation, pivot and visibility models the columns allow) and `validateGridAiState(json, columns)` (drops unknown fields and operators, coerces values, returns errors) |
-| **3.5.0** | 15 Dec | **AI toolkit, part 2**: `aiAssistant={{ onPrompt }}` prompt panel that calls the app's own model, shows the proposed changes as removable chips and applies them with undo; `createGridAgentTools(apiRef)` (plain tool objects for CopilotKit, the Vercel AI SDK or WebMCP) | Header filter row; **fill handle** as a stretch goal (moves to Q1 2027 if 3.3–3.4 run late) |
+| **3.5.0** | 15 Dec | **AI toolkit, part 2**: `aiAssistant={{ onPrompt }}` prompt panel that calls the app's own model, shows the proposed changes as removable chips and applies them with undo; `createGridAgentTools(apiRef, columns)` (plain tool objects for CopilotKit, the Vercel AI SDK or WebMCP) | Header filter row; **fill handle** as a stretch goal (moves to Q1 2027 if 3.3–3.4 run late) |
 | Freeze | 19 Dec – 5 Jan | Bug fixes only | — |
 
 ### Across the quarter
@@ -106,7 +106,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 
 *   OpenGridX never calls an AI service and never bundles an AI SDK. The app passes a function that calls whichever model it uses.
 *   By default only column definitions and grid state are sent, never row data. Example values are opt-in per column and documented as real data.
-*   Model output is always validated against the schema and shown to the user before it changes the grid, with one-click undo.
+*   Model output is always validated against the schema (the grid applies only a validated, branded result), and every change it makes is shown as a removable chip with one-click undo.
 *   The schema carries a `schemaVersion`, since apps will cache prompts against it.
 
 ### Risks

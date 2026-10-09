@@ -254,6 +254,29 @@ model reply directly: `validateGridAiState` drops unknown fields, wrong operator
 `GridColDef.aiExamples` (opt-in) and `valueOptions` send data values to the model. Guide:
 `docs/features/ai-toolkit.md`.
 
+### AI toolkit: Ask AI panel and agent tools (3.5.0+)
+
+```tsx
+import { createGridAiPromptHandler, createGridAgentTools } from '@opencorestack/opengridx/ai';
+
+const onPrompt = createGridAiPromptHandler({
+  columns,
+  callModel: async (request, { signal }) =>
+    (await fetch('/api/grid-ai', { method: 'POST', body: JSON.stringify(request), signal })).json(),
+});
+<DataGrid rows={rows} columns={columns} slots={{ toolbar: GridToolbar }} aiAssistant={{ onPrompt }} />;
+
+const tools = createGridAgentTools(apiRef, columns); // plain { name, description, inputSchema, execute }
+```
+
+The grid applies only a **branded** result: `validateGridAiState` (used by `createGridAiPromptHandler`)
+brands the result and its `state` with `Symbol.for('opengridx.ai.validated')`; a hand-built or copied
+state is refused ("The reply was not validated"). A reply is applied at once, as removable chips with
+Undo. `rowGroupingModel` is now a controlled/uncontrolled pair with `onRowGroupingModelChange`, and
+`apiRef` has `setSortModel`, `setRowGroupingModel`, `setAggregationModel`, `setColumnVisibilityModel`,
+`setPivotModel` and `getGridAiState`. Agent tools never send rows unless `allowRowAccess: true`
+(`get_row_summary`). Demo: `/ai-assistant`.
+
 ### Custom sort order and column auto-size (3.1.0+)
 
 ```tsx
@@ -428,8 +451,8 @@ import type {
 } from '@opencorestack/opengridx';
 
 // AI toolkit (3.4.0+): a separate entry point
-import { getGridAiSchema, validateGridAiState } from '@opencorestack/opengridx/ai';
-import type { GridAiState, GridAiSchema, GridAiValidationError } from '@opencorestack/opengridx/ai';
+import { getGridAiSchema, validateGridAiState, createGridAiPromptHandler, createGridAgentTools } from '@opencorestack/opengridx/ai';
+import type { GridAiState, GridAiSchema, GridAiValidationError, GridAiPromptResult, GridAgentTool } from '@opencorestack/opengridx/ai';
 ```
 
 ---

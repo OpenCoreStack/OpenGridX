@@ -168,7 +168,8 @@ interface GridUndoRedoOptions { limit?: number }
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `rowGroupingModel` | `GridRowGroupingModel` | `[]` | Array of field names to group rows by (e.g. `['department', 'team']`). See [Row Grouping](#️-row-grouping). |
+| `rowGroupingModel` | `GridRowGroupingModel` | — | Array of field names to group rows by (e.g. `['department', 'team']`). Passing it controls grouping; without it the grid keeps its own model (initially `[]`), which `apiRef.setRowGroupingModel()` and the AI assistant change (v3.5.0+). See [Row Grouping](#️-row-grouping). |
+| `onRowGroupingModelChange` | `(model: GridRowGroupingModel) => void` | — | Fired when the grouping model changes through `apiRef.setRowGroupingModel()` or the AI assistant. With a controlled `rowGroupingModel`, update the prop from it (v3.5.0+). |
 | `aggregationModel` | `GridAggregationModel` | — | Map of `field → aggFn` (e.g. `{ salary: 'sum', age: 'avg' }`). See [Aggregation Reference](#-aggregation-reference). |
 | `onAggregationModelChange` | `(model: GridAggregationModel) => void` | — | Fired when the aggregation model changes. |
 | `getAggregationPosition` | `(groupNode: GridTreeNode \| null) => 'inline' \| 'footer' \| null` | — | Controls where aggregation results appear. Called for every group node (with its current `isExpanded`) and once with `null` for the grand total. `'inline'` (group default) = on the group row, `'footer'` = on a subtotal row after the group's children while it is expanded (on the group row while collapsed), `null` = hidden. For the grand total, `null` hides the footer row. A callback that throws gets the default (`'inline'` for a group, `'footer'` for the grand total; v3.0+). See [the callback](#getaggregationposition-callback). |
@@ -180,6 +181,24 @@ interface GridUndoRedoOptions { limit?: number }
 | `pivotMode` | `boolean` | `false` | Switches the grid to multidimensional Pivot Mode (client-side: ignored when a `dataSource` is set; tree data and row grouping are turned off while pivoting). See [Aggregation & Pivot](features/aggregation-pivot.md#-pivot-mode). |
 | `pivotModel` | `GridPivotModel` | — | Controlled pivot configuration (row fields, column fields, value fields). |
 | `onPivotModelChange` | `(model: GridPivotModel) => void` | — | Fired when the pivot model changes. |
+
+#### AI Assistant (v3.5)
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `aiAssistant` | `GridAiAssistantOptions` | — | The "Ask AI" prompt panel: `{ onPrompt, placeholder?, suggestions?, voice?, parts? }`. The built-in toolbar shows an **Ask AI** button (`localeText.aiAssistantButton`); `apiRef.openAiAssistant()` opens the panel without one; `slots.aiAssistantPanel` replaces it. A reply is applied only when its `state` carries the brand `validateGridAiState` sets (build `onPrompt` with `createGridAiPromptHandler`); it is applied at once as one undoable step, shown as removable chips. See [AI Toolkit](features/ai-toolkit.md#ai-assistant-panel). Grids without it are unchanged. |
+| `onAiAssistantApply` | `(result: GridAiPromptResult) => void` | — | Fired after the assistant applied a reply. |
+| `onAiAssistantError` | `(error: unknown) => void` | — | Fired when `onPrompt` rejects (not on Stop) or returns a result that was not validated. |
+
+`GridAiAssistantOptions`:
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `onPrompt` | `(prompt: string, context: GridAiPromptContext) => Promise<GridAiPromptResult>` | — | Answers a prompt. `context` is `{ currentState, history, signal }`: the grid's models (`GridAiState`), earlier prompts of the session (`GridAiHistoryEntry[]`: `{ prompt, applied }`) and an `AbortSignal` aborted by Stop, a new prompt or closing the panel. Resolve with `{ state, errors, message? }` from `validateGridAiState` or `createGridAiPromptHandler`. |
+| `placeholder` | `string` | `'Ask about this table…'` | Placeholder of the prompt input. |
+| `suggestions` | `string[]` | — | Example prompts shown as clickable chips. |
+| `voice` | `boolean` | `true` | Shows a microphone button where the browser has `SpeechRecognition` / `webkitSpeechRecognition`. The microphone is asked for only when the button is clicked; elsewhere the button is hidden. |
+| `parts` | `GridAiPart[]` | every part | The parts of the state the assistant may change. Other parts of a reply are ignored ("Part not allowed"). |
 
 #### Scroll & Viewport
 
@@ -200,7 +219,7 @@ interface GridUndoRedoOptions { limit?: number }
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `localeText` | `GridLocaleText` | — | Override user-visible strings: the Pagination labels and the empty-state label (`noRowsLabel`, which wins over the `noRowsLabel` prop). See [`GridLocaleText`](#gridlocaletext). |
+| `localeText` | `GridLocaleText` | — | Override user-visible strings: the Pagination labels, the empty-state label (`noRowsLabel`, which wins over the `noRowsLabel` prop), the cell-range announcement and the Ask AI button (`aiAssistantButton`). See [`GridLocaleText`](#gridlocaletext). |
 
 #### Imperative Ref
 
@@ -261,6 +280,7 @@ The types of the `slots` and `slotProps` props (v3.0+ exports). Each slot is typ
 | `noRowsOverlay` | The empty-state icon and label (shown when there are no rows and the grid is not loading). | `slotProps.noRowsOverlay` only (`GridOverlaySlotProps`). |
 | `loadingOverlay` | The loading indicator: the skeleton rows while loading with no rows, the progress bar while loading with rows shown (the slot is then shown over them). | `slotProps.loadingOverlay` only (`GridOverlaySlotProps`). |
 | `cellSelectionStats` | The status bar of `showCellSelectionStats` (v3.3). Rendered while more than one cell is selected. | `GridCellSelectionStatsSlotProps`: `apiRef`, `cellCount`, `rowCount`, `columnCount`, `count`, `numericCount`, `sum`, `average` (`null` without numeric cells), then `slotProps.cellSelectionStats`. |
+| `aiAssistantPanel` | The `aiAssistant` panel (v3.5). Rendered while the panel is open, under the toolbar; Escape inside it closes it. | `GridAiAssistantPanelProps`: `status`, `statusText`, `message`, `errors`, `chips` (`GridAiChip[]`: `{ id, part, label }`), `history`, `suggestions`, `placeholder`, `voiceAvailable`, `canUndo`, and the actions `submit(prompt)`, `stop()`, `undo()`, `removeChip(id)`, `close()`; then `slotProps.aiAssistantPanel`. |
 | `footer` | The pagination area. | `GridFooterSlotProps`: `apiRef`, `aggregationModel`, `aggregationResult`, `rowCount`, `pagination`, `paginationModel`, `pageSizeOptions`, `onPaginationModelChange`, then `slotProps.footer`. `rowCount` is the built-in pager's count (pinned rows excluded, v3.0+); under tree data or row grouping, the filtered data rows. |
 
 ```ts
@@ -302,6 +322,9 @@ The built-in toolbar component. Mount it via `slots={{ toolbar: GridToolbar }}`.
 | `renderAggregationButton` | `(props: ToolbarButtonRenderProps) => ReactNode` | — | Replace the built-in Summaries toggle button. The Aggregation panel still functions normally. |
 | `renderExportButton` | `() => ReactNode` | — | Inject an Export button after the Aggregation button. No built-in export button exists. |
 | `renderQuickFilter` | `(props: ToolbarQuickFilterRenderProps) => ReactNode` | — | Replace the built-in `GlobalSearch` input with your own component. |
+| `onAiAssistantToggle` | `(trigger: HTMLElement \| null) => void` | — | Opens or closes the `aiAssistant` panel. The grid injects it when `aiAssistant` is set; its presence renders the **Ask AI** button (sparkle icon), first in the button row. Focus returns to `trigger` when the panel closes (v3.5). |
+| `aiAssistantOpen` | `boolean` | `false` | Whether the panel is open (`aria-expanded` of the button; injected by the grid) (v3.5). |
+| `aiAssistantLabel` | `string` | `'Ask AI'` | The button's label; the grid passes `localeText.aiAssistantButton` (v3.5). |
 
 ### `ToolbarButtonRenderProps`
 
@@ -363,6 +386,13 @@ Access these methods via the `apiRef` prop.
 | `redo()` | `Promise<GridBatchEditResult>` | Redo the last undone action (v3.4). |
 | `canUndo()` / `canRedo()` | `boolean` | Whether there is an action to undo / redo (v3.4). |
 | `clearHistory()` | `void` | Forget every undo and redo action (v3.4). |
+| `setSortModel(model)` | `void` | Replace the sort model. Fires `onSortModelChange` (v3.5). |
+| `setRowGroupingModel(model)` | `void` | Replace the row grouping model. Fires `onRowGroupingModelChange`; with a controlled `rowGroupingModel`, update the prop from it (v3.5). |
+| `setAggregationModel(model)` | `void` | Replace the aggregation model. Fires `onAggregationModelChange` (v3.5). |
+| `setColumnVisibilityModel(model)` | `void` | Replace the column visibility model. Fires `onColumnVisibilityModelChange` (v3.5). |
+| `setPivotModel(model)` | `void` | Replace the pivot model. Fires `onPivotModelChange` (v3.5). |
+| `getGridAiState()` | `GridAiState` | The current `filterModel`, `sortModel`, `rowGroupingModel`, `aggregationModel`, `pivotModel` and `columnVisibilityModel`, as the AI toolkit reads them. Like the other getters it sees a setter's value in the same tick (v3.5). |
+| `openAiAssistant()` / `closeAiAssistant()` | `void` | Open or close the `aiAssistant` panel; `openAiAssistant` does nothing without `aiAssistant` (v3.5). |
 | `copySelectedRows()` | `Promise<void>` | Copy every selected row that passes the filter (other pages, collapsed groups and pinned rows included) as TSV, with the visible columns in screen order. Resolves without writing when no selected row is found; rejects when the clipboard write fails. |
 
 ---
@@ -494,14 +524,16 @@ Every exporter takes `columns` typed for your rows (`GridColDef<R>[]`) or untype
 A separate entry point (v3.4.0+) with no React import and no dependencies; the core package never loads it. It does not call any AI service: the app sends the schema to its own model and validates the reply. Guide: [AI Toolkit](features/ai-toolkit.md).
 
 ```ts
-import { getGridAiSchema, validateGridAiState } from '@opencorestack/opengridx/ai';
-import type { GridAiState, GridAiValidationError } from '@opencorestack/opengridx/ai';
+import { getGridAiSchema, validateGridAiState, createGridAiPromptHandler, createGridAgentTools } from '@opencorestack/opengridx/ai';
+import type { GridAiState, GridAiValidationError, GridAgentTool } from '@opencorestack/opengridx/ai';
 ```
 
 | Function | Return | Description |
 | :--- | :--- | :--- |
 | `getGridAiSchema(columns, options?)` | `GridAiSchema` | JSON Schema (draft 2020-12, `schemaVersion: 1`) of the `filterModel` (nested AND/OR groups up to 3 levels, `quickFilterValues`), `sortModel`, `rowGroupingModel`, `aggregationModel`, `pivotModel` and `columnVisibilityModel` the columns allow, honouring `filterable`, `sortable`, `groupable`, `hideable`, `aggregable`, `availableAggregationFunctions` and `valueOptions`. Operators per column come from the column type. Reads column definitions only, never rows; deterministic for the same input. |
-| `validateGridAiState(json, columns, options?)` | `GridAiValidationResult` | `{ state, errors }`. `json` is an object or a JSON string. Drops unknown parts, fields, operators and enum values (each with an `{ path, message }` error), coerces values to the column type (`"1,200"` → `1200`, dates → `"YYYY-MM-DD"`), removes empty filter groups. Never throws. |
+| `validateGridAiState(json, columns, options?)` | `GridAiValidationResult` | `{ state, errors }`. `json` is an object or a JSON string. Drops unknown parts, fields, operators and enum values (each with an `{ path, message }` error), coerces values to the column type (`"1,200"` → `1200`, dates → `"YYYY-MM-DD"`), removes empty filter groups. Never throws. Since v3.5 the result and its `state` carry the non-enumerable brand `Symbol.for('opengridx.ai.validated')`, which `aiAssistant` requires. |
+| `createGridAiPromptHandler({ columns, callModel, parts?, schemaOptions? })` | `(prompt, context) => Promise<GridAiPromptResult>` | Builds `aiAssistant.onPrompt` (v3.5). Builds the schema once; per prompt calls `callModel({ prompt, schema, currentState, history }, { signal })`, reads the reply (a state object, a JSON string, or a fenced JSON block inside text; a `message` key or the text around the JSON becomes `result.message`; plain text becomes the message with nothing to apply), validates it and returns the branded result. A `callModel` throw or rejection gives `{ state: {}, errors: [{ path: '', message }] }`; an abort rejects with an `AbortError`, also when `callModel` ignores the signal. |
+| `createGridAgentTools(apiRef, columns, options?)` | `GridAgentTool[]` | Plain tools for AI agents (v3.5): `get_grid_state`, `set_filter`, `set_sort`, `set_grouping`, `set_aggregation`, `set_column_visibility` (merged over the current model), `clear_filters`, and `get_row_summary` only with `options.allowRowAccess: true`. Each is `{ name, description, inputSchema, execute(input) }`; inputs are validated with `validateGridAiState` and applied through `apiRef` only when they have no errors. `execute` never throws. A `set_*` tool whose part no column allows is left out. |
 
 `GridAiSchemaOptions`: `include` / `exclude` (`GridAiPart[]`: `'filter' \| 'sort' \| 'grouping' \| 'aggregation' \| 'pivot' \| 'columnVisibility'`; `exclude` wins), `descriptions` (default `true`: each column's `headerName` and `description` go into the schema), `examples` (default `true`: the columns' `aiExamples` go into the schema). `GridAiValidateOptions` takes `include` / `exclude`; parts outside them are dropped with an error.
 
@@ -511,7 +543,23 @@ import type { GridAiState, GridAiValidationError } from '@opencorestack/opengrid
 | `GridAiSchema` | The returned JSON Schema object: `$schema`, `schemaVersion: 1`, `title`, `type: 'object'`, `properties` (one per offered part) and `$defs`. |
 | `GridAiState` | The validated state: `filterModel?`, `sortModel?`, `rowGroupingModel?`, `aggregationModel?`, `pivotModel?`, `columnVisibilityModel?`, the same types the grid's props take. Only parts present in the reply are set. |
 | `GridAiValidationError` | `{ path: string; message: string }`, e.g. `{ path: 'filterModel.items[2].field', message: 'Unknown field "revenue"' }`. At most 100 are listed. |
-| `GridAiValidationResult` | `{ state: GridAiState; errors: GridAiValidationError[] }` |
+| `GridAiValidationResult` | `{ state: GridAiState; errors: GridAiValidationError[] }` (branded since v3.5). |
+| `GridAiPart` | `'filter' \| 'sort' \| 'grouping' \| 'aggregation' \| 'pivot' \| 'columnVisibility'`. |
+| `GridAiPromptHandlerOptions` | `{ columns, callModel, parts?, schemaOptions? }` of `createGridAiPromptHandler` (v3.5). |
+| `GridAiModelRequest` | What `callModel` receives: `{ prompt, schema, currentState, history }` (v3.5). |
+| `GridAiPromptContext` | `onPrompt`'s second argument: `{ currentState: GridAiState; history: GridAiHistoryEntry[]; signal: AbortSignal }` (v3.5). |
+| `GridAiPromptResult` | `{ state: GridAiState; errors: GridAiValidationError[]; message?: string }` (v3.5). |
+| `GridAiHistoryEntry` | `{ prompt: string; applied: GridAiState }` (v3.5). |
+| `GridAiAssistantOptions` | The `aiAssistant` prop (v3.5). |
+| `GridAiAssistantPanelProps` | Props of `slots.aiAssistantPanel` (v3.5). |
+| `GridAiAssistantStatus` | `'idle' \| 'running' \| 'applied' \| 'stopped' \| 'error'` (v3.5). |
+| `GridAiChip` | `{ id: string; part: GridAiPart; label: string }`: one applied change (v3.5). |
+| `GridAgentTool` | `{ name: string; description: string; inputSchema: GridAiJsonSchema; execute: (input: unknown) => Promise<GridAgentToolResult> }` (v3.5). |
+| `GridAgentToolResult` | `{ ok: boolean; applied?; errors?; state?; columns?; rowCount?; rows? }` (v3.5). |
+| `GridAgentToolsOptions` | `{ allowRowAccess?: boolean; fields?: string[]; maxRows?: number }`: `get_row_summary` returns the row count and at most `maxRows` (default 20) rows, limited to `fields` (default: every column given), values read through `valueGetter` (v3.5). |
+| `GridAgentApi` | The part of `GridApi` the tools use; `apiRef.current` fits it (v3.5). |
+
+The state and assistant types (`GridAiState`, `GridAiPart`, `GridAiValidationError`, `GridAiPrompt*`, `GridAiAssistant*`, `GridAiChip`) are declared with the grid's own types since v3.5 and exported from `@opencorestack/opengridx/ai`; they are type-only, so importing them adds nothing to a bundle.
 
 ---
 
@@ -810,6 +858,8 @@ interface GridLocaleText {
   noRowsLabel?: string;
   /** v3.3: live-region text after a cell range change. Default "12 cells selected, 3 rows by 4 columns". */
   cellSelectionAnnouncement?: (cellCount: number, rowCount: number, columnCount: number) => string;
+  /** v3.5: label of the toolbar's Ask AI button. Default "Ask AI". */
+  aiAssistantButton?: string;
 }
 ```
 

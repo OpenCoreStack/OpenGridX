@@ -56,6 +56,13 @@ The Summaries panel lists each aggregable column with the functions it allows: i
 | `renderAggregationButton` | `(props: ToolbarButtonRenderProps) => ReactNode` | — | Replace the built-in Summaries button. The Aggregation panel still opens and closes normally. |
 | `renderExportButton` | `() => ReactNode` | — | Inject an Export button after the Aggregation button. No built-in export button exists — this is the slot for it. |
 | `renderQuickFilter` | `(props: ToolbarQuickFilterRenderProps) => ReactNode` | — | Replace the built-in quick-filter search input with your own component. |
+| `onAiAssistantToggle` | `(trigger: HTMLElement \| null) => void` | — | Opens or closes the `aiAssistant` panel. The grid injects it when the `aiAssistant` prop is set; its presence renders the **Ask AI** button (sparkle icon), first in the button row. Focus returns to `trigger` when the panel closes (v3.5). |
+| `aiAssistantOpen` | `boolean` | `false` | Whether the AI panel is open: the button's `aria-expanded` (injected by the grid, v3.5). |
+| `aiAssistantLabel` | `string` | `'Ask AI'` | The Ask AI button's label; the grid passes `localeText.aiAssistantButton` (v3.5). |
+
+### Ask AI button (v3.5)
+
+With the grid's `aiAssistant` prop set, `GridToolbar` shows an **Ask AI** button that opens the prompt panel under the toolbar (a `role="dialog"` labelled "Ask AI"; Escape closes it and focus returns to the button). Opening it closes any open toolbar panel. A custom toolbar can render its own button: call `onAiAssistantToggle(buttonElement)` from the props the grid passes, or `apiRef.current.openAiAssistant()`. See [AI Toolkit](../features/ai-toolkit.md#ai-assistant-panel).
 
 ---
 

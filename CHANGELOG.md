@@ -5,6 +5,26 @@
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **AI toolkit, part 2: the Ask AI panel** — new `aiAssistant` prop (`{ onPrompt, placeholder?, suggestions?, voice?, parts? }`). `GridToolbar` shows an **Ask AI** button (`localeText.aiAssistantButton`) that opens a prompt panel under the toolbar; `apiRef.openAiAssistant()` / `closeAiAssistant()` open and close it without a toolbar, and `slots.aiAssistantPanel` replaces it (`GridAiAssistantPanelProps`). The panel has a prompt input (Enter sends), suggestion chips, a microphone button only where the browser has `SpeechRecognition` (the microphone is requested on click, never on load; `voice: false` hides it), Stop (aborts `context.signal`), the reply text, the session's earlier prompts, and the list of ignored parts. A reply is applied at once as one undoable step: every change is a removable chip (removing one re-applies the reply without it) and **Undo** restores the models from before the reply. `role="dialog"` labelled "Ask AI", focus to the input on open and back on close, Escape closes, status in the grid's live region. New `onAiAssistantApply(result)` and `onAiAssistantError(error)`. Grids without `aiAssistant` are unchanged, and the core bundle still holds no AI code.
+- **Only validated replies are applied.** `validateGridAiState` now brands its result and the result's `state` with the non-enumerable `Symbol.for('opengridx.ai.validated')` (shape, equality and JSON unchanged); the panel applies a state only when it carries it, and otherwise shows "The reply was not validated" with a development warning.
+- **`createGridAiPromptHandler({ columns, callModel, parts?, schemaOptions? })`** in `@opencorestack/opengridx/ai` — builds `onPrompt` for the app's own model: the schema once, then `callModel({ prompt, schema, currentState, history }, { signal })`; the reply may be a state object, a JSON string or text with a fenced JSON block (the text or a `message` key becomes the reply message). A `callModel` failure becomes an error result; an abort rejects with an `AbortError`.
+- **`createGridAgentTools(apiRef, columns, options?)`** in `/ai` — plain tool objects (`name`, `description`, `inputSchema`, `execute`) for the Vercel AI SDK, CopilotKit, OpenAI or Anthropic tool calling and WebMCP: `get_grid_state`, `set_filter`, `set_sort`, `set_grouping`, `set_aggregation`, `set_column_visibility`, `clear_filters`, and `get_row_summary` only with `allowRowAccess: true` (the one tool that sends row data). Inputs are validated and applied all or nothing; `execute` never throws.
+- **`GridApi`**: `setSortModel`, `setRowGroupingModel`, `setAggregationModel`, `setColumnVisibilityModel`, `setPivotModel` (each fires its change callback) and `getGridAiState()`, plus `openAiAssistant()` / `closeAiAssistant()`.
+- **`onRowGroupingModelChange`** — `rowGroupingModel` is now a controlled/uncontrolled pair: without the prop the grid keeps its own grouping model, which `apiRef.setRowGroupingModel` and the assistant change. A grid that passes `rowGroupingModel` stays controlled. (v2.0 removed this callback because nothing called it; the assistant and `apiRef` now do.)
+- New types: `GridAiAssistantOptions`, `GridAiAssistantPanelProps`, `GridAiAssistantStatus`, `GridAiChip`, `GridAiPromptContext`, `GridAiPromptResult`, `GridAiHistoryEntry`, `GridAiModelRequest`, `GridAiPromptHandlerOptions`, `GridAgentTool`, `GridAgentToolResult`, `GridAgentToolsOptions`, `GridAgentApi` (exported from `/ai`); `GridToolbarProps.onAiAssistantToggle` / `aiAssistantOpen` / `aiAssistantLabel`; `GridLocaleText.aiAssistantButton`.
+- Demo page *AI Assistant* (`/ai-assistant`): a simulated, rule-based model (no API key, no network), suggestion chips, the real `fetch` integration sample, and a scripted agent driving the grid through `createGridAgentTools`. Package smoke suite: `ai-assistant` scenario in both fixtures.
+
+### Changed
+
+- `GridAiState`, `GridAiPart` and `GridAiValidationError` are declared in the grid's types so the `aiAssistant` prop can use them; `@opencorestack/opengridx/ai` re-exports them, so existing imports keep working.
+- The `/ai` size budget in `check-bundle` is 8 kB gzipped (was 5 kB); the entry point is about 6.7 kB with the handler and tools.
+
+---
+
 ## [3.4.0] — 2026-10-08
 
 ### Added

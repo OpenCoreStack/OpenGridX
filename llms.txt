@@ -169,7 +169,8 @@ export default function App() {
 ### Grouping & Aggregation
 | Prop                   | Type                      | Description                              |
 |------------------------|---------------------------|------------------------------------------|
-| rowGroupingModel       | string[]                  | Fields to group by (one nesting level per field). Disables pagination. groupable:false fields are skipped |
+| rowGroupingModel       | string[]                  | Fields to group by (one nesting level per field). Disables pagination. groupable:false fields are skipped. Passing it controls grouping; without it the grid keeps its own model (3.5.0+: apiRef.setRowGroupingModel, AI assistant) |
+| onRowGroupingModelChange | (model: string[]) => void | Grouping changed through apiRef.setRowGroupingModel or the AI assistant (3.5.0+) |
 | aggregationModel       | GridAggregationModel      | {field: 'sum'/'avg'/'min'/'max'/'count'/'unique'} |
 | onAggregationModelChange | (model) => void        | Aggregation model changed (toolbar Summaries panel) |
 | groupingColDef         | Partial<GridColDef<R>>    | Adds a dedicated `__group__` column pinned left (rowGroupingModel or treeData); no `field` needed; never exported |
@@ -305,6 +306,15 @@ apiRef.current.sortColumn(field, 'asc' | 'desc' | null)
 apiRef.current.getSortModel()          // → GridSortItem[]
 apiRef.current.setFilterModel(model)
 apiRef.current.getFilterModel()        // → GridFilterModel
+
+// Model setters (3.5.0+): each fires its change callback, like the UI
+apiRef.current.setSortModel(model)
+apiRef.current.setRowGroupingModel(fields)
+apiRef.current.setAggregationModel(model)
+apiRef.current.setColumnVisibilityModel(model)
+apiRef.current.setPivotModel(model)
+apiRef.current.getGridAiState()        // → { filterModel, sortModel, rowGroupingModel, aggregationModel, pivotModel, columnVisibilityModel }
+apiRef.current.openAiAssistant()       // opens the aiAssistant panel (no-op without aiAssistant); closeAiAssistant()
 
 // Pagination
 apiRef.current.setPage(page)
@@ -558,7 +568,7 @@ await printGrid(rows, columns, 'My Report Title');
 
 ## AI TOOLKIT (@opencorestack/opengridx/ai, 3.4.0+)
 
-Separate entry point: no React, no dependencies, ~4.5 kB gzip; never loaded by the core import. OpenGridX calls no AI service: the app sends { prompt, schema, currentState } to its own model (structured output) and validates the reply.
+Separate entry point: no React, no dependencies, ~6.7 kB gzip with the 3.5.0 additions; never loaded by the core import. OpenGridX calls no AI service: the app sends { prompt, schema, currentState } to its own model (structured output) and validates the reply.
 
 ```ts
 import { getGridAiSchema, validateGridAiState } from '@opencorestack/opengridx/ai';
@@ -574,6 +584,27 @@ if (state.sortModel) setSortModel(state.sortModel);
 - validateGridAiState(json | jsonString, columns, { include?, exclude? }) → { state: GridAiState, errors: { path, message }[] }. Drops unknown parts, fields, disallowed fields, wrong operators, enum values outside the list; coerces values like clipboard paste ("1,200"/"$1,200" → 1200, "12%" → 0.12, yes/no/1/0 → boolean, dates → "YYYY-MM-DD", singleSelect by value or label, case-insensitive); removes empty groups; lists capped at 200 entries, errors at 100. Never throws; never reads `__proto__`.
 - Privacy: no row data by default; `aiExamples` and `valueOptions` ARE sent; always apply `state`, never the raw reply.
 - Types (from /ai): GridAiColumn, GridAiPart, GridAiSchema, GridAiSchemaOptions, GridAiState, GridAiValidateOptions, GridAiValidationError, GridAiValidationResult.
+
+### AI toolkit part 2 (3.5.0+): Ask AI panel and agent tools
+
+```tsx
+import { createGridAiPromptHandler, createGridAgentTools } from '@opencorestack/opengridx/ai';
+
+const onPrompt = createGridAiPromptHandler({
+  columns,
+  callModel: async (request, { signal }) => (await fetch('/api/grid-ai', { method: 'POST', body: JSON.stringify(request), signal })).json(),
+});
+<DataGrid columns={columns} rows={rows} slots={{ toolbar: GridToolbar }} aiAssistant={{ onPrompt, suggestions: ['Top 10 by revenue'] }} />
+
+const tools = createGridAgentTools(apiRef, columns);   // [{ name, description, inputSchema, execute }]
+```
+
+- `aiAssistant` prop: { onPrompt(prompt, { currentState, history, signal }) => Promise<{ state, errors, message? }>, placeholder?, suggestions?, voice? = true, parts? }. GridToolbar shows an "Ask AI" button (localeText.aiAssistantButton); apiRef.openAiAssistant() without a toolbar; slots.aiAssistantPanel replaces the panel (GridAiAssistantPanelProps). Events: onAiAssistantApply(result), onAiAssistantError(error).
+- BRAND RULE: the grid applies a result only if `result.state` carries Symbol.for('opengridx.ai.validated'), set (non-enumerable) by validateGridAiState on the result and its state. Unbranded → not applied, "The reply was not validated" + dev warning. `{ ...result, message }` keeps the brand; `{ ...result.state }` loses it.
+- Applying: immediately, one undoable step (Undo restores the models from before the reply; separate from the cell-edit undoRedo history). Each change is a removable chip; removing one re-applies the reply without it. Parts replace the grid's models, except columnVisibilityModel (merged). Parts outside `parts`, and parts the validator emptied (all entries dropped), are not applied. Voice: mic button only where SpeechRecognition / webkitSpeechRecognition exists; the microphone is requested only on click. Panel: role=dialog "Ask AI", Escape closes and returns focus, status in the grid's live region; Stop aborts `signal`.
+- createGridAiPromptHandler({ columns, callModel, parts?, schemaOptions? }): schema built once; callModel({ prompt, schema, currentState, history }, { signal }); reply = state object | JSON string | text with a ```json fence (surrounding text / a `message` key → result.message; plain text → message only); validated + branded. callModel throw → { state: {}, errors: [{ path: '', message }] }; abort → rejects AbortError.
+- createGridAgentTools(apiRef, columns, { allowRowAccess?, fields?, maxRows? = 20 }): get_grid_state, set_filter, set_sort, set_grouping, set_aggregation, set_column_visibility (merged), clear_filters, and get_row_summary ONLY with allowRowAccess: true (the one tool that sends rows). Inputs validated with validateGridAiState; any error → nothing applied, { ok: false, errors }. execute never throws. Works with the Vercel AI SDK, CopilotKit, OpenAI / Anthropic tool calling, WebMCP.
+- More types (from /ai): GridAiPromptContext, GridAiPromptResult, GridAiHistoryEntry, GridAiAssistantOptions, GridAiAssistantPanelProps, GridAiChip, GridAiModelRequest, GridAiPromptHandlerOptions, GridAgentTool, GridAgentToolResult, GridAgentToolsOptions, GridAgentApi. /ai is ~6.7 kB gzip (budget 8 kB).
 
 ---
 

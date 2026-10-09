@@ -33,7 +33,7 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | # | Hook / util | File | Produces |
 | :- | :--- | :--- | :--- |
 | 0 | `useStableColumns` | `hooks/core/useStableColumns.ts` | The `columns` prop with a stable identity while every column is shallowly equal (inline columns do not re-run the row passes) |
-| 1 | `useGridControlledState` | `hooks/core/useGridControlledState.ts` | Controlled/uncontrolled sort, filter, aggregation, visibility, pinning, pivot, pagination, selection, density, cell selection (v3.3) |
+| 1 | `useGridControlledState` | `hooks/core/useGridControlledState.ts` | Controlled/uncontrolled sort, filter, aggregation, row grouping (v3.5), visibility, pinning, pivot, pagination, selection, density, cell selection (v3.3) |
 | 2 | `useGridPivot` | `hooks/features/useGridPivot.ts` | Pivot rows/columns (or the source ones) and the pipeline filter/sort models |
 | 3 | `resolveGridModes` (pure) | `utils/gridModes.ts` | Which features are in effect: tree data, row grouping, pagination, row reordering, list view, grouping column |
 | 4 | `useGridThemeDimensions` | `hooks/core/useGridThemeDimensions.ts` | Row and header heights (props → theme provider → defaults) |
@@ -58,7 +58,7 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | 21 | `useGridPageCorrection` | `hooks/core/useGridPageCorrection.ts` | Moves a page left past the end back to the last page |
 | 22 | `getPaginationRowCount` (pure) | `utils/pagination/index.ts` | What the pager pages through |
 | 23 | `useGridRowInteractions` | `hooks/core/useGridRowInteractions.ts` | Row selection, `handleRowClick`, `handleSelectionChange` |
-| 24 | `useGridApiMethods` | `hooks/core/useGridApiMethods.ts` | State API methods (`getAllFilteredRows` via `utils/gridApiRows.ts`) |
+| 24 | `useGridApiMethods` | `hooks/core/useGridApiMethods.ts` | State API methods (`getAllFilteredRows` via `utils/gridApiRows.ts`); since v3.5 also `setSortModel`, `setRowGroupingModel`, `setAggregationModel`, `setColumnVisibilityModel`, `setPivotModel` and `getGridAiState` |
 | 25 | `useRowReorder` | `hooks/useRowReorder.ts` | Row drag-reorder |
 | 26 | `useAggregation` | `hooks/features/useAggregation.ts` | Footer aggregation result |
 | 27 | `useGridAggregationApi` | `hooks/core/useGridAggregationApi.ts` | `getAggregationResult`, `getAggregationModel`, `getGroupedExportRows` |
@@ -85,11 +85,12 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | 43 | `useColumnGroupReorderGuard` | `hooks/features/useColumnGroupReorderGuard.ts` | Header drag-reorder kept inside column groups |
 | 44 | `useGridColumnsPanel` | `hooks/core/useGridColumnsPanel.ts` | Columns panel (toolbar or standalone) |
 | 45 | `useGridStylesheetWarning` | `hooks/core/useGridDevWarnings.ts` | Warns when the stylesheet is missing |
+| 45a | `useGridAiAssistant` | `hooks/features/useGridAiAssistant.ts` | The `aiAssistant` panel (v3.5): open state, the request and its `AbortController` (Stop), applying a branded reply through the `apiRef` setters of step 24 (`utils/aiAssistant.ts`: allowed parts, the Undo snapshot, chips, chip removal), the live-region status, and `apiRef.openAiAssistant` / `closeAiAssistant`. Inert without `aiAssistant`; it runs before step 46 because the toolbar gets its Ask AI button from it |
 | 46 | `useGridToolbarProps` | `hooks/core/useGridToolbarProps.ts` | Props for `slots.toolbar` |
 
 ## Rendered components
 
-`GridToolbarSlot`, `GridStandaloneColumnPanel`, `GridListView` (list view) or the viewport
+`GridToolbarSlot`, `GridAiAssistantArea` (the `aiAssistant` panel or `slots.aiAssistantPanel` while open, anchored under the toolbar), `GridStandaloneColumnPanel`, `GridListView` (list view) or the viewport
 (`Header`, `GridPinnedRows` top, `GridEmptyState`, `GridVirtualRows`, `GridPinnedRows` bottom,
 `GridAggregationFooter`), `GridCellSelectionStatsArea` (`showCellSelectionStats` with `cellSelection`), then `slots.footer` or `GridPaginationArea`, `GridLiveRegion`,
 `GridLoadingOverlay` and `GridErrorOverlay`. The props all three row renderers take alike are built
