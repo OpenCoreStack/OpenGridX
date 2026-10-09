@@ -42,6 +42,10 @@ __screenshots__/
 .pack/
 e2e/fixtures/*/node_modules
 e2e/fixtures/*/dist
+
+# Benchmark app (npm run bench); bench/results/ is committed
+bench/app/node_modules
+bench/app/dist
 test-results/
 playwright-report/
 .wiki-build/

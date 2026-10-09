@@ -1,0 +1,23 @@
+{
+  "name": "opengridx-bench",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Benchmark app: installs the packed tarball and is driven by bench/run.mjs.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@opencorestack/opengridx": "file:../../.pack/opencorestack-opengridx.tgz",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  // Type-checks the benchmark from the repository root (`npm run typecheck`), before bench/app is
+  // installed: the package name resolves to lib/ here. bench/app/tsconfig.json checks the same
+  // sources against the packed tarball when `npm run bench` builds the app. The runner scripts
+  // (*.mjs) are plain Node scripts like scripts/*.mjs and are not type-checked.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["vite/client"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@opencorestack/opengridx": ["../lib/index.ts"],
+      "@opencorestack/opengridx/styles": ["../lib/styles/opengridx.css.d.ts"]
+    }
+  },
+  "include": ["app/src", "app/vite.config.ts"],
+  "exclude": ["app/node_modules", "app/dist"]
+}
