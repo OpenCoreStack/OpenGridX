@@ -29,11 +29,11 @@ The grid calculates which rows are visible based on:
 />
 ```
 
-**Performance characteristics** (when the grid has a bounded height — see below):
-- ✅ Renders ~15-25 rows regardless of total dataset size
-- ✅ Constant memory usage
-- ✅ Smooth 60fps scrolling
-- ⚠️ Not millions of rows. Browsers cap an element's height (33,554,432px in Chromium, about 17.9M px in Firefox) and the grid does no scroll scaling: it lays every row out at its real height, so rows past the cap cannot be scrolled to. The limit is roughly `33,554,432 / rowHeight` rows in Chromium (about 645,000 at the default 52px), and about half that in Firefox (about 340,000). Beyond that, use pagination, or server-side paging / infinite scroll. In development the grid warns when the content passes 17.8M px.
+**Performance characteristics** (when the grid has a bounded height — see below), measured by the [benchmark](../performance.md#benchmarks):
+- ✅ About 19 row elements at rest in an 800 px page at 52 px rows, at most about 86 while scrolling fast, whatever the row count (10k to 1M)
+- ✅ Scrolling keeps up with a 60 Hz display at 1M rows in Chromium (no missed frames) and Firefox; WebKit misses a frame or two on each long jump of the scroll position
+- ✅ The grid itself adds about 10 MB of JS heap at 100k rows and 79 MB at 1M (Chromium), on top of your row data
+- ⚠️ Not millions of rows at the default height. Browsers cap an element's height and the grid does no scroll scaling: it lays every row out at its real height. Chromium and WebKit stop at 33,554,428 px, so rows past about `33,554,428 / rowHeight` cannot be scrolled to (645,277 at the default 52 px; 1M rows fit at 32 px). Firefox's limit is about 17.9M px, and past it the content collapses and the grid does not scroll at all (more than about 344,000 rows at 52 px). Beyond that, use pagination, or server-side paging / infinite scroll. In development the grid warns when the content passes 17.8M px. Measured reach per browser: [Performance → Reach](../performance.md#reach-the-browser-height-ceiling).
 
 ### Column Virtualization
 

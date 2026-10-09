@@ -68,7 +68,7 @@ Without a `height` prop the grid fills its container (`height: 100%`, or the fre
 
 ## 🚀 Key Features
 
-- **High-Performance Virtualization**: Row and column virtualization for 100,000+ rows. (Browsers cap an element's height, so a single scrolling grid reaches about 645,000 rows at the default 52 px row height; page or stream larger datasets.)
+- **High-Performance Virtualization**: Row and column virtualization, [benchmarked](docs/performance.md#benchmarks) from 10k to 1M rows. (Browsers cap an element's height, so a single scrolling grid reaches 645,277 rows at the default 52 px row height in Chromium and Safari and about 344,000 in Firefox; page or stream larger datasets.)
 - **Advanced Layouts**: Native support for **Row & Column Spanning**, Grouping, and Tree Data.
 - **Data Orchestration**: 19 filter operators across string, number, date, boolean and select columns, AND/OR filter groups, multi-column sorting, and client or server pagination.
 - **Zero UI Dependencies**: 100% vanilla CSS (BEM) and pure React/TypeScript logic.
@@ -500,7 +500,8 @@ Built-in themes: `darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compac
 - **Tree-shaking Ready**: ES Module build — bundlers (Vite, Webpack) only include what you use.
 - **Zero UI Dependencies**: No MUI, Ant Design, or Radix. Pure React + vanilla CSS.
 - **Lazy Advanced Export**: ExcelJS and jsPDF are optional peer deps — not bundled, loaded only when you call `exportToExcelAdvanced` / `exportToPdf`.
-- **Efficient Rendering**: Row and column virtualization keeps the DOM small for 100k+ rows (needs a bounded grid height).
+- **Efficient Rendering**: Row and column virtualization keeps the DOM small (needs a bounded grid height): about 19 rows at rest and under 90 while scrolling fast, at 10k or 1M rows.
+- **[Benchmarks](docs/performance.md#benchmarks)** (`npm run bench`, Apple M1, Chromium, production build): at 100k rows the grid mounts in 89 ms, sorts in 102–160 ms, filters in 28–33 ms and groups with a sum in 87 ms; at 1M rows mount takes 0.7 s and a sort 1.1–1.3 s. Scrolling missed no frames at any size in Chromium. Past the browser's height cap (645,277 rows at 52 px in Chromium and Safari, about 344,000 in Firefox) rows cannot be scrolled to; page or stream larger datasets.
 
 ---
 
@@ -515,7 +516,7 @@ Full documentation at 👉 **[opencorestack.github.io/OpenGridX](https://opencor
 - **[Column Visibility](docs/components/column-visibility.md)** — Column show/hide panel
 
 ### 🚀 Features
-- **[Virtualization](docs/features/virtualization.md)** — 60fps rendering for 100k+ rows
+- **[Virtualization](docs/features/virtualization.md)** — row and column virtualization; [measured](docs/performance.md#benchmarks) from 10k to 1M rows
 - **[Filtering & Search](docs/features/filtering.md)** — Quick filters and advanced operators
 - **[Sorting & Pagination](docs/features/sorting-pagination.md)** — Multi-column sorting
 - **[Editing & Reordering](docs/features/editing-reordering.md)** — Inline edits and DnD
