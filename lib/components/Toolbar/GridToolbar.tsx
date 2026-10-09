@@ -10,6 +10,7 @@ import { GlobalSearch } from './GlobalSearch';
 import { ColumnVisibilityPanel } from '../ColumnVisibilityPanel/ColumnVisibilityPanel';
 import { FilterPanel } from '../FilterPanel/FilterPanel';
 import { GridTooltip } from '../Tooltip/Tooltip';
+import { AiSparkleIcon } from '../AiAssistant/GridAiAssistantPanel';
 
 /** Props passed to a custom toolbar button renderer. */
 export interface ToolbarButtonRenderProps {
@@ -80,6 +81,16 @@ export interface GridToolbarProps {
     className?: string;
     /** Show columns with `hideable: false` in the Columns panel as disabled rows. Default: false. */
     showNonHideableColumns?: boolean;
+    /**
+     * Opens or closes the `aiAssistant` panel. The grid passes it when `aiAssistant` is set; the
+     * **Ask AI** button is shown only with it. Receives the button, which gets focus back on close.
+     * @since v3.5
+     */
+    onAiAssistantToggle?: (trigger: HTMLElement | null) => void;
+    /** Whether the `aiAssistant` panel is open. @since v3.5 */
+    aiAssistantOpen?: boolean;
+    /** Label of the Ask AI button (`localeText.aiAssistantButton`). Default: `"Ask AI"`. @since v3.5 */
+    aiAssistantLabel?: string;
 }
 
 const BUILT_IN_AGGREGATION_FUNCTIONS = Object.keys(AGGREGATION_FUNCTIONS) as BuiltInAggFn[];
@@ -502,6 +513,9 @@ export function GridToolbar({
     renderQuickFilter,
     className,
     showNonHideableColumns,
+    onAiAssistantToggle,
+    aiAssistantOpen = false,
+    aiAssistantLabel = 'Ask AI',
 }: GridToolbarProps) {
     // At most one panel is open. Every way the Columns panel closes (its button, a custom
     // button, another panel opening, click-outside, Escape) reports onColumnsPanelClose, so the
@@ -537,6 +551,7 @@ export function GridToolbar({
     }, [toolbarHost, hostsColumnsPanel]);
 
     const aggButtonRef = useRef<HTMLButtonElement>(null);
+    const aiButtonRef = useRef<HTMLButtonElement>(null);
     const pivotButtonRef = useRef<HTMLButtonElement>(null);
     const colsButtonRef = useRef<HTMLButtonElement>(null);
     const filterButtonRef = useRef<HTMLButtonElement>(null);
@@ -642,6 +657,24 @@ export function GridToolbar({
 
             {/* Right: built-in buttons */}
             <div className="ogx-toolbar__actions">
+                {onAiAssistantToggle && (
+                    <div className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
+                        <button
+                            type="button"
+                            ref={aiButtonRef}
+                            className={`ogx-toolbar__icon-btn ogx-toolbar__ai-btn${aiAssistantOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
+                            aria-haspopup="dialog"
+                            aria-expanded={aiAssistantOpen}
+                            onClick={() => {
+                                switchPanel(null);
+                                onAiAssistantToggle(aiButtonRef.current);
+                            }}
+                        >
+                            <AiSparkleIcon />
+                            {aiAssistantLabel}
+                        </button>
+                    </div>
+                )}
                 {onFilterModelChange && (
                     <div className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
                         {renderQuickFilter

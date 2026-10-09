@@ -65,6 +65,8 @@ import { GridPaginationArea } from './GridPaginationArea';
 import { GridLiveRegion } from './GridLiveRegion';
 import { useGridAriaRows } from '../../hooks/core/useGridAriaRows';
 import { useGridToolbarProps } from '../../hooks/core/useGridToolbarProps';
+import { useGridAiAssistant } from '../../hooks/features/useGridAiAssistant';
+import { GridAiAssistantArea } from '../AiAssistant/GridAiAssistantArea';
 import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridColDef } from '../../types';
 
 /**
@@ -178,6 +180,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         localeText,
         apiRef: propApiRef,
         overscanRowCount = 3,
+        aiAssistant,
+        onAiAssistantApply,
+        onAiAssistantError,
     } = props;
     // Equal inline column definitions keep one identity, so the row passes memoised on it do not re-run.
     const columns = useStableColumns(columnsProp);
@@ -724,6 +729,15 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const columnsPanel = useGridColumnsPanel();
     useGridStylesheetWarning(containerRef);
 
+    // The aiAssistant prompt panel (v3.5): applies validated replies through apiRef; apiRef.openAiAssistant.
+    const aiAssistantPanel = useGridAiAssistant({
+        apiRef,
+        options: aiAssistant,
+        columns: activeColumns as unknown as GridColDef[],
+        onApply: onAiAssistantApply,
+        onError: onAiAssistantError,
+    });
+
     const NoRowsOverlaySlot = slots?.noRowsOverlay;
     const LoadingOverlaySlot = slots?.loadingOverlay;
     const loadingOverlay = LoadingOverlaySlot ? <LoadingOverlaySlot {...slotProps?.loadingOverlay} /> : undefined;
@@ -754,6 +768,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         disableColumnReorder, columnGroupingModel, moveColumn, resetColumnOrder,
         forceColumnsOpen: columnsPanel.toolbarPanelRequested,
         onColumnsPanelClose: columnsPanel.closeToolbarPanel,
+        aiAssistantEnabled: aiAssistantPanel.enabled,
+        aiAssistantOpen: aiAssistantPanel.open,
+        onAiAssistantToggle: aiAssistantPanel.togglePanel,
+        aiAssistantLabel: localeText?.aiAssistantButton,
     });
 
     // Props the row renderers (top-pinned, centre and bottom-pinned rows) all take.
@@ -793,6 +811,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 <GridToolbarHostContext.Provider value={columnsPanel.toolbarHost}>
                     <GridToolbarSlot component={ToolbarSlot} toolbarProps={toolbarProps} />
                 </GridToolbarHostContext.Provider>
+            )}
+
+            {aiAssistantPanel.panelProps && (
+                <GridAiAssistantArea
+                    panelProps={aiAssistantPanel.panelProps}
+                    slot={slots?.aiAssistantPanel}
+                    slotProps={slotProps?.aiAssistantPanel}
+                />
             )}
 
             {/* Used by the column menu's Manage columns when no GridToolbar can show the panel */}
@@ -1046,6 +1072,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 dataRowCount={dataRows.length}
                 filterModel={filterModel}
                 cellSelectionAnnouncement={cellSelection.announcement}
+                aiAssistantAnnouncement={aiAssistantPanel.announcement}
             />
 
             {showLoadingOverRows && (

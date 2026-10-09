@@ -13,13 +13,15 @@ interface GridLiveRegionProps {
     filterModel: GridFilterModel | undefined;
     /** The size of the selected cell range (`cellSelection`), already debounced. */
     cellSelectionAnnouncement?: string;
+    /** The `aiAssistant` status line ("Thinking…", "Applied 3 changes", an error). */
+    aiAssistantAnnouncement?: string;
 }
 
 /**
  * Polite status announcements: loading, a load error, no rows, or the row count of an active filter;
- * and the size of the selected cell range.
+ * the size of the selected cell range; and the AI assistant's status.
  */
-export function GridLiveRegion({ loading, error, noRowsLabel, filteredRowCount, dataRowCount, filterModel, cellSelectionAnnouncement }: GridLiveRegionProps) {
+export function GridLiveRegion({ loading, error, noRowsLabel, filteredRowCount, dataRowCount, filterModel, cellSelectionAnnouncement, aiAssistantAnnouncement }: GridLiveRegionProps) {
     return (
         <div className="ogx-aria-live-status" role="status" aria-live="polite">
             {loading ? 'Loading data...' : ''}
@@ -32,6 +34,7 @@ export function GridLiveRegion({ loading, error, noRowsLabel, filteredRowCount, 
                         : ''
             )}
             {cellSelectionAnnouncement ? <span className="ogx-aria-live-status__cells"> {cellSelectionAnnouncement}</span> : null}
+            {aiAssistantAnnouncement ? <span className="ogx-aria-live-status__ai"> {aiAssistantAnnouncement}</span> : null}
         </div>
     );
 }
