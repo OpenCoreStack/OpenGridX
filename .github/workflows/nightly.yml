@@ -47,3 +47,43 @@ jobs:
             test-results/
           retention-days: 14
           if-no-files-found: ignore
+
+  # Large-dataset benchmark (bench/run.mjs), Chromium only and --quick. Shared runners are too noisy to
+  # gate on timings: the numbers are uploaded so trends are visible, and the job fails only when the
+  # benchmark itself breaks (a script error, a page error, a result that never appears).
+  bench:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Benchmark (Chromium, quick)
+        run: npm run bench -- --quick --engine chromium --out bench-results.json
+
+      - name: Benchmark tables
+        if: always()
+        run: |
+          if [ -f bench-results.json ]; then node bench/report.mjs bench-results.json >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results
+          path: bench-results.json
+          retention-days: 90
+          if-no-files-found: ignore
