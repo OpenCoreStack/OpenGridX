@@ -1,0 +1,114 @@
+.header-filters-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.header-filters-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.header-filters-button {
+    padding: 5px 12px;
+    border: 1px solid var(--ogx-color-gray-300, #d1d5db);
+    border-radius: 6px;
+    background: var(--ogx-color-white, #fff);
+    color: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.header-filters-button:hover {
+    border-color: var(--ogx-color-primary, #3b82f6);
+}
+
+.header-filters-hint {
+    background: var(--ogx-color-primary, #3b82f6);
+    color: #fff;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.header-filters-hint code,
+.header-filters-hint kbd {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-family: inherit;
+}
+
+.header-filters-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 16px;
+    align-items: start;
+}
+
+@media (max-width: 1100px) {
+    .header-filters-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.header-filters-grid {
+    min-width: 0;
+}
+
+.header-filters-side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.header-filters-side h3 {
+    margin: 0 0 4px;
+    font-size: 14px;
+}
+
+.header-filters-side p {
+    margin: 0 0 8px;
+    color: var(--ogx-color-gray-600, #4b5563);
+}
+
+.header-filters-panel {
+    max-height: 300px;
+    overflow: auto;
+    padding: 8px;
+    border: 1px solid var(--ogx-color-gray-200, #e5e7eb);
+    border-radius: 6px;
+    background: var(--ogx-color-white, #fff);
+}
+
+.header-filters-model {
+    margin: 0;
+    max-height: 220px;
+    overflow: auto;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: var(--ogx-color-surface-secondary, #f3f4f6);
+    font-size: 12px;
+}
+
+.header-filters-usage {
+    margin-top: 16px;
+    font-size: 13px;
+}
+
+.header-filters-usage pre {
+    margin: 8px 0 0;
+    padding: 12px 14px;
+    overflow-x: auto;
+    border-radius: 6px;
+    background: var(--ogx-color-surface-secondary, #f3f4f6);
+    font-size: 12px;
+}
