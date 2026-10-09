@@ -273,9 +273,14 @@ const results = {
   runs: [],
 };
 
+/** Indented JSON with every metric on one line, so results files stay small and diff well. */
+function formatResults(value) {
+  return `${JSON.stringify(value, null, 1).replace(/\{\n\s*"median"[^}]*\}/g, (m) => m.replace(/\s*\n\s*/g, ' '))}\n`;
+}
+
 function save() {
   mkdirSync(resultsDir, { recursive: true });
-  writeFileSync(outFile, `${JSON.stringify(results, null, 1)}\n`);
+  writeFileSync(outFile, formatResults(results));
 }
 
 step(`Serve bench/app on ${BASE_URL}`);

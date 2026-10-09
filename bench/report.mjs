@@ -38,6 +38,7 @@ function fmtMs(n) {
 /** "median (min–max)" with a unit; just the median when every run gave the same value. */
 function cell(stat, format, unit) {
   if (!stat) return '–';
+  if (format(stat.median) === 'none') return 'none';
   const median = `${format(stat.median)}${unit}`;
   if (stat.samples.length < 2 || format(stat.min) === format(stat.max)) return median;
   return `${median} (${format(stat.min)}–${format(stat.max)})`;
@@ -59,7 +60,7 @@ const ROWS = [
   ['… over 16.7 ms while scrolling steadily', 'scrollOver16ConstantPct', (n) => n.toFixed(1), ' %'],
   ['… over 16.7 ms during the jumps', 'scrollOver16JumpsPct', (n) => n.toFixed(1), ' %'],
   ['Long tasks during scroll ¹', 'scrollLongTasks', fmtInt, ''],
-  ['Longest task during a sort ¹', 'sortLongTaskMaxMs', fmtMs, ' ms'],
+  ['Longest task during a sort ¹', 'sortLongTaskMaxMs', (n) => (n === 0 ? 'none' : fmtMs(n)), ' ms'],
   ['JS heap for the grid ¹', 'heapMB', (n) => n.toFixed(1), ' MB'],
   ['Row elements in the DOM, end of scroll', 'domRows', fmtInt, ''],
   ['Cells in the DOM, end of scroll', 'domCells', fmtInt, ''],
