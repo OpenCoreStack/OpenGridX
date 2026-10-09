@@ -8,7 +8,7 @@ that uses the `@opencorestack/opengridx` library. Read it in full before writing
 ## What this library is
 
 `@opencorestack/opengridx` is a zero-dependency, high-performance React DataGrid component.
-Current version: **3.4.0**. It is a full custom implementation — not a wrapper around MUI or any
+Current version: **3.5.0**. It is a full custom implementation — not a wrapper around MUI or any
 other library.
 
 ---

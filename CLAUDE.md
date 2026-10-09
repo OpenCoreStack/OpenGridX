@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.4.0
+- **Current version:** 3.5.0
 
 ---
 
@@ -152,6 +152,21 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.5.0 — significant changes
+
+Design: `docs/superpowers/specs/2026-10-09-ai-assistant-header-filters-fill-design.md`.
+
+- **AI assistant** (`aiAssistant`): core holds the panel (`useGridAiAssistant`, hook 45a, before `useGridToolbarProps`; UI in `lib/components/AiAssistant/`), `/ai` holds model logic (`createGridAiPromptHandler`, `createGridAgentTools`). The core bundle must contain no AI code and `/ai` no React (`check-bundle`; `/ai` budget 8 kB, ≈ 6.7 kB now). `/ai` strings must never contain the word "react" or a lowercase `import`/`require(` (check-bundle regexes)
+- **Brand rule**: `validateGridAiState` brands result and `state` with the non-enumerable `Symbol.for('opengridx.ai.validated')` (`lib/utils/aiBrand.ts`); the grid applies only `isGridAiValidated(result.state)`. Parts the validator emptied are skipped; column visibility is merged; Undo restores a snapshot of touched parts (view undo, separate from `undoRedo`)
+- `GridAiState` / `GridAiPart` / `GridAiValidationError` and assistant types live in `lib/types/index.ts`; all `GridAi*` / `GridAgent*` types are exported from `/ai` only (publicApi rule `/^Grid(?:Ai|Agent)[A-Z]/`)
+- **Agent tools** are all-or-nothing on validation errors and never throw; `get_row_summary` exists only with `allowRowAccess`. They read `apiRef.current` at call time — create them in a handler/effect, not during render (`react-hooks/refs`)
+- `rowGroupingModel` is a controlled/uncontrolled pair (`onRowGroupingModelChange`) in `useGridControlledState`. New `GridApi`: `setSortModel`, `setRowGroupingModel`, `setAggregationModel`, `setColumnVisibilityModel`, `setPivotModel`, `getGridAiState`, `openAiAssistant`, `closeAiAssistant`
+- Two buttons swapped by a ternary inside a `<form>` need distinct `key`s, or the click on the outgoing one submits the form (the Stop button re-sent the prompt)
+- **Header filters** (`headerFilters`): each cell owns only the root `filterModel` item `id: 'header:<field>'` (`lib/utils/headerFilters.ts`: `getHeaderFilterState`, `setHeaderFilterItem`, which returns the same object for a model it can't show). Custom = `'or'` root with items, field inside a group, or an untagged/second root item on the field. Off in pivot mode
+- The filter row renders inside `.ogx__header-wrap` after `.ogx__header`; column cells of both rows must use `getHeaderColumnStyle` (`lib/components/Header/headerColumnStyle.ts`). Focus: `FocusedCell.headerFilter`; column header is row -2 when header filters are on, filter row -1. `useGridAriaRows({ headerFilterRow })`. "Custom filter" opens the panel via `GridToolbarHost.registerFiltersPanel` + `forceFiltersOpen` / `onFiltersPanelClose`
+- **Fill handle**: `useGridFillHandle` (hook 36d, after `useGridUndoRedo`) → `rowRenderProps.fillHandle` → `fillHandleCol` on the handle's row only; `RANGE_FILL_HANDLE` (32) flag; `.ogx__cell-fill-handle` (24 px hit area inside the corner cell). Drags go through `cellSelection.startTrackedDrag` (pointer events, touch, auto-scroll, Escape cancels). Pure fill logic in `lib/utils/editing/fill.ts` (no regexes); commits via `applyEdits(edits, 'fill')`; Ctrl/Cmd+D / R always copy
+- Smoke suites of parallel agents share ports 4318/4319 — never run two at once
 
 ## v3.4.0 — significant changes
 

@@ -84,7 +84,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 | :--- | :--- | :--- | :--- |
 | **3.3.0** ✅ | shipped 7 Oct | **Cell range selection** (opt-in `cellSelection` prop): mouse drag, Shift+click, Shift+arrows; Ctrl+C / Cmd+C copies the block as TSV | Selection status bar (count, sum, average of selected cells); wrapped header text; React Compiler compatibility check |
 | **3.4.0** ✅ | shipped 8 Oct | **Paste from Excel / Google Sheets** into the selection, through `processRowUpdate` (values parsed per column type or `valueParser`, non-editable cells skipped, `onClipboardPaste` summary); **Delete clears a range**; built-in inputs and editors use the shared `Input` / `Checkbox` (`Input variant="cell"`). **Undo / redo** for cell edits and pastes (Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y, `apiRef.undo()` / `redo()`) | **AI toolkit, part 1** in a new `@opencorestack/opengridx/ai` entry point: `getGridAiSchema(columns)` (JSON Schema of the filter, sort, grouping, aggregation, pivot and visibility models the columns allow) and `validateGridAiState(json, columns)` (drops unknown fields and operators, coerces values, returns errors) |
-| **3.5.0** | 15 Dec | **AI toolkit, part 2**: `aiAssistant={{ onPrompt }}` prompt panel that calls the app's own model, shows the proposed changes as removable chips and applies them with undo; `createGridAgentTools(apiRef, columns)` (plain tool objects for CopilotKit, the Vercel AI SDK or WebMCP) | Header filter row; **fill handle** as a stretch goal (moves to Q1 2027 if 3.3–3.4 run late) |
+| **3.5.0** ✅ | shipped 9 Oct | **AI toolkit, part 2**: `aiAssistant={{ onPrompt }}` Ask AI panel (chips, Undo, voice) that calls the app's own model through `createGridAiPromptHandler`; only validated replies apply; `createGridAgentTools(apiRef, columns)` (plain tool objects for CopilotKit, the Vercel AI SDK, provider tool calling or WebMCP) | **Header filter row** (`headerFilters`); **fill handle** (series, Alt copy, Ctrl/Cmd+D / R); `rowGroupingModel` controlled/uncontrolled pair |
 | Freeze | 19 Dec – 5 Jan | Bug fixes only | — |
 
 ### Across the quarter
@@ -118,7 +118,6 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 ## 🔭 Next (Q1 2027)
 
 *   **Row reordering inside tree data and row groups**, touch-friendly (MUI #4821, 405 👍, not in MUI X).
-*   **Fill handle**, if it does not make 3.5.0.
 *   **Find & highlight** (Ctrl+F through cells), **right-click context menu**, **Excel-style value (set) filter**.
 *   **Calculated columns** (`[price] * [qty]` defined by users).
 *   **Interactive pivot builder**: drag-and-drop panel for pivot and grouping.
