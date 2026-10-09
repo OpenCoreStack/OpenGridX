@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { GridColDef, GridFilterModel } from '../types';
+import type { GridColDef, GridFilterItem, GridFilterModel, GridFilterOperator } from '../types';
 import {
     buildHeaderFilterItem,
     convertHeaderFilterValue,
@@ -11,7 +11,7 @@ import {
     setHeaderFilterItem,
 } from './headerFilters';
 
-const own = (field: string, operator: string, value: unknown) => ({ id: getHeaderFilterItemId(field), field, operator, value }) as const;
+const own = (field: string, operator: GridFilterOperator, value: unknown): GridFilterItem => ({ id: getHeaderFilterItemId(field), field, operator, value });
 
 describe('getHeaderFilterDefaultOperator', () => {
     it.each([

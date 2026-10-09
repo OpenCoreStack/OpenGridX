@@ -9,7 +9,7 @@ import { test, expect, type ConsoleMessage, type Locator, type Page } from '@pla
 /** Console output that is expected and harmless. Keep this list short and explain every entry. */
 const ALLOWED_CONSOLE: RegExp[] = [];
 
-const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range', 'paste', 'ai', 'ai-assistant']);
+const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range', 'paste', 'ai', 'ai-assistant', 'header-filters']);
 
 function fixtureOf(projectName: string): string {
   return projectName.split('-')[1] ?? '';
@@ -368,6 +368,49 @@ test.describe('package smoke', () => {
     await page.getByTestId('ai-run-tool').click();
     await expect(page.getByTestId('ai-tool-result')).toHaveText('{"ok":true,"applied":{"sortModel":[{"field":"amount","sort":"asc"}]}}');
     await expect(page.getByRole('columnheader', { name: 'Amount' }).first()).toHaveAttribute('aria-sort', 'ascending');
+  test('header-filters: typing and selects filter the rows, ArrowDown reaches the filter row', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'header-filters');
+    const filterCell = (field: string) => page.locator(`.ogx__header-filter-row [data-field="${field}"]`).first();
+    const headerCell = (field: string) => page.locator(`.ogx__header [data-field="${field}"]`).first();
+
+    // Laid out with the headers: same left edge and width, its own 40px row under them.
+    const header = await headerCell('customer').boundingBox();
+    const filter = await filterCell('customer').boundingBox();
+    expect(header && filter).toBeTruthy();
+    if (!header || !filter) return;
+    expect(Math.round(filter.x)).toBe(Math.round(header.x));
+    expect(Math.round(filter.width)).toBe(Math.round(header.width));
+    const headerRow = await page.locator('.ogx__header').first().boundingBox();
+    const row = await page.locator('.ogx__header-filter-row').first().boundingBox();
+    expect(headerRow && row).toBeTruthy();
+    if (!headerRow || !row) return;
+    expect(Math.round(row.y)).toBe(Math.round(headerRow.y + headerRow.height));
+    expect(Math.round(row.height)).toBe(40);
+
+    await filterCell('customer').getByLabel('Filter value for Customer').fill('Globex');
+    await expect(page.getByTestId('filter-log')).toHaveText('header:customer contains Globex');
+    await expect(async () => {
+      const customers = (await page.locator('.ogx__viewport [data-rowindex] [data-field="customer"]').allInnerTexts()).map((t) => t.trim());
+      expect(customers.length).toBeGreaterThan(0);
+      expect(customers.filter((c) => c !== 'Globex'), 'rows left after the header filter').toEqual([]);
+    }).toPass();
+
+    await filterCell('status').getByLabel('Filter value for Status').selectOption({ label: 'Paid' });
+    await expect(page.getByTestId('filter-log')).toHaveText('header:customer contains Globex; header:status is Paid');
+    await expect(async () => {
+      const statuses = (await page.locator('.ogx__viewport [data-rowindex] [data-field="status"]').allInnerTexts()).map((t) => t.trim());
+      expect(statuses.length).toBeGreaterThan(0);
+      expect(statuses.filter((s) => s !== 'Paid')).toEqual([]);
+    }).toPass();
+
+    await filterCell('customer').getByLabel('Clear filter for Customer').click();
+    await expect(page.getByTestId('filter-log')).toHaveText('header:status is Paid');
+
+    await headerCell('region').locator('.ogx__header-cell-title').click();
+    await page.keyboard.press('ArrowDown');
+    await expect(filterCell('region')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(cell(centerRow(page, 0), 'region')).toBeFocused();
   });
 
   test('pinned: pinned columns and rows, column groups, colSpan, detail panel', async ({ page }) => {
