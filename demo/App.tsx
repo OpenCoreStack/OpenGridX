@@ -25,6 +25,7 @@ const ClipboardPasteDemo = lazy(() => import('./examples/ClipboardPasteDemo/Clip
 const UndoRedoDemo = lazy(() => import('./examples/UndoRedoDemo/UndoRedoDemo'));
 const CustomEditorsDemo = lazy(() => import('./examples/CustomEditorsDemo/CustomEditorsDemo'));
 const AiSchemaDemo = lazy(() => import('./examples/AiSchemaDemo/AiSchemaDemo'));
+const AiAssistantDemo = lazy(() => import('./examples/AiAssistantDemo/AiAssistantDemo'));
 const EventsDemo = lazy(() => import('./examples/EventsDemo/EventsDemo'));
 const DataGridTest = lazy(() => import('./examples/DataGridTest/DataGridTest'));
 const ServerSideTreeDemo = lazy(() =>
@@ -79,6 +80,7 @@ const examplesConfig = [
     { path: '/events', name: 'Events Observer', component: EventsDemo, category: 'Main features' },
     { path: '/scroll-to', name: 'Scroll To Indexes', component: ScrollToIndexesDemo, category: 'Main features' },
     { path: '/ai-schema', name: 'AI: Grid Schema & Validator', component: AiSchemaDemo, category: 'Main features' },
+    { path: '/ai-assistant', name: 'AI Assistant', component: AiAssistantDemo, category: 'Main features' },
     { path: '/full-test', name: 'Full Feature Test', component: DataGridTest, category: 'Main features' },
 
     // Advanced Features

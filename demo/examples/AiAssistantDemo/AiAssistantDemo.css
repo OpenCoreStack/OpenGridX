@@ -1,0 +1,122 @@
+.ai-assistant-demo__banner {
+    background: var(--ogx-color-surface-secondary, #f3f4f6);
+    border-left: 3px solid var(--ogx-color-warning, #f59e0b);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.ai-assistant-demo__tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--ogx-grid-border-color, #e5e7eb);
+}
+
+.ai-assistant-demo__tabs [role='tab'] {
+    padding: 8px 14px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.ai-assistant-demo__tabs [role='tab'][aria-selected='true'] {
+    border-bottom-color: var(--ogx-color-primary, #3b82f6);
+    color: var(--ogx-color-primary, #3b82f6);
+    font-weight: 600;
+}
+
+.ai-assistant-demo__hint {
+    font-size: 13px;
+    margin: 0 0 10px;
+}
+
+.ai-assistant-demo__tool {
+    margin-right: 6px;
+}
+
+.ai-assistant-demo__log {
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.ai-assistant-demo__log ul {
+    margin: 4px 0 0;
+    padding-left: 18px;
+}
+
+.ai-assistant-demo__log code,
+.ai-assistant-demo__transcript code {
+    word-break: break-all;
+}
+
+.ai-assistant-demo__code {
+    margin: 8px 0 0;
+    padding: 12px 14px;
+    overflow: auto;
+    border-radius: 6px;
+    background: var(--ogx-color-surface-secondary, #f3f4f6);
+    font-size: 12px;
+}
+
+.ai-assistant-demo__actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.ai-assistant-demo__agent {
+    display: grid;
+    grid-template-columns: minmax(260px, 2fr) 3fr;
+    gap: 12px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .ai-assistant-demo__agent {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ai-assistant-demo__transcript {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 460px;
+    overflow: auto;
+    font-size: 12px;
+}
+
+.ai-assistant-demo__entry {
+    padding: 6px 8px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    background: var(--ogx-color-surface-secondary, #f3f4f6);
+}
+
+.ai-assistant-demo__entry--user {
+    background: var(--ogx-color-primary-light, #e0e7ff);
+}
+
+.ai-assistant-demo__who {
+    display: inline-block;
+    min-width: 64px;
+    font-weight: 600;
+    opacity: 0.7;
+}
+
+.ai-assistant-demo__ok {
+    color: var(--ogx-color-success, #047857);
+}
+
+.ai-assistant-demo__fail {
+    color: var(--ogx-color-error, #b91c1c);
+}
+
+.ai-assistant-demo__empty {
+    opacity: 0.7;
+}

@@ -69,7 +69,6 @@ export function GridAiAssistantPanel(props: GridAiAssistantPanelProps) {
                 <Input
                     ref={inputRef}
                     className="ogx-ai-panel__input"
-                    fullWidth
                     value={text}
                     placeholder={placeholder}
                     aria-label="Prompt"

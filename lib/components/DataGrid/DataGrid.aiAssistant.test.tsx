@@ -150,7 +150,9 @@ describe('aiAssistant', () => {
         await waitFor(() => expect(screen.getByText('Ignored: Unknown field "revnue"')).toBeTruthy());
         expect(screen.getByText('Ignored: Part not allowed')).toBeTruthy();
         expect(onGrouping).not.toHaveBeenCalled();
-        expect(screen.getByText('No sorting')).toBeTruthy();
+        // The sort came back empty only because its field was dropped: it is not applied (no "No sorting").
+        expect(screen.queryByText('No sorting')).toBeNull();
+        statusOf('No changes, 2 ignored');
     });
 
     it('reports a failing onPrompt', async () => {

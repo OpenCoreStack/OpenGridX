@@ -41,6 +41,44 @@ export function pickAllowedParts(state: GridAiState, parts: readonly GridAiPart[
     return { state: picked, errors };
 }
 
+function isEmptyPart(state: GridAiState, key: StateKey): boolean {
+    const value = state[key];
+    if (Array.isArray(value)) return value.length === 0;
+    if (key === 'filterModel') {
+        const model = state.filterModel;
+        return !model || ((model.items ?? []).length === 0 && (model.quickFilterValues ?? []).length === 0);
+    }
+    if (key === 'pivotModel') {
+        const model = state.pivotModel;
+        return !model || (model.rowFields.length === 0 && model.columnFields.length === 0 && model.valueFields.length === 0);
+    }
+    return typeof value === 'object' && value !== null && Object.keys(value).length === 0;
+}
+
+/** The state key an error path starts with (`'sortModel[0].field'` → `'sortModel'`). */
+function errorKey(path: string): string {
+    let end = path.length;
+    for (const sep of ['.', '[']) {
+        const at = path.indexOf(sep);
+        if (at >= 0 && at < end) end = at;
+    }
+    return path.slice(0, end);
+}
+
+/**
+ * Leaves out a part that is empty only because the validator dropped everything in it (`sortModel`
+ * naming an unknown field comes back as `[]`): applying it would clear the grid's model, which the
+ * reply did not ask for. An empty part without errors ("clear the sort") is kept.
+ */
+export function dropEmptiedParts(state: GridAiState, errors: readonly GridAiValidationError[]): GridAiState {
+    const failed = new Set(errors.map((error) => errorKey(typeof error.path === 'string' ? error.path : '')));
+    const out: GridAiState = {};
+    for (const key of keysOf(state)) {
+        if (!(failed.has(key) && isEmptyPart(state, key))) Object.assign(out, { [key]: state[key] });
+    }
+    return out;
+}
+
 /** The current values of the parts `state` changes: what Undo restores. */
 export function snapshotParts(state: GridAiState, current: GridAiState): GridAiState {
     const snapshot: GridAiState = {};

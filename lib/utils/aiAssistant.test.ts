@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAiChips, effectiveState, pickAllowedParts, removeAiChip, snapshotParts } from './aiAssistant';
+import { buildAiChips, dropEmptiedParts, effectiveState, pickAllowedParts, removeAiChip, snapshotParts } from './aiAssistant';
 import type { GridAiState } from '../types';
 
 const label = (field: string) => field.toUpperCase();
@@ -61,5 +61,15 @@ describe('aiAssistant helpers', () => {
         expect('columnVisibilityModel' in removeAiChip(applied, 'columnVisibility:b')).toBe(false);
         expect('pivotModel' in removeAiChip(applied, 'pivot')).toBe(false);
         expect(removeAiChip(applied, 'unknown:1')).toEqual(applied);
+    });
+
+    it('leaves out parts emptied by the validator, keeps deliberate empty parts', () => {
+        const state: GridAiState = { sortModel: [], rowGroupingModel: [], filterModel: { items: [] }, aggregationModel: { a: 'sum' } };
+        expect(dropEmptiedParts(state, [
+            { path: 'sortModel[0].field', message: 'Unknown field' },
+            { path: 'filterModel.items[0].operator', message: 'x' },
+            { path: 'aggregationModel.b', message: 'y' },
+        ])).toEqual({ rowGroupingModel: [], aggregationModel: { a: 'sum' } });
+        expect(dropEmptiedParts(state, [])).toEqual(state);
     });
 });

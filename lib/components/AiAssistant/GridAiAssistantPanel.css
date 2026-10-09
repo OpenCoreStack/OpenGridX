@@ -46,8 +46,11 @@
   align-items: center;
 }
 .ogx-ai-panel__input {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
+}
+.ogx-ai-panel__form > .ogx-button {
+  flex: 0 0 auto;
 }
 .ogx-ai-panel__mic {
   display: inline-flex;
@@ -65,9 +68,9 @@
 }
 .ogx-ai-panel__suggestion {
   padding: 3px 10px;
-  border: 1px solid var(--ogx-grid-border-color);
+  border: 1px solid var(--ogx-border-color, var(--ogx-grid-border-color));
   border-radius: var(--ogx-border-radius-round, 999px);
-  background: transparent;
+  background: var(--ogx-grid-header-background);
   color: inherit;
   font: inherit;
   cursor: pointer;

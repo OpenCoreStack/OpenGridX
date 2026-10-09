@@ -17,6 +17,7 @@ import {
     AI_PARTS,
     applyGridAiState,
     buildAiChips,
+    dropEmptiedParts,
     effectiveState,
     pickAllowedParts,
     removeAiChip,
@@ -166,16 +167,17 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
             return;
         }
         const allowed = pickAllowedParts(result.state, current.options?.parts ?? AI_PARTS);
-        const api = apiRef.current;
-        const previous = snapshotParts(allowed.state, api.getGridAiState());
-        applyGridAiState(api, effectiveState(allowed.state, previous));
         const ignored = [...(Array.isArray(result.errors) ? result.errors : []), ...allowed.errors];
-        setApplied({ state: allowed.state, previous });
+        const state = dropEmptiedParts(allowed.state, ignored);
+        const api = apiRef.current;
+        const previous = snapshotParts(state, api.getGridAiState());
+        applyGridAiState(api, effectiveState(state, previous));
+        setApplied({ state, previous });
         setErrors(ignored);
         setMessage(typeof result.message === 'string' && result.message ? result.message : null);
-        setHistory((list) => [...list, { prompt, applied: allowed.state }]);
+        setHistory((list) => [...list, { prompt, applied: state }]);
         setStatus('applied');
-        setStatusText(changesText(buildAiChips(allowed.state, (f) => f).length, ignored.length));
+        setStatusText(changesText(buildAiChips(state, (f) => f).length, ignored.length));
         notify(current.onApply, result, 'onAiAssistantApply');
     }, [apiRef, fail]);
 
