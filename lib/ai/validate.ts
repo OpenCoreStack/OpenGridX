@@ -14,6 +14,7 @@ import type {
   GridSortItem,
 } from '../types';
 import { toLocalDateString } from '../utils/values';
+import { brandGridAiValidated } from '../utils/aiBrand';
 import { coerceBoolean, coerceValue } from './coerce';
 import {
   ALL_PARTS,
@@ -244,6 +245,9 @@ function readPart(ctx: Ctx, part: GridAiPart, raw: unknown, path: string, state:
  * parts, fields, operators and enum values are dropped, each with an error; values are coerced to
  * the column type (`"1,200"` → 1200, a date → `"YYYY-MM-DD"`); filter groups left empty are
  * removed. Never throws, and never returns a field the columns do not allow.
+ *
+ * The result and its `state` carry the brand `Symbol.for('opengridx.ai.validated')` (not enumerable):
+ * the grid's `aiAssistant` applies only a branded state. Spreading the result keeps `state` branded.
  * @since v3.4
  */
 export function validateGridAiState<C extends GridAiColumn>(
@@ -251,6 +255,12 @@ export function validateGridAiState<C extends GridAiColumn>(
   columns: readonly C[],
   options: GridAiValidateOptions = {},
 ): GridAiValidationResult {
+  const result = validate(json, columns, options);
+  brandGridAiValidated(result.state);
+  return brandGridAiValidated(result);
+}
+
+function validate(json: unknown, columns: readonly GridAiColumn[], options: GridAiValidateOptions): GridAiValidationResult {
   const ctx: Ctx = { errors: [], byField: new Map() };
   const state: GridAiState = {};
   try {

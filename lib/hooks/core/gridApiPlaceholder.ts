@@ -45,5 +45,13 @@ export function createGridApiPlaceholder<R extends GridValidRowModel = GridRowMo
         canUndo: () => false,
         canRedo: () => false,
         clearHistory: noop,
+        setSortModel: noop,
+        setRowGroupingModel: noop,
+        setAggregationModel: noop,
+        setColumnVisibilityModel: noop,
+        setPivotModel: noop,
+        getGridAiState: () => ({}),
+        openAiAssistant: noop,
+        closeAiAssistant: noop,
     };
 }

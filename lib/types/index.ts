@@ -893,6 +893,8 @@ export interface GridLocaleText {
      * @since v3.3
      */
     cellSelectionAnnouncement?: (cellCount: number, rowCount: number, columnCount: number) => string;
+    /** Label of the toolbar button that opens the `aiAssistant` panel. Default: `"Ask AI"` @since v3.5 */
+    aiAssistantButton?: string;
 }
 
 /**
@@ -1138,8 +1140,13 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
   /** Initial expansion depth for Tree Data. */
   defaultGroupingExpansionDepth?: number;
 
-  /** Controlled state for row grouping. */
+  /**
+   * The row grouping model: the fields to group by, outermost first. Passing it controls grouping;
+   * without it the grid keeps its own model, which `apiRef.setRowGroupingModel` and the AI assistant change.
+   */
   rowGroupingModel?: GridRowGroupingModel;
+  /** Fired when the row grouping model changes (`apiRef.setRowGroupingModel`, the AI assistant). @since v3.5 */
+  onRowGroupingModelChange?: (model: GridRowGroupingModel) => void;
   /** Controlled state for data aggregation (e.g., { salary: 'sum' }). */
   aggregationModel?: GridAggregationModel;
   /** Callback fired when aggregation model changes. */
@@ -1203,6 +1210,8 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
      * (plus `slotProps.cellSelectionStats`). @since v3.3
      */
     cellSelectionStats?: React.ComponentType<GridCellSelectionStatsSlotProps & Record<string, unknown>>;
+    /** Replaces the `aiAssistant` panel. Receives `GridAiAssistantPanelProps` while the panel is open. @since v3.5 */
+    aiAssistantPanel?: React.ComponentType<GridAiAssistantPanelProps & Record<string, unknown>>;
   };
   /** Properties passed directly to custom slots. */
   slotProps?: {
@@ -1220,6 +1229,8 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
     footer?: Partial<GridFooterSlotProps> & Record<string, unknown>;
     /** Merged over the `GridCellSelectionStatsSlotProps` the grid passes to the status bar. */
     cellSelectionStats?: Partial<GridCellSelectionStatsSlotProps> & Record<string, unknown>;
+    /** Extra props for `slots.aiAssistantPanel`. */
+    aiAssistantPanel?: Record<string, unknown>;
   };
 
   /** When true, renders the grid as a single-column list of cards. Perfect for mobile/responsive views. */
@@ -1232,6 +1243,18 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
    * column headers, supporting multiple levels of nesting.
    */
   columnGroupingModel?: GridColumnGroupingModel;
+
+  /**
+   * The "Ask AI" prompt panel: users describe the view they want and the grid applies the validated
+   * reply as one undoable step, shown as removable chips. The built-in toolbar shows an **Ask AI**
+   * button; `apiRef.openAiAssistant()` opens it without one. Build `onPrompt` with
+   * `createGridAiPromptHandler` from `@opencorestack/opengridx/ai`. @since v3.5
+   */
+  aiAssistant?: GridAiAssistantOptions;
+  /** Fired after the assistant applied a reply. @since v3.5 */
+  onAiAssistantApply?: (result: GridAiPromptResult) => void;
+  /** Fired when `onPrompt` fails or returns a result that was not validated. @since v3.5 */
+  onAiAssistantError?: (error: unknown) => void;
 }
 
 /**
@@ -1452,4 +1475,132 @@ export interface GridApi<R extends GridValidRowModel = GridRowModel> {
   canRedo: () => boolean;
   /** Forgets every action (undo and redo). @since v3.4 */
   clearHistory: () => void;
+
+  /** Replaces the sort model (fires `onSortModelChange`). @since v3.5 */
+  setSortModel: (model: GridSortItem[]) => void;
+  /** Replaces the row grouping model (fires `onRowGroupingModelChange`). @since v3.5 */
+  setRowGroupingModel: (model: GridRowGroupingModel) => void;
+  /** Replaces the aggregation model (fires `onAggregationModelChange`). @since v3.5 */
+  setAggregationModel: (model: GridAggregationModel) => void;
+  /** Replaces the column visibility model (fires `onColumnVisibilityModelChange`). @since v3.5 */
+  setColumnVisibilityModel: (model: GridColumnVisibilityModel) => void;
+  /** Replaces the pivot model (fires `onPivotModelChange`). @since v3.5 */
+  setPivotModel: (model: GridPivotModel) => void;
+  /**
+   * The current filter, sort, grouping, aggregation, pivot and column visibility models, in the shape
+   * of the AI toolkit (`GridAiState`). @since v3.5
+   */
+  getGridAiState: () => GridAiState;
+  /** Opens the `aiAssistant` panel (does nothing without `aiAssistant`). @since v3.5 */
+  openAiAssistant: () => void;
+  /** Closes the `aiAssistant` panel. @since v3.5 */
+  closeAiAssistant: () => void;
+}
+
+// ── AI toolkit (v3.4 state types; v3.5 assistant) ──────────────────────────────────────────────────
+// Type-only and React-free: the `@opencorestack/opengridx/ai` entry point re-exports them.
+
+/** A part of the grid state a model may change. @since v3.4 */
+export type GridAiPart = 'filter' | 'sort' | 'grouping' | 'aggregation' | 'pivot' | 'columnVisibility';
+
+/** Grid state as the AI toolkit reads and writes it. Only the parts present are applied. @since v3.4 */
+export interface GridAiState {
+  filterModel?: GridFilterModel;
+  sortModel?: GridSortItem[];
+  rowGroupingModel?: GridRowGroupingModel;
+  aggregationModel?: GridAggregationModel;
+  pivotModel?: GridPivotModel;
+  columnVisibilityModel?: GridColumnVisibilityModel;
+}
+
+/** One thing the validator dropped or could not use. `path` points into the model output. @since v3.4 */
+export interface GridAiValidationError {
+  path: string;
+  message: string;
+}
+
+/** One earlier prompt of this session and the state the assistant applied for it. @since v3.5 */
+export interface GridAiHistoryEntry {
+  prompt: string;
+  applied: GridAiState;
+}
+
+/** What `aiAssistant.onPrompt` receives next to the prompt. @since v3.5 */
+export interface GridAiPromptContext {
+  /** The grid's current models (`apiRef.getGridAiState()`). */
+  currentState: GridAiState;
+  /** Earlier prompts of this session, oldest first. */
+  history: GridAiHistoryEntry[];
+  /** Aborted when the user presses Stop, sends another prompt or closes the panel. */
+  signal: AbortSignal;
+}
+
+/**
+ * What `aiAssistant.onPrompt` resolves with. The grid applies it only when its `state` comes from
+ * `validateGridAiState` (or `createGridAiPromptHandler`), which brands the result and its `state`.
+ * @since v3.5
+ */
+export interface GridAiPromptResult {
+  state: GridAiState;
+  /** What the validator dropped; shown as "Ignored: …". */
+  errors: GridAiValidationError[];
+  /** The assistant's reply text, shown in the panel. */
+  message?: string;
+}
+
+/** The `aiAssistant` prop: the "Ask AI" prompt panel. @since v3.5 */
+export interface GridAiAssistantOptions {
+  /**
+   * Answers a prompt. Call your own model and return the validated result: `createGridAiPromptHandler`
+   * from `@opencorestack/opengridx/ai` builds this function, or call `validateGridAiState` yourself.
+   */
+  onPrompt: (prompt: string, context: GridAiPromptContext) => Promise<GridAiPromptResult>;
+  /** Placeholder of the prompt input. Default: `"Ask about this table…"` */
+  placeholder?: string;
+  /** Example prompts shown as clickable chips. */
+  suggestions?: string[];
+  /** Shows a microphone button where the browser has speech recognition; the microphone is asked for only on click. Default: true. */
+  voice?: boolean;
+  /** The parts of the state the assistant may change. Default: every part. */
+  parts?: GridAiPart[];
+}
+
+/** One change the assistant applied, shown as a removable chip. @since v3.5 */
+export interface GridAiChip {
+  id: string;
+  part: GridAiPart;
+  label: string;
+}
+
+/** The assistant panel's state. @since v3.5 */
+export type GridAiAssistantStatus = 'idle' | 'running' | 'applied' | 'stopped' | 'error';
+
+/** Props of `slots.aiAssistantPanel` and the built-in panel, rendered while the panel is open. @since v3.5 */
+export interface GridAiAssistantPanelProps {
+  status: GridAiAssistantStatus;
+  /** The status line: "Thinking…", "Applied 3 changes", an error. */
+  statusText: string;
+  /** The assistant's reply text (`result.message`). */
+  message: string | null;
+  /** What the last reply asked for that was ignored. */
+  errors: GridAiValidationError[];
+  /** The changes the last reply applied. */
+  chips: GridAiChip[];
+  /** Earlier prompts of this session, oldest first. */
+  history: GridAiHistoryEntry[];
+  suggestions: string[];
+  placeholder: string;
+  /** `voice` is on and this browser has speech recognition. */
+  voiceAvailable: boolean;
+  /** Undo can restore the state from before the last reply. */
+  canUndo: boolean;
+  submit: (prompt: string) => void;
+  /** Aborts the running request. */
+  stop: () => void;
+  /** Restores the state from before the last reply. */
+  undo: () => void;
+  /** Re-applies the last reply without this change. */
+  removeChip: (id: string) => void;
+  /** Closes the panel; focus returns to where it was before it opened. */
+  close: () => void;
 }

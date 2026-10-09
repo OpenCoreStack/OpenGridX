@@ -14,7 +14,7 @@ const REACT_INTERNALS = ['react.transitional.element', 'react.element', '__CLIEN
 
 const AI_BUNDLES = ['dist/ai.es.js', 'dist/ai.cjs'];
 const AI_TYPES = 'dist/ai.d.ts';
-const AI_BUDGET_GZIP = 5 * 1024;
+const AI_BUDGET_GZIP = 8 * 1024;
 // The schema title (GRID_AI_SCHEMA_TITLE in lib/ai/schema.ts): a string literal survives minification.
 const AI_MARKER = 'OpenGridX grid state';
 // A static or dynamic import, or a require call. The ai bundles are minified, so no spaces are assumed.
