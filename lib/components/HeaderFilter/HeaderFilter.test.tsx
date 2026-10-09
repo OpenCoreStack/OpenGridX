@@ -212,6 +212,28 @@ describe('header filter row — editing the shared model', () => {
         expect(valueInput(container, 'customer').value).toBe('');
     });
 
+    it('keeps typing done while its own earlier change is still on the way back', () => {
+        vi.useFakeTimers();
+        const seen: GridFilterModel[] = [];
+        // A parent that stores the model 200 ms after the grid reports it (a server round trip).
+        function Grid() {
+            const [model, setModel] = useState<GridFilterModel>({ items: [] });
+            return (
+                <DataGrid rows={ROWS} columns={COLS} headerFilters filterModel={model}
+                    onFilterModelChange={(m) => { seen.push(m); setTimeout(() => setModel(m), 200); }} />
+            );
+        }
+        const { container } = render(<Grid />);
+        fireEvent.change(valueInput(container, 'customer'), { target: { value: 'b' } });
+        advance(300);
+        expect(itemsOf(seen[0])[0].value).toBe('b');
+        fireEvent.change(valueInput(container, 'customer'), { target: { value: 'bo' } });
+        advance(250);
+        expect(valueInput(container, 'customer').value).toBe('bo');
+        advance(100);
+        expect(itemsOf(seen[1])[0].value).toBe('bo');
+    });
+
     it('reports the model through onFilterModelChange in server filter mode without filtering rows', () => {
         vi.useFakeTimers();
         const onFilterModelChange = vi.fn();

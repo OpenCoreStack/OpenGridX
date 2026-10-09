@@ -87,11 +87,15 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
     const [draft, setDraft] = useState<string | null>(null);
     const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
 
+    // The last item this cell reported (null: removed). Its own change arriving late (a parent that
+    // stores the model asynchronously) is not mistaken for a change made elsewhere.
+    const [lastEmitted, setLastEmitted] = useState<GridFilterItem | null | undefined>(undefined);
     // A change made elsewhere (filter panel, Clear all, apiRef) discards typing not committed yet.
     const [seenItem, setSeenItem] = useState(item);
     if (seenItem !== item) {
         setSeenItem(item);
-        if (!sameItem(seenItem, item)) setDraft(null);
+        const own = lastEmitted !== undefined && sameItem(lastEmitted ?? undefined, item);
+        if (!sameItem(seenItem, item) && !own) setDraft(null);
     }
 
     const cellRef = useRef<HTMLDivElement>(null);
@@ -111,7 +115,9 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
         const unchanged = current ? text === filterValueToInputText(current.value, col.type) : text.trim() === '';
         if (unchanged) return;
         const op = current?.operator ?? getHeaderFilterDefaultOperator(col);
-        emit(col.field, buildHeaderFilterItem(col, op, fromInputText(text, op)));
+        const next = buildHeaderFilterItem(col, op, fromInputText(text, op));
+        setLastEmitted(next);
+        emit(col.field, next);
     }, []);
 
     // Typing still waiting for the debounce is committed if the cell unmounts meanwhile (its column
@@ -139,14 +145,19 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
     const focusCell = () => cellRef.current?.focus({ preventScroll: true });
     const focusControl = () => (inputRef.current ?? selectRef.current)?.focus({ preventScroll: true });
 
+    const report = (next: GridFilterItem | null) => {
+        setLastEmitted(next);
+        onItemChange(colDef.field, next);
+    };
+
     const setValue = (value: unknown) => {
         setDraft(null);
-        onItemChange(colDef.field, buildHeaderFilterItem(colDef, operator, value));
+        report(buildHeaderFilterItem(colDef, operator, value));
     };
 
     const clear = () => {
         setDraft(null);
-        onItemChange(colDef.field, null);
+        report(null);
     };
 
     const openMenu = () => { if (operatorRef.current) setMenuAnchor(operatorRef.current); };
@@ -163,7 +174,7 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
         const value = draft !== null ? fromInputText(draft, op) : item?.value;
         setDraft(null);
         setMenuAnchor(null);
-        onItemChange(colDef.field, buildHeaderFilterItem(colDef, op, convertHeaderFilterValue(value, op)));
+        report(buildHeaderFilterItem(colDef, op, convertHeaderFilterValue(value, op)));
         // The value control may only mount with the new operator (from isEmpty), so focus after commit.
         requestAnimationFrame(() => {
             if (inputRef.current || selectRef.current) focusControl();
