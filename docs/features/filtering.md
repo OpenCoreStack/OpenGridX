@@ -7,6 +7,7 @@ OpenGridX provides a robust filtering system with support for both client-side a
 - **Column Filters**: Specific operators for different data types (string, number, date, etc.).
 - **Multi-Filter Groups**: Support for `AND`/`OR` logic operators.
 - **Server-Side Filtering**: Offload complex queries to your backend.
+- **Header Filters** (v3.5): a filter row under the column headers (`headerFilters`) that edits the same model. See [Header Filters](header-filters.md).
 
 ---
 
@@ -121,3 +122,5 @@ The filter panel is accessible through the built-in `GridToolbar`. To use your o
 ```
 
 The `FilterPanel` component is also exported from `@opencorestack/opengridx` if you need to embed it inside a custom layout. See [`<FilterPanel />`](../components/filter-panel.md) for how it edits the model.
+
+For a filter control on every column, set `headerFilters`: a row under the headers whose cells own the root items `id: 'header:<field>'` of the same `filterModel`, so the panel, the quick filter and the header row stay in sync. See [Header Filters](header-filters.md).

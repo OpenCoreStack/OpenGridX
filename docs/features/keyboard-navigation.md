@@ -70,9 +70,24 @@ When an edit ends, focus returns to the edited cell unless you moved it elsewher
 | **Enter** / **Space** | Sort the column (asc → desc → none), replacing the sort model; with `multiSort`, or with **Shift** held, the column is added to (or updated or removed from) the sort model instead, as a header click or shift-click does. On the select-all header: select or clear all rows. |
 | **Alt+ArrowDown** or **Ctrl+Enter** (Cmd+Enter) | Open the column menu. |
 | **Alt+ArrowRight** / **Alt+ArrowLeft** | Widen / narrow the column by 10px (with **Shift**: 50px). Not for `resizable: false` columns. |
-| **ArrowDown** | Move to the first row. |
+| **ArrowDown** | Move to the first row; with `headerFilters`, to the column's filter cell. |
 
 In the column menu, **ArrowUp** / **ArrowDown** / **Home** / **End** move between items, **Enter** / **Space** choose one, and **Escape** or **Tab** closes the menu. Focus returns to the column header.
+
+### Header filter row
+
+With `headerFilters` (v3.5, see [Header Filters](header-filters.md)) the filter row sits between the column headers and the first row. Its cells are navigation stops like any other cell:
+
+| Key | Action |
+| :--- | :--- |
+| **ArrowDown** / **ArrowUp** | To the first row / back to the column header. Arrow keys from the first row go up to the filter row. |
+| **ArrowLeft** / **ArrowRight**, **Home** / **End** | Along the filter row. |
+| **Enter** / **Space** | Focus the cell's text box or select. On "Custom filter": open the toolbar's filter panel. |
+| Typing a character | Start a new value in the text box (text and number columns). |
+| **Alt+ArrowDown** or **Ctrl+Enter** (Cmd+Enter) | Open the operator menu; it works like the column menu. |
+| **Delete** / **Backspace** | Clear the column's filter. |
+
+Inside the text box or select, the arrow keys belong to the control, as in a cell editor. **Escape** returns focus to the filter cell; **Tab** leaves the grid (the controls are not Tab stops).
 
 ### List view
 
@@ -95,7 +110,7 @@ Keys pressed in content your `renderCell` puts in a row (inputs, buttons) are le
 | Element | Attributes |
 | :--- | :--- |
 | Viewport | `role="grid"`, `aria-rowcount`, `aria-colcount`, `aria-multiselectable` (true when several rows can be selected), `aria-busy`. |
-| Header rows | `role="row"` with `aria-rowindex`: column-group rows first, then the column header row. |
+| Header rows | `role="row"` with `aria-rowindex`: column-group rows first, then the column header row, then the header filter row (`headerFilters`), whose cells are `role="columnheader"` labelled "Filter &lt;header&gt;". |
 | Data rows | `role="row"`, `aria-rowindex` counted across the whole dataset (page 2 continues after page 1; bottom-pinned rows come after every page), `aria-selected`. Tree-data and row-grouping rows add `aria-level`; rows with children add `aria-expanded`. |
 | Cells and headers | `aria-colindex`, identical for a header and the body cells below it. The system columns (reorder handle, detail-panel toggle, checkbox) come first. |
 | Sorted headers | Only the primary sort column has `aria-sort="ascending"` / `"descending"`; with several sort keys every sorted header also gets an `aria-description` such as "Sorted descending, sort priority 2 of 2". |

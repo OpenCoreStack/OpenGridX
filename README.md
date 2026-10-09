@@ -76,6 +76,7 @@ Without a `height` prop the grid fills its container (`height: 100%`, or the fre
 - **Fully Customizable**: Slots system for replacing any component (pagination, overlays, toolbar).
 - **Export Functionality**: Built-in CSV, Excel (HTML `.xls`, or real `.xlsx` with the optional ExcelJS peer), JSON, PDF (optional jsPDF peer) and Print export.
 - **Clipboard**: `Ctrl+C` / `Cmd+C` copies the selected rows' visible columns as TSV for Excel/Sheets.
+- **Header Filters** (v3.5): `headerFilters` adds a filter row under the column headers (text, number, date and select controls with an operator menu) that edits the same `filterModel` as the filter panel and the quick filter.
 - **Cell Range Selection** (v3.3): drag, Shift+click or Shift+arrows select a rectangle of cells; copy it as TSV and see its count, sum and average in a status bar (`cellSelection`, `showCellSelectionStats`).
 - **AI Toolkit** (v3.4): `@opencorestack/opengridx/ai` turns your columns into a JSON Schema for your own model and validates its reply before the grid applies it (`getGridAiSchema`, `validateGridAiState`). No AI SDK, no row data sent by default.
 - **Accessibility**: WCAG 2.1 AA — full ARIA roles and keyboard navigation.
@@ -157,6 +158,8 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `sortable` | `boolean` | `true` | Enable/disable column sorting. |
 | `sortComparator` | `(v1, v2, p1, p2) => number` | — | Custom ascending comparator (sees nulls; negated for desc). v3.1.0+ |
 | `filterable` | `boolean` | `true` | Enable/disable column filtering. |
+| `headerFilter` | `boolean` | `true` | `false` leaves the column's cell in the header filter row empty (v3.5). |
+| `headerFilterOperator` | `GridFilterOperator` | by type | Operator a new header filter starts with (v3.5). |
 | `resizable` | `boolean` | `true` | Allow drag-resize; double-click the handle to auto-size to content (v3.1.0+). |
 | `hideable` | `boolean` | `true` | Allow hiding via the column panel. |
 | `pinnable` | `boolean` | `true` | Allow pinning via the UI. |
@@ -188,6 +191,8 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `onSortModelChange` | `(model: GridSortItem[]) => void` | Fires on sort change. |
 | `filterModel` | `GridFilterModel` | Controlled filter model. |
 | `onFilterModelChange` | `(model: GridFilterModel) => void` | Fires on filter change. |
+| `headerFilters` | `boolean` | Filter row under the column headers, sharing `filterModel` (v3.5). |
+| `headerFilterHeight` | `number` | Height of the header filter row. Default `40`. |
 | `multiSort` | `boolean` | Every header click adds to the sort instead of replacing it (Shift+click always does). |
 
 ### Columns

@@ -187,6 +187,7 @@ All sub-theme types (`GridThemeColors`, `GridThemeGrayScale`, `GridThemeTypograp
 |---|---|---|
 | `--ogx-row-height` | `52px` | Row height. The grid sets it inline on `.ogx` from the `rowHeight` / `density` props (or the provider's `grid.rowHeight*`); read it in custom CSS, don't set it. |
 | `--ogx-header-height` | `56px` | Column header row height; set inline by the grid like `--ogx-row-height`. |
+| `--ogx-header-filter-height` | `40px` | Header filter row height (`headerFilters`, v3.5); set inline by the grid from `headerFilterHeight`. The row's colours come from the header variables, so themes need no new keys. |
 | `--ogx-grid-row-height-compact` | `32px` | Informational copy of the theme's `grid.rowHeightCompact`; the grid reads the theme value, not this variable |
 | `--ogx-grid-row-height-standard` | `52px` | Informational copy of `grid.rowHeightStandard` |
 | `--ogx-grid-row-height-comfortable` | `72px` | Informational copy of `grid.rowHeightComfortable` |

@@ -32,6 +32,7 @@ In-depth guides on the grid's functional capabilities.
 
 - **[Virtualization](features/virtualization.md)** - Handling massive datasets
 - **[Filtering & Search](features/filtering.md)** - Column filters and Global Quick Search
+- **[Header Filters](features/header-filters.md)** - A filter row under the column headers, sharing the filter model
 - **[Sorting & Pagination](features/sorting-pagination.md)** - Organizing and navigating data
 - **[Editing & Reordering](features/editing-reordering.md)** - Inline edits and Drag-and-Drop
 - **[Loading & Performance](features/loading-states.md)** - Skeletons, Lazy, and Infinite loading

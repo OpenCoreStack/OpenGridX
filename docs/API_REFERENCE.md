@@ -34,6 +34,8 @@ The main component for displaying and interacting with data.
 | `slots` | `GridSlots` | — | Custom component overrides: `toolbar`, `pagination`, `noRowsOverlay`, `loadingOverlay`, `footer`, `cellSelectionStats`. See [`GridSlots`](#gridslots-and-gridslotprops) and the [Slots API](customization/slots-api.md). |
 | `slotProps` | `GridSlotProps` | — | Props passed to the slots, keyed like `slots`. `slotProps.toolbar` is typed as `Partial<GridToolbarProps>` (plus any extra keys your own toolbar reads), so `GridToolbar` render props are type-checked (v3.0+). |
 | `filterModel` | `GridFilterModel` | `undefined` | Active filters (controlled). Omit it to let the grid keep its own filter state, seeded from `initialState.filter` and changed by the toolbar or `apiRef.setFilterModel` (v3.0+). |
+| `headerFilters` | `boolean` | `false` | A filter row under the column headers (v3.5): text, number and date boxes (the shared `Input`), a Yes / No select for `boolean`, a `valueOptions` select for `singleSelect`, an operator menu and a clear button per column. Each cell owns the root `filterModel` item with `id: 'header:<field>'` and leaves every other entry alone; a model it cannot show (root `logicOperator: 'or'`, the field in a group, another root item on the field) is shown as a read-only "Custom filter" that opens the toolbar's filter panel. Typing is debounced by 300 ms. Not rendered in pivot mode. Classes `ogx__header-filter-row`, `ogx__header-filter-cell` (`--focused`, `--active`, `--custom`, `--empty`, `--system`, `--pinned*`), `ogx__header-filter-operator`, `ogx__header-filter-menu`, `ogx__header-filter-input-wrapper`, `ogx__header-filter-input`, `ogx__header-filter-select`, `ogx__header-filter-operator-label`, `ogx__header-filter-clear`, `ogx__header-filter-custom`. See [Header Filters](features/header-filters.md). |
+| `headerFilterHeight` | `number` | `40` | Height of the header filter row in pixels; sets `--ogx-header-filter-height` (v3.5). |
 | `sortModel` | `GridSortItem[]` | `undefined` | Active sorting. |
 | `onRowClick` | `(params: GridRowParams) => void` | — | Fired when a row is clicked. Tree-data parent rows are real rows: a click fires this and selects them (their chevron expands them). Not fired for synthetic rows (row-grouping group rows, subtotal rows, auto-created tree parents): clicking a group row toggles it. |
 | `onRowDoubleClick` | `(params: GridRowParams) => void` | — | Fired when a row is double-clicked (v2.1+). Also fires for group rows, and (v3.0+) for the double-click that opens an editor on an editable cell; not fired on the checkbox, expand icon, drag handle or inside an open editor. |
@@ -313,6 +315,8 @@ The built-in toolbar component. Mount it via `slots={{ toolbar: GridToolbar }}`.
 | `onColumnOrderReset` | `() => void` | — | Called when the user clicks "Reset order" in the Columns panel. |
 | `forceColumnsOpen` | `boolean` | — | Opens the Columns panel when it becomes `true` (set by `DataGrid` for the column menu's **Manage columns**). If the toolbar slot does not render a `GridToolbar` that receives it, the grid opens its standalone Columns panel instead. |
 | `onColumnsPanelClose` | `() => void` | — | Called whenever the Columns panel closes (its button, a custom button, another panel opening, click-outside or Escape). |
+| `forceFiltersOpen` | `boolean` | — | Opens the filter panel when it becomes `true` (v3.5; set by `DataGrid` for a header filter cell's "Custom filter"). Only a `GridToolbar` that receives it lets that label open the panel. |
+| `onFiltersPanelClose` | `() => void` | — | Called whenever the filter panel closes (v3.5). |
 | `children` | `ReactNode` | — | Content rendered on the **left** side of the toolbar, before the spacer. |
 | `rightContent` | `ReactNode` | — | Content rendered on the **right** side, after all built-in buttons. |
 | `className` | `string` | — | Additional CSS class on the toolbar root `<div>`. Use for visual theme overrides. |
@@ -488,7 +492,9 @@ Span values are floored; `Infinity` means "to the end"; `NaN`, `0` and negative 
 | :--- | :--- | :--- | :--- |
 | `sortable` | `boolean` | `true` | Enable/disable sorting for this column. |
 | `sortComparator` | `(v1, v2, params1, params2) => number` | — | Custom ascending comparator for client-side sorting (v3.1.0+). `v1`/`v2` are `valueGetter` values **including `null`/`undefined`**; `params` are `GridSortCellParams` `{ id, field, row, value }`. Negated for `desc`, chained in multi-sort, used for group ordering under row grouping, tree-data siblings and pivot row labels. Throw / `NaN` reads as 0 (dev warning once). Ignored with `sortingMode="server"`. |
-| `filterable` | `boolean` | `true` | Enable/disable filtering for this column. `false` also removes it from the quick-filter search. |
+| `filterable` | `boolean` | `true` | Enable/disable filtering for this column. `false` also removes it from the quick-filter search and the header filter row. |
+| `headerFilter` | `boolean` | `true` | `false` leaves this column's cell in the header filter row (`headerFilters`) empty (v3.5). `image` columns never get a control. |
+| `headerFilterOperator` | `GridFilterOperator` | by type | The operator a new header filter starts with (v3.5). Defaults: `contains` (string), `=` (number), `is` (date, boolean, singleSelect). |
 | `resizable` | `boolean` | `true` | Allow the user to drag-resize this column; double-click the handle (or Enter on it) to auto-size to content (v3.1.0+). |
 | `hideable` | `boolean` | `true` | Allow the user to hide this column from the UI. `false` removes it from the Columns panel (unless `showNonHideableColumns`) and removes **Hide Column** from its column menu. |
 | `pinnable` | `boolean` | `true` | Allow this column to be pinned via the UI. `false` removes the pin actions from its column menu. Does not affect drag-reordering (v3.0+). |
@@ -1232,6 +1238,8 @@ The filter panel shows only the operators relevant to each column's `type`; an o
 | `date` | `is` | `is`, `not`, `after`, `onOrAfter`, `before`, `onOrBefore`, `isEmpty`, `isNotEmpty` |
 | `boolean` | `is` | `is` |
 | `singleSelect` | `isAnyOf` | `isAnyOf`, `is`, `not` |
+
+The header filter row (`headerFilters`) offers the same operators; it starts `singleSelect` columns with `is` (one value from a select) and any column with its `headerFilterOperator`.
 
 ### Nested Group Example
 

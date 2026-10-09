@@ -21,8 +21,11 @@ Manages the column headers, sorting triggers, column resizing, and column groupi
 | `checkboxSelection` | `boolean` | Reserves the checkbox column. The "Select All" checkbox is rendered only when `onSelectAll` is also passed (the grid omits it with `disableMultipleRowSelection`). |
 | `onSelectAll` | `(isSelected: boolean) => void` | Called by the "Select All" checkbox. |
 | `allSelected` / `someSelected` | `boolean` | Checked / indeterminate state of the "Select All" checkbox. |
-| `focusedCell` | `{ id: GridRowId \| null; field: string } \| null` | The grid's focus position. `id: null` means the header cell of `field` is focused (v3.0; it used to be the string `'HEADER'`, which a real row id could collide with). DOM focus is moved by the grid, not by `<Header />`. |
+| `focusedCell` | `{ id: GridRowId \| null; field: string; headerFilter?: boolean } \| null` | The grid's focus position. `id: null` means the header cell of `field` is focused (v3.0; it used to be the string `'HEADER'`, which a real row id could collide with); with `headerFilter: true`, its cell in the header filter row (v3.5). DOM focus is moved by the grid, not by `<Header />`. |
 | `columnIndexMap` | `Map<string, number>` | Position of each visible data column in render order. Used for `aria-colindex` and the `colIndex` passed to `renderHeader`, so they match the body cells and do not change with horizontal scrolling. |
+| `headerFilters` | `boolean` | Renders the header filter row under the column header row (v3.5, see [Header Filters](../features/header-filters.md)). |
+| `filterModel` / `onFilterModelChange` | `GridFilterModel` / `(model) => void` | The model the filter row reads and the callback it reports changes to. |
+| `onOpenFilterPanel` | `() => void` | Called by a filter cell's "Custom filter" button; without it the label is plain text. |
 
 ## ↩️ Wrapped Header Text
 

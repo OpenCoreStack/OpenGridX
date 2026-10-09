@@ -42,6 +42,7 @@ const SECTIONS = [
     ['Features', [
         ['docs/features/virtualization.md', 'Virtualization', 'Virtualization'],
         ['docs/features/filtering.md', 'Filtering', 'Filtering & Search'],
+        ['docs/features/header-filters.md', 'Header-Filters', 'Header Filters'],
         ['docs/features/sorting-pagination.md', 'Sorting-and-Pagination', 'Sorting & Pagination'],
         ['docs/features/custom-pagination.md', 'Custom-Pagination', 'Custom Pagination'],
         ['docs/features/editing-reordering.md', 'Editing-and-Reordering', 'Editing & Reordering'],

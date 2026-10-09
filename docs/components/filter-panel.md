@@ -51,6 +51,7 @@ The panel shows one row per column with `filterable !== false` (the synthetic ro
 - Typing is debounced by 300 ms before `onFilterModelChange` fires. Opening the panel never emits anything and never rewrites existing values (arrays, numbers and dates stay as they are).
 - Changing the operator right after typing keeps the typed text.
 - Each row edits the **first** root-level item for its column and replaces it in place. Filter groups (`GridFilterGroup`) and further items for the same column are passed through untouched; the panel notes how many such conditions it does not show.
+- With `headerFilters` (v3.5) that item is often the header filter row's `id: 'header:<field>'` item. The panel keeps the item's `id` when it edits it, so the header row goes on showing it; see [Header Filters](../features/header-filters.md).
 - Picking an operator without typing, or clearing the input, leaves an item with an empty value, which does not filter. The row's **×** button removes the item.
 - If the model is changed from outside the panel (the toolbar's **Clear all**, or your own code) while typing is still pending, the pending text is dropped instead of being re-applied.
 

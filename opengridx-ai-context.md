@@ -32,6 +32,7 @@ node_modules/@opencorestack/opengridx/docs/features/sorting-pagination.md
 node_modules/@opencorestack/opengridx/docs/features/tree-data-grouping.md
 node_modules/@opencorestack/opengridx/docs/features/selection.md
 node_modules/@opencorestack/opengridx/docs/features/filtering.md
+node_modules/@opencorestack/opengridx/docs/features/header-filters.md
 node_modules/@opencorestack/opengridx/docs/features/export-guide.md
 node_modules/@opencorestack/opengridx/docs/features/aggregation-pivot.md
 node_modules/@opencorestack/opengridx/docs/features/editing-reordering.md
@@ -217,6 +218,25 @@ Drag, Shift+click and Shift+arrows select a rectangle of data cells; Ctrl/Cmd+C 
 corner ids and fields (`{ anchor, head }[]`), so it follows sorting and is cleared with reason
 `'dataChange'` when a corner disappears. Synthetic rows are highlighted but not copied. Guide:
 `docs/features/cell-selection.md`.
+
+### Header filter row (3.5.0+)
+
+```tsx
+<DataGrid rows={rows} columns={[
+  { field: 'customer' },                                        // text box, "contains"
+  { field: 'total', type: 'number', headerFilterOperator: '>=' },
+  { field: 'notes', headerFilter: false },                      // no filter cell
+]} headerFilters filterModel={filterModel} onFilterModelChange={setFilterModel} />
+```
+
+`headerFilters` adds a filter row inside the sticky header. It has no model of its own: each cell owns
+the root `filterModel` item `{ id: 'header:<field>', field, operator, value }` and leaves every other
+item, group, `logicOperator` and `quickFilterValues` untouched, so the filter panel, quick filter,
+`apiRef.setFilterModel` and `filterMode="server"` keep working. A model the row cannot show (root
+`logicOperator: 'or'`, the field inside a group, an untagged or second root item on the field) is shown
+as a read-only "Custom filter" that opens the `GridToolbar` filter panel; it is never rewritten.
+Keyboard: ArrowDown on a header → filter cell → first row; Enter or typing focuses the control,
+Escape returns. Guide: `docs/features/header-filters.md`.
 
 ### Paste, range clear and undo/redo (3.4.0+)
 
