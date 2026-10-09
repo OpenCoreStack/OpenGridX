@@ -100,9 +100,15 @@ describe('fillTargetFromPointer', () => {
         expect(fillTargetFromPointer(source, { row: 3, col: 0 }, -150, 0)).toEqual({ rect: { ...source, left: 0 }, direction: 'left' });
     });
 
+    it('follows the only side the cell lies beyond, whatever the pointer offsets', () => {
+        // Down and to the left within the source columns: still a fill down.
+        expect(fillTargetFromPointer(source, { row: 5, col: 1 }, -60, 30)).toEqual({ rect: { ...source, bottom: 5 }, direction: 'down' });
+        expect(fillTargetFromPointer(source, { row: 2, col: 9 }, 0, -40)).toEqual({ rect: { ...source, right: 9 }, direction: 'right' });
+    });
+
     it('is null while the pointer stays over the source', () => {
         expect(fillTargetFromPointer(source, { row: 3, col: 2 }, 2, 2)).toBeNull();
-        expect(fillTargetFromPointer(source, { row: 2, col: 9 }, 0, -40)).toBeNull();
+        expect(fillTargetFromPointer(source, { row: 2, col: 1 }, -90, -40)).toBeNull();
     });
 });
 

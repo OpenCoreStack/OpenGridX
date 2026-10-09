@@ -122,8 +122,9 @@ export function computeFillValues(source: readonly unknown[], count: number, ser
 
 /**
  * Where a fill-handle drag reaches: the source rectangle extended in one direction to the cell under
- * the pointer, or null while the pointer is over the source. The larger pointer offset (px, `dx` /
- * `dy` from where the drag started) decides between vertical and horizontal.
+ * the pointer, or null while the pointer is over the source. When the cell lies beyond the source
+ * both down/up and right/left, the larger pointer offset (px, `dx` / `dy` from where the drag
+ * started) decides between vertical and horizontal.
  */
 export function fillTargetFromPointer(
     source: CellRangeRect,
@@ -131,14 +132,18 @@ export function fillTargetFromPointer(
     dx: number,
     dy: number,
 ): { rect: CellRangeRect; direction: GridFillDirection } | null {
-    if (Math.abs(dy) >= Math.abs(dx)) {
-        if (head.row > source.bottom) return { rect: { ...source, bottom: head.row }, direction: 'down' };
-        if (head.row < source.top) return { rect: { ...source, top: head.row }, direction: 'up' };
-        return null;
+    const outVertical = head.row > source.bottom || head.row < source.top;
+    const outHorizontal = head.col > source.right || head.col < source.left;
+    if (!outVertical && !outHorizontal) return null;
+    const vertical = outVertical && (!outHorizontal || Math.abs(dy) >= Math.abs(dx));
+    if (vertical) {
+        return head.row > source.bottom
+            ? { rect: { ...source, bottom: head.row }, direction: 'down' }
+            : { rect: { ...source, top: head.row }, direction: 'up' };
     }
-    if (head.col > source.right) return { rect: { ...source, right: head.col }, direction: 'right' };
-    if (head.col < source.left) return { rect: { ...source, left: head.col }, direction: 'left' };
-    return null;
+    return head.col > source.right
+        ? { rect: { ...source, right: head.col }, direction: 'right' }
+        : { rect: { ...source, left: head.col }, direction: 'left' };
 }
 
 /** One line of a fill: the source positions in fill order and the positions it fills, in order. */
