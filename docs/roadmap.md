@@ -89,7 +89,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 
 ### Across the quarter
 
-*   **Published benchmark**: reproducible 100k / 1M-row numbers (scroll frame rate, sort and filter time, memory) in `docs/performance.md`.
+*   ✅ **Published benchmark** (done 9 Oct): reproducible 10k / 100k / 500k / 1M-row numbers (scroll frame times, sort, filter and grouping time, memory, the reachable row) in [`docs/performance.md`](performance.md#benchmarks); rerun with `npm run bench`.
 *   **Next.js App Router guide**: using the grid from a `'use client'` component, with the stylesheet in `app/layout.tsx`.
 *   **RTL check**: verify right-to-left layouts and document the result.
 *   **Demo site**: source viewer on all examples (`DocsLayout` with Vite `?raw`) and syntax highlighting, done alongside each release's demo page.
