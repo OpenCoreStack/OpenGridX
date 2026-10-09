@@ -9,7 +9,7 @@ import { test, expect, type ConsoleMessage, type Locator, type Page } from '@pla
 /** Console output that is expected and harmless. Keep this list short and explain every entry. */
 const ALLOWED_CONSOLE: RegExp[] = [];
 
-const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range', 'paste', 'ai', 'ai-assistant', 'header-filters']);
+const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range', 'paste', 'ai', 'ai-assistant', 'header-filters', 'fill']);
 
 function fixtureOf(projectName: string): string {
   return projectName.split('-')[1] ?? '';
@@ -252,6 +252,51 @@ test.describe('package smoke', () => {
     await page.keyboard.press('ControlOrMeta+Shift+z');
     await expect(first).toHaveText('Widget');
     await expect(page.getByTestId('history-log')).toHaveText('1 true false');
+  });
+
+  test('fill: dragging the fill handle continues a series, Ctrl/Cmd+D fills down, Ctrl/Cmd+Z undoes', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'fill');
+    const log = page.getByTestId('fill-log');
+
+    // Select Jan of the first two rows (100, 110), then drag the handle down two more rows.
+    const start = await cell(centerRow(page, 0), 'jan').boundingBox();
+    const end = await cell(centerRow(page, 1), 'jan').boundingBox();
+    expect(start && end).toBeTruthy();
+    if (!start || !end) return;
+    await page.mouse.move(start.x + 10, start.y + start.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(end.x + 10, end.y + end.height / 2, { steps: 4 });
+    await page.mouse.up();
+    const handle = page.locator('.ogx__viewport .ogx__cell-fill-handle');
+    await expect(handle).toHaveCount(1);
+    const box = await handle.boundingBox();
+    const target = await cell(centerRow(page, 3), 'jan').boundingBox();
+    if (!box || !target) throw new Error('fill handle or target cell not rendered');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, target.y + target.height / 2, { steps: 6 });
+    await page.mouse.up();
+
+    await expect(log).toHaveText('down updated 2 skipped 0');
+    await expect(cell(centerRow(page, 2), 'jan')).toHaveText('120');
+    await expect(cell(centerRow(page, 3), 'jan')).toHaveText('130');
+    await expect(page.locator('.ogx__viewport .ogx__cell--range')).toHaveCount(4);
+
+    // Jan..Mar of the first three rows, then Ctrl/Cmd+D copies the top row down.
+    await cell(centerRow(page, 0), 'jan').click();
+    await page.keyboard.press('Shift+ArrowRight');
+    await page.keyboard.press('Shift+ArrowRight');
+    await page.keyboard.press('Shift+ArrowDown');
+    await page.keyboard.press('Shift+ArrowDown');
+    await expect(page.locator('.ogx__viewport .ogx__cell--range')).toHaveCount(9);
+    await page.keyboard.press('ControlOrMeta+d');
+    await expect(log).toHaveText('down updated 2 skipped 0');
+    await expect(cell(centerRow(page, 2), 'jan')).toHaveText('100');
+    await expect(cell(centerRow(page, 1), 'jan')).toHaveText('100');
+
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(cell(centerRow(page, 2), 'jan')).toHaveText('120');
+    await expect(cell(centerRow(page, 1), 'jan')).toHaveText('110');
   });
 
   test('range: dragging selects a cell range and Ctrl+C copies it as TSV', async ({ page }) => {

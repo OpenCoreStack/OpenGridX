@@ -8,6 +8,7 @@ import Paste from './scenarios/Paste';
 import Ai from './scenarios/Ai';
 import AiAssistant from './scenarios/AiAssistant';
 import HeaderFilters from './scenarios/HeaderFilters';
+import Fill from './scenarios/Fill';
 import Pinned from './scenarios/Pinned';
 import Dark from './scenarios/Dark';
 
@@ -21,6 +22,7 @@ const scenarios: Record<string, ComponentType> = {
   ai: Ai,
   'ai-assistant': AiAssistant,
   'header-filters': HeaderFilters,
+  fill: Fill,
   pinned: Pinned,
   dark: Dark,
 };
