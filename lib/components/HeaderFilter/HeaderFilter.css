@@ -1,0 +1,160 @@
+/* Header filter row (headerFilters): inside .ogx__header-wrap, under the column header row, so it
+   sticks with the headers. Its height (--ogx-header-filter-height) is set by the grid from
+   headerFilterHeight. */
+.ogx__header-filter-row {
+  display: flex;
+  align-items: stretch;
+  height: var(--ogx-header-filter-height, 40px);
+  min-height: var(--ogx-header-filter-height, 40px);
+  background: var(--ogx-grid-header-background);
+  border-bottom: 1px solid var(--ogx-grid-border-color);
+}
+.ogx__header-filter-cell {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+  background: var(--ogx-grid-header-background);
+  font-family: var(--ogx-font-family);
+  font-size: var(--ogx-font-size-sm, 0.8125rem);
+  color: var(--ogx-grid-header-text);
+}
+.ogx__header-filter-cell:focus,
+.ogx__header-filter-cell:focus-visible {
+  outline: none;
+}
+.ogx--kb .ogx__header-filter-cell--focused {
+  outline: 2px solid var(--ogx-grid-cell-focus-border, var(--ogx-color-primary, #2563eb));
+  outline-offset: -2px;
+  z-index: 6;
+}
+.ogx__header-filter-cell--pinned {
+  z-index: 12;
+}
+.ogx__header-filter-cell--pinned-left-last {
+  box-shadow: var(--ogx-grid-pinned-left-shadow, 4px 0 12px -4px rgba(0, 0, 0, 0.05));
+}
+.ogx__header-filter-cell--pinned-right-first {
+  margin-left: auto;
+  box-shadow: var(--ogx-grid-pinned-right-shadow, -4px 0 12px -4px rgba(0, 0, 0, 0.05));
+}
+
+/* Operator button: a compact symbol for the current operator; opens the operator menu. */
+.ogx__header-filter-operator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 22px;
+  height: 24px;
+  padding: 0 3px;
+  border: none;
+  border-radius: var(--ogx-border-radius-sm, 4px);
+  background: transparent;
+  color: var(--ogx-color-gray-500);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ogx__header-filter-operator:hover,
+.ogx__header-filter-operator--open {
+  background: var(--ogx-grid-header-hover-background);
+  color: var(--ogx-grid-header-text);
+}
+.ogx__header-filter-cell--active .ogx__header-filter-operator {
+  color: var(--ogx-color-primary);
+}
+
+/* Value controls: the shared Input, and native selects styled to match it. */
+.ogx__header-filter-input-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+}
+.ogx-input.ogx__header-filter-input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 6px;
+  font-size: inherit;
+}
+.ogx__header-filter-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border: var(--ogx-border-width-thin, 1px) solid var(--ogx-border-color);
+  border-radius: var(--ogx-border-radius-md);
+  background: var(--ogx-color-white);
+  color: var(--ogx-color-gray-900);
+  font-family: var(--ogx-font-family);
+  font-size: inherit;
+  outline: none;
+  cursor: pointer;
+}
+.ogx__header-filter-select:hover {
+  border-color: var(--ogx-border-color-hover);
+}
+.ogx__header-filter-select:focus {
+  border-color: var(--ogx-color-primary);
+  box-shadow: 0 0 0 1px var(--ogx-color-primary);
+}
+.ogx__header-filter-cell--active .ogx-input-wrapper,
+.ogx__header-filter-cell--active .ogx__header-filter-select {
+  border-color: var(--ogx-color-primary);
+}
+.ogx__header-filter-operator-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ogx-color-gray-600);
+  font-style: italic;
+}
+
+.ogx__header-filter-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ogx-border-radius-sm, 4px);
+  background: transparent;
+  color: var(--ogx-color-gray-500);
+  cursor: pointer;
+}
+.ogx__header-filter-clear:hover {
+  background: var(--ogx-grid-header-hover-background);
+  color: var(--ogx-grid-header-text);
+}
+
+/* Read-only label for a filter the row cannot show (OR logic, nested groups, other conditions). */
+.ogx__header-filter-custom {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--ogx-color-primary);
+  font: inherit;
+  font-style: italic;
+  text-align: left;
+}
+button.ogx__header-filter-custom {
+  cursor: pointer;
+  text-decoration: underline dotted;
+}

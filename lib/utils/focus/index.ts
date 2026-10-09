@@ -13,12 +13,14 @@ export interface FocusedCell {
     /** Row id of the focused body cell, or `null` when a column header cell is focused. */
     id: GridRowId | null;
     field: string;
+    /** With `id: null`: the cell of the header filter row (`headerFilters`), not the column header. */
+    headerFilter?: boolean;
     /** Index in the renderable rows when focus was set; used to pick a neighbour if the row disappears. */
     rowIndex?: number;
 }
 
 export const isSameCell = (a: FocusedCell | null, b: FocusedCell | null): boolean =>
-    a === b || (a !== null && b !== null && a.id === b.id && a.field === b.field);
+    a === b || (a !== null && b !== null && a.id === b.id && a.field === b.field && !a.headerFilter === !b.headerFilter);
 
 /**
  * Where a keydown came from, from the grid's point of view:
@@ -81,7 +83,9 @@ export function focusedCellFromElement<T>(
     const field = cell?.dataset.field;
     if (!cell || !field) return null;
     if (cell.getAttribute('role') === 'columnheader') {
-        return cell.parentElement?.classList.contains('ogx__header') ? { id: null, field } : null;
+        const headerRow = cell.parentElement;
+        if (headerRow?.classList.contains('ogx__header')) return { id: null, field };
+        return headerRow?.classList.contains('ogx__header-filter-row') ? { id: null, field, headerFilter: true } : null;
     }
     const rowIndex = Number(cell.parentElement?.getAttribute('data-rowindex'));
     const row = Number.isInteger(rowIndex) ? rows[rowIndex] : undefined;
@@ -100,7 +104,9 @@ function childWithField(parent: Element | null, field: string): HTMLElement | nu
 export function findFocusTarget(viewport: HTMLElement, cell: FocusedCell, rowIndex: number): HTMLElement | null {
     if (cell.id === null) {
         // The header sits in the sticky top block together with the top-pinned rows.
-        const header = viewport.querySelector(':scope > .ogx__content > .ogx__sticky-top > .ogx__header-wrap > .ogx__header');
+        const header = viewport.querySelector(
+            `:scope > .ogx__content > .ogx__sticky-top > .ogx__header-wrap > ${cell.headerFilter ? '.ogx__header-filter-row' : '.ogx__header'}`
+        );
         const el = childWithField(header, cell.field);
         if (el && cell.field === CHECKBOX_FIELD) return el.querySelector('input') ?? el;
         return el;

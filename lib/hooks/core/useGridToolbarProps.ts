@@ -51,6 +51,9 @@ export interface UseGridToolbarPropsParams<R extends GridRowModel> {
     aiAssistantOpen?: boolean;
     onAiAssistantToggle?: (trigger: HTMLElement | null) => void;
     aiAssistantLabel?: string;
+    /** `useGridColumnsPanel().toolbarFiltersRequested`. */
+    forceFiltersOpen: boolean;
+    onFiltersPanelClose: () => void;
 }
 
 /** The props the grid passes to `slots.toolbar`, or null when there is no toolbar slot. */
@@ -63,6 +66,7 @@ export function useGridToolbarProps<R extends GridRowModel>(
         onFilterModelChange, columnVisibilityModel, onColumnVisibilityModelChange, disableColumnReorder,
         columnGroupingModel, moveColumn, resetColumnOrder, forceColumnsOpen, onColumnsPanelClose,
         aiAssistantEnabled = false, aiAssistantOpen = false, onAiAssistantToggle, aiAssistantLabel,
+        forceFiltersOpen, onFiltersPanelClose,
     } = params;
 
     return useMemo(() => {
@@ -96,6 +100,8 @@ export function useGridToolbarProps<R extends GridRowModel>(
                 aiAssistantOpen,
                 ...(aiAssistantLabel ? { aiAssistantLabel } : {}),
             } : {}),
+            forceFiltersOpen,
+            onFiltersPanelClose,
             ...toolbarSlotProps,
         };
     }, [
@@ -105,5 +111,6 @@ export function useGridToolbarProps<R extends GridRowModel>(
         filterModel, onFilterModelChange, columnVisibilityModel,
         onColumnVisibilityModelChange, forceColumnsOpen, onColumnsPanelClose, toolbarSlotProps, columnGroupingModel,
         aiAssistantEnabled, aiAssistantOpen, onAiAssistantToggle, aiAssistantLabel,
+        forceFiltersOpen, onFiltersPanelClose,
     ]);
 }

@@ -100,6 +100,11 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
      * Ctrl/Cmd+A selects every data cell instead of every row.
      */
     cellSelection?: GridKeyboardCellSelection;
+    /**
+     * Whether the header filter row (`headerFilters`) is rendered: ArrowDown on a column header
+     * moves to its filter cell, and ArrowDown there into the first row.
+     */
+    headerFilters?: boolean;
 }
 
 export interface GridKeyboardCellSelection {
@@ -134,14 +139,18 @@ function resolveFocus<R extends GridRowModel>(
     cell: FocusedCell | null,
     rows: R[],
     columns: ReadonlyArray<NavigationColumn<R>>,
-    getRowId: (row: R) => GridRowId
+    getRowId: (row: R) => GridRowId,
+    headerFilters: boolean
 ): { cell: FocusedCell | null; rowIndex: number } {
     if (!cell || columns.length === 0) return { cell: null, rowIndex: -1 };
     const fallbackField = (columns.find(c => !isSystemField(c.field)) ?? columns[0]).field;
     const field = columns.some(c => c.field === cell.field) ? cell.field : fallbackField;
 
     if (cell.id === null) {
-        return { cell: field === cell.field ? cell : { id: null, field }, rowIndex: -1 };
+        // A filter cell whose row was turned off falls back to its column header.
+        const headerFilter = Boolean(cell.headerFilter) && headerFilters;
+        if (field === cell.field && headerFilter === Boolean(cell.headerFilter)) return { cell, rowIndex: -1 };
+        return { cell: headerFilter ? { id: null, field, headerFilter } : { id: null, field }, rowIndex: -1 };
     }
     const hint = cell.rowIndex;
     let rowIndex = hint !== undefined && rows[hint] && getRowId(rows[hint]) === cell.id ? hint : rows.findIndex(r => getRowId(r) === cell.id);
@@ -187,14 +196,15 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         rowHeight,
         getSpanOrigin,
         cellSelection,
+        headerFilters = false,
     } = params;
 
     const [storedFocus, setFocusedCell] = useState<FocusedCell | null>(null);
     const [focusWithin, setFocusWithin] = useState(false);
 
     const resolved = useMemo(
-        () => resolveFocus(storedFocus, allRenderableRows, navigationColumns, getRowId),
-        [storedFocus, allRenderableRows, navigationColumns, getRowId]
+        () => resolveFocus(storedFocus, allRenderableRows, navigationColumns, getRowId, headerFilters),
+        [storedFocus, allRenderableRows, navigationColumns, getRowId, headerFilters]
     );
     const focusedCell = resolved.cell;
     const focusedRowIndex = resolved.rowIndex;
@@ -359,10 +369,15 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         const isSpace = key === ' ' || key === 'Spacebar';
         const isEditing = Boolean(editingHandlers.editingCell);
 
+        // Row positions: rows from 0, the column header row at `headerRow`, and the header filter
+        // row (when rendered) at -1, between the header and the rows.
+        const headerRow = headerFilters ? -2 : -1;
         const moveTo = (r: number, c: number) => {
             const col = navigationColumns[c];
-            if (!col || r < -1 || r >= allRenderableRows.length) return;
-            setFocusedCell(r === -1 ? { id: null, field: col.field } : { id: getRowId(allRenderableRows[r]), field: col.field, rowIndex: r });
+            if (!col || r < headerRow || r >= allRenderableRows.length) return;
+            if (r === headerRow) setFocusedCell({ id: null, field: col.field });
+            else if (r < 0) setFocusedCell({ id: null, field: col.field, headerFilter: true });
+            else setFocusedCell({ id: getRowId(allRenderableRows[r]), field: col.field, rowIndex: r });
             scrollCellIntoView(r, col.field);
         };
 
@@ -377,7 +392,8 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         }
 
         const { id, field } = focusedCell;
-        const rowIndex = focusedRowIndex;
+        const onHeaderFilter = id === null && Boolean(focusedCell.headerFilter);
+        const rowIndex = id !== null ? focusedRowIndex : onHeaderFilter ? -1 : headerRow;
         const colIndex = navigationColumns.findIndex(c => c.field === field);
         const systemColumnCount = navigationColumns.filter(c => isSystemField(c.field)).length;
         const isSyntheticRow = (rowId: GridRowId) => isSyntheticRowId(rowId, rowMetaMap);
@@ -455,6 +471,8 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
             return;
         }
 
+        // A filter cell handles Enter, Space and typing itself (HeaderFilterCell).
+        if (onHeaderFilter && (key === 'Enter' || isSpace)) return;
         if (id === null) {
             if (key === 'Enter' || isSpace) {
                 event.preventDefault();
@@ -533,13 +551,13 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
                 case 'ArrowLeft': return c - 1 < 0 ? { r: r - 1, c: lastCol } : { r, c: c - 1 };
                 case 'ArrowDown': return { r: r + 1, c };
                 case 'ArrowUp': return { r: r - 1, c };
-                case 'Home': return { r: withModifier ? -1 : r, c: 0 };
+                case 'Home': return { r: withModifier ? headerRow : r, c: 0 };
                 case 'End': return { r: withModifier ? lastRow : r, c: lastCol };
-                case 'PageUp': return { r: Math.max(-1, r - page), c };
+                case 'PageUp': return { r: Math.max(headerRow, r - page), c };
                 default: return { r: Math.min(lastRow, r + page), c };
             }
         };
-        const inGrid = ({ r, c }: { r: number; c: number }) => r >= -1 && r <= lastRow && c >= 0 && c <= lastCol;
+        const inGrid = ({ r, c }: { r: number; c: number }) => r >= headerRow && r <= lastRow && c >= 0 && c <= lastCol;
         const spanOriginAt = ({ r, c }: { r: number; c: number }) =>
             r >= 0 ? getSpanOrigin?.(getRowId(allRenderableRows[r]), navigationColumns[c].field) ?? null : null;
 
@@ -590,6 +608,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         getSpanOrigin,
         getRowId,
         cellSelection,
+        headerFilters,
     ]);
 
     return {

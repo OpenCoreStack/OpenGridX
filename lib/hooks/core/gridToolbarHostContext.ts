@@ -9,6 +9,11 @@ import { createContext } from 'react';
 export interface GridToolbarHost {
     /** Registers a toolbar that can show the Columns panel. Returns the function that unregisters it. */
     registerColumnsPanel: () => () => void;
+    /**
+     * Registers a toolbar that can show the filter panel when the header filter row asks for it
+     * (through `forceFiltersOpen`). Returns the function that unregisters it.
+     */
+    registerFiltersPanel: () => () => void;
 }
 
 export const GridToolbarHostContext = createContext<GridToolbarHost | null>(null);

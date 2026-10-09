@@ -2,12 +2,14 @@ import React, { useId } from 'react';
 import { Checkbox } from '../ui/Checkbox';
 import { ColumnResizeHandle } from '../ColumnResizeHandle/ColumnResizeHandle';
 import { clampResizeWidth } from '../ColumnResizeHandle/clampResizeWidth';
-import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning, GridAggregationModel, GridColumnGroupingModel } from '../../types';
+import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning, GridAggregationModel, GridColumnGroupingModel, GridFilterModel } from '../../types';
 import { isColumnPinned, calculatePinnedPositions, getPinnedEdgeFields } from '../../utils/pinning';
 import { getRenderedColumnWidth } from '../../utils/columnWidth';
 import { buildColumnGroupRow, getColumnGroupDepth, getColumnGroupPaths } from '../../utils/columnGroups';
 import { ColumnMenu } from './ColumnMenu';
 import { getHeaderLineClamp, shouldWrapHeaderText } from '../../utils/headerWrap';
+import { getHeaderColumnStyle } from './headerColumnStyle';
+import { HeaderFilterRow } from '../HeaderFilter/HeaderFilterRow';
 
 
 function MenuIcon() {
@@ -60,8 +62,11 @@ export interface HeaderProps<R extends GridRowModel = GridRowModel> {
     onDragOver?: (field: string) => (event: React.DragEvent) => void;
     onDragEnd?: () => void;
     onDrop?: (targetField: string) => (event: React.DragEvent) => void;
-    /** The grid's focus position; `id: null` means a header cell is focused. */
-    focusedCell?: { id: string | number | null; field: string } | null;
+    /**
+     * The grid's focus position; `id: null` means a header cell is focused, and `headerFilter: true`
+     * a cell of the header filter row.
+     */
+    focusedCell?: { id: string | number | null; field: string; headerFilter?: boolean } | null;
     onHeaderClick?: (field: string) => void;
     onSortAdd?: (field: string, direction: GridSortDirection) => void;
     multiSort?: boolean;
@@ -74,6 +79,14 @@ export interface HeaderProps<R extends GridRowModel = GridRowModel> {
     wrapHeaderText?: boolean;
     /** Header row height in pixels; sets how many lines a wrapped title may take. Defaults to 56. */
     headerHeight?: number;
+    /** Renders the header filter row under the column headers (`DataGridProps.headerFilters`). */
+    headerFilters?: boolean;
+    /** The filter model the header filter row reads. */
+    filterModel?: GridFilterModel;
+    /** Receives the filter model after a header filter changes. */
+    onFilterModelChange?: (model: GridFilterModel) => void;
+    /** Opens the filter panel; a header filter cell showing "Custom filter" calls it. */
+    onOpenFilterPanel?: () => void;
 }
 
 export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps<R>) {
@@ -112,6 +125,10 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         columnIndexMap,
         wrapHeaderText = false,
         headerHeight = 56,
+        headerFilters = false,
+        filterModel,
+        onFilterModelChange,
+        onOpenFilterPanel,
     } = props;
 
     const selectAllId = useId();
@@ -148,7 +165,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         setMenuOpenParams({ colDef, anchorEl: anchor });
     };
 
-    const isHeaderFocused = (field: string) => focusedCell?.id === null && focusedCell.field === field;
+    const isHeaderFocused = (field: string) => focusedCell?.id === null && !focusedCell.headerFilter && focusedCell.field === field;
 
     // aria-colindex: system columns first (reorder, expand, checkbox), then the data columns.
     const reorderColIndex = rowReordering ? 1 : 0;
@@ -437,29 +454,11 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         colDef.headerClassName
                     ].filter(Boolean).join(' ');
 
-                    const effectiveWidth = columnWidths[colDef.field] ?? colDef.width ?? 100;
-
                     const style: React.CSSProperties = {
-                        width: effectiveWidth,
-                        minWidth: colDef.minWidth,
-                        maxWidth: colDef.maxWidth,
-                        flexGrow: colDef.flex ?? 0,
-                        flexShrink: 0,
-                        flexBasis: colDef.flex ? 'auto' : 'auto',
-                        boxSizing: 'border-box',
-                        position: isPinned ? 'sticky' : 'relative',
+                        ...getHeaderColumnStyle(colDef, columnWidths, pinnedPosition, pinnedPosition ? pinnedPositions[colDef.field] : undefined),
                         zIndex: colDef.zIndex,
                         opacity: isDragging ? 0.5 : 1
                     };
-
-                    if (isPinned && pinnedPosition) {
-                        const offset = pinnedPositions[colDef.field];
-                        if (pinnedPosition === 'left') {
-                            style.left = offset;
-                        } else {
-                            style.right = offset;
-                        }
-                    }
 
                     const headerContent = colDef.renderHeader
                         ? colDef.renderHeader({ field: colDef.field, colDef: colDef as unknown as GridColDef, colIndex })
@@ -565,6 +564,28 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                     />
                 )}
             </div>{/* end .ogx__header */}
+
+            {/* ── Header filter row ── */}
+            {headerFilters && (
+                <HeaderFilterRow
+                    columns={columns as unknown as GridColDef[]}
+                    columnWidths={columnWidths}
+                    pinnedColumns={pinnedColumns}
+                    pinnedPositions={pinnedPositions}
+                    pinnedEdges={pinnedEdges}
+                    rowReordering={rowReordering}
+                    hasDetailPanel={hasDetailPanel}
+                    checkboxSelection={checkboxSelection}
+                    pinExpandColumn={pinExpandColumn}
+                    pinCheckboxColumn={pinCheckboxColumn}
+                    columnIndexMap={columnIndexMap}
+                    ariaRowIndex={groupDepth + 2}
+                    filterModel={filterModel}
+                    onFilterModelChange={onFilterModelChange}
+                    onOpenFilterPanel={onOpenFilterPanel}
+                    focusedField={focusedCell?.id === null && focusedCell.headerFilter ? focusedCell.field : null}
+                />
+            )}
         </div>
     );
 }

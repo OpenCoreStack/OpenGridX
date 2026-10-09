@@ -49,6 +49,10 @@ export interface GridToolbarProps {
     onColumnOrderReset?: () => void;
     forceColumnsOpen?: boolean;
     onColumnsPanelClose?: () => void;
+    /** Opens the filter panel when it turns true (the grid passes it for the header filter row). @since v3.5 */
+    forceFiltersOpen?: boolean;
+    /** Called whenever the filter panel closes. @since v3.5 */
+    onFiltersPanelClose?: () => void;
     children?: React.ReactNode;
     rightContent?: React.ReactNode;
     style?: React.CSSProperties;
@@ -503,6 +507,8 @@ export function GridToolbar({
     onColumnOrderReset,
     forceColumnsOpen,
     onColumnsPanelClose,
+    forceFiltersOpen,
+    onFiltersPanelClose,
     children,
     rightContent,
     style,
@@ -528,6 +534,7 @@ export function GridToolbar({
 
     const switchPanel = (next: ToolbarPanel | null) => {
         if (openPanel === 'columns' && next !== 'columns') onColumnsPanelClose?.();
+        if (openPanel === 'filters' && next !== 'filters') onFiltersPanelClose?.();
         setOpenPanel(next);
     };
     const togglePanel = (panel: ToolbarPanel) => switchPanel(openPanel === panel ? null : panel);
@@ -540,6 +547,12 @@ export function GridToolbar({
         setSeenForceColumnsOpen(forceColumnsOpen);
         if (forceColumnsOpen) setOpenPanel('columns');
     }
+    // forceFiltersOpen turning true opens the filter panel, the same way.
+    const [seenForceFiltersOpen, setSeenForceFiltersOpen] = useState(forceFiltersOpen);
+    if (seenForceFiltersOpen !== forceFiltersOpen) {
+        setSeenForceFiltersOpen(forceFiltersOpen);
+        if (forceFiltersOpen && onFilterModelChange) setOpenPanel('filters');
+    }
 
     // Tell the grid this toolbar shows the Columns panel for the column menu; it can only do so
     // when the grid's forceColumnsOpen reaches it and the Columns panel is enabled.
@@ -549,6 +562,11 @@ export function GridToolbar({
         if (!toolbarHost || !hostsColumnsPanel) return undefined;
         return toolbarHost.registerColumnsPanel();
     }, [toolbarHost, hostsColumnsPanel]);
+    const hostsFiltersPanel = forceFiltersOpen !== undefined && Boolean(onFilterModelChange);
+    useEffect(() => {
+        if (!toolbarHost || !hostsFiltersPanel) return undefined;
+        return toolbarHost.registerFiltersPanel();
+    }, [toolbarHost, hostsFiltersPanel]);
 
     const aggButtonRef = useRef<HTMLButtonElement>(null);
     const aiButtonRef = useRef<HTMLButtonElement>(null);

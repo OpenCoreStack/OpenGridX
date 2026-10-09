@@ -6,8 +6,7 @@ import type {
     GridColDef,
     GridFilterOperator
 } from '../../types';
-import { getOperatorsForType, NO_VALUE_OPERATORS } from '../../utils/filtering';
-import { toLocalDateString } from '../../utils/values';
+import { filterValueToInputText, getOperatorsForType, NO_VALUE_OPERATORS } from '../../utils/filtering';
 import { Input } from '../ui/Input';
 
 
@@ -74,13 +73,7 @@ function matchesOption(option: ValueOption, value: unknown): boolean {
 
 /** Text shown in the value input for a committed value. Never used to emit anything. */
 function toInputText(value: unknown, col: GridColDef): string {
-    if (value == null) return '';
-    if (col.type === 'date' || value instanceof Date) {
-        const day = toLocalDateString(value);
-        return day || (typeof value === 'string' ? value : '');
-    }
-    if (Array.isArray(value)) return value.map(v => String(v)).join(', ');
-    return String(value);
+    return filterValueToInputText(value, col.type);
 }
 
 /** The item value for typed text. isAnyOf takes a comma-separated list. */

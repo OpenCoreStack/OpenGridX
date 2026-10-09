@@ -367,3 +367,17 @@ export function getOperatorsForType(type?: string): GridFilterOperator[] {
       return ['contains', 'equals', 'startsWith', 'endsWith', 'isEmpty', 'isNotEmpty'];
   }
 }
+
+/**
+ * The text an input shows for a committed filter value: dates as `YYYY-MM-DD`, lists joined with
+ * commas. Never used to emit anything (the filter panel and the header filter row).
+ */
+export function filterValueToInputText(value: unknown, colType?: string): string {
+  if (value == null) return '';
+  if (colType === 'date' || value instanceof Date) {
+    const day = toLocalDateString(value);
+    return day || (typeof value === 'string' ? value : '');
+  }
+  if (Array.isArray(value)) return value.map(v => String(v)).join(', ');
+  return String(value);
+}

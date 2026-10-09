@@ -4,6 +4,7 @@
 @import '../components/ui/Input.css';
 @import '../components/DataGrid/DataGrid.css';
 @import '../components/Header/Header.css';
+@import '../components/HeaderFilter/HeaderFilter.css';
 @import '../components/Row/Row.css';
 @import '../components/Cell/Cell.css';
 @import '../components/Cell/GridEditInputCell.css';

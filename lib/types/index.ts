@@ -154,6 +154,18 @@ export interface GridColDef<R extends GridValidRowModel = GridRowModel> {
   sortable?: boolean;
   /** If false, filtering is disabled for this column. */
   filterable?: boolean;
+  /**
+   * Set to `false` to leave this column's cell in the header filter row (`headerFilters`) empty.
+   * Columns with `filterable: false` or `type: 'image'` have no header filter either.
+   * @since v3.5
+   */
+  headerFilter?: boolean;
+  /**
+   * The operator a new header filter (`headerFilters`) for this column starts with. Defaults by type:
+   * `contains` (string), `=` (number), `is` (date, boolean, singleSelect).
+   * @since v3.5
+   */
+  headerFilterOperator?: GridFilterOperator;
   /** If false, the user cannot manually resize this column. */
   resizable?: boolean;
   /** If false, the column cannot be hidden via the UI. */
@@ -920,6 +932,18 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
    * Defaults to `false`.
    */
   wrapHeaderText?: boolean;
+  /**
+   * Adds a filter row under the column headers: one control per column (text, number, date, a Yes / No
+   * select for booleans, the `valueOptions` for singleSelect) with an operator menu and a clear button.
+   * It reads and writes `filterModel`: each cell owns the root-level item with `id: 'header:<field>'`,
+   * so the filter panel, quick filter and `filterMode="server"` keep working. A model the row cannot
+   * show (root `logicOperator: 'or'`, other conditions on the column, nested groups) is shown as
+   * "Custom filter" and left untouched. See `docs/features/header-filters.md`. Defaults to `false`.
+   * @since v3.5
+   */
+  headerFilters?: boolean;
+  /** Height of the header filter row (`headerFilters`) in pixels. Defaults to 40. @since v3.5 */
+  headerFilterHeight?: number;
   /** If true, the grid height will adjust to match the total height of its rows. */
   autoHeight?: boolean;
   /**

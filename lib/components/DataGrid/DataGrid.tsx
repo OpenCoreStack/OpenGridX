@@ -67,6 +67,7 @@ import { useGridAriaRows } from '../../hooks/core/useGridAriaRows';
 import { useGridToolbarProps } from '../../hooks/core/useGridToolbarProps';
 import { useGridAiAssistant } from '../../hooks/features/useGridAiAssistant';
 import { GridAiAssistantArea } from '../AiAssistant/GridAiAssistantArea';
+import { DEFAULT_HEADER_FILTER_HEIGHT } from '../../utils/headerFilters';
 import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridColDef } from '../../types';
 
 /**
@@ -85,6 +86,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowHeight: rowHeightProp,
         headerHeight: headerHeightProp,
         wrapHeaderText = false,
+        headerFilters = false,
+        headerFilterHeight = DEFAULT_HEADER_FILTER_HEIGHT,
         autoHeight = false,
         density,
         checkboxSelection = false,
@@ -234,6 +237,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         hierarchyRequested: treeData || rowGroupingModel.length > 0,
     });
     const isPivotActive = pivot.isActive;
+    // The header filter row filters the source columns; pivot columns are generated, so it is off then.
+    const showHeaderFilters = headerFilters && !isPivotActive;
     const {
         rowReordering, hierarchyRowGroupingModel, isTreeDataRequested, isTreeData,
         isRowGrouping, isHierarchyEnabled, hasGroupingColumn, pagination, listView,
@@ -612,6 +617,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         pinExpandColumn,
         rowHeight: effectiveRowHeight,
         cellSelection: cellSelection.keyboard,
+        headerFilters: showHeaderFilters,
     });
 
     const { handleCellClick, handleHeaderClick } = useGridPointerFocusHandlers<R>({
@@ -675,6 +681,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const ariaRows = useGridAriaRows({
         columnGroupingModel,
+        headerFilterRow: showHeaderFilters,
         pinnedTopCount: pinnedTopRows.length,
         pinnedBottomCount: pinnedBottomRows.length,
         pagination,
@@ -772,6 +779,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         aiAssistantOpen: aiAssistantPanel.open,
         onAiAssistantToggle: aiAssistantPanel.togglePanel,
         aiAssistantLabel: localeText?.aiAssistantButton,
+        forceFiltersOpen: columnsPanel.toolbarFiltersRequested,
+        onFiltersPanelClose: columnsPanel.closeToolbarFiltersPanel,
     });
 
     // Props the row renderers (top-pinned, centre and bottom-pinned rows) all take.
@@ -803,7 +812,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 ...style,
                 height: height ?? style?.height,
                 '--ogx-row-height': `${effectiveRowHeight}px`,
-                '--ogx-header-height': `${headerHeight}px`
+                '--ogx-header-height': `${headerHeight}px`,
+                ...(showHeaderFilters ? { '--ogx-header-filter-height': `${headerFilterHeight}px` } : undefined),
             } as unknown as React.CSSProperties}
             aria-busy={effectiveLoading}
         >
@@ -949,6 +959,10 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                 onPinColumn={handlePinColumn}
                                 wrapHeaderText={wrapHeaderText}
                                 headerHeight={headerHeight}
+                                headerFilters={showHeaderFilters}
+                                filterModel={filterModel}
+                                onFilterModelChange={handleFilterModelChange}
+                                onOpenFilterPanel={columnsPanel.openFiltersPanel}
                             />
 
                             <GridPinnedRows<R>
