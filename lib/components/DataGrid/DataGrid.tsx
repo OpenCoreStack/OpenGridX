@@ -30,6 +30,7 @@ import { useGridEditing } from '../../hooks/features/useGridEditing';
 import { useGridBatchEdit } from '../../hooks/features/useGridBatchEdit';
 import { useGridClipboardPaste } from '../../hooks/core/useGridClipboardPaste';
 import { useGridUndoRedo, useGridEditCommitChannel, UNDO_HISTORY_LIMIT } from '../../hooks/core/useGridUndoRedo';
+import { useGridFillHandle } from '../../hooks/core/useGridFillHandle';
 import { useGridSpanning } from '../../hooks/features/useGridSpanning';
 import { useGridSpanRowWindow, useGridSpanColumnWindow } from '../../hooks/features/useGridSpanRenderWindow';
 import { useColumnGroupReorderGuard } from '../../hooks/features/useColumnGroupReorderGuard';
@@ -103,6 +104,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onClipboardPaste,
         onBeforeClipboardPaste,
         undoRedo = false,
+        disableFillHandle = false,
+        onFill,
         onHistoryChange,
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange: propOnRowSelectionModelChange,
@@ -672,6 +675,23 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         pinnedTopRowCount: pinnedTopRows.length,
     });
 
+    // Fill handle (cellSelection): drag the range's corner, Ctrl/Cmd+D and Ctrl/Cmd+R.
+    const fillHandle = useGridFillHandle<R>({
+        containerRef, viewportRef,
+        selection: cellSelection,
+        disableFillHandle,
+        isEditing: editingHandlers.editingCell !== null,
+        allRenderableRows,
+        getRowId: getRowIdOf,
+        navigationColumns: navigationColumns as unknown as GridColDef<R>[],
+        columnIndexMap,
+        isCellEditable,
+        rowMetaMap,
+        getSpanOrigin: spanning.getSpanOrigin,
+        batchEdit,
+        onFill,
+    });
+
     const { handleHideColumn, handlePinColumn } = useGridColumnMenuHandlers({
         columnVisibilityModel,
         onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
@@ -802,6 +822,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowMetaMap,
         cellRange: cellSelection.displayRange,
         cellRangeHasRowSpan: cellSelection.hasRowSpan,
+        fillHandle: fillHandle.handle,
     };
 
     return (

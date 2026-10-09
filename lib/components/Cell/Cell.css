@@ -52,6 +52,34 @@
 .ogx__cell--range-right {
   --ogx-range-edge-right: inset -2px 0 0 0 var(--ogx-range-border);
 }
+/*
+ * Fill handle (v3.5): the square on the bottom-right cell of the range. The cell clips its overflow,
+ * so the 24px hit area lies inside the corner and the visible square sits in its corner.
+ * touch-action: none lets a touch drag on it fill instead of scrolling.
+ */
+.ogx__cell-fill-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  max-width: 100%;
+  max-height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+  z-index: 1;
+}
+.ogx__cell-fill-handle::after {
+  content: '';
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 7px;
+  height: 7px;
+  box-sizing: border-box;
+  background-color: var(--ogx-fill-handle-color, var(--ogx-range-border));
+  border: 1px solid var(--ogx-grid-background, #fff);
+}
 /* While a pointer drag selects cells, the browser must not select text as well. */
 .ogx--range-dragging,
 .ogx--range-dragging * {

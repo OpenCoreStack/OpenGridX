@@ -11,6 +11,7 @@ const primaryDerived: Record<string, string> = {
     '--ogx-grid-cell-focus-border': 'var(--ogx-color-primary)',
     '--ogx-range-background': 'color-mix(in srgb, var(--ogx-color-primary) 12%, transparent)',
     '--ogx-range-border': 'var(--ogx-color-primary)',
+    '--ogx-fill-handle-color': 'var(--ogx-range-border)',
     '--ogx-toolbar-btn-primary-bg': 'var(--ogx-color-primary)',
     '--ogx-toolbar-btn-primary-hover': 'var(--ogx-color-primary-dark)',
     '--ogx-toolbar-input-focus-border': 'var(--ogx-color-primary)',
@@ -285,6 +286,7 @@ function themeToCSS(theme: GridTheme): Record<string, string> {
         set('--ogx-grid-cell-focus-border', g.cellFocusBorder);
         set('--ogx-range-background', g.rangeBackground);
         set('--ogx-range-border', g.rangeBorder);
+        set('--ogx-fill-handle-color', g.fillHandleColor);
         set('--ogx-grid-pinned-left-shadow', g.pinnedLeftShadow);
         set('--ogx-grid-pinned-right-shadow', g.pinnedRightShadow);
         set('--ogx-checkbox-bg', g.checkboxBg);

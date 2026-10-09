@@ -20,6 +20,7 @@ import type { GridEditingState } from '../../hooks/features/useGridEditing';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
 import type { GridDisplayCellRange } from '../../hooks/core/useGridCellSelection';
 import { getRowCellRange } from '../../utils/cellSelection';
+import type { GridFillHandlePosition } from '../../utils/cellSelection';
 
 interface RowEditingHandlers {
     editingCell: GridEditingState['editingCell'];
@@ -77,6 +78,8 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     cellRange?: GridDisplayCellRange | null;
     /** The grid has row spans: rows tell their cells how far the range bottom is. */
     cellRangeHasRowSpan?: boolean;
+    /** Where the fill handle is drawn (v3.5), or null. */
+    fillHandle?: GridFillHandlePosition | null;
 }
 
 export function GridVirtualRows<R extends GridRowModel>({
@@ -123,6 +126,7 @@ export function GridVirtualRows<R extends GridRowModel>({
     columnIndexMap,
     cellRange,
     cellRangeHasRowSpan = false,
+    fillHandle,
 }: GridVirtualRowsProps<R>) {
     const skeletonColumns: GridColDef<R>[] = baseColumns.length > 0
         ? baseColumns
@@ -214,7 +218,7 @@ export function GridVirtualRows<R extends GridRowModel>({
                             rowSpanningCaches={rowSpanningCaches}
                             rowHeight={rowHeight}
                             rowMeta={rowMetaMap.get(id)}
-                            cellRange={getRowCellRange(cellRange, actualIndex, cellRangeHasRowSpan)}
+                            cellRange={getRowCellRange(cellRange, actualIndex, cellRangeHasRowSpan, fillHandle)}
                         />
                     ))
                 )}

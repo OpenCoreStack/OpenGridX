@@ -7,7 +7,7 @@ import { GridEditInputCell } from './GridEditInputCell';
 import { CellErrorBoundary } from './CellErrorBoundary';
 import { formatValueByType } from '../../utils/values';
 import { attempt } from '../../utils/attempt';
-import { RANGE_BOTTOM, RANGE_CELL, RANGE_LEFT, RANGE_RIGHT, RANGE_TOP } from '../../utils/cellSelection';
+import { RANGE_BOTTOM, RANGE_CELL, RANGE_FILL_HANDLE, RANGE_LEFT, RANGE_RIGHT, RANGE_TOP } from '../../utils/cellSelection';
 
 export interface CellProps<R extends GridRowModel = GridRowModel> {
     onCellClick?: (params: GridCellParams<R>) => void;
@@ -50,7 +50,8 @@ export interface CellProps<R extends GridRowModel = GridRowModel> {
     valueError?: unknown;
     /**
      * Place of the cell in the selected cell range (`cellSelection`), as bit flags: in range 1, top
-     * edge 2, bottom 4, left 8, right 16. 0 or absent: not in a range. @since v3.3
+     * edge 2, bottom 4, left 8, right 16; 32 draws the fill handle (v3.5). 0 or absent: not in a range.
+     * @since v3.3
      */
     rangeFlags?: number;
 }
@@ -341,6 +342,9 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                     formattedValue
                 )}
             </div>
+            {(rangeFlags & RANGE_FILL_HANDLE) !== 0 && !isEditing && (
+                <div className="ogx__cell-fill-handle" aria-hidden="true" />
+            )}
         </div>
     );
 }

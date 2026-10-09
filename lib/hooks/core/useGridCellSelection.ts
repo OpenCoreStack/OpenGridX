@@ -121,6 +121,8 @@ export interface UseGridCellSelectionReturn {
      * address the renderable rows and the range columns of `navigationColumns` (`isRangeColumnField`).
      */
     getCurrentRange: () => { range: GridCellSelectionModel[number] | null; resolved: ResolvedCellRange | null };
+    /** Starts a tracked pointer drag with the range drag's auto-scroll (fill handle). Stable. @since v3.5 */
+    startTrackedDrag: (options: GridTrackedDragOptions) => void;
 }
 
 interface DragState {
@@ -130,7 +132,24 @@ interface DragState {
     y: number;
     frame: number;
     moved: boolean;
-    stop: () => void;
+    /** Ends the drag; `cancelled` unless the button was released normally. */
+    stop: (cancelled?: boolean, altKey?: boolean) => void;
+    /** A tracked drag (fill handle): told the cell under the pointer each frame instead of moving the range. */
+    onTrack?: (head: GridCellCoordinates, x: number, y: number) => void;
+}
+
+/** A drag that reuses the range drag's hit testing and auto-scroll without selecting (the fill handle, v3.5). */
+export interface GridTrackedDragOptions {
+    /** The cell the drag starts on. */
+    start: GridCellCoordinates;
+    x: number;
+    y: number;
+    /** Pointer events of this pointer are followed (touch included), not mouse events. */
+    pointerId: number;
+    /** Each frame: the cell under the pointer (or nearest it) and the pointer position. */
+    onTrack: (head: GridCellCoordinates, x: number, y: number) => void;
+    /** Once: released (`cancelled: false`, with the Alt key state) or cancelled. */
+    onEnd: (details: { cancelled: boolean; altKey: boolean }) => void;
 }
 
 /** The body cell of `viewport` holding `target`: its row index and field. Not cells of nested grids or detail panels. */
@@ -451,8 +470,10 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
                 latestRef.current.containerRef.current?.classList.add(RANGE_DRAGGING_CLASS);
                 clearTextSelection(viewport.ownerDocument);
             }
-            setRange(drag.anchor, head, 'pointer');
+            if (!drag.onTrack) setRange(drag.anchor, head, 'pointer');
         }
+        // A tracked drag hears every frame: its target can change while the head stays in one cell.
+        if (drag.onTrack) drag.onTrack(drag.head, drag.x, drag.y);
 
         if (!allowScroll) return;
         const outside = drag.y < bodyTop || drag.y > bodyBottom || drag.x < box.left || drag.x > box.left + width;
@@ -475,11 +496,22 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         runDragFrameRef.current = runDragFrame;
     }, [runDragFrame]);
 
-    const startDrag = useCallback((anchor: GridCellCoordinates, head: GridCellCoordinates, x: number, y: number, doc: Document) => {
+    const startDrag = useCallback((
+        anchor: GridCellCoordinates,
+        head: GridCellCoordinates,
+        x: number,
+        y: number,
+        doc: Document,
+        tracked?: Pick<GridTrackedDragOptions, 'pointerId' | 'onTrack' | 'onEnd'>,
+    ) => {
         dragRef.current?.stop();
+        // A range drag follows the mouse; a tracked drag (fill handle) follows its pointer, touch included.
+        const moveType = tracked ? 'pointermove' : 'mousemove';
+        const upType = tracked ? 'pointerup' : 'mouseup';
+        const isOwnEvent = (event: MouseEvent) => !tracked || (event as PointerEvent).pointerId === tracked.pointerId;
         const onMove = (event: MouseEvent) => {
             const drag = dragRef.current;
-            if (!drag) return;
+            if (!drag || !isOwnEvent(event)) return;
             if (event.buttons === 0) {
                 // Released outside the window.
                 drag.stop();
@@ -497,12 +529,12 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         };
         const onUp = (event: MouseEvent) => {
             const drag = dragRef.current;
-            if (!drag) return;
+            if (!drag || !isOwnEvent(event)) return;
             drag.x = event.clientX;
             drag.y = event.clientY;
             runDragFrame(false);
             const moved = drag.moved;
-            drag.stop();
+            drag.stop(false, event.altKey);
             if (moved) clearTextSelection(doc);
             if (moved) {
                 // The click that follows lands on the common ancestor of both cells (often the row):
@@ -511,25 +543,43 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
                 setTimeout(() => { suppressClickRef.current = false; }, 0);
             }
         };
+        const onCancel = (event: Event) => {
+            if (isOwnEvent(event as MouseEvent)) dragRef.current?.stop();
+        };
         const view = doc.defaultView;
         const onBlur = () => dragRef.current?.stop();
+        let ended = false;
         const drag: DragState = {
             anchor, head, x, y, frame: 0, moved: false,
-            stop: () => {
+            onTrack: tracked?.onTrack,
+            stop: (cancelled = true, altKey = false) => {
                 if (drag.frame) cancelAnimationFrame(drag.frame);
                 drag.frame = 0;
-                doc.removeEventListener('mousemove', onMove, true);
-                doc.removeEventListener('mouseup', onUp, true);
+                doc.removeEventListener(moveType, onMove, true);
+                doc.removeEventListener(upType, onUp, true);
+                if (tracked) doc.removeEventListener('pointercancel', onCancel, true);
                 view?.removeEventListener('blur', onBlur);
                 latestRef.current.containerRef.current?.classList.remove(RANGE_DRAGGING_CLASS);
                 if (dragRef.current === drag) dragRef.current = null;
+                if (!ended) {
+                    ended = true;
+                    if (tracked) tracked.onEnd({ cancelled, altKey });
+                }
             },
         };
         dragRef.current = drag;
-        doc.addEventListener('mousemove', onMove, true);
-        doc.addEventListener('mouseup', onUp, true);
+        doc.addEventListener(moveType, onMove, true);
+        doc.addEventListener(upType, onUp, true);
+        if (tracked) doc.addEventListener('pointercancel', onCancel, true);
         view?.addEventListener('blur', onBlur);
     }, [runDragFrame]);
+
+    const startTrackedDrag = useCallback((options: GridTrackedDragOptions) => {
+        const viewport = latestRef.current.viewportRef.current;
+        if (!viewport || !latestRef.current.enabled) return;
+        const { start, x, y, pointerId, onTrack, onEnd } = options;
+        startDrag(start, start, x, y, viewport.ownerDocument, { pointerId, onTrack, onEnd });
+    }, [startDrag]);
 
     const handleMouseDown = useCallback((event: React.MouseEvent<HTMLElement>) => {
         if (event.button !== 0 || event.defaultPrevented) return;
@@ -538,6 +588,8 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         const viewport = event.currentTarget;
         const hit = cellFromTarget(event.target, viewport);
         if (!hit || !isRangeColumnField(hit.field)) return;
+        // The fill handle starts its own drag (useGridFillHandle).
+        if ((event.target as Element).closest?.('.ogx__cell-fill-handle')) return;
         // Typing targets and open editors keep the pointer to themselves.
         if (hit.element.classList.contains('ogx__cell--editing') || isTextEntryElement(event.target as Element)) return;
         const id = ctx.rowIds[hit.rowIndex];
@@ -626,6 +678,7 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         reportFocus,
         setModel,
         getCurrentRange: currentRange,
+        startTrackedDrag,
     };
 }
 

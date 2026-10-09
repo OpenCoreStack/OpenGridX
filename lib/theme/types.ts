@@ -163,6 +163,8 @@ export interface GridThemeGrid {
     rangeBackground?: string;
     /** Outline of a selected cell range (`--ogx-range-border`). Default: the primary colour. @since v3.3 */
     rangeBorder?: string;
+    /** The fill handle on the range's corner (`--ogx-fill-handle-color`). Default: the range border colour. @since v3.5 */
+    fillHandleColor?: string;
     pinnedLeftShadow?: string;
   pinnedRightShadow?: string;
     checkboxBg?: string;

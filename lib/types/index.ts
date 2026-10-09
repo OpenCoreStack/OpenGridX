@@ -208,6 +208,13 @@ export interface GridColDef<R extends GridValidRowModel = GridRowModel> {
    * @since v3.1
    */
   sortComparator?(v1: unknown, v2: unknown, params1: GridSortCellParams<R>, params2: GridSortCellParams<R>): number;
+  /**
+   * Decides the value the fill handle (or Ctrl/Cmd+D, Ctrl/Cmd+R) writes into a cell of this column.
+   * `params.value` is what the grid would write (a continued series, the repeated pattern or a copy);
+   * return it to keep that, or any other value. A throw skips the cell with reason `'invalidValue'`.
+   * The value then goes through `valueSetter` and `processRowUpdate` like an edit. @since v3.5
+   */
+  fillValue?(params: GridFillValueParams<R>): unknown;
   /** Function to format a value into a human-readable string. */
   valueFormatter?(params: GridValueFormatterParams<R>): string;
   /** Custom component or element to render in the cell. */
@@ -328,6 +335,32 @@ export interface GridValueGetterParams<R extends GridValidRowModel = GridRowMode
   field: string;
   /** The raw value from the row object. */
   value: unknown;
+}
+
+/** The way a fill extends the cell range. @since v3.5 */
+export type GridFillDirection = 'down' | 'up' | 'right' | 'left';
+
+/** Parameters passed to `GridColDef.fillValue`. @since v3.5 */
+export interface GridFillValueParams<R extends GridValidRowModel = GridRowModel> {
+  /** The row of the cell being filled, as stored now. */
+  row: R;
+  id: GridRowId;
+  field: string;
+  colDef: GridColDef<R>;
+  direction: GridFillDirection;
+  /** The source cells' values in fill order: the value next to the first filled cell is last. */
+  sourceValues: unknown[];
+  /** Position of this cell among the filled cells of its line, from 0 (next to the source). */
+  index: number;
+  /** What the grid would write: the continued series, the repeated pattern or a copy. */
+  value: unknown;
+  /** Whether a copy was asked for (Alt held at release, or the keyboard shortcuts), so no series. */
+  copy: boolean;
+}
+
+/** `onFill` details: the batch edit result plus the direction of the fill. @since v3.5 */
+export interface GridFillResult extends GridBatchEditResult {
+  direction: GridFillDirection;
 }
 
 /** Parameters passed to `GridColDef.valueParser`. @since v3.4 */
@@ -1071,6 +1104,16 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
   undoRedo?: boolean | GridUndoRedoOptions;
   /** Fired when what can be undone or redone changes (`undoRedo`). @since v3.4 */
   onHistoryChange?: (params: GridHistoryChangeParams) => void;
+  /**
+   * With `cellSelection` on, a fill handle sits on the bottom-right corner of the range: dragging it
+   * down, up, right or left fills the new cells from the range (a series of numbers or dates with an
+   * equal step continues, anything else repeats; Alt at release copies), and Ctrl/Cmd+D / Ctrl/Cmd+R
+   * fill down from the range's top row / right from its left column. `true` hides the handle and turns
+   * the shortcuts off. Default: false. @since v3.5
+   */
+  disableFillHandle?: boolean;
+  /** Fired after every fill with the result and its direction. @since v3.5 */
+  onFill?: (result: GridFillResult) => void;
 
   /** Loading state. With no rows the body shows skeleton rows (or `slots.loadingOverlay`); with rows, they stay and a progress bar (or `slots.loadingOverlay`) is shown over them. */
   loading?: boolean;

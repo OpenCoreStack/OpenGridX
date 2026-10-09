@@ -11,8 +11,8 @@ import {
 } from '../../utils/editing/commit';
 import type { GridCellChange } from '../../utils/editing/commit';
 
-/** What made a commit: history records `edit`, `paste` and `clear`; `undo` / `redo` replay it. */
-export type GridEditSource = 'edit' | 'paste' | 'clear' | 'undo' | 'redo';
+/** What made a commit: history records `edit`, `paste`, `clear` and `fill`; `undo` / `redo` replay it. */
+export type GridEditSource = 'edit' | 'paste' | 'clear' | 'fill' | 'undo' | 'redo';
 
 /** One cell to write in a batch edit. */
 export interface GridBatchCellEdit {

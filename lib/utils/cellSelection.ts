@@ -184,26 +184,43 @@ export interface GridRowCellRange {
     isBottom: boolean;
     /** Rows from this one to the bottom of the range; only set (else 0) when the grid has row spans. */
     bottomOffset: number;
+    /** Data column index (`columnIndexMap`) of the cell carrying the fill handle; only set on its row. @since v3.5 */
+    fillHandleCol?: number;
+}
+
+/** Where the fill handle is drawn: a renderable row index and a data column index (`columnIndexMap`). */
+export interface GridFillHandlePosition {
+    row: number;
+    col: number;
 }
 
 export function getRowCellRange(
     range: { top: number; bottom: number; left: number; right: number } | null | undefined,
     rowIndex: number,
     hasRowSpan: boolean,
+    fillHandle?: GridFillHandlePosition | null,
 ): GridRowCellRange | null {
-    if (!range || rowIndex < range.top || rowIndex > range.bottom) return null;
-    return {
+    const handleCol = fillHandle && fillHandle.row === rowIndex ? fillHandle.col : undefined;
+    if (!range || rowIndex < range.top || rowIndex > range.bottom) {
+        // A single selected cell draws no range, only the handle: an empty column interval.
+        return handleCol === undefined
+            ? null
+            : { left: 0, right: -1, isTop: false, isBottom: false, bottomOffset: 0, fillHandleCol: handleCol };
+    }
+    const rowRange: GridRowCellRange = {
         left: range.left,
         right: range.right,
         isTop: rowIndex === range.top,
         isBottom: rowIndex === range.bottom,
         bottomOffset: hasRowSpan ? range.bottom - rowIndex : 0,
     };
+    if (handleCol !== undefined) rowRange.fillHandleCol = handleCol;
+    return rowRange;
 }
 
 export const isSameRowCellRange = (a: GridRowCellRange | null | undefined, b: GridRowCellRange | null | undefined): boolean =>
     a === b || (!!a && !!b && a.left === b.left && a.right === b.right && a.isTop === b.isTop && a.isBottom === b.isBottom
-        && a.bottomOffset === b.bottomOffset);
+        && a.bottomOffset === b.bottomOffset && a.fillHandleCol === b.fillHandleCol);
 
 /** Bit flags a cell receives for its place in the range (a number keeps memoised cells stable). */
 export const RANGE_CELL = 1;
@@ -211,6 +228,8 @@ export const RANGE_TOP = 2;
 export const RANGE_BOTTOM = 4;
 export const RANGE_LEFT = 8;
 export const RANGE_RIGHT = 16;
+/** The cell carries the fill handle (v3.5). */
+export const RANGE_FILL_HANDLE = 32;
 
 /**
  * The flags of the cell at data column `colIndex` (spanning `colSpan` columns and `rowSpan` rows from
@@ -218,9 +237,10 @@ export const RANGE_RIGHT = 16;
  */
 export function getCellRangeFlags(rowRange: GridRowCellRange | null | undefined, colIndex: number, colSpan: number, rowSpan: number): number {
     if (!rowRange) return 0;
+    const handle = rowRange.fillHandleCol === colIndex ? RANGE_FILL_HANDLE : 0;
     const lastCol = colIndex + Math.max(1, colSpan) - 1;
-    if (colIndex < rowRange.left || lastCol > rowRange.right) return 0;
-    let flags = RANGE_CELL;
+    if (colIndex < rowRange.left || lastCol > rowRange.right) return handle;
+    let flags = RANGE_CELL | handle;
     if (rowRange.isTop) flags |= RANGE_TOP;
     if (rowRange.isBottom || (rowSpan > 1 && rowSpan - 1 >= rowRange.bottomOffset)) flags |= RANGE_BOTTOM;
     if (colIndex === rowRange.left) flags |= RANGE_LEFT;
