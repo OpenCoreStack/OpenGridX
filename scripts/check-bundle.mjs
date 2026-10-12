@@ -31,6 +31,8 @@ for (const file of BUNDLES) {
     for (const marker of REACT_INTERNALS) {
         if (code.includes(marker)) fail(`${file}: contains React internals ("${marker}"); react/react-dom must stay external`);
     }
+    // The ES bundle is what Next.js and other RSC bundlers load; the minifier drops the directive from the UMD build.
+    if (file.endsWith('.es.js') && !/^["']use client["'];/.test(code)) fail(`${file}: must start with the 'use client' directive (React Server Components)`);
     if (!code.includes('react/jsx-runtime')) fail(`${file}: does not import react/jsx-runtime from the consumer`);
     if (code.includes(AI_MARKER)) fail(`${file}: contains the ai entry point's code; it must only ship in dist/ai.*`);
 }

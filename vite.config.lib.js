@@ -86,6 +86,9 @@ const coreConfig = defineConfig({
             // with: React 19's runtime creates elements React 18 refuses to render.
             external: [/^react($|\/)/, /^react-dom($|\/)/, 'exceljs', 'jspdf', 'jspdf-autotable'],
             output: {
+                // React Server Components (Next.js App Router): the bundle uses hooks and context, so
+                // a Server Component that imports it must get a client reference, not run it.
+                banner: "'use client';",
                 globals: {
                     react: 'React',
                     'react-dom': 'ReactDOM',
