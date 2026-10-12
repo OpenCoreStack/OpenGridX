@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
     DataGrid,
     DataGridThemeProvider,
@@ -234,7 +235,8 @@ export default function ThemingDemo() {
                 <p className="theming-description">
                     Click a theme preset below. Each one sets <code>--ogx-*</code> CSS
                     variables via <code>&lt;DataGridThemeProvider&gt;</code> — no CSS
-                    files, no CSS-in-JS, just inline custom properties.
+                    files, no CSS-in-JS, just inline custom properties. To build your own theme with
+                    controls and copy the code, open the <Link to="/theme-builder">Theme Builder</Link>.
                 </p>
 
                 <div className="theming-controls">

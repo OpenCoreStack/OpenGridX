@@ -34,6 +34,7 @@ const ServerSideTreeDemo = lazy(() =>
 );
 const ServerSideAggregationDemo = lazy(() => import('./examples/ServerSideAggregationDemo/ServerSideAggregationDemo'));
 const ThemingDemo = lazy(() => import('./examples/ThemingDemo/ThemingDemo'));
+const ThemeBuilderDemo = lazy(() => import('./examples/ThemeBuilderDemo/ThemeBuilderDemo'));
 const StatePersistenceDemo = lazy(() => import('./examples/StatePersistenceDemo/StatePersistenceDemo'));
 const PivotModeDemo = lazy(() => import('./examples/PivotModeDemo/PivotModeDemo'));
 const ListViewDemo = lazy(() => import('./examples/ListViewDemo/ListViewDemo'));
@@ -114,6 +115,8 @@ const examplesConfig = [
     // Customization
     { path: '/locale-text', name: 'Locale Text (i18n)', component: LocaleTextDemo, category: 'Customization' },
     { path: '/theming', name: 'Theming', component: ThemingDemo, category: 'Customization' },
+    // fullWidth: no table of contents column, so the controls and the preview fit side by side.
+    { path: '/theme-builder', name: 'Theme Builder', component: ThemeBuilderDemo, category: 'Customization', fullWidth: true },
     { path: '/list-view', name: 'List View', component: ListViewDemo, category: 'Customization' },
     { path: '/slots', name: 'Slots & Renderers', component: SlotsDemo, category: 'Customization' },
 
@@ -138,14 +141,15 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
     // Check if current route is in 'Resources' category
     const currentConfig = examplesConfig.find(item => item.path === location.pathname);
     const isResourcePage = currentConfig?.category === 'Resources';
+    const isFullWidth = isResourcePage || currentConfig?.fullWidth === true;
 
     // Automatically extract TOC from current page, except for Resources
     return (
         <div className="app-page-wrapper" key={location.pathname}>
-            <div className={`app-content-column ${isResourcePage ? 'app-content-column--full-width' : ''}`}>
+            <div className={`app-content-column ${isFullWidth ? 'app-content-column--full-width' : ''}`}>
                 {children}
             </div>
-            {!isResourcePage && <Toc />}
+            {!isFullWidth && <Toc />}
         </div>
     );
 }

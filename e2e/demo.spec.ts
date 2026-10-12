@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 const appSource = readFileSync(fileURLToPath(new URL('../demo/App.tsx', import.meta.url)), 'utf8');
 const routes = [...appSource.matchAll(/\{\s*path:\s*'(\/[^']*)'/g)].map((m) => m[1]);
 
-// Pages that also run in Firefox and WebKit: interaction-heavy, large data, RTL and theming.
-const HEAVY = new Set(['/cell-selection', '/ai-assistant', '/full-test', '/rtl', '/theming', '/pivot', '/infinite']);
+// Pages that also run in Firefox and WebKit: interaction-heavy, large data, RTL, theming and the theme builder.
+const HEAVY = new Set(['/cell-selection', '/ai-assistant', '/full-test', '/rtl', '/theming', '/theme-builder', '/pivot', '/infinite']);
 
 // Console messages a page may log on purpose. Each entry needs a comment saying why.
 const ALLOWED_CONSOLE: { route: string | null; pattern: RegExp }[] = [];
