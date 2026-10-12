@@ -48,6 +48,7 @@ In-depth guides on the grid's functional capabilities.
 - **[Cell Spanning](features/cell-spanning.md)** - Row and Col span spanning
 - **[Master-Detail](features/master-detail.md)** - Expandable Detail Panels
 - **[Keyboard & Accessibility](features/keyboard-navigation.md)** - Keys, focus behaviour and ARIA structure
+- **[Right-to-Left (RTL)](features/rtl.md)** - What works in `dir="rtl"`, what was fixed, and the known limitations (pinned columns)
 - **[List View](features/list-view.md)** - Card-based responsive layout
 - **[Infinite Scroll](features/infinite-scroll.md)** - Advanced performance loading
 - **[Data Source](features/data-source.md)** - Server-side fetching and SSR

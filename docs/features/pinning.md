@@ -35,6 +35,8 @@ Pinned column headers are not draggable and are not drop targets for header drag
 
 ---
 
+> **Right-to-left:** pinned columns do not work in `dir="rtl"` grids yet (they scroll away instead of sticking). See [Right-to-Left](rtl.md#known-limitations).
+
 ## ⬆️ Row Pinning
 
 Rows can be pinned to the top or bottom of the grid. Pinned rows remain visible while the user scrolls vertically through the grid body.

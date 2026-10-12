@@ -38,6 +38,8 @@ node_modules/@opencorestack/opengridx/docs/features/aggregation-pivot.md
 node_modules/@opencorestack/opengridx/docs/features/editing-reordering.md
 node_modules/@opencorestack/opengridx/docs/features/master-detail.md
 node_modules/@opencorestack/opengridx/docs/features/pinning.md
+node_modules/@opencorestack/opengridx/docs/features/nextjs.md
+node_modules/@opencorestack/opengridx/docs/features/rtl.md
 node_modules/@opencorestack/opengridx/docs/features/toolbar-customization.md
 node_modules/@opencorestack/opengridx/docs/features/virtualization.md
 node_modules/@opencorestack/opengridx/docs/features/infinite-scroll.md
@@ -424,6 +426,11 @@ const hasChildren = params.rowMeta?.hasChildren;
   added to the selector as an extra entry, which usually is not what you want. The default options are
   `[10, 25, 50, 100]`.
 - **Import the stylesheet** — `import '@opencorestack/opengridx/styles'` once in the app root.
+- **Next.js App Router: column functions stay in the client file** — render the grid from a `'use client'`
+  component and pass server-fetched rows as props; `valueFormatter` / `renderCell` cannot be passed from a
+  Server Component. Install or alias `exceljs` / `jspdf` / `jspdf-autotable` or `next build` fails. See `docs/features/nextjs.md`.
+- **Don't pin columns in right-to-left grids** — `dir="rtl"` works for unpinned grids (3.6+), but pinned
+  columns use physical sticky offsets and scroll away. See `docs/features/rtl.md`.
 - **Controlled props need their callback** — `paginationModel` without `onPaginationModelChange` (or `sortModel`
   without `onSortModelChange`) freezes that state. Leave both out to let the grid own it.
 - **Give the grid a bounded height** — without a `height` prop the grid fills its container (3.0.1+); in a flex layout wrap it in `<div style={{ flex: 1, minHeight: 0 }}>`.

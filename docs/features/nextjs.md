@@ -2,7 +2,7 @@
 
 OpenGridX is a client component: it uses state, effects, context and the DOM. In the App Router you render it from a file marked `'use client'`, and fetch the data in Server Components or Route Handlers.
 
-Everything on this page was built with `next build`, served with `next start` and loaded in Chromium, Firefox and WebKit without console errors, on Next.js 16.4 (Turbopack and webpack) and 15.5 (webpack), React 19.3.
+Everything on this page was built with `next build`, served with `next start` and loaded in Chromium, Firefox and WebKit without console errors, on Next.js 16.4 (Turbopack; `next build --webpack` also builds) and 15.5 (webpack), React 19.3.
 
 ## 1. Install and import the stylesheet
 

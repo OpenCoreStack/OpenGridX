@@ -59,6 +59,7 @@ const SECTIONS = [
         ['docs/features/cell-spanning.md', 'Cell-Spanning', 'Cell Spanning'],
         ['docs/features/master-detail.md', 'Master-Detail', 'Master-Detail'],
         ['docs/features/keyboard-navigation.md', 'Keyboard-and-Accessibility', 'Keyboard & Accessibility'],
+        ['docs/features/rtl.md', 'Right-to-Left', 'Right-to-Left (RTL)'],
         ['docs/features/list-view.md', 'List-View', 'List View'],
         ['docs/features/infinite-scroll.md', 'Infinite-Scroll', 'Infinite Scroll'],
         ['docs/features/data-source.md', 'Data-Source', 'Data Source'],

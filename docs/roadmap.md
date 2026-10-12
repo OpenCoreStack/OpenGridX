@@ -90,8 +90,8 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 ### Across the quarter
 
 *   ✅ **Published benchmark** (done 9 Oct): reproducible 10k / 100k / 500k / 1M-row numbers (scroll frame times, sort, filter and grouping time, memory, the reachable row) in [`docs/performance.md`](performance.md#benchmarks); rerun with `npm run bench`.
-*   **Next.js App Router guide**: using the grid from a `'use client'` component, with the stylesheet in `app/layout.tsx`.
-*   **RTL check**: verify right-to-left layouts and document the result.
+*   ✅ **Next.js App Router guide** (done 12 Oct): [`docs/features/nextjs.md`](features/nextjs.md), verified with `next build` / `next start` on Next.js 15.5 and 16.4. The ES bundle now starts with `'use client'`.
+*   ✅ **RTL check** (done 12 Oct): [`docs/features/rtl.md`](features/rtl.md). Fixed: text alignment, horizontal scrolling and column virtualization, arrow keys, the resize and fill handles, range outlines and auto-scroll, toolbar panel placement. Pinned columns remain a limitation (Q1 2027).
 *   **Demo site**: source viewer on all examples (`DocsLayout` with Vite `?raw`) and syntax highlighting, done alongside each release's demo page.
 
 ### Definition of done for each feature
@@ -124,6 +124,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 *   **Sparklines** and a charts adapter that passes grid state to any chart library.
 *   **AI toolkit, part 3**: smart paste (unstructured text → pending rows) and `apiRef.getAiContext()` for "summarise selection"; an `opengridx-mcp` docs server for coding assistants.
 *   **Tailwind / shadcn theme preset**, sticky header against page scroll.
+*   **RTL, part 2** (see [`rtl.md`](features/rtl.md#known-limitations)): pinned columns and pinned system columns with logical sticky offsets (`inset-inline-start` / `-end`) and mirrored pinned shadows; mirrored icons (pagination arrows, tree chevrons); a direction change on a mounted grid.
 
 ### Not planned
 

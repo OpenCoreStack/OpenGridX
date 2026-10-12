@@ -108,6 +108,8 @@ In `listView`, focus moves between whole rows instead of cells:
 
 Keys pressed in content your `renderCell` puts in a row (inputs, buttons) are left to that content.
 
+In a right-to-left grid (`dir="rtl"`, v3.6) ArrowLeft and ArrowRight follow the screen: ArrowLeft moves to the next column, and the Alt+Arrow shortcuts (expand / collapse, header resize) are mirrored the same way. See [Right-to-Left](rtl.md).
+
 ## ARIA structure
 
 | Element | Attributes |
