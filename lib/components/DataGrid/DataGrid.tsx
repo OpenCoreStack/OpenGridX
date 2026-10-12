@@ -8,12 +8,11 @@ import { countReachableRows } from '../../utils/maxElementHeight';
 import { useGridColumns } from '../../hooks/core/useGridColumns';
 import { useGridDetailPanel } from '../../hooks/core/useGridDetailPanel';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
-import { useGridDevWarnings, useGridStylesheetWarning } from '../../hooks/core/useGridDevWarnings';
+import { useGridDevWarnings } from '../../hooks/core/useGridDevWarnings';
 import { useGridLiveRowSelection } from '../../hooks/core/useGridLiveRowSelection';
 import { useGridSelectionAndStateApi } from '../../hooks/core/useGridSelectionAndStateApi';
 import { useGridColumnLookup } from '../../hooks/core/useGridColumnLookup';
 import { useGridPageCorrection } from '../../hooks/core/useGridPageCorrection';
-import { useGridColumnsPanel } from '../../hooks/core/useGridColumnsPanel';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useGridHierarchy } from '../../hooks/core/useGridHierarchy';
@@ -43,8 +42,7 @@ import { useGridCellSelection } from '../../hooks/core/useGridCellSelection';
 import { useGridSortHandlers, useGridColumnMenuHandlers } from '../../hooks/core/useGridHeaderHandlers';
 import { useGridKeyboardMode, useGridPointerFocusHandlers } from '../../hooks/core/useGridFocusHandlers';
 import { getPaginationRowCount } from '../../utils/pagination';
-import { useGridToolbarProps } from '../../hooks/core/useGridToolbarProps';
-import { useGridAiAssistant } from '../../hooks/features/useGridAiAssistant';
+import { useGridToolbarStack } from '../../hooks/core/useGridToolbarStack';
 import { DEFAULT_HEADER_FILTER_HEIGHT } from '../../utils/headerFilters';
 import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridColDef } from '../../types';
 
@@ -558,44 +556,33 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const headerReorderHandlers = useColumnGroupReorderGuard(columnGroupingModel, columnReorderHandlers);
 
     const hasRowSpanning = React.useMemo(() => effectiveColumns.some(c => !!c.rowSpan), [effectiveColumns]);
-    const columnsPanel = useGridColumnsPanel();
-    useGridStylesheetWarning(containerRef);
-
-    // The aiAssistant prompt panel (v3.5): applies validated replies through apiRef; apiRef.openAiAssistant.
-    const aiAssistantPanel = useGridAiAssistant({
-        apiRef,
-        options: aiAssistant,
-        columns: activeColumns as unknown as GridColDef[],
-        onApply: onAiAssistantApply,
-        onError: onAiAssistantError,
-    });
-
-    const toolbarProps = useGridToolbarProps<R>({
-        toolbar: slots?.toolbar,
-        toolbarSlotProps: slotProps?.toolbar,
-        apiRef,
-        orderedColumns,
-        baseColumns: columns,
-        aggregationModel,
-        onAggregationModelChange: handleAggregationModelChange,
-        pivotMode,
-        pivotModelProp: propPivotModel,
-        onPivotModelChangeProp: onPivotModelChange,
-        pivotModel: currentPivotModel,
-        onPivotModelChange: handlePivotModelChange,
-        filterModel,
-        onFilterModelChange: handleFilterModelChange,
-        columnVisibilityModel,
-        onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
-        disableColumnReorder, columnGroupingModel, moveColumn, resetColumnOrder,
-        forceColumnsOpen: columnsPanel.toolbarPanelRequested,
-        onColumnsPanelClose: columnsPanel.closeToolbarPanel,
-        aiAssistantEnabled: aiAssistantPanel.enabled,
-        aiAssistantOpen: aiAssistantPanel.open,
-        onAiAssistantToggle: aiAssistantPanel.togglePanel,
-        aiAssistantLabel: localeText?.aiAssistantButton,
-        forceFiltersOpen: columnsPanel.toolbarFiltersRequested,
-        onFiltersPanelClose: columnsPanel.closeToolbarFiltersPanel,
+    // Steps 44–46: the columns panel, the stylesheet warning, the aiAssistant panel and the toolbar's props.
+    const { columnsPanel, aiAssistantPanel, toolbarProps } = useGridToolbarStack<R>({
+        apiRef, containerRef, localeText,
+        aiAssistant: {
+            options: aiAssistant,
+            columns: activeColumns as unknown as GridColDef[],
+            onApply: onAiAssistantApply,
+            onError: onAiAssistantError,
+        },
+        toolbar: {
+            toolbar: slots?.toolbar,
+            toolbarSlotProps: slotProps?.toolbar,
+            orderedColumns,
+            baseColumns: columns,
+            aggregationModel,
+            onAggregationModelChange: handleAggregationModelChange,
+            pivotMode,
+            pivotModelProp: propPivotModel,
+            onPivotModelChangeProp: onPivotModelChange,
+            pivotModel: currentPivotModel,
+            onPivotModelChange: handlePivotModelChange,
+            filterModel,
+            onFilterModelChange: handleFilterModelChange,
+            columnVisibilityModel,
+            onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
+            disableColumnReorder, columnGroupingModel, moveColumn, resetColumnOrder,
+        },
     });
 
     // Props the row renderers (top-pinned, centre and bottom-pinned rows) all take.
