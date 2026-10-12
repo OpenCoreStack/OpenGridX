@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 3.5.0
+# Version: 3.6.0
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 
@@ -75,7 +75,7 @@ export default function App() {
 | autoHeight        | boolean   | false   | Fit height to rows (renders every row) |
 | overscanRowCount  | number    | 3       | Minimum rows rendered outside the viewport (raised automatically while scrolling fast) |
 | ariaLabel         | string    | —       | Accessible name for the grid          |
-| localeText        | GridLocaleText | —  | Override pager / no-rows strings: paginationRowsPerPage, paginationOf(from,to,count), paginationPage(page,count), noRowsLabel |
+| localeText        | GridLocaleText | —  | Override strings: paginationRowsPerPage, paginationOf(from,to,count), paginationPage(page,count), noRowsLabel, cellSelectionAnnouncement, aiAssistantButton; header filter row (3.6): headerFilterCustom, headerFilterCustomTooltip, headerFilterCellLabel(h), headerFilterValueLabel(h), headerFilterOperatorButtonLabel(h, op), headerFilterOperatorMenuLabel(h), headerFilterClearLabel(h), headerFilterClearTooltip, headerFilterAny, headerFilterTrue, headerFilterFalse, headerFilterOperators (Partial<Record<GridFilterOperator,string>>) |
 | rowHeight         | number    | 52      | Row height in pixels                   |
 | headerHeight      | number    | 56      | Header height in pixels                |
 | wrapHeaderText    | boolean   | false   | Wrap header titles within headerHeight (2 lines at 56px, 3 at 72, 4 at 88; ellipsis on the last line). Header never grows: raise headerHeight for more lines. Class ogx__header-cell--wrap. Per column: GridColDef.wrapHeaderText (3.3.0+) |
@@ -725,3 +725,5 @@ Arrows move between cells (skipping hidden columns); Home/End, Ctrl+Home/End, Pa
 17. **Server modes without dataSource**: with `paginationMode` / `sortingMode` / `filterMode` = `'server'` the grid shows `rows` as given (no slicing, sorting or filtering). Fetch from the change callbacks and control the models.
 18. **`valueFormatter` / `valueGetter` params are `unknown`-typed**: cast (`(value as number).toFixed(2)`) before calling methods, or TypeScript strict mode rejects it.
 19. **Inline `columns` are reused while shallow-equal**: a new array with the same column objects does not re-run filtering/sorting, but mutating a column object in place is not detected — pass new objects when a definition changes.
+20. **Next.js App Router**: render `<DataGrid>` from a `'use client'` file (column functions such as `valueFormatter` cannot cross from a Server Component) and import the stylesheet in `app/layout.tsx`. Rows fetched in a Server Component pass as props (serialisable data only). The ES bundle starts with `'use client'` (3.6+), so a Server Component may also render `<DataGrid>` with serialisable props. `next build` fails with `Can't resolve 'exceljs'` unless the optional peers are installed or aliased in `next.config.ts` (`turbopack.resolveAlias` to an empty module; webpack `resolve.alias[name] = false`). `@opencorestack/opengridx/ai` runs on the server too, but the validation brand is a Symbol that does not survive JSON: validate on the client (`createGridAiPromptHandler`). Guide: `docs/features/nextjs.md`.
+21. **Right-to-left**: wrap the grid in `dir="rtl"` (or set `document.dir`); no prop. Works without pinned columns (3.6+): column order, text alignment (`align: 'left'`/'right' = start/end), horizontal scrolling + column virtualization, ArrowLeft = next column, resize handle on the left edge, fill handle bottom-left, toolbar panels open rightwards. **Pinned columns are not supported in RTL** (they do not stick); do not pin in RTL grids. Guide: `docs/features/rtl.md`.
