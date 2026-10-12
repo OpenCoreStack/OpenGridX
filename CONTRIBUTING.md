@@ -29,7 +29,7 @@ npm run dev                                       # demo site
 | `lib/` | The published library |
 | `lib/components/DataGrid/DataGrid.tsx` | Orchestration only: hook calls and JSX, no logic |
 | `lib/hooks/core/`, `lib/hooks/features/` | Pipeline and opt-in feature hooks |
-| `lib/types/index.ts` | All public types |
+| `lib/types/` | All public types, one file per domain; `index.ts` re-exports them |
 | `demo/` | Demo site (GitHub Pages) |
 | `docs/` | Guides, API reference, architecture notes |
 | `e2e/` | Package smoke suite |

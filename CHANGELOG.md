@@ -40,6 +40,7 @@
 ### Internal
 
 - `docs/superpowers/specs/2026-10-12-nonblocking-pipeline-proposal.md`: a proposal for time-sliced sorting, filtering and grouping (not implemented).
+- `lib/types/index.ts` is split into one file per domain (`rows`, `columns`, `sorting`, `filtering`, `editing`, `export`, `dataSource`, `selection`, `grouping`, `state`, `locale`, `props`, `slots`, `api`, `ai`); `index.ts` re-exports them. A move only: the published `index.d.ts` and `ai.d.ts` declare the same types with the same doc comments.
 
 ## [3.5.1] — 2026-10-12
 

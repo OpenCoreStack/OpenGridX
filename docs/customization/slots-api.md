@@ -288,4 +288,4 @@ function CustomPagination(props: Record<string, unknown>) {
 ## See Also
 
 - [Custom Pagination Guide](../features/custom-pagination.md) - Detailed examples with Ant Design and MUI
-- [DataGrid Props](../../lib/types/index.ts) - Full TypeScript definitions
+- [DataGrid Props](../../lib/types/props.ts) - Full TypeScript definitions

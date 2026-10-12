@@ -2,7 +2,7 @@
 
 Hierarchy metadata for a grid row, available via `params.rowMeta` in `renderCell` since v1.1.
 
-**File:** `lib/types/index.ts`
+**File:** `lib/types/rows.ts` (re-exported from `lib/types/index.ts`)
 
 ---
 

@@ -62,7 +62,7 @@ Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGroupin
 
 | File | Purpose |
 | :--- | :--- |
-| `lib/types/index.ts` | All public types: `DataGridProps`, `GridColDef`, `GridRowModel`, `GridRowMeta`, `GridLocaleText`, `GridRenderCellParams`, etc. |
+| `lib/types/` | All public types, one file per domain: `rows.ts` (`GridRowId`, `GridRowModel`, `GridRowMeta`, pinned rows, row params), `columns.ts` (`GridColDef`, cell/value/render params, column pinning/order/visibility), `sorting.ts`, `filtering.ts`, `selection.ts` (row + cell selection), `editing.ts` (batch edit, paste, undo/redo, fill), `grouping.ts` (grouping, aggregation, pivot models), `export.ts` (`PdfExportOptions`, `GridGroupedExportRow`), `dataSource.ts` (data source, pagination model), `state.ts`, `locale.ts` (`GridLocaleText`), `props.ts` (`DataGridProps`), `slots.ts`, `api.ts` (`GridApi`), `ai.ts` (`GridAi*`). `index.ts` only re-exports them (`export type *`), so import from `types`, never from a domain file outside `lib/types/` |
 | `lib/components/DataGrid/DataGrid.tsx` | Orchestration only — hooks + JSX, no business logic. Hook order: `docs/architecture/datagrid-orchestration.md` |
 | `lib/hooks/core/` | Core pipeline hooks (always active): `useGridControlledState`, `useGridRowPipeline`, `useGridColumns`, `useGridVirtualization`, `useGridVisibleRows`, `useGridScrollSync`, `useGridKeyboardNavigation`, `useLayout`; DataGrid wiring: `useGridHierarchy`, `useGridGroupingColumn`, `useGridRowIdOf`, `useGridDetailPanel`, `useGridRowInteractions`, `useGridViewport`, `useGridAriaRows`, `useGridToolbarProps`, `useGridHeaderHandlers`, `useGridFocusHandlers`, and the `apiRef` installers `useGridApiRefBinding` / `useGridApiMethods` / `useGridAggregationApi` / `useGridClipboardApi` / `useGridScrollToIndexesApi` |
 | `lib/utils/gridModes.ts` | `resolveGridModes`: the one place features override each other (pivot vs tree/grouping/reorder, grouping vs pagination, infinite vs pages, list view needs `listViewColumn`) |
@@ -82,13 +82,13 @@ Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGroupin
 
 | Task | Where |
 | :--- | :--- |
-| New filter operator for a column type | `lib/utils/filtering/filtering.ts` + `types/index.ts` |
+| New filter operator for a column type | `lib/utils/filtering/filtering.ts` + `GridFilterOperator` in `lib/types/filtering.ts` |
 | New feature (aggregation, pivot, etc.) | New hook in `lib/hooks/features/`, consumed by `DataGrid.tsx` |
 | New core pipeline stage | New hook in `lib/hooks/core/`, added to `DataGrid.tsx` |
 | New component (slot, overlay, etc.) | `lib/components/<Name>/` |
-| New public prop on `DataGrid` | Add to `DataGridProps` in `lib/types/index.ts`, destructure in `DataGrid.tsx` |
-| New column type | `GridColType` union in `lib/types/index.ts`, operators in `lib/utils/filtering/filtering.ts` |
-| New slot | Add to `GridSlots` in `lib/types/index.ts`, wire in `DataGrid.tsx` via `slots?.mySlot` |
+| New public prop on `DataGrid` | Add to `DataGridProps` in `lib/types/props.ts`, destructure in `DataGrid.tsx` |
+| New column type | `GridColType` union in `lib/types/columns.ts`, operators in `lib/utils/filtering/filtering.ts` |
+| New slot | Add to the `slots` / `slotProps` of `DataGridProps` in `lib/types/props.ts` (slot prop types in `lib/types/slots.ts`), wire in `DataGrid.tsx` via `slots?.mySlot` |
 
 ---
 
@@ -179,7 +179,7 @@ Design: `docs/superpowers/specs/2026-10-09-ai-assistant-header-filters-fill-desi
 
 - **AI assistant** (`aiAssistant`): core holds the panel (`useGridAiAssistant`, hook 45a, before `useGridToolbarProps`; UI in `lib/components/AiAssistant/`), `/ai` holds model logic (`createGridAiPromptHandler`, `createGridAgentTools`). The core bundle must contain no AI code and `/ai` no React (`check-bundle`; `/ai` budget 8 kB, ≈ 6.7 kB now). `/ai` strings must never contain the word "react" or a lowercase `import`/`require(` (check-bundle regexes)
 - **Brand rule**: `validateGridAiState` brands result and `state` with the non-enumerable `Symbol.for('opengridx.ai.validated')` (`lib/utils/aiBrand.ts`); the grid applies only `isGridAiValidated(result.state)`. Parts the validator emptied are skipped; column visibility is merged; Undo restores a snapshot of touched parts (view undo, separate from `undoRedo`)
-- `GridAiState` / `GridAiPart` / `GridAiValidationError` and assistant types live in `lib/types/index.ts`; all `GridAi*` / `GridAgent*` types are exported from `/ai` only (publicApi rule `/^Grid(?:Ai|Agent)[A-Z]/`)
+- `GridAiState` / `GridAiPart` / `GridAiValidationError` and assistant types live in `lib/types/ai.ts`; all `GridAi*` / `GridAgent*` types are exported from `/ai` only (publicApi rule `/^Grid(?:Ai|Agent)[A-Z]/`)
 - **Agent tools** are all-or-nothing on validation errors and never throw; `get_row_summary` exists only with `allowRowAccess`. They read `apiRef.current` at call time — create them in a handler/effect, not during render (`react-hooks/refs`)
 - `rowGroupingModel` is a controlled/uncontrolled pair (`onRowGroupingModelChange`) in `useGridControlledState`. New `GridApi`: `setSortModel`, `setRowGroupingModel`, `setAggregationModel`, `setColumnVisibilityModel`, `setPivotModel`, `getGridAiState`, `openAiAssistant`, `closeAiAssistant`
 - Two buttons swapped by a ternary inside a `<form>` need distinct `key`s, or the click on the outgoing one submits the form (the Stop button re-sent the prompt)
