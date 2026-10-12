@@ -23,11 +23,15 @@ const COLS: GridColDef<Row>[] = [
 const renderGrid = (props: Partial<DataGridProps<Row>> = {}) =>
     render(<div style={{ height: 400, width: 800 }}><DataGrid<Row> rows={ROWS} columns={COLS} {...props} /></div>);
 
-/** Field, sticky side and offset of each pinned element in a row, in DOM order. */
+// Sticky offsets are logical (inset-inline-start / -end), so pinning works right to left too.
+const startOf = (el: HTMLElement) => el.style.getPropertyValue('inset-inline-start');
+const endOf = (el: HTMLElement) => el.style.getPropertyValue('inset-inline-end');
+
+/** Field, sticky side (left = inline start) and offset of each pinned element in a row, in DOM order. */
 const pinnedLayout = (row: Element, selector: string) =>
     Array.from(row.querySelectorAll<HTMLElement>(selector))
-        .filter(el => el.style.left !== '' || el.style.right !== '')
-        .map(el => `${el.dataset.field}:${el.style.left ? `left=${el.style.left}` : `right=${el.style.right}`}`);
+        .filter(el => startOf(el) !== '' || endOf(el) !== '')
+        .map(el => `${el.dataset.field}:${startOf(el) ? `left=${startOf(el)}` : `right=${endOf(el)}`}`);
 
 afterEach(() => { vi.restoreAllMocks(); });
 
@@ -57,7 +61,7 @@ describe('DataGrid pinned columns', () => {
                 aggregationModel: { amount: 'sum' },
             });
             const footer = container.querySelector('.ogx__aggregation-footer')!;
-            const offsets = Array.from(footer.querySelectorAll<HTMLElement>('.ogx__aggregation-cell--pinned-left')).map(el => el.style.left);
+            const offsets = Array.from(footer.querySelectorAll<HTMLElement>('.ogx__aggregation-cell--pinned-left')).map(startOf);
             expect(offsets).toEqual(['0px', '90px']);
         });
 

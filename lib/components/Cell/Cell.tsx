@@ -258,9 +258,9 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
 
     if (isPinned && pinnedOffset !== undefined) {
         if (pinnedPosition === 'left') {
-            style.left = pinnedOffset;
+            style.insetInlineStart = pinnedOffset;
         } else {
-            style.right = pinnedOffset;
+            style.insetInlineEnd = pinnedOffset;
         }
     }
 

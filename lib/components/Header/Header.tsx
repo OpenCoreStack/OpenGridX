@@ -291,7 +291,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                                     minWidth: prefixWidth,
                                     flexShrink: 0,
                                     position: isPrefixPinned ? 'sticky' : undefined,
-                                    left: isPrefixPinned ? 0 : undefined,
+                                    insetInlineStart: isPrefixPinned ? 0 : undefined,
                                 }}
                                 aria-hidden="true"
                             />
@@ -306,12 +306,12 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             };
                             if (cell.pinned === 'left') {
                                 style.position = 'sticky';
-                                style.left = pinnedPositions[cell.fields[0]];
+                                style.insetInlineStart = pinnedPositions[cell.fields[0]];
                             } else if (cell.pinned === 'right') {
                                 style.position = 'sticky';
-                                style.right = pinnedPositions[cell.fields[cell.fields.length - 1]];
+                                style.insetInlineEnd = pinnedPositions[cell.fields[cell.fields.length - 1]];
                                 // Free space goes before the right-pinned section, as in the column header row.
-                                if (cells[cellIndex - 1]?.pinned !== 'right') style.marginLeft = 'auto';
+                                if (cells[cellIndex - 1]?.pinned !== 'right') style.marginInlineStart = 'auto';
                             }
                             if (!cell.isGroup) {
                                 return (
@@ -357,7 +357,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             minWidth: 48,
                             maxWidth: 48,
                             position: 'sticky',
-                            left: 0,
+                            insetInlineStart: 0,
                         }}
                     />
                 )}
@@ -376,7 +376,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                             minWidth: 48,
                             maxWidth: 48,
                             position: pinExpandColumn ? 'sticky' : undefined,
-                            left: pinExpandColumn ? (rowReordering ? 48 : 0) : undefined,
+                            insetInlineStart: pinExpandColumn ? (rowReordering ? 48 : 0) : undefined,
                         }}
                     >
                         { }
@@ -393,7 +393,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         data-field="__checkbox_col__"
                         style={{
                             position: pinCheckboxColumn ? 'sticky' : undefined,
-                            left: pinCheckboxColumn ? ((rowReordering ? 48 : 0) + (hasDetailPanel && pinExpandColumn ? 48 : 0)) : undefined,
+                            insetInlineStart: pinCheckboxColumn ? ((rowReordering ? 48 : 0) + (hasDetailPanel && pinExpandColumn ? 48 : 0)) : undefined,
 
                         }}
                     >

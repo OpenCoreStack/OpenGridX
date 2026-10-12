@@ -449,11 +449,16 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         const bodyTop = stickyTop ? stickyTop.getBoundingClientRect().bottom : box.top;
         const bodyBottom = Math.min(box.top + height, stickyBottom ? stickyBottom.getBoundingClientRect().top : box.top + height);
         const headerBottom = headerWrap ? headerWrap.getBoundingClientRect().bottom : bodyTop;
-        const bodyLeft = box.left + layout.pinnedSystemColumnsWidth + layout.leftWidth;
-        const bodyRight = box.left + width - layout.rightWidth;
+        // Left-pinned columns (and pinned system columns) sit at the inline start: on the right in a
+        // right-to-left grid, whose vertical scrollbar is on the left.
+        const rtl = isRtl(viewport);
+        const contentLeft = rtl ? box.right - width : box.left;
+        const startPinnedWidth = layout.pinnedSystemColumnsWidth + layout.leftWidth;
+        const bodyLeft = contentLeft + (rtl ? layout.rightWidth : startPinnedWidth);
+        const bodyRight = contentLeft + width - (rtl ? startPinnedWidth : layout.rightWidth);
 
         // The cell under the pointer; outside the viewport (or over the header) the nearest body cell.
-        const x = clamp(drag.x, box.left + 1, box.left + width - 2);
+        const x = clamp(drag.x, contentLeft + 1, contentLeft + width - 2);
         let y = drag.y;
         if (y < box.top || y > box.top + height || y < headerBottom) y = clamp(y, bodyTop + 1, Math.max(bodyTop + 1, bodyBottom - 2));
         // During fast auto-scroll the rows under the pointer may not be rendered yet (virtualization
@@ -477,7 +482,7 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         if (drag.onTrack) drag.onTrack(drag.head, drag.x, drag.y);
 
         if (!allowScroll) return;
-        const outside = drag.y < bodyTop || drag.y > bodyBottom || drag.x < box.left || drag.x > box.left + width;
+        const outside = drag.y < bodyTop || drag.y > bodyBottom || drag.x < contentLeft || drag.x > contentLeft + width;
         if (!drag.moved && !outside) return;
         let dy = 0;
         let dx = 0;
@@ -488,7 +493,7 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         const canScrollY = (dy < 0 && viewport.scrollTop > 0) || (dy > 0 && viewport.scrollTop + height < viewport.scrollHeight - 1);
         // scrollLeft runs from 0 to the maximum, or from minus the maximum to 0 right to left.
         const maxScroll = viewport.scrollWidth - width;
-        const minLeft = isRtl(viewport) ? -maxScroll : 0;
+        const minLeft = rtl ? -maxScroll : 0;
         const canScrollX = (dx < 0 && viewport.scrollLeft > minLeft) || (dx > 0 && viewport.scrollLeft < minLeft + maxScroll - 1);
         if (!canScrollY && !canScrollX) return;
         if (canScrollY) viewport.scrollTop += dy;

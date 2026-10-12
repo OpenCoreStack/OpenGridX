@@ -21,8 +21,9 @@ export function getHeaderColumnStyle<R extends GridRowModel>(
         boxSizing: 'border-box',
         position: pinnedPosition ? 'sticky' : 'relative',
     };
-    if (pinnedPosition === 'left') style.left = pinnedOffset;
-    else if (pinnedPosition === 'right') style.right = pinnedOffset;
+    // Logical sides: `left` pinning sticks to the inline start (the right edge in a right-to-left grid).
+    if (pinnedPosition === 'left') style.insetInlineStart = pinnedOffset;
+    else if (pinnedPosition === 'right') style.insetInlineEnd = pinnedOffset;
     return style;
 }
 

@@ -72,8 +72,8 @@ export const SkeletonRow: React.FC<SkeletonRowProps> = ({
                             width,
                             minWidth: col.minWidth,
                             maxWidth: col.maxWidth,
-                            left: col.left,
-                            right: col.right,
+                            insetInlineStart: col.left,
+                            insetInlineEnd: col.right,
                             position: col.isSpacer ? 'relative' : (col.pinned ? 'sticky' : 'relative'),
                             zIndex: col.zIndex
                         }}

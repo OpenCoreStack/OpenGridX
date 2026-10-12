@@ -300,7 +300,7 @@ function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         tabIndex={-1}
                         style={{
                             position: 'sticky',
-                            left: 0,
+                            insetInlineStart: 0,
                             zIndex: SYSTEM_CELL_Z_INDEX
                         }}
                         draggable={!!onDragStart}
@@ -326,7 +326,7 @@ function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         data-field="__expand_col__"
                         style={{
                             position: pinExpandColumn ? 'sticky' : undefined,
-                            left: pinExpandColumn ? (rowReordering ? 48 : 0) : undefined,
+                            insetInlineStart: pinExpandColumn ? (rowReordering ? 48 : 0) : undefined,
                             zIndex: pinExpandColumn ? SYSTEM_CELL_Z_INDEX : undefined
                         }}
                         tabIndex={-1}
@@ -364,7 +364,7 @@ function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                         data-field="__checkbox_col__"
                         style={{
                             position: pinCheckboxColumn ? 'sticky' : undefined,
-                            left: pinCheckboxColumn ? ((rowReordering ? 48 : 0) + (hasDetailPanel && pinExpandColumn ? 48 : 0)) : undefined,
+                            insetInlineStart: pinCheckboxColumn ? ((rowReordering ? 48 : 0) + (hasDetailPanel && pinExpandColumn ? 48 : 0)) : undefined,
                             zIndex: pinCheckboxColumn ? SYSTEM_CELL_Z_INDEX : undefined
                         }}
                         tabIndex={-1}

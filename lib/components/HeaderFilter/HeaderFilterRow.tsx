@@ -52,7 +52,7 @@ function SystemFilterCell({ field, ariaColIndex, sticky, left, focused }: {
                 minWidth: SYSTEM_COLUMN_WIDTH,
                 maxWidth: SYSTEM_COLUMN_WIDTH,
                 position: sticky ? 'sticky' : undefined,
-                left: sticky ? left : undefined,
+                insetInlineStart: sticky ? left : undefined,
             }}
             role="columnheader"
             aria-colindex={ariaColIndex}

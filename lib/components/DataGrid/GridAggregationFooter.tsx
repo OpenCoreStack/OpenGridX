@@ -68,7 +68,7 @@ export function GridAggregationFooter({
         <div
             key={key}
             className={`ogx__aggregation-spacer${pinned ? ' ogx__aggregation-spacer--pinned' : ''}`}
-            style={pinned ? { left } : undefined}
+            style={pinned ? { insetInlineStart: left } : undefined}
             aria-hidden="true"
         />
     );
@@ -116,8 +116,8 @@ export function GridAggregationFooter({
                     maxWidth: colWidth,
                     textAlign: (col.align as React.CSSProperties['textAlign']) || 'left',
                 };
-                if (pinnedPosition === 'left'  && pinnedOffset !== undefined) style.left  = pinnedOffset;
-                if (pinnedPosition === 'right' && pinnedOffset !== undefined) style.right = pinnedOffset;
+                if (pinnedPosition === 'left'  && pinnedOffset !== undefined) style.insetInlineStart = pinnedOffset;
+                if (pinnedPosition === 'right' && pinnedOffset !== undefined) style.insetInlineEnd = pinnedOffset;
 
                 return (
                     <div

@@ -20,7 +20,7 @@
   width: 48px;
   min-width: 48px;
   flex-shrink: 0;
-  border-right: 1px solid transparent; 
+  border-inline-end: 1px solid transparent;
 }
 .ogx__header-cell {
   display: flex;
@@ -39,7 +39,7 @@
 .ogx__header-cell:not(:last-child)::after {
   content: '';
   position: absolute;
-  right: 0;
+  inset-inline-end: 0;
   top: 25%;
   height: 50%;
   width: 1px;
@@ -131,7 +131,7 @@
   justify-content: center;
   width: 16px;
   height: 16px;
-  margin-left: 4px;
+  margin-inline-start: 4px;
   flex-shrink: 0;
   font-size: 14px;
   line-height: 1;
@@ -166,6 +166,14 @@
 .ogx__header-cell--pinned-right {
   box-shadow: var(--ogx-grid-pinned-right-shadow, -4px 0 12px -4px rgba(0, 0, 0, 0.05));
 }
+/* Right to left: the start-pinned section is on the right and casts its shadow leftwards, the
+   end-pinned one on the left casts it rightwards (the mirrored shadow tokens). */
+.ogx__header-cell--pinned-left:dir(rtl) {
+  box-shadow: var(--ogx-grid-pinned-right-shadow, -4px 0 12px -4px rgba(0, 0, 0, 0.05));
+}
+.ogx__header-cell--pinned-right:dir(rtl) {
+  box-shadow: var(--ogx-grid-pinned-left-shadow, 4px 0 12px -4px rgba(0, 0, 0, 0.05));
+}
 .ogx__header-cell--pinned::after {
   display: none;
 }
@@ -178,7 +186,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 8px;
+  margin-inline-end: 8px;
   color: var(--ogx-color-primary);
   animation: ogx-pulse 1.5s infinite ease-in-out;
 }
@@ -188,7 +196,7 @@
   100% { transform: scale(1); }
 }
 .ogx__header-cell--drag-over {
-  border-left: 2px solid var(--ogx-color-primary) !important;
+  border-inline-start: 2px solid var(--ogx-color-primary) !important;
   background: var(--ogx-color-primary-light);
 }
 /* Show ring on header cells during keyboard navigation */

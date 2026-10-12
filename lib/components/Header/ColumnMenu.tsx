@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning } from '../../types';
 import { getViewportWidth, getViewportHeight } from '../../utils/viewport';
+import { isRtl } from '../../utils/direction';
 
 
 interface ColumnMenuProps {
@@ -222,6 +223,13 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
     const isPinnedLeft = pinnedColumns?.left?.includes(colDef.field) ?? false;
     const isPinnedRight = pinnedColumns?.right?.includes(colDef.field) ?? false;
     const isUnpinned = !isPinnedLeft && !isPinnedRight;
+    // `pinnedColumns.left` / `.right` are the inline start / end: in a right-to-left grid the start
+    // is on the right, so the item labelled by screen side pins to the opposite list.
+    const rtl = isRtl(anchorEl);
+    const screenLeftSide = rtl ? 'right' : 'left';
+    const screenRightSide = rtl ? 'left' : 'right';
+    const isPinnedScreenLeft = rtl ? isPinnedRight : isPinnedLeft;
+    const isPinnedScreenRight = rtl ? isPinnedLeft : isPinnedRight;
 
     const colLabel = colDef.headerName || colDef.field;
 
@@ -257,15 +265,15 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
             {canPin && (
                 <>
                     <div className="ogx-menu-section-label" aria-hidden="true">Pin column</div>
-                    <button type="button" className={`ogx-menu-item${isPinnedLeft ? ' ogx-menu-item--active' : ''}`}
-                        onClick={() => handlePin('left')} role="menuitemradio" aria-checked={isPinnedLeft} aria-label="Pin to left">
-                        <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedLeft ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
+                    <button type="button" className={`ogx-menu-item${isPinnedScreenLeft ? ' ogx-menu-item--active' : ''}`}
+                        onClick={() => handlePin(screenLeftSide)} role="menuitemradio" aria-checked={isPinnedScreenLeft} aria-label="Pin to left">
+                        <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedScreenLeft ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
                         <span className="ogx-menu-item__icon" aria-hidden="true"><PinLeftIcon /></span>
                         Pin to Left
                     </button>
-                    <button type="button" className={`ogx-menu-item${isPinnedRight ? ' ogx-menu-item--active' : ''}`}
-                        onClick={() => handlePin('right')} role="menuitemradio" aria-checked={isPinnedRight} aria-label="Pin to right">
-                        <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedRight ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
+                    <button type="button" className={`ogx-menu-item${isPinnedScreenRight ? ' ogx-menu-item--active' : ''}`}
+                        onClick={() => handlePin(screenRightSide)} role="menuitemradio" aria-checked={isPinnedScreenRight} aria-label="Pin to right">
+                        <span className="ogx-menu-item__indicator" aria-hidden="true">{isPinnedScreenRight ? <ActiveDotIcon /> : <InactiveDotIcon />}</span>
                         <span className="ogx-menu-item__icon" aria-hidden="true"><PinRightIcon /></span>
                         Pin to Right
                     </button>

@@ -23,12 +23,12 @@
     box-sizing: border-box;
     position: relative;
     overflow: hidden;
-    /* Same border UI as primary header cells: half-height right divider */
+    /* Same border UI as primary header cells: half-height divider on the end edge */
 }
 .ogx-col-group-cell:not(:last-child)::after {
     content: '';
     position: absolute;
-    right: 0;
+    inset-inline-end: 0;
     top: 25%;
     height: 50%;
     width: 1px;

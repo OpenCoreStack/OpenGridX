@@ -243,7 +243,7 @@
   justify-content: center;
   overflow: hidden;
   box-sizing: border-box;
-  border-right: 1px solid var(--ogx-grid-border-color);
+  border-inline-end: 1px solid var(--ogx-grid-border-color);
   position: relative;
 }
 .ogx__aggregation-cell--pinned-left,
@@ -265,7 +265,7 @@
   background: var(--ogx-grid-header-background);
 }
 .ogx__aggregation-cell--pinned-right {
-  border-left: 1px solid var(--ogx-grid-border-color);
+  border-inline-start: 1px solid var(--ogx-grid-border-color);
 }
 .ogx__aggregation-cell--pinned-left-last {
   overflow: visible;
@@ -274,7 +274,7 @@
   content: '';
   position: absolute;
   top: 0;
-  right: -10px;
+  inset-inline-end: -10px;
   bottom: 0;
   width: 10px;
   pointer-events: none;
@@ -288,11 +288,17 @@
   content: '';
   position: absolute;
   top: 0;
-  left: -10px;
+  inset-inline-start: -10px;
   bottom: 0;
   width: 10px;
   pointer-events: none;
   box-shadow: inset -10px 0 8px -8px rgba(0, 0, 0, 0.1);
+}
+.ogx__aggregation-cell--pinned-left-last:dir(rtl)::after {
+  box-shadow: inset -10px 0 8px -8px rgba(0, 0, 0, 0.1);
+}
+.ogx__aggregation-cell--pinned-right-first:dir(rtl)::before {
+  box-shadow: inset 10px 0 8px -8px rgba(0, 0, 0, 0.1);
 }
 .ogx__aggregation-label {
   font-size: 0.7em;
