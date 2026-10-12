@@ -59,6 +59,7 @@
     "test:browser": "vitest run --project browser",
     "test:all": "vitest run",
     "test:smoke": "node scripts/smoke.mjs",
+    "test:demo": "npm run build && playwright test --config e2e/playwright.demo.config.ts",
     "bench": "node bench/run.mjs",
     "test:watch": "vitest --project unit",
     "coverage": "vitest run --coverage",

@@ -72,6 +72,9 @@ jobs:
       - name: Package smoke suite (packed tarball in React 18 and 19 apps)
         run: npm run test:smoke -- --skip-lib
 
+      - name: Demo-site smoke test (builds the demo, loads every route)
+        run: npm run test:demo
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4

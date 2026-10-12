@@ -7,6 +7,7 @@ Three layers, from fastest to closest to a real consumer.
 | `npm test` | Vitest unit tests in jsdom | `lib/**/*.test.ts(x)` |
 | `npm run test:browser` | Vitest browser mode in real Chromium, Firefox and WebKit | `lib/**/*.browser.test.ts(x)` |
 | `npm run test:smoke` | Package smoke suite: Playwright Test against apps that installed the packed tarball | `e2e/` |
+| `npm run test:demo` | Demo-site smoke test: builds the demo and loads every route in Playwright | `e2e/demo.spec.ts` |
 
 Other gates: `npm run lint`, `npm run typecheck` (lib, tests, demo, e2e, bench), `npm run build:lib` (also checks that React stays external).
 
@@ -52,6 +53,20 @@ npx playwright show-report playwright-report           # HTML report, traces of 
 
 The fixtures are separate npm projects: they are not part of the root lint, typecheck or Vitest runs and install into their own `node_modules`. When you change a fixture's dependencies, run `npm install` in it and then delete the `integrity` field from the `node_modules/@opencorestack/opengridx` entry of its `package-lock.json` (the tarball changes on every build; the script refuses a lockfile that pins it).
 
+## The demo-site smoke test
+
+`npm run test:demo` runs `npm run build` (demo site into `demo/dist`, base `/OpenGridX/` as on GitHub Pages) and then `playwright test --config e2e/playwright.demo.config.ts`, which serves the build with `vite preview` on port 4322. `e2e/demo.spec.ts`:
+
+- reads the routes from `examplesConfig` in `demo/App.tsx` (no hand-kept list) and checks that the built sidebar links to exactly those routes;
+- for each route: loads it, waits until no request has been in flight for 500 ms, and asserts no console error or warning and no uncaught page error, that the lazy chunk replaced the loading skeleton, that `main` has text, and that every grid root (`.ogx`) shows a row or an intentional empty, loading or error state.
+
+Every route runs in Chromium; the pages tagged `@heavy` in the spec (cell selection, AI assistant, full feature test, RTL, theming, pivot, infinite scroll) also run in Firefox and WebKit. A page that logs a warning on purpose goes into `ALLOWED_CONSOLE` in the spec with a comment saying why. A new demo route needs nothing: add it to `examplesConfig` and it is covered.
+
+```bash
+npm run test:demo
+npx playwright test --config e2e/playwright.demo.config.ts --project chromium   # reuse an existing demo/dist
+```
+
 ## The benchmark
 
 `npm run bench` (`bench/run.mjs`) measures the grid at 10k, 100k, 500k and 1M rows. It is a measuring tool, not a test: nothing fails on a number. The method and the published results are in [Performance → Benchmarks](../performance.md#benchmarks).
@@ -74,6 +89,7 @@ Close other heavy programs first and keep the machine on power; the runner recor
 
 ## CI
 
-- `.github/workflows/ci.yml` (pull requests and pushes to branches other than `main`): lint, typecheck, unit, browser tests, `build:lib`, smoke suite. Playwright reports and traces are uploaded when a step fails.
+- `.github/workflows/ci.yml` (pull requests and pushes to branches other than `main`): lint, typecheck, unit, browser tests, `build:lib`, smoke suite, demo-site smoke test. Playwright reports and traces are uploaded when a step fails.
+- `deploy.yml` builds the demo through `npm run test:demo`, so a demo page that fails the sweep is never deployed.
 - `npm-publish.yml` runs the smoke suite after `build:lib` and before `npm publish`.
 - `nightly.yml` runs weekly: all Vitest projects and the smoke suite with `--fresh`, and a separate `bench` job (`npm run bench -- --quick --engine chromium`) that puts the tables in the job summary and uploads the JSON as the `bench-results` artifact. It fails only when the benchmark script breaks, never on timings.
