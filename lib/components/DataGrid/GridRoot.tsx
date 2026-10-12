@@ -11,7 +11,7 @@ import { GridLiveRegion } from './GridLiveRegion';
 import { GridLoadingOverlay } from './GridLoadingOverlay';
 import { GridErrorOverlay } from './GridErrorOverlay';
 import { pickPaginationLocaleText } from '../../utils/pagination';
-import type { DataGridProps, GridApi, GridColDef, GridRowId, GridRowMeta, GridRowModel } from '../../types';
+import type { DataGridProps, GridApi, GridColDef, GridRowModel } from '../../types';
 import type { UseGridAiAssistantResult } from '../../hooks/features/useGridAiAssistant';
 import type { useGridToolbarProps } from '../../hooks/core/useGridToolbarProps';
 
@@ -47,13 +47,8 @@ export interface GridRootProps<R extends GridRowModel> extends Omit<GridViewport
     effectivePaginationModel: GridListViewProps<R>['effectivePaginationModel'];
     currentPage: number;
     pageSizeOptions: number[];
-    selectedRowIds: Set<GridRowId>;
     columnsByField: GridListViewProps<R>['columnsByField'];
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
     paginationRowCount: number;
-    handleRowClick: GridListViewProps<R>['onRowClick'];
-    onRowDoubleClick: GridListViewProps<R>['onRowDoubleClick'];
-    handleSelectionChange: GridListViewProps<R>['onSelectionChange'];
     handlePaginationModelChange: GridListViewProps<R>['onPaginationModelChange'];
     onRowsScrollEnd: GridListViewProps<R>['onRowsScrollEnd'];
     toggleExpansion: GridListViewProps<R>['onToggleExpansion'];
@@ -78,8 +73,8 @@ export function GridRoot<R extends GridRowModel>(props: GridRootProps<R>) {
         containerRef, className, autoHeight, height, style, hasRowSpanning, listView, headerFilterHeight, slots, slotProps,
         toolbarProps, aiAssistantPanel, orderedColumns, columnVisibilityModel, disableColumnReorder,
         handleColumnVisibilityModelChange, moveColumn, resetColumnOrder, listViewColumn, allRenderableRows, dataRows,
-        pagination, effectivePaginationModel, currentPage, pageSizeOptions, selectedRowIds, columnsByField, rowMetaMap,
-        paginationRowCount, handleRowClick, onRowDoubleClick, handleSelectionChange, handlePaginationModelChange,
+        pagination, effectivePaginationModel, currentPage, pageSizeOptions, columnsByField,
+        paginationRowCount, handlePaginationModelChange,
         onRowsScrollEnd, toggleExpansion, showCellSelectionStats, apiRef, hasAggregation, isHierarchyEnabled,
         dataSourceError, filteredRowCount, onRetry,
         ...viewport
@@ -88,7 +83,7 @@ export function GridRoot<R extends GridRowModel>(props: GridRootProps<R>) {
         effectiveRowHeight, headerHeight, showHeaderFilters, effectiveLoading, columnsPanel, columnGroupingModel, ariaLabel,
         pinnedTopRows, pinnedBottomRows, sortedUnpinnedRowCount, effectiveNoRowsLabel, checkboxSelection, paginationMode,
         localeText, getRowIdOf, rowSelectionEnabled, disableMultipleRowSelection, cellSelection, aggregationModel,
-        aggregationResult, filterModel,
+        aggregationResult, filterModel, selectedRowIds, rowMetaMap, handleRowClick, onRowDoubleClick, handleSelectionChange,
     } = viewport;
 
     const NoRowsOverlaySlot = slots?.noRowsOverlay;

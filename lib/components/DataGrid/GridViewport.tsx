@@ -13,6 +13,7 @@ import type { UseGridColumnsPanelResult } from '../../hooks/core/useGridColumnsP
 import type { UseGridViewportResult } from '../../hooks/core/useGridViewport';
 import type { GridVirtualizationResult } from '../../hooks/core/useGridVirtualization';
 import type { UseColumnReorderReturn } from '../../hooks/useColumnReorder';
+import type { GridSpanningResult } from '../../hooks/features/useGridSpanning';
 
 /** The props the row renderers (top-pinned, centre and bottom-pinned rows) all take. */
 export type GridRowRenderProps<R extends GridRowModel> = Pick<GridVirtualRowsProps<R>,
@@ -74,7 +75,21 @@ export interface GridViewportProps<R extends GridRowModel> {
     handleFilterModelChange: HeaderProps<R>['onFilterModelChange'];
     localeText: HeaderProps<R>['localeText'];
     // Rows
-    rowRenderProps: GridRowRenderProps<R>;
+    editingHandlers: GridRowRenderProps<R>['editingHandlers'];
+    isCellEditable: GridRowRenderProps<R>['isCellEditable'];
+    selectedRowIds: GridRowRenderProps<R>['selectedRowIds'];
+    handleRowClick: GridRowRenderProps<R>['onRowClick'];
+    onRowDoubleClick: GridRowRenderProps<R>['onRowDoubleClick'];
+    handleCellClick: GridRowRenderProps<R>['onCellClick'];
+    handleSelectionChange: GridRowRenderProps<R>['onSelectionChange'];
+    expandedRowIds: GridRowRenderProps<R>['expandedRowIds'];
+    getDetailPanelContent: GridRowRenderProps<R>['getDetailPanelContent'];
+    getDetailPanelHeight: GridRowRenderProps<R>['getDetailPanelHeight'];
+    handleDetailPanelToggle: GridRowRenderProps<R>['onDetailPanelToggle'];
+    reportDetailPanelHeight: GridRowRenderProps<R>['onDetailPanelHeightChange'];
+    spanning: Pick<GridSpanningResult, 'colspanMap' | 'rowSpanningCaches'>;
+    rowMetaMap: GridRowRenderProps<R>['rowMetaMap'];
+    fillHandle: { handle: GridRowRenderProps<R>['fillHandle'] };
     pinnedTopRows: R[];
     pinnedBottomRows: R[];
     pinnedRows: GridPinnedRowsProps<R>['pinnedRows'];
@@ -113,12 +128,36 @@ export function GridViewport<R extends GridRowModel>(props: GridViewportProps<R>
         handleSortAdd, multiSort, handleColumnResize, handleColumnAutosize, columnWidths, focusedCell, columnIndexMap,
         handleHeaderClick, headerReorderHandlers, rowReordering, hasDetailPanel, pinCheckboxColumn, pinExpandColumn,
         aggregationModel, handleHideColumn, columnsPanel, handlePinColumn, wrapHeaderText, headerHeight, showHeaderFilters,
-        filterModel, handleFilterModelChange, localeText, rowRenderProps, pinnedTopRows, pinnedBottomRows, pinnedRows,
+        filterModel, handleFilterModelChange, localeText, editingHandlers, isCellEditable, selectedRowIds, handleRowClick,
+        onRowDoubleClick, handleCellClick, handleSelectionChange, expandedRowIds, getDetailPanelContent, getDetailPanelHeight,
+        handleDetailPanelToggle, reportDetailPanelHeight, spanning, rowMetaMap, fillHandle, pinnedTopRows, pinnedBottomRows, pinnedRows,
         getRowIdOf, showEmptyState, effectiveNoRowsLabel, noRowsOverlay, loadingOverlay, spanRowWindow, visibleRows,
         baseColumns, viewportWidth, rowReorderHandlers, paginationMode, dataSourceLoading, sortedUnpinnedRowCount,
         pageSize, unpinnedRowsLength, showAggregationFooter, aggregationResult, effectiveRowHeight, isAggregationLoading,
     } = props;
     const { allSelected, someSelected } = rowSelection;
+
+    // Props the row renderers (top-pinned, centre and bottom-pinned rows) all take.
+    const rowRenderProps: GridRowRenderProps<R> = {
+        rowReordering, columnIndexMap, editingHandlers, isCellEditable, selectedRowIds, checkboxSelection,
+        onRowClick: handleRowClick,
+        onRowDoubleClick,
+        onCellClick: handleCellClick,
+        onSelectionChange: handleSelectionChange,
+        columnWidths,
+        pinnedColumns: effectivePinnedColumns,
+        hasDetailPanel, expandedRowIds, getDetailPanelContent, getDetailPanelHeight,
+        onDetailPanelToggle: handleDetailPanelToggle,
+        onDetailPanelHeightChange: reportDetailPanelHeight,
+        pinCheckboxColumn, pinExpandColumn, focusedCell,
+        colspanMap: spanning.colspanMap,
+        rowSpanningCaches: spanning.rowSpanningCaches,
+        rowHeight: effectiveRowHeight,
+        rowMetaMap,
+        cellRange: cellSelection.displayRange,
+        cellRangeHasRowSpan: cellSelection.hasRowSpan,
+        fillHandle: fillHandle.handle,
+    };
 
     return (
         <div
