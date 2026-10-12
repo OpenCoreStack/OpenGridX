@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.5.0
+- **Current version:** 3.5.1
 
 ---
 
@@ -152,6 +152,12 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.5.1 — significant changes
+
+- **Content height is capped to the browser's limit.** Firefox lays out elements up to about 17.9M px and collapses a taller one (it does not clamp like Chromium/WebKit at about 33.5M px), which made large grids unscrollable there. `useGridMaxContentHeight` (hook 32a, before `useGridVirtualization`) measures the limit once per document with an invisible probe (`lib/utils/maxElementHeight.ts`: `getMaxElementHeight`, `countReachableRows`; `undefined` until measured, `Infinity` without a layout engine), and `useGridVirtualization` returns `virtualContainerHeight` capped to it — always render the rows' container with that, never `totalHeight - pinned heights`
+- The tall-content dev warning waits for the measurement and fires only when rows are cut off, naming the reachable count. `DataGrid.heightCap.browser.test.tsx` (500k rows) fails without the cap in Firefox
+- **Benchmark**: `npm run bench` (`bench/`, port 4320) measures the packed package at 10k–1M rows in 3 engines; results in `bench/results/`, tables in `docs/performance.md` (`node bench/report.mjs --write docs/performance.md`). Run it on an idle machine; the weekly CI pass is for trends only
 
 ## v3.5.0 — significant changes
 
