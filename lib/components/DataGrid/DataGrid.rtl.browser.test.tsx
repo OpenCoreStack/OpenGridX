@@ -21,7 +21,9 @@ const ROWS: Row[] = Array.from({ length: 40 }, (_, r) => {
 const frame = () => new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 const settle = async () => { for (let i = 0; i < 3; i++) await frame(); };
 
-afterEach(() => {
+afterEach(async () => {
+    // Never leave the mouse button pressed for the next test (or test file).
+    await commands.pointerUp().catch(() => {});
     cleanup();
     document.documentElement.removeAttribute('dir');
 });
@@ -111,9 +113,9 @@ describe('RTL — layout', () => {
         const start = box(handle);
         const x = start.left + start.width / 2;
         const y = start.top + start.height / 2;
-        fireEvent.pointerDown(handle, { pointerId: 1, button: 0, clientX: x, clientY: y });
-        fireEvent.pointerMove(handle, { pointerId: 1, clientX: x - 40, clientY: y });
-        fireEvent.pointerUp(handle, { pointerId: 1, clientX: x - 40, clientY: y });
+        fireEvent.pointerDown(handle, { pointerId: 91, button: 0, clientX: x, clientY: y });
+        fireEvent.pointerMove(handle, { pointerId: 91, clientX: x - 40, clientY: y });
+        fireEvent.pointerUp(handle, { pointerId: 91, clientX: x - 40, clientY: y });
         await settle();
         expect(Math.round(box(header(container, 'c1')!).width)).toBe(160);
     });
@@ -159,6 +161,9 @@ describe('RTL — cell range drag', () => {
         const boxTop = container.querySelector<HTMLElement>('[data-testid="box"]')!.getBoundingClientRect().top;
         await commands.pointerMoveTo('[data-testid="box"]', -100, row.top - boxTop + row.height / 2);
         await expect.poll(() => vp.scrollLeft, { timeout: 8000 }).toBeLessThan(-1000);
+        // Release over the grid: a release outside the page is lost in WebKit, which then keeps the button
+        // pressed and swallows the next test file's pointerdown.
+        await commands.pointerMoveTo('[data-testid="box"]', 100, row.top - boxTop + row.height / 2);
         await commands.pointerUp();
         await settle();
         const inRange = Array.from(container.querySelectorAll<HTMLElement>('.ogx__cell--range')).map(el => Number(el.dataset.field!.slice(1)));

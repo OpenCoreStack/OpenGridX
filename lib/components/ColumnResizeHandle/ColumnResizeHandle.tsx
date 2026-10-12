@@ -102,6 +102,16 @@ export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
         if (!active || event.pointerId !== active.pointerId) return;
         activeRef.current = null;
         setIsDragging(false);
+        // Release explicitly: the implicit release only follows a real pointerup, and a capture left on
+        // this handle (a synthetic press on the live mouse pointer, or an interrupted drag) would keep
+        // the pointer's later events from reaching the rest of the page.
+        if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+            try {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+            } catch {
+                // Already released.
+            }
+        }
         if (active.moved || event.clientX !== active.startX) {
             // The drag may end over the header cell, which would take the synthesized click as a sort.
             suppressNextClick();

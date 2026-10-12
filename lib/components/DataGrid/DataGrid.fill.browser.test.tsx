@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
-import { userEvent, commands, page, server } from 'vitest/browser';
+import { userEvent, commands, page } from 'vitest/browser';
 import { useLayoutEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import '../../styles/opengridx.css';
@@ -107,11 +107,7 @@ async function select(api: () => GridApi, a: [number, string], h: [number, strin
 }
 
 describe('fill handle: pointer drag', () => {
-    // Skipped in WebKit: after the RTL suite has run in the same session, Playwright's WebKit
-    // intermittently delivers the mouse press without a pointerdown reaching the handle's listener,
-    // so a range drag starts instead of a fill (seen in about 1 run in 3, logged 2026-10-12). Real
-    // Safari sends pointerdown; the other fill-drag tests below still cover WebKit.
-    it.skipIf(server.browser === 'webkit')('drags down past the grid, auto-scrolls and continues the series to the row under the pointer', async () => {
+    it('drags down past the grid, auto-scrolls and continues the series to the row under the pointer', async () => {
         const rows = makeRows(400);
         rows[0].c1 = 1;
         rows[1].c1 = 2;
