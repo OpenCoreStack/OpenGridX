@@ -198,6 +198,47 @@ All sub-theme types (`GridThemeColors`, `GridThemeGrayScale`, `GridThemeTypograp
 | `--ogx-grid-header-font-size` | `13px` | Header cell font size (`grid.headerFontSize`) |
 | `--ogx-grid-line-height` | `var(--ogx-line-height-normal)` | Row line height |
 
+### Fonts, dividers and corners (v3.7)
+
+These keys were added for the [Theme Builder](https://opencorestack.github.io/OpenGridX/theme-builder). Each defaults to exactly what the grid drew before, so a theme that leaves them out looks unchanged. The variables without a stylesheet value are read with a fallback, so they follow the token in the Default column when only that one is set.
+
+| Theme key | CSS variable | Default | Styles |
+|---|---|---|---|
+| `grid.headerFontFamily` | `--ogx-grid-header-font-family` | the grid font | Header cells |
+| `grid.headerFontWeight` | `--ogx-grid-header-font-weight` | `600` | Header cells |
+| `grid.cellFontFamily` | `--ogx-grid-cell-font-family` | the grid font | Body cells |
+| `grid.cellFontWeight` | `--ogx-grid-cell-font-weight` | inherited (`400`) | Body cells |
+| `grid.headerPaddingX` | `--ogx-grid-header-padding-x` | `--ogx-grid-cell-padding-x` | Horizontal padding of header cells |
+| `grid.borderWidth` | `--ogx-grid-border-width` | `1px` | The grid's outer border |
+| `grid.borderRadius` | `--ogx-grid-border-radius` | `--ogx-border-radius-lg` (`12px`) | The grid's corners (inner corners follow: radius minus border width) |
+| `grid.columnDividerWidth` | `--ogx-grid-column-divider-width` | `1px` | Lines between body cells and aggregation footer cells, and the edge of the right-pinned section |
+| `grid.headerColumnDividerWidth` | `--ogx-grid-header-column-divider-width` | `1px` | The short separators between header cells and column-group cells |
+| `grid.rowDividerWidth` | `--ogx-grid-row-divider-width` | `1px` | Lines under rows, the header row, column-group rows and the header filter row |
+| `grid.columnDividerColor` | `--ogx-grid-column-divider-color` | `--ogx-grid-border-color` | Colour of the column dividers |
+| `grid.rowDividerColor` | `--ogx-grid-row-divider-color` | `--ogx-grid-border-color` | Colour of the row dividers |
+| `overlays.fontFamily` | `--ogx-overlay-font-family` | the grid font | Column menu, header filter menu, toolbar panels (columns, filters, summaries, pivot), AI panel |
+| `overlays.fontWeight` | `--ogx-overlay-font-weight` | each item's own (`400`, labels `500`) | Menu items and panel labels; section titles and active items stay bold |
+| `overlays.fontSize` | `--ogx-overlay-font-size` | `--ogx-font-size-xs` (AI panel `--ogx-font-size-sm`) | Menu items and panel labels |
+
+The header-cell separators keep their own colour (`--ogx-color-gray-300` at 50% opacity); only their width is themable.
+
+#### Recipe: hide the dividers
+
+A width of `0` removes a divider without changing any cell's size or position:
+
+```tsx
+const borderless: GridTheme = {
+  grid: {
+    columnDividerWidth: '0',        // body and footer cells
+    headerColumnDividerWidth: '0',  // header and column-group cells
+    rowDividerWidth: '0',           // under rows and header rows
+    rowAlternateBackground: '#f8fafc', // optional: zebra rows instead of lines
+  },
+};
+```
+
+For visible gaps between cells instead of lines, set the divider colour to the grid background (`columnDividerColor: '#ffffff'`) and widen it. Cells have no margin setting: they are positioned to the pixel for virtualization, pinning and spanning, so use padding for room inside them.
+
 ### Grid Colors
 
 | Token | Default (light) | Dark override | Description |
