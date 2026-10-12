@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.6.0
+- **Current version:** 3.7.0
 
 ---
 
@@ -156,6 +156,15 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.7.0 — significant changes
+
+- **Types** live in domain files under `lib/types/` (`columns`, `rows`, `props`, `api`, `editing`, `selection`, …); `lib/types/index.ts` only re-exports. Import from `types`, add a type to its domain file
+- **`DataGrid.tsx`** renders through `GridRoot` → `GridViewport`, and wraps contiguous hook runs in composite hooks (`useGridEditPipeline`, `useGridSelectionAndStateApi`, `useGridViewApis`, `useGridScrollViewport`, `useGridRangeEditing`, `useGridRenderWindow`, `useGridToolbarStack`). Never reorder hooks across a composite; the true numbered order is in `docs/architecture/datagrid-orchestration.md`. Each extracted component takes exactly one child position (keeps `useId` values stable in SSR)
+- **16 theme keys** (fonts, header padding, border width/radius, divider widths/colours, overlay font). Variables without a stylesheet value are read as `var(--x, fallback)` so they follow a provider's base token; divider width 0 hides a divider. `lib/theme/defaultThemeBaseline.browser.test.tsx` compares the default theme's computed styles with `lib/theme/__baseline__/default-theme.darwin.<engine>.json` on macOS only (text metrics differ per OS); an intended default-look change must regenerate them
+- **Demo smoke**: `npm run test:demo` (`e2e/demo.spec.ts`, port 4322, base `/OpenGridX/`) loads every route of `examplesConfig` in `demo/App.tsx`; `@heavy` pages also in Firefox/WebKit. It runs in `ci.yml` and is the build step of `deploy.yml`. A route can set `fullWidth: true`
+- `source-map-js` is overridden to `^1.2.2` (root, fixtures, bench). The `sprintf-js` alert has no fix while `vite-plugin-dts` relies on api-extractor
+- Browser tests that drag must release the mouse over the page (and test files reset with `commands.pointerUp()` in `afterEach`): a release outside the frame leaves WebKit's button pressed and swallows the next file's `pointerdown`
 
 ## v3.6.0 — significant changes
 
