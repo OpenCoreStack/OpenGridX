@@ -5,6 +5,22 @@
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **Faster sort, quick filter and grouping on large data; results unchanged.** Row order, filtered rows and group contents are the same as before (randomized tests compare them with the previous implementation). Medians at 1M rows (`npm run bench`, Apple M1, before → after, `docs/performance.md` → Benchmarks):
+  - Sort by a number column: Chromium 1,716 → 467 ms, Firefox 1,935 → 468 ms, WebKit 1,126 → 340 ms.
+  - Sort by a string column: Chromium 1,510 → 467 ms, Firefox 2,338 → 560 ms, WebKit 2,939 → 562 ms. Strings are ranked by sorting only their distinct values with the collator instead of comparing every row pair with it.
+  - Quick filter, first keystroke: Chromium 2,127 → 1,813 ms, Firefox 3,283 → 2,789 ms, WebKit 3,646 → 3,166 ms.
+  - Group by a column + `sum`: Chromium 924 → 693 ms, Firefox 1,879 → 1,776 ms, WebKit 818 → 675 ms.
+  - Also faster: number filters (144 → 97 ms in Chromium) and mount (804 → 621 ms), from reading plain cells without allocating and computing row heights in one pass.
+- Row-grouping leaf rows at the same depth now share one `GridRowMeta` object in `rowMetaMap` (same content as before).
+
+### Internal
+
+- `docs/superpowers/specs/2026-10-12-nonblocking-pipeline-proposal.md`: a proposal for time-sliced sorting, filtering and grouping (not implemented).
+
 ## [3.5.1] — 2026-10-12
 
 ### Fixed
