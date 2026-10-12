@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.5.1
+- **Current version:** 3.6.0
 
 ---
 
@@ -152,6 +152,20 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.6.0 — significant changes
+
+- **Sorting** encodes each key into typed arrays (`encodeSortColumn`): rank 0–4 (number, date, boolean, string, other), empty = 5, plus a number per row; strings/other get their position among the distinct texts in collator order. Only keys where an item carries both `comparator` and `params` use the per-pair `callSortComparator` path. Never call the collator inside a comparator over rows
+- `getCellValue` returns `row[field]` without allocating when the column has no `valueGetter` — keep it allocation-free. Built-in aggregations go through `aggregateRows` (row by row, same addition order); `AGGREGATION_FUNCTIONS` stays the value-array API for pivot and cell selection
+- Quick filter: `filterRows` keeps texts by index for the last rows array per `GridColumnLookup` (reused when the same object is at the same index); `createRowFilter` keeps a per-row WeakMap. Joining texts into one string was measured and rejected
+- Row-grouping leaf `GridRowMeta` objects are one per row (sharing per depth was reverted: `params.rowMeta` is public). Equivalence tests with the old code as oracles: `*.equivalence.test.ts`
+- **`dist/opengridx.es.js` starts with `'use client'`** (banner in `vite.config.lib.js`, checked by check-bundle); the UMD build has none
+- **Every optional-peer `import()` (`exceljs`, `jspdf`, `jspdf-autotable`) must stay inside `try`** — webpack and Turbopack only treat it as optional there; a hidden variable specifier breaks apps that install the peers. The `nopeers` smoke fixture (webpack 5, no peers, port 4321, `e2e/nopeers.spec.ts`) guards it; fixtures must keep webpack from resolving the root `node_modules`
+- `validateGridAiState` skips a top-level string `message`; the prompt handler surfaces it as `result.message` for object, JSON-string and fenced input
+- **RTL**: read/write horizontal scroll only through `getScrollStart` / `setScrollStart` (`lib/utils/direction.ts`; scroll state is the offset from the inline start, never negative); map arrows with `logicalArrowKey(key, isRtl(el))`; panels with `getPanelPosition`. `pinnedColumns.left` / `right` are logical (inline start / end): sticky offsets use `insetInlineStart` / `insetInlineEnd` (jsdom: `style.getPropertyValue('inset-inline-start')`), borders `border-inline-*`, box-shadow x-offsets need `:dir(rtl)` mirrors. The column menu pins by screen side. `useGridScrollSync` observes `dir` mutations
+- Testing RTL: Playwright's headless Chromium runs with `--hide-scrollbars`; with classic scrollbars and `scrollbar-gutter: stable`, RTL cannot reach `scrollLeft` 0 — compare against the scroll origin. Reproduce on macOS with `defaults write chrome-headless-shell AppleShowScrollBars Always`. The grid's `scrollbar-width` / `scrollbar-color` disable `::-webkit-scrollbar` in Chromium
+- Header filter strings are in `localeText` (`headerFilter*`, resolved in `lib/utils/headerFilterLocale.ts`)
+- Not in this release: the time-sliced pipeline (Option A of `docs/superpowers/specs/2026-10-12-nonblocking-pipeline-proposal.md`) is held for 3.7.0 until its overhead is within ~20 %
 
 ## v3.5.1 — significant changes
 
