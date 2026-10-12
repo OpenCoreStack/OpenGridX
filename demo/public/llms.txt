@@ -75,7 +75,7 @@ export default function App() {
 | autoHeight        | boolean   | false   | Fit height to rows (renders every row) |
 | overscanRowCount  | number    | 3       | Minimum rows rendered outside the viewport (raised automatically while scrolling fast) |
 | ariaLabel         | string    | —       | Accessible name for the grid          |
-| localeText        | GridLocaleText | —  | Override pager / no-rows strings: paginationRowsPerPage, paginationOf(from,to,count), paginationPage(page,count), noRowsLabel |
+| localeText        | GridLocaleText | —  | Override strings: paginationRowsPerPage, paginationOf(from,to,count), paginationPage(page,count), noRowsLabel, cellSelectionAnnouncement, aiAssistantButton; header filter row (3.6): headerFilterCustom, headerFilterCustomTooltip, headerFilterCellLabel(h), headerFilterValueLabel(h), headerFilterOperatorButtonLabel(h, op), headerFilterOperatorMenuLabel(h), headerFilterClearLabel(h), headerFilterClearTooltip, headerFilterAny, headerFilterTrue, headerFilterFalse, headerFilterOperators (Partial<Record<GridFilterOperator,string>>) |
 | rowHeight         | number    | 52      | Row height in pixels                   |
 | headerHeight      | number    | 56      | Header height in pixels                |
 | wrapHeaderText    | boolean   | false   | Wrap header titles within headerHeight (2 lines at 56px, 3 at 72, 4 at 88; ellipsis on the last line). Header never grows: raise headerHeight for more lines. Class ogx__header-cell--wrap. Per column: GridColDef.wrapHeaderText (3.3.0+) |

@@ -3,7 +3,6 @@ import type { GridColDef, GridFilterItem, GridFilterOperator } from '../../types
 import { filterValueToInputText, NO_VALUE_OPERATORS } from '../../utils/filtering';
 import {
     HEADER_FILTER_DEBOUNCE_MS,
-    HEADER_FILTER_OPERATOR_LABELS,
     HEADER_FILTER_OPERATOR_SYMBOLS,
     buildHeaderFilterItem,
     convertHeaderFilterValue,
@@ -13,6 +12,7 @@ import {
 } from '../../utils/headerFilters';
 import { Input } from '../ui/Input';
 import { HeaderFilterOperatorMenu } from './HeaderFilterOperatorMenu';
+import type { HeaderFilterLocale } from '../../utils/headerFilterLocale';
 
 export interface HeaderFilterCellProps {
     colDef: GridColDef;
@@ -25,6 +25,8 @@ export interface HeaderFilterCellProps {
     /** Stores (or removes, with null) the cell's own filter item. Must keep its identity. */
     onItemChange: (field: string, item: GridFilterItem | null) => void;
     onOpenFilterPanel?: () => void;
+    /** The row's strings (`resolveHeaderFilterLocale`). */
+    locale: HeaderFilterLocale;
 }
 
 interface ValueOption {
@@ -75,7 +77,7 @@ function ClearIcon() {
 }
 
 /** One cell of the header filter row: operator button, value control and clear button. */
-export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex, onItemChange, onOpenFilterPanel }: HeaderFilterCellProps) {
+export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex, onItemChange, onOpenFilterPanel, locale }: HeaderFilterCellProps) {
     const label = colDef.headerName || colDef.field;
     const item = state.kind === 'editable' ? state.item : undefined;
     const operator: GridFilterOperator = item?.operator ?? getHeaderFilterDefaultOperator(colDef);
@@ -242,17 +244,17 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
                 className="ogx__header-filter-custom"
                 tabIndex={-1}
                 onClick={onOpenFilterPanel}
-                title="Set in the filter panel"
+                title={locale.customTooltip}
             >
-                Custom filter
+                {locale.custom}
             </button>
         ) : (
-            <span className="ogx__header-filter-custom" title="Set in the filter panel">Custom filter</span>
+            <span className="ogx__header-filter-custom" title={locale.customTooltip}>{locale.custom}</span>
         );
     } else {
         let valueControl: React.ReactNode;
         if (!showsValue) {
-            valueControl = <span className="ogx__header-filter-operator-label">{HEADER_FILTER_OPERATOR_LABELS[operator] ?? operator}</span>;
+            valueControl = <span className="ogx__header-filter-operator-label">{locale.operator(operator)}</span>;
         } else if (colDef.type === 'boolean') {
             valueControl = (
                 <select
@@ -261,11 +263,11 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
                     tabIndex={-1}
                     value={item?.value == null || item.value === '' ? '' : String(item.value)}
                     onChange={(e) => setValue(e.target.value === '' ? '' : e.target.value === 'true')}
-                    aria-label={`Filter value for ${label}`}
+                    aria-label={locale.valueLabel(label)}
                 >
-                    <option value="">Any</option>
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
+                    <option value="">{locale.any}</option>
+                    <option value="true">{locale.yes}</option>
+                    <option value="false">{locale.no}</option>
                 </select>
             );
         } else if (usesSelect) {
@@ -280,9 +282,9 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
                         const option = valueOptions.find(o => o.key === e.target.value);
                         setValue(convertHeaderFilterValue(option ? option.value : '', operator));
                     }}
-                    aria-label={`Filter value for ${label}`}
+                    aria-label={locale.valueLabel(label)}
                 >
-                    <option value="">Any</option>
+                    <option value="">{locale.any}</option>
                     {valueOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
                 </select>
             );
@@ -298,11 +300,11 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
                     autoComplete="off"
                     value={draft ?? filterValueToInputText(item?.value, colDef.type)}
                     onChange={(e) => setDraft(e.target.value)}
-                    aria-label={`Filter value for ${label}`}
+                    aria-label={locale.valueLabel(label)}
                 />
             );
         }
-        const operatorLabel = HEADER_FILTER_OPERATOR_LABELS[operator] ?? operator;
+        const operatorLabel = locale.operator(operator);
         content = (
             <>
                 <button
@@ -312,7 +314,7 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
                     tabIndex={-1}
                     aria-haspopup="menu"
                     aria-expanded={menuAnchor !== null}
-                    aria-label={`Filter operator for ${label}: ${operatorLabel}`}
+                    aria-label={locale.operatorButtonLabel(label, operatorLabel)}
                     title={operatorLabel}
                     onClick={() => (menuAnchor ? setMenuAnchor(null) : openMenu())}
                 >
@@ -324,8 +326,8 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
                         type="button"
                         className="ogx__header-filter-clear"
                         tabIndex={-1}
-                        aria-label={`Clear filter for ${label}`}
-                        title="Clear"
+                        aria-label={locale.clearLabel(label)}
+                        title={locale.clearTooltip}
                         onClick={() => { clear(); focusCell(); }}
                     >
                         <ClearIcon />
@@ -335,6 +337,7 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
                     <HeaderFilterOperatorMenu
                         anchorEl={menuAnchor}
                         columnLabel={label}
+                        locale={locale}
                         operators={getHeaderFilterOperators(colDef)}
                         current={operator}
                         onSelect={selectOperator}
@@ -358,7 +361,7 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
             className={classNames}
             style={style}
             role="columnheader"
-            aria-label={`Filter ${label}`}
+            aria-label={locale.cellLabel(label)}
             aria-colindex={ariaColIndex}
             data-field={colDef.field}
             tabIndex={-1}

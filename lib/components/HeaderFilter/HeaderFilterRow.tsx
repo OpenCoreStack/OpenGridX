@@ -1,7 +1,8 @@
 import { useCallback, useLayoutEffect, useRef } from 'react';
-import type { GridColDef, GridColumnPinning, GridFilterItem, GridFilterModel } from '../../types';
+import type { GridColDef, GridColumnPinning, GridFilterItem, GridFilterModel, GridLocaleText } from '../../types';
 import { isColumnPinned, SYSTEM_COLUMN_WIDTH } from '../../utils/pinning';
 import { CHECKBOX_FIELD, EXPAND_FIELD, REORDER_FIELD } from '../../utils/focus';
+import { resolveHeaderFilterLocale } from '../../utils/headerFilterLocale';
 import { getHeaderFilterState, hasHeaderFilter, setHeaderFilterItem } from '../../utils/headerFilters';
 import { getHeaderColumnStyle } from '../Header/headerColumnStyle';
 import { HeaderFilterCell } from './HeaderFilterCell';
@@ -27,6 +28,8 @@ export interface HeaderFilterRowProps {
     onOpenFilterPanel?: () => void;
     /** Field of the focused filter cell, or null. */
     focusedField: string | null;
+    /** Translations of the row's strings. */
+    localeText?: GridLocaleText;
 }
 
 function SystemFilterCell({ field, ariaColIndex, sticky, left, focused }: {
@@ -68,7 +71,7 @@ export function HeaderFilterRow(props: HeaderFilterRowProps) {
     const {
         columns, columnWidths, pinnedColumns, pinnedPositions, pinnedEdges, rowReordering, hasDetailPanel,
         checkboxSelection, pinExpandColumn, pinCheckboxColumn, columnIndexMap, ariaRowIndex, filterModel,
-        onFilterModelChange, onOpenFilterPanel, focusedField,
+        onFilterModelChange, onOpenFilterPanel, focusedField, localeText,
     } = props;
 
     // Cells commit from timers and unmount cleanups: they read the newest model, and two commits
@@ -85,6 +88,8 @@ export function HeaderFilterRow(props: HeaderFilterRowProps) {
         latestRef.current = { filterModel: next, onFilterModelChange: emit };
         emit(next);
     }, []);
+
+    const locale = resolveHeaderFilterLocale(localeText);
 
     const reorderColIndex = rowReordering ? 1 : 0;
     const expandColIndex = hasDetailPanel ? reorderColIndex + 1 : reorderColIndex;
@@ -149,6 +154,7 @@ export function HeaderFilterRow(props: HeaderFilterRowProps) {
                         ariaColIndex={ariaColIndex}
                         onItemChange={handleItemChange}
                         onOpenFilterPanel={onOpenFilterPanel}
+                        locale={locale}
                     />
                 );
             })}

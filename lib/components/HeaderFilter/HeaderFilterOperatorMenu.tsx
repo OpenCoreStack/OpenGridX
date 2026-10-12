@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import type { GridFilterOperator } from '../../types';
-import { HEADER_FILTER_OPERATOR_LABELS } from '../../utils/headerFilters';
+import type { HeaderFilterLocale } from '../../utils/headerFilterLocale';
 import { getViewportHeight, getViewportWidth } from '../../utils/viewport';
 
 export interface HeaderFilterOperatorMenuProps {
@@ -13,6 +13,7 @@ export interface HeaderFilterOperatorMenuProps {
     onSelect: (operator: GridFilterOperator) => void;
     /** `restoreFocus`: the menu was left from the keyboard or by choosing an item. */
     onClose: (restoreFocus: boolean) => void;
+    locale: HeaderFilterLocale;
 }
 
 const HIDDEN_STYLE: React.CSSProperties = { position: 'fixed', zIndex: 1300, top: 0, left: 0, visibility: 'hidden' };
@@ -21,7 +22,7 @@ const itemsOf = (menu: HTMLElement | null): HTMLElement[] =>
     menu ? Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitemradio"]')) : [];
 
 /** The operator menu of a header filter cell: a menu of radio items, portalled out of the header. */
-export function HeaderFilterOperatorMenu({ anchorEl, columnLabel, operators, current, onSelect, onClose }: HeaderFilterOperatorMenuProps) {
+export function HeaderFilterOperatorMenu({ anchorEl, columnLabel, operators, current, onSelect, onClose, locale }: HeaderFilterOperatorMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [style, setStyle] = useState<React.CSSProperties>(HIDDEN_STYLE);
 
@@ -102,7 +103,7 @@ export function HeaderFilterOperatorMenu({ anchorEl, columnLabel, operators, cur
             className="ogx-column-menu ogx__header-filter-menu"
             style={style}
             role="menu"
-            aria-label={`Filter operator for ${columnLabel}`}
+            aria-label={locale.operatorMenuLabel(columnLabel)}
             onKeyDown={handleKeyDown}
         >
             {operators.map(op => (
@@ -115,7 +116,7 @@ export function HeaderFilterOperatorMenu({ anchorEl, columnLabel, operators, cur
                     className={`ogx-menu-item${op === current ? ' ogx-menu-item--active' : ''}`}
                     onClick={() => onSelect(op)}
                 >
-                    {HEADER_FILTER_OPERATOR_LABELS[op] ?? op}
+                    {locale.operator(op)}
                 </button>
             ))}
         </div>,

@@ -2,7 +2,7 @@ import React, { useId } from 'react';
 import { Checkbox } from '../ui/Checkbox';
 import { ColumnResizeHandle } from '../ColumnResizeHandle/ColumnResizeHandle';
 import { clampResizeWidth } from '../ColumnResizeHandle/clampResizeWidth';
-import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning, GridAggregationModel, GridColumnGroupingModel, GridFilterModel } from '../../types';
+import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning, GridAggregationModel, GridColumnGroupingModel, GridFilterModel, GridLocaleText } from '../../types';
 import { isColumnPinned, calculatePinnedPositions, getPinnedEdgeFields } from '../../utils/pinning';
 import { getRenderedColumnWidth } from '../../utils/columnWidth';
 import { buildColumnGroupRow, getColumnGroupDepth, getColumnGroupPaths } from '../../utils/columnGroups';
@@ -87,6 +87,8 @@ export interface HeaderProps<R extends GridRowModel = GridRowModel> {
     onFilterModelChange?: (model: GridFilterModel) => void;
     /** Opens the filter panel; a header filter cell showing "Custom filter" calls it. */
     onOpenFilterPanel?: () => void;
+    /** Translations of the header filter row's strings. */
+    localeText?: GridLocaleText;
 }
 
 export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps<R>) {
@@ -129,6 +131,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
         filterModel,
         onFilterModelChange,
         onOpenFilterPanel,
+        localeText,
     } = props;
 
     const selectAllId = useId();
@@ -583,6 +586,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                     filterModel={filterModel}
                     onFilterModelChange={onFilterModelChange}
                     onOpenFilterPanel={onOpenFilterPanel}
+                    localeText={localeText}
                     focusedField={focusedCell?.id === null && focusedCell.headerFilter ? focusedCell.field : null}
                 />
             )}

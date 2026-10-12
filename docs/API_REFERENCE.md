@@ -243,7 +243,7 @@ Public CSS: `ogx__cell-fill-handle` (24 × 24 px hit area in the corner cell; th
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `localeText` | `GridLocaleText` | — | Override user-visible strings: the Pagination labels, the empty-state label (`noRowsLabel`, which wins over the `noRowsLabel` prop), the cell-range announcement and the Ask AI button (`aiAssistantButton`). See [`GridLocaleText`](#gridlocaletext). |
+| `localeText` | `GridLocaleText` | — | Override user-visible strings: the Pagination labels, the empty-state label (`noRowsLabel`, which wins over the `noRowsLabel` prop), the cell-range announcement, the Ask AI button (`aiAssistantButton`) and the header filter row (`headerFilter*`, v3.6). See [`GridLocaleText`](#gridlocaletext). |
 
 #### Imperative Ref
 
@@ -889,6 +889,19 @@ interface GridLocaleText {
   cellSelectionAnnouncement?: (cellCount: number, rowCount: number, columnCount: number) => string;
   /** v3.5: label of the toolbar's Ask AI button. Default "Ask AI". */
   aiAssistantButton?: string;
+  /** v3.6: header filter row strings (defaults in English). See features/header-filters.md#translating-the-row. */
+  headerFilterCustom?: string;                      // "Custom filter"
+  headerFilterCustomTooltip?: string;               // "Set in the filter panel"
+  headerFilterCellLabel?: (header: string) => string;           // "Filter Qty"
+  headerFilterValueLabel?: (header: string) => string;          // "Filter value for Qty"
+  headerFilterOperatorButtonLabel?: (header: string, operatorLabel: string) => string; // "Filter operator for Qty: Equals"
+  headerFilterOperatorMenuLabel?: (header: string) => string;   // "Filter operator for Qty"
+  headerFilterClearLabel?: (header: string) => string;          // "Clear filter for Qty"
+  headerFilterClearTooltip?: string;                // "Clear"
+  headerFilterAny?: string;                         // "Any"
+  headerFilterTrue?: string;                        // "Yes"
+  headerFilterFalse?: string;                       // "No"
+  headerFilterOperators?: Partial<Record<GridFilterOperator, string>>; // operator names
 }
 ```
 

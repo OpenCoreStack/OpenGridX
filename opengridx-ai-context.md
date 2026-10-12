@@ -237,7 +237,8 @@ item, group, `logicOperator` and `quickFilterValues` untouched, so the filter pa
 `logicOperator: 'or'`, the field inside a group, an untagged or second root item on the field) is shown
 as a read-only "Custom filter" that opens the `GridToolbar` filter panel; it is never rewritten.
 Keyboard: ArrowDown on a header → filter cell → first row; Enter or typing focuses the control,
-Escape returns. Guide: `docs/features/header-filters.md`.
+Escape returns. Its strings are `localeText.headerFilter*` keys (3.6: `headerFilterCustom`, `headerFilterAny`/`True`/`False`,
+`headerFilterOperators`, aria-label functions). Guide: `docs/features/header-filters.md`.
 
 ### Paste, range clear and undo/redo (3.4.0+)
 

@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Translatable header filter row.** New `GridLocaleText` keys for every string the header filter row shows or announces: `headerFilterCustom` / `headerFilterCustomTooltip` ("Custom filter"), `headerFilterCellLabel`, `headerFilterValueLabel`, `headerFilterOperatorButtonLabel`, `headerFilterOperatorMenuLabel`, `headerFilterClearLabel` (aria-labels, functions of the column header), `headerFilterClearTooltip`, `headerFilterAny` / `headerFilterTrue` / `headerFilterFalse` (the selects) and `headerFilterOperators` (operator names). Each defaults to the English text it replaces. The *Locale Text* demo shows them in French.
+
 ### Changed
 
 - **Faster sort, quick filter and grouping on large data; results unchanged.** Row order, filtered rows and group contents are the same as before (randomized tests compare them with the previous implementation). Medians at 1M rows (`npm run bench`, Apple M1, before → after, `docs/performance.md` → Benchmarks):

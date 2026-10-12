@@ -107,6 +107,40 @@ The filter row is a header row (`role="row"`) between the column headers and the
 
 Inside a control, arrow keys edit the text (or move through a select) and do not move the grid's focus, as in a cell editor. **Escape** returns focus to the filter cell. **Tab** leaves the grid: the grid stays a single Tab stop and every control in the row has `tabIndex={-1}`.
 
+## Translating the row
+
+Every string the row shows or announces comes from `localeText` (v3.6). Each key defaults to the English text below.
+
+| `GridLocaleText` key | Type | Default |
+| :--- | :--- | :--- |
+| `headerFilterCustom` | `string` | `"Custom filter"` |
+| `headerFilterCustomTooltip` | `string` | `"Set in the filter panel"` |
+| `headerFilterCellLabel` | `(header) => string` | `` `Filter ${header}` `` (the cell's `aria-label`) |
+| `headerFilterValueLabel` | `(header) => string` | `` `Filter value for ${header}` `` |
+| `headerFilterOperatorButtonLabel` | `(header, operatorLabel) => string` | `` `Filter operator for ${header}: ${operatorLabel}` `` |
+| `headerFilterOperatorMenuLabel` | `(header) => string` | `` `Filter operator for ${header}` `` |
+| `headerFilterClearLabel` | `(header) => string` | `` `Clear filter for ${header}` `` |
+| `headerFilterClearTooltip` | `string` | `"Clear"` |
+| `headerFilterAny` | `string` | `"Any"` (boolean and `singleSelect` selects) |
+| `headerFilterTrue` / `headerFilterFalse` | `string` | `"Yes"` / `"No"` |
+| `headerFilterOperators` | `Partial<Record<GridFilterOperator, string>>` | English names ("Contains", "Is empty", ...); operators left out keep them |
+
+```tsx
+<DataGrid
+    headerFilters
+    localeText={{
+        headerFilterAny: 'Tous',
+        headerFilterTrue: 'Oui',
+        headerFilterFalse: 'Non',
+        headerFilterCellLabel: (h) => `Filtrer ${h}`,
+        headerFilterOperators: { contains: 'Contient', isEmpty: 'Est vide' },
+    }}
+    /* ... */
+/>
+```
+
+The operator symbols on the buttons (`=`, `≠`, `>`) are not translated. Demo: *Locale Text* (`/locale-text`).
+
 ## Layout
 
 - The row sits inside the sticky header block (`.ogx__header-wrap`), under any column group rows and the column header row, so it stays at the top while rows scroll.

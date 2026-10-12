@@ -991,6 +991,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                                 filterModel={filterModel}
                                 onFilterModelChange={handleFilterModelChange}
                                 onOpenFilterPanel={columnsPanel.openFiltersPanel}
+                                localeText={localeText}
                             />
 
                             <GridPinnedRows<R>
