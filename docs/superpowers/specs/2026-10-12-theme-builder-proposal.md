@@ -15,15 +15,20 @@ Each control maps to an existing `GridTheme` key, or a **new** one (marked **new
 | **Colours** | Grid background, border colour, row text, alternate row, row hover, selected row, focus ring, range selection | `grid.background`, `grid.borderColor` / `borders.color`, `grid.rowText`, `grid.rowAlternateBackground`, `grid.rowHoverBackground`, `grid.rowSelectedBackground`, `grid.cellFocusBorder`, `grid.rangeBackground` / `rangeBorder` |
 | **Header cell** | Background, text colour, hover and sorted background; font family, **weight**, size | `grid.headerBackground`, `headerText`, `headerHoverBackground`, `headerSortedBackground`, `grid.headerFontSize`, **new** `grid.headerFontFamily`, **new** `grid.headerFontWeight` |
 | **Body cell** | Font family, **weight**, size; horizontal padding | **new** `grid.cellFontFamily`, **new** `grid.cellFontWeight`, `grid.cellFontSize`, `grid.cellPaddingX` |
-| **Sizes** | Row height (compact / standard / comfortable), header height, border radius | `grid.rowHeightCompact` / `Standard` / `Comfortable`, `grid.headerHeight`, `borders.radiusMd` |
+| **Sizes and spacing** | Row height (compact / standard / comfortable), header height; body cell padding (horizontal, vertical); header cell padding (horizontal) | `grid.rowHeightCompact` / `Standard` / `Comfortable`, `grid.headerHeight`, `grid.cellPaddingX`, `grid.cellPaddingY`, **new** `grid.headerPaddingX` |
+| **Borders and dividers** | Outer border width, colour and corner radius; show or hide column dividers (body, header, separately) and row dividers; divider width and colour | **new** `grid.borderWidth`, `grid.borderColor`, **new** `grid.borderRadius`; **new** `grid.columnDividerWidth`, `grid.headerColumnDividerWidth`, `grid.rowDividerWidth`, **new** `grid.columnDividerColor`, `grid.rowDividerColor` (default to `grid.borderColor`). "Hide" in the builder sets the width to `0` |
 | **Buttons** | Toolbar button background, hover, text; primary button background and text | `toolbar.buttonBackground`, `buttonHoverBackground`, `buttonText`, `buttonPrimaryBackground`, `buttonPrimaryText` |
 | **Column menu and panels** | Background, text, border, shadow, item hover / selected; font family, weight, size | `overlays.background`, `text`, `border`, `shadow`, `itemHoverBackground`, `itemSelectedBackground`, **new** `overlays.fontFamily`, **new** `overlays.fontWeight`, **new** `overlays.fontSize` |
 | **Brand** | Primary colour (drives the derived tokens) | `colors.primary` |
 
-**New keys (library change, additive):** 8 theme keys and their CSS variables.
+**Not included: cell margin.** Cells are positioned to the pixel for virtualization, spanning, pinning and range outlines, so a margin would misalign them. Padding gives the same visual room; dividers in the grid background colour give visible gaps.
+
+**New keys (library change, additive):** 16 theme keys and their CSS variables.
 - **Header:** `--ogx-grid-header-font-family`, `--ogx-grid-header-font-weight`
 - **Body cells:** `--ogx-grid-cell-font-family`, `--ogx-grid-cell-font-weight`
 - **Column menu and panels:** `--ogx-overlay-font-family`, `--ogx-overlay-font-weight`, `--ogx-overlay-font-size`
+- **Spacing:** `--ogx-grid-header-padding-x` (defaults to the cell padding)
+- **Borders and dividers:** `--ogx-grid-border-width`, `--ogx-grid-border-radius`, `--ogx-grid-column-divider-width`, `--ogx-grid-header-column-divider-width`, `--ogx-grid-row-divider-width`, `--ogx-grid-column-divider-color`, `--ogx-grid-row-divider-color`. Today these are hard-coded `1px` borders in the CSS; the new variables default to exactly those values
 
 **Defaults:** each falls back to today's value. Grids that don't set the new keys look exactly as they do now, and a layout test proves it.
 
@@ -45,7 +50,7 @@ Each control maps to an existing `GridTheme` key, or a **new** one (marked **new
 
 ## Workflow (how it gets built)
 
-1. **Approve this proposal**, including the 8 new theme keys.
+1. **Approve this proposal**, including the 16 new theme keys.
 2. **Library step**, one agent:
    - add the new keys to `GridTheme`, the CSS variables, the `DataGridThemeProvider` mapping, every built-in preset (same values as today) and the CSS rules that read them;
    - tests: unit tests for the provider mapping, a browser test that the fonts apply to header cells, body cells and the column menu, and an LTR layout test showing no change for existing themes;
