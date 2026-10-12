@@ -27,3 +27,16 @@
   display: block;
   transition: transform 0.2s ease;
 }
+/* The chevron points towards the inline end (right, or left in a right-to-left grid) and down when expanded. */
+.ogx-expand-icon__chevron {
+  transform: rotate(0deg);
+}
+.ogx-expand-icon--expanded .ogx-expand-icon__chevron {
+  transform: rotate(90deg);
+}
+.ogx-expand-icon__chevron:dir(rtl) {
+  transform: scaleX(-1) rotate(0deg);
+}
+.ogx-expand-icon--expanded .ogx-expand-icon__chevron:dir(rtl) {
+  transform: scaleX(-1) rotate(90deg);
+}

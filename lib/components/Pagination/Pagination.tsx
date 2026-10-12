@@ -115,7 +115,7 @@ export function Pagination(props: PaginationProps) {
                         aria-label="Go to first page"
                         title="First page"
                     >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <svg className="ogx-pagination__icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <path d="M18.41 16.59L13.82 12l4.59-4.59L17 6l-6 6 6 6zM6 6h2v12H6z" />
                         </svg>
                     </Button>
@@ -129,7 +129,7 @@ export function Pagination(props: PaginationProps) {
                     aria-label="Go to previous page"
                     title="Previous page"
                 >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <svg className="ogx-pagination__icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
                     </svg>
                 </Button>
@@ -146,7 +146,7 @@ export function Pagination(props: PaginationProps) {
                     aria-label="Go to next page"
                     title="Next page"
                 >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <svg className="ogx-pagination__icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
                     </svg>
                 </Button>
@@ -160,7 +160,7 @@ export function Pagination(props: PaginationProps) {
                         aria-label="Go to last page"
                         title="Last page"
                     >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <svg className="ogx-pagination__icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <path d="M5.59 7.41L10.18 12l-4.59 4.59L7 18l6-6-6-6zM16 6h2v12h-2z" />
                         </svg>
                     </Button>

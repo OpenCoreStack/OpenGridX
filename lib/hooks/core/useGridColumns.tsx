@@ -282,8 +282,8 @@ export function useGridColumns<R extends GridRowModel>(
                         const content = custom.useDefault ? defaultHierarchyContent(cellParams, isRowGrouping, isTreeData) : custom.content;
 
                         return (
-                            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: depth * 24, width: '100%', height: '100%' }}>
-                                <div style={{ marginRight: 4, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: hasChildren ? 'pointer' : 'default', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', paddingInlineStart: depth * 24, width: '100%', height: '100%' }}>
+                                <div style={{ marginInlineEnd: 4, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: hasChildren ? 'pointer' : 'default', flexShrink: 0 }}>
                                     {hasChildren ? (
                                         <div
                                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); activeHierarchyHandlers?.toggleExpansion(getRowId(cellParams.row)); }}

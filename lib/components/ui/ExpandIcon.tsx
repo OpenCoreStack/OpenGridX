@@ -59,10 +59,8 @@ export function ExpandIcon({ isExpanded, onClick, variant = 'chevron', tabIndex 
                     viewBox="0 0 16 16"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
-                    style={{
-                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s ease'
-                    }}
+                    className="ogx-expand-icon__chevron"
+                    aria-hidden="true"
                 >
                     <path
                         d="M6 4L10 8L6 12"

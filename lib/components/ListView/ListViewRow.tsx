@@ -107,7 +107,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
                 // (not a Tab stop: Enter or Alt+Arrow toggle the focused row).
                 <div
                     className="ogx-list-view__expand"
-                    style={{ paddingLeft: (rowMeta.treeDepth ?? 0) * 16 }}
+                    style={{ paddingInlineStart: (rowMeta.treeDepth ?? 0) * 16 }}
                     onClick={(e) => e.stopPropagation()}
                     onDoubleClick={(e) => e.stopPropagation()}
                 >

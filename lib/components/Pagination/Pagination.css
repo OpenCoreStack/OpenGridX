@@ -89,3 +89,7 @@
     order: 2;
   }
 }
+/* First / previous / next / last arrows point the way the pages run: mirrored right to left. */
+.ogx-pagination__icon:dir(rtl) {
+  transform: scaleX(-1);
+}
