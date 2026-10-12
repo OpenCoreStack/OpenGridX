@@ -52,6 +52,7 @@ const PdfExportDemo = lazy(() => import('./examples/PdfExportDemo/PdfExportDemo'
 const MultiSortDemo = lazy(() => import('./examples/MultiSortDemo/MultiSortDemo'));
 const HeaderWrapDemo = lazy(() => import('./examples/HeaderWrapDemo/HeaderWrapDemo'));
 const HeaderFiltersDemo = lazy(() => import('./examples/HeaderFiltersDemo/HeaderFiltersDemo'));
+const RtlDemo = lazy(() => import('./examples/RtlDemo/RtlDemo'));
 
 const examplesConfig = [
     // Resources
@@ -79,6 +80,7 @@ const examplesConfig = [
     { path: '/header-wrap', name: 'Wrapped Header Text', component: HeaderWrapDemo, category: 'Main features' },
     { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
     { path: '/header-filters', name: 'Header Filters', component: HeaderFiltersDemo, category: 'Main features' },
+    { path: '/rtl', name: 'Right-to-Left', component: RtlDemo, category: 'Main features' },
     { path: '/editing', name: 'Cell Editing', component: EditingExample, category: 'Main features' },
     { path: '/custom-editors', name: 'Custom Cell Editors', component: CustomEditorsDemo, category: 'Main features' },
     { path: '/events', name: 'Events Observer', component: EventsDemo, category: 'Main features' },
