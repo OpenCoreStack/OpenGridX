@@ -51,6 +51,7 @@ In-depth guides on the grid's functional capabilities.
 - **[List View](features/list-view.md)** - Card-based responsive layout
 - **[Infinite Scroll](features/infinite-scroll.md)** - Advanced performance loading
 - **[Data Source](features/data-source.md)** - Server-side fetching and SSR
+- **[Next.js (App Router)](features/nextjs.md)** - Client components, server-fetched rows, Route Handlers, the AI toolkit on server and client, common errors
 - **[Export Guide](features/export-guide.md)** - Excel, CSV, JSON, and Print
 - **[AI Toolkit](features/ai-toolkit.md)** - JSON Schema of the grid state for your own model, a validator for its replies, the **Ask AI** panel (`aiAssistant`) and tools for AI agents (`@opencorestack/opengridx/ai`)
 

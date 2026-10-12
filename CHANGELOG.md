@@ -11,6 +11,14 @@
 
 - **Translatable header filter row.** New `GridLocaleText` keys for every string the header filter row shows or announces: `headerFilterCustom` / `headerFilterCustomTooltip` ("Custom filter"), `headerFilterCellLabel`, `headerFilterValueLabel`, `headerFilterOperatorButtonLabel`, `headerFilterOperatorMenuLabel`, `headerFilterClearLabel` (aria-labels, functions of the column header), `headerFilterClearTooltip`, `headerFilterAny` / `headerFilterTrue` / `headerFilterFalse` (the selects) and `headerFilterOperators` (operator names). Each defaults to the English text it replaces. The *Locale Text* demo shows them in French.
 
+### Fixed
+
+- **Importing the grid from a React Server Component crashed the build** (`TypeError: createContext is not a function` in Next.js App Router "collecting page data"). `dist/opengridx.es.js` now starts with `'use client'`, so a Server Component gets a client reference: `<DataGrid>` with serialisable props can be rendered from a server file, and the grid hydrates in the browser. Wrapping it in your own `'use client'` file (needed for column functions) works as before. `scripts/check-bundle.mjs` checks the directive. The UMD build is minified and does not carry it; Next.js and other RSC bundlers load the ES build.
+
+### Docs
+
+- **Next.js (App Router) guide** — `docs/features/nextjs.md`: the `'use client'` grid file, the stylesheet in `app/layout.tsx`, server-fetched rows as props (columns with functions stay in the client file), `dataSource` with a Route Handler, `@opencorestack/opengridx/ai` on the server and in the browser (the validation brand does not survive JSON, so the client validates), the Pages Router, and the common errors. Verified with `next build` + `next start` on Next.js 16.4 (Turbopack and webpack) and 15.5, React 19.3, in Chromium, Firefox and WebKit. It also documents that `next build` fails with `Can't resolve 'exceljs'` when the optional export peers are not installed, and the `next.config.ts` aliases that avoid it.
+
 ### Changed
 
 - **Faster sort, quick filter and grouping on large data; results unchanged.** Row order, filtered rows and group contents are the same as before (randomized tests compare them with the previous implementation). Medians at 1M rows (`npm run bench`, Apple M1, before → after, `docs/performance.md` → Benchmarks):

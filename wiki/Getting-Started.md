@@ -96,4 +96,5 @@ apiRef.current.autosizeColumns();
 
 - Every prop, type and `apiRef` method: [API Reference](API-Reference)
 - Common problems: [FAQ & Troubleshooting](FAQ)
+- Next.js App Router: [Next.js guide](Nextjs)
 - Live examples for every feature: [demo site](https://opencorestack.github.io/OpenGridX/)

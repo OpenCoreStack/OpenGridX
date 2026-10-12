@@ -533,6 +533,7 @@ Full documentation at 👉 **[opencorestack.github.io/OpenGridX](https://opencor
 - **[AI Toolkit](docs/features/ai-toolkit.md)** — Schema and validator for driving the grid from your own model
 - **[Keyboard & Accessibility](docs/features/keyboard-navigation.md)** — Keys, focus and ARIA
 - **[Data Source](docs/features/data-source.md)** — Server-side integration
+- **[Next.js (App Router)](docs/features/nextjs.md)** — Client components, server-fetched rows and Route Handlers
 - **[Loading States](docs/features/loading-states.md)** — Skeleton and shimmer overlays
 
 ### 📊 Advanced Data

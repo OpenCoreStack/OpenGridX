@@ -24,7 +24,7 @@ Yes. React 18 and 19 are supported, and every release is tested in apps on both 
 
 ### Does it work with Next.js?
 
-Yes, as a client component. Render `DataGrid` from a file that starts with `'use client'`, and import the stylesheet in `app/layout.tsx`.
+Yes, as a client component. Render `DataGrid` from a file that starts with `'use client'`, and import the stylesheet in `app/layout.tsx`. Install the optional export peers or alias them in `next.config.ts`, or `next build` cannot resolve `exceljs`. Full guide, with Server Components, Route Handlers and common errors: [Next.js (App Router)](Nextjs).
 
 ### Do I need `exceljs` or `jspdf`?
 

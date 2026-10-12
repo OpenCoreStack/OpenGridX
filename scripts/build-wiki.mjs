@@ -22,6 +22,7 @@ const SECTIONS = [
         ['wiki/FAQ.md', 'FAQ', 'FAQ & Troubleshooting'],
         ['docs/API_REFERENCE.md', 'API-Reference', 'API Reference'],
         ['docs/performance.md', 'Performance', 'Performance'],
+        ['docs/features/nextjs.md', 'Nextjs', 'Next.js (App Router)'],
     ]],
     ['Components', [
         ['docs/components/datagrid.md', 'DataGrid', 'DataGrid'],
