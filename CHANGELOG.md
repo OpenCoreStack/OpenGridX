@@ -29,7 +29,6 @@
   - Quick filter, first keystroke: Chromium 2,127 → 1,813 ms, Firefox 3,283 → 2,789 ms, WebKit 3,646 → 3,166 ms.
   - Group by a column + `sum`: Chromium 924 → 693 ms, Firefox 1,879 → 1,776 ms, WebKit 818 → 675 ms.
   - Also faster: number filters (144 → 97 ms in Chromium) and mount (804 → 621 ms), from reading plain cells without allocating and computing row heights in one pass.
-- Row-grouping leaf rows at the same depth now share one `GridRowMeta` object in `rowMetaMap` (same content as before).
 
 ### Internal
 

@@ -438,17 +438,12 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
     const rowMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
         const map = new Map<GridRowId, GridRowMeta>();
-        // Every leaf at one depth has the same metadata: one object per depth, not one per row.
-        const leafMetaByDepth: GridRowMeta[] = [];
         treeNodes.forEach((node, id) => {
             const variants = groupRowVariants.get(id);
             if (!variants) {
-                let leafMeta = leafMetaByDepth[node.depth];
-                if (!leafMeta) {
-                    leafMeta = { hasChildren: false, treeDepth: node.depth, isGroupRow: false };
-                    leafMetaByDepth[node.depth] = leafMeta;
-                }
-                map.set(id, leafMeta);
+                // One object per row (not shared per depth): `params.rowMeta` is public, and a consumer that
+                // writes to it must not change other rows.
+                map.set(id, { hasChildren: false, treeDepth: node.depth, isGroupRow: false });
                 return;
             }
             const groupMeta: GridRowMeta = {
