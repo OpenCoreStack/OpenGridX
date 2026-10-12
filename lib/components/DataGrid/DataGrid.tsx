@@ -6,7 +6,6 @@ import { useGridThemeDimensions } from '../../hooks/core/useGridThemeDimensions'
 import { useGridRowPipeline, type GridRowPipelineResult } from '../../hooks/core/useGridRowPipeline';
 import { countReachableRows } from '../../utils/maxElementHeight';
 import { useGridColumns } from '../../hooks/core/useGridColumns';
-import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
 import { useGridDetailPanel } from '../../hooks/core/useGridDetailPanel';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings, useGridStylesheetWarning } from '../../hooks/core/useGridDevWarnings';
@@ -25,12 +24,12 @@ import { Header } from '../Header/Header';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useGridHierarchy } from '../../hooks/core/useGridHierarchy';
+import { useGridRenderWindow } from '../../hooks/core/useGridRenderWindow';
 import { useGridRangeEditing } from '../../hooks/core/useGridRangeEditing';
 import { useGridScrollViewport } from '../../hooks/core/useGridScrollViewport';
 import { useGridViewApis } from '../../hooks/core/useGridViewApis';
 import { useGridEditPipeline } from '../../hooks/core/useGridEditPipeline';
 import { useGridSpanning } from '../../hooks/features/useGridSpanning';
-import { useGridSpanRowWindow, useGridSpanColumnWindow } from '../../hooks/features/useGridSpanRenderWindow';
 import { useColumnGroupReorderGuard } from '../../hooks/features/useColumnGroupReorderGuard';
 import { useGridDataSource } from '../../hooks/features/useGridDataSource';
 import { useServerTreeChildren } from '../../hooks/features/useServerTreeChildren';
@@ -58,7 +57,6 @@ import { useGridKeyboardMode, useGridPointerFocusHandlers } from '../../hooks/co
 import { getPaginationRowCount, pickPaginationLocaleText } from '../../utils/pagination';
 import { GridPaginationArea } from './GridPaginationArea';
 import { GridLiveRegion } from './GridLiveRegion';
-import { useGridAriaRows } from '../../hooks/core/useGridAriaRows';
 import { useGridToolbarProps } from '../../hooks/core/useGridToolbarProps';
 import { useGridAiAssistant } from '../../hooks/features/useGridAiAssistant';
 import { GridAiAssistantArea } from '../AiAssistant/GridAiAssistantArea';
@@ -620,39 +618,23 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onPinnedColumnsChange: handlePinnedColumnsChange,
     });
 
-    const ariaRows = useGridAriaRows({
-        columnGroupingModel,
-        headerFilterRow: showHeaderFilters,
-        pinnedTopCount: pinnedTopRows.length,
-        pinnedBottomCount: pinnedBottomRows.length,
-        pagination,
-        paginationMode,
-        paginationModel: effectivePaginationModel,
-        paginationRowCount,
-        paginatedUnpinnedRowCount: paginatedUnpinnedRows.length,
-        sortedUnpinnedRowCount: sortedUnpinnedRows.length,
-    });
-
-    const spanRowWindow = useGridSpanRowWindow({
-        spanning,
-        renderContext: virtualization.renderContext,
-        offsetTop: virtualization.offsetTop,
-        cumulativeHeights: layout.cumulativeHeights,
-    });
-
-    const visibleRows = useGridVisibleRows<R>({
-        renderContext: spanRowWindow.renderContext,
+    // Steps 38–41: aria row bases, the span-widened row window, the rows and the columns to render.
+    const { ariaRows, spanRowWindow, visibleRows, renderColumns } = useGridRenderWindow<R>({
+        aria: {
+            columnGroupingModel,
+            headerFilterRow: showHeaderFilters,
+            pinnedTopCount: pinnedTopRows.length,
+            pinnedBottomCount: pinnedBottomRows.length,
+            pagination,
+            paginationMode,
+            paginationModel: effectivePaginationModel,
+            paginationRowCount,
+            paginatedUnpinnedRowCount: paginatedUnpinnedRows.length,
+            sortedUnpinnedRowCount: sortedUnpinnedRows.length,
+        },
+        spanning, virtualization, layout,
         pinnedTopRows, pinnedBottomRows, paginatedUnpinnedRows, sortedUnpinnedRows, pagination,
         getRowId: getRowIdOf,
-    });
-
-    const renderColumns = useGridSpanColumnWindow<R>({
-        spanning,
-        firstColumnIndex: virtualization.renderContext.firstColumnIndex,
-        lastColumnIndex: virtualization.renderContext.lastColumnIndex,
-        virtualColumns: virtualization.virtualColumns,
-        layout,
-        rows: visibleRows,
     });
 
     useGridDevWarnings({
