@@ -17,10 +17,7 @@ import { useGridPageCorrection } from '../../hooks/core/useGridPageCorrection';
 import { useGridColumnsPanel } from '../../hooks/core/useGridColumnsPanel';
 import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
 import { GridToolbarSlot } from './GridToolbarSlot';
-import { GridAggregationFooter } from './GridAggregationFooter';
-import { GridEmptyState } from './GridEmptyState';
 import { GridErrorOverlay } from './GridErrorOverlay';
-import { Header } from '../Header/Header';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useGridHierarchy } from '../../hooks/core/useGridHierarchy';
@@ -38,8 +35,7 @@ import { useGridPivot } from '../../hooks/features/useGridPivot';
 import { isServerDrivenDataSource } from '../../utils/dataSource';
 import { GridListView } from './GridListView';
 import { GridLoadingOverlay } from './GridLoadingOverlay';
-import { GridPinnedRows } from './GridPinnedRows';
-import { GridVirtualRows } from './GridVirtualRows';
+import { GridViewport, type GridViewportProps } from './GridViewport';
 import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
 import { resolveGridModes } from '../../utils/gridModes';
 import { useGridGroupingColumn } from '../../hooks/core/useGridGroupingColumn';
@@ -653,8 +649,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         listViewRowCount: listView && listViewColumn ? allRenderableRows.length : 0,
     });
 
-    const { allSelected, someSelected } = rowSelection;
-
     // Header drag-reorder keeps a column inside its column group (and ungrouped columns outside groups).
     const headerReorderHandlers = useColumnGroupReorderGuard(columnGroupingModel, columnReorderHandlers);
 
@@ -729,6 +723,29 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         cellRange: cellSelection.displayRange,
         cellRangeHasRowSpan: cellSelection.hasRowSpan,
         fillHandle: fillHandle.handle,
+    };
+
+    const viewportProps: GridViewportProps<R> = {
+        setViewportElement, handleScroll, ariaLabel, ariaRows,
+        navigationColumnCount: navigationColumns.length,
+        rowSelectionEnabled, disableMultipleRowSelection, cellSelection, effectiveLoading, viewportTabIndex, setKeyboardMode,
+        handleMouseDownCapture, handleKeyDown, handleFocus, handleBlur, effectivePinnedColumns, virtualization, renderColumns,
+        renderedDataColumns, columnGroupingModel, checkboxSelection, rowSelection, sortModel, handleSort, handleSortAdd,
+        multiSort, handleColumnResize, handleColumnAutosize, columnWidths, focusedCell, columnIndexMap, handleHeaderClick,
+        headerReorderHandlers, rowReordering, hasDetailPanel, pinCheckboxColumn, pinExpandColumn, aggregationModel,
+        handleHideColumn, columnsPanel, handlePinColumn, wrapHeaderText, headerHeight, showHeaderFilters, filterModel,
+        handleFilterModelChange, localeText, rowRenderProps, pinnedTopRows, pinnedBottomRows, pinnedRows, getRowIdOf,
+        showEmptyState: !effectiveLoading && !state.dataSource.error && filteredRows.length === 0,
+        effectiveNoRowsLabel, noRowsOverlay, loadingOverlay, spanRowWindow, visibleRows,
+        baseColumns: columns as unknown as GridColDef<R>[],
+        viewportWidth: state.dimensions.viewportWidth,
+        rowReorderHandlers, paginationMode,
+        dataSourceLoading: state.dataSource.loading,
+        sortedUnpinnedRowCount: sortedUnpinnedRows.length,
+        pageSize: effectivePaginationModel.pageSize,
+        unpinnedRowsLength: layout.unpinnedRowsLength,
+        showAggregationFooter: hasAggregation && rowGroupingHandlers.rootAggregationPosition !== null,
+        aggregationResult, effectiveRowHeight, isAggregationLoading,
     };
 
     return (
@@ -814,161 +831,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 />
             )}
 
-            {/* ══════════════════════════════════════════════════════════════
-                STANDARD GRID VIEWPORT (hidden when listView=true)
-            ══════════════════════════════════════════════════════════════ */}
-            {!listView && (
-                <div
-                    ref={setViewportElement}
-                    className="ogx__viewport"
-                    onScroll={handleScroll}
-                    role="grid"
-                    aria-label={ariaLabel || 'Data grid'}
-                    aria-rowcount={ariaRows.rowCount}
-                    aria-colcount={navigationColumns.length}
-                    aria-multiselectable={(rowSelectionEnabled && !disableMultipleRowSelection) || cellSelection.enabled}
-                    aria-busy={effectiveLoading}
-                    tabIndex={viewportTabIndex}
-                    onKeyDownCapture={() => { setKeyboardMode(true); }}
-                    onMouseDownCapture={handleMouseDownCapture}
-                    onMouseDown={cellSelection.handleMouseDown}
-                    onClickCapture={cellSelection.handleClickCapture}
-                    onKeyDown={handleKeyDown}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                >
-                    <div
-                        className="ogx__content"
-                        style={{
-                            // With right-pinned columns the content spans at least the viewport, so they sit at its right edge.
-                            width: effectivePinnedColumns?.right?.length
-                                ? `max(100%, ${virtualization.totalWidth}px)`
-                                : virtualization.totalWidth
-                        }}
-                        role="presentation"
-                    >
-                        {/* Header and top-pinned rows stick together, so pinned rows sit below every header row. */}
-                        <div className="ogx__sticky-top" role="presentation">
-                            <Header
-                                columns={renderColumns}
-                                allColumns={renderedDataColumns}
-                                columnGroupingModel={columnGroupingModel}
-                                checkboxSelection={checkboxSelection}
-                                allSelected={allSelected}
-                                someSelected={someSelected}
-                                onSelectAll={rowSelection.selectAll}
-                                sortModel={sortModel}
-                                onSort={handleSort}
-                                onSortAdd={handleSortAdd}
-                                multiSort={multiSort}
-
-                                onColumnResize={handleColumnResize}
-                                onColumnAutosize={handleColumnAutosize}
-                                columnWidths={columnWidths}
-                                pinnedColumns={effectivePinnedColumns}
-
-                                focusedCell={focusedCell}
-                                columnIndexMap={columnIndexMap}
-                                onHeaderClick={handleHeaderClick}
-                                onDragStart={headerReorderHandlers.onDragStart}
-                                onDragOver={headerReorderHandlers.onDragOver}
-                                onDragEnd={headerReorderHandlers.onDragEnd}
-                                onDrop={headerReorderHandlers.onDrop}
-                                draggedColumn={headerReorderHandlers.draggedColumn}
-                                dragOverColumn={headerReorderHandlers.dragOverColumn}
-                                rowReordering={rowReordering}
-                                hasDetailPanel={hasDetailPanel}
-                                pinCheckboxColumn={pinCheckboxColumn}
-                                pinExpandColumn={pinExpandColumn}
-                                aggregationModel={aggregationModel}
-                                onHideColumn={handleHideColumn}
-                                onManageColumns={columnsPanel.openColumnsPanel}
-                                onPinColumn={handlePinColumn}
-                                wrapHeaderText={wrapHeaderText}
-                                headerHeight={headerHeight}
-                                headerFilters={showHeaderFilters}
-                                filterModel={filterModel}
-                                onFilterModelChange={handleFilterModelChange}
-                                onOpenFilterPanel={columnsPanel.openFiltersPanel}
-                                localeText={localeText}
-                            />
-
-                            <GridPinnedRows<R>
-                                {...rowRenderProps}
-                                rows={pinnedTopRows}
-                                position="top"
-                                ariaRowIndexBase={ariaRows.topBase}
-                                columns={renderColumns}
-                                pinnedRows={pinnedRows}
-                                getRowId={getRowIdOf}
-                            />
-                        </div>
-
-                        {/* Empty State Overlay (Standard View) — showing after header */}
-                        {!effectiveLoading && !state.dataSource.error && filteredRows.length === 0 && (
-                            <GridEmptyState
-                                noRowsLabel={effectiveNoRowsLabel}
-                                width={virtualization.totalWidth}
-                                overlay={noRowsOverlay}
-                            />
-                        )}
-
-                        <GridVirtualRows<R>
-                            {...rowRenderProps}
-                            virtualContainerHeight={virtualization.virtualContainerHeight}
-                            offsetTop={spanRowWindow.offsetTop}
-                            effectiveLoading={effectiveLoading}
-                            visibleRows={visibleRows}
-                            baseColumns={columns as unknown as GridColDef<R>[]}
-                            virtualColumns={renderColumns}
-                            viewportWidth={state.dimensions.viewportWidth}
-                            rowReorderHandlers={rowReorderHandlers}
-                            paginationMode={paginationMode}
-                            dataSourceLoading={state.dataSource.loading}
-                            sortedUnpinnedRowCount={sortedUnpinnedRows.length}
-                            infiniteScrollSkeletonCount={Math.min(effectivePaginationModel.pageSize, 20)}
-                            unpinnedRowsLength={layout.unpinnedRowsLength}
-                            lastRenderedRowIndex={spanRowWindow.renderContext.lastRowIndex}
-                            ariaRowIndexOffset={ariaRows.centerOffset}
-                            loadingOverlay={loadingOverlay}
-                        />
-
-                        {/* Bottom-pinned rows and the aggregation footer stick together, footer last. */}
-                        <div className="ogx__sticky-bottom" role="presentation">
-                            <GridPinnedRows<R>
-                                {...rowRenderProps}
-                                rows={pinnedBottomRows}
-                                position="bottom"
-                                rowIndexOffset={ariaRows.bottomRowIndexOffset}
-                                ariaRowIndexBase={ariaRows.bottomBase}
-                                columns={renderColumns}
-                                pinnedRows={pinnedRows}
-                                getRowId={getRowIdOf}
-                            />
-
-                            {/* Aggregation Footer Row — laid out from the same virtual columns as the rows, so
-                                 hidden, pinned and scrolled columns line up. Off in pivot mode (hasAggregation). */}
-                            {hasAggregation && rowGroupingHandlers.rootAggregationPosition !== null && (
-                                <GridAggregationFooter
-                                    columns={virtualization.virtualColumns as unknown as GridColDef[]}
-                                    aggregationModel={aggregationModel}
-                                    aggregationResult={aggregationResult}
-                                    columnWidths={columnWidths}
-                                    rowHeight={effectiveRowHeight}
-                                    checkboxSelection={checkboxSelection}
-                                    hasDetailPanel={hasDetailPanel}
-                                    rowReordering={rowReordering}
-                                    pinCheckboxColumn={pinCheckboxColumn}
-                                    pinExpandColumn={pinExpandColumn}
-                                    pinnedColumns={effectivePinnedColumns}
-                                    loading={isAggregationLoading}
-                                />
-                            )}
-                        </div>
-
-                    </div>
-                </div>
-            )}
+            {/* Standard grid viewport (hidden when listView=true) */}
+            {!listView && <GridViewport<R> {...viewportProps} />}
 
             {cellSelection.enabled && showCellSelectionStats && (
                 <GridCellSelectionStatsArea
