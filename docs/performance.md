@@ -125,17 +125,39 @@ In server modes the grid shows `rows` as given: it does not re-filter, re-sort o
 
 Measured with `npm run bench` (`bench/`), which installs the packed npm package into a production Vite + React 19 app and drives it with Playwright in Chromium, Firefox and WebKit. The numbers below are from one machine (Apple M1, 8 GB RAM): compare them with each other and with your own runs, not with other machines.
 
-**In short** (Chromium, median):
+**In short** (Chromium, median; 100k and 1M rows from the run below, 10k and 500k from the 3.5.0 run of 2026-10-09, before the faster sort, quick filter and grouping):
 
 | Rows | Mount | Sort (number / string) | Filter | Quick filter | Group + sum | Scroll frames over 16.7 ms | JS heap |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 10,000 | 79 ms | 34 / 42 ms | 19 ms | 52 ms | 30 ms | 0 % | 2.9 MB |
-| 100,000 | 89 ms | 102 / 160 ms | 28 ms | 205 ms | 87 ms | 0 % | 10.4 MB |
-| 500,000 | 295 ms | 493 / 641 ms | 59 ms | 958 ms | 331 ms | 0 % | 39.4 MB |
-| 1,000,000 | 688 ms | 1,105 / 1,316 ms | 95 ms | 1,845 ms | 681 ms | 0 % | 79.1 MB |
+| 10,000 (3.5.0) | 79 ms | 34 / 42 ms | 19 ms | 52 ms | 30 ms | 0 % | 2.9 MB |
+| 100,000 | 75 ms | 49 / 66 ms | 20 ms | 165 ms | 74 ms | 0 % | 10.4 MB |
+| 500,000 (3.5.0) | 295 ms | 493 / 641 ms | 59 ms | 958 ms | 331 ms | 0 % | 39.4 MB |
+| 1,000,000 | 621 ms | 467 / 467 ms | 109 ms | 1,813 ms | 693 ms | 0 % | 76.9 MB |
+
+### Before and after the faster sort, quick filter and grouping (unreleased)
+
+Medians of 5 runs, the same machine, the 3.5.1 code (`122d431`) and the changed code (`e1df2f1`) measured back to back on 2026-10-12 (`bench/results/2026-10-12-apple-m1-darwin-before.json` and `bench/results/2026-10-12-apple-m1-darwin.json`). Load average at the start of each run: 2.9 (before) and 4.6 (after); an IDE, a browser and other tools were open. Row counts after every filter and grouping were identical in both runs.
+
+| 1M rows, 52 px | Chromium before → after | Firefox before → after | WebKit before → after |
+| :--- | ---: | ---: | ---: |
+| Sort, number column | 1,716 → 467 ms | 1,935 → 468 ms | 1,126 → 340 ms |
+| Sort, string column | 1,510 → 467 ms | 2,338 → 560 ms | 2,939 → 562 ms |
+| Quick filter, one term (first keystroke) | 2,127 → 1,813 ms | 3,283 → 2,789 ms | 3,646 → 3,166 ms |
+| Group by region + `sum` | 924 → 693 ms | 1,879 → 1,776 ms | 818 → 675 ms |
+| Filter, number `>` | 144 → 97 ms | 203 → 125 ms | 142 → 89 ms |
+| Mount | 804 → 621 ms | 1,216 → 925 ms | 620 → 547 ms |
+
+| 100k rows, 52 px | Chromium before → after | Firefox before → after | WebKit before → after |
+| :--- | ---: | ---: | ---: |
+| Sort, number column | 99 → 49 ms | 153 → 74 ms | 120 → 87 ms |
+| Sort, string column | 154 → 66 ms | 193 → 75 ms | 202 → 91 ms |
+| Quick filter, one term | 207 → 165 ms | 372 → 287 ms | 294 → 282 ms |
+| Group by region + `sum` | 79 → 74 ms | 108 → 78 ms | 103 → 107 ms |
+
+What changed: sort keys are read once per row into typed arrays and strings are ranked by sorting only their distinct values with the collator (the collator no longer runs in every comparison, which was most of WebKit's string sort); the row heights after a sort or filter are computed in one pass without id lookups when no detail panel is open; cells of plain columns are read without allocating; the quick filter keeps its texts by row position for the rows array it searched and matches with plain loops; aggregation reads cells row by row. The quick filter's first keystroke is still dominated by reading, formatting (`valueFormatter`) and lower-casing every cell, and Firefox's grouping by allocation of per-row tree nodes and metadata; the Firefox runs at 1M rows varied widely (up to several seconds) in both runs.
 
 - **Scrolling keeps up with the display at every size.** Chromium missed no frames; Firefox missed 0–2.4 %. The DOM holds about 19 row elements at rest (28 at 32 px) and at most 86 while scrolling fast, whatever the row count. WebKit scrolls steadily without missed frames too, but misses one or two frames each time the scroll position jumps far (the *during the jumps* rows below). Firefox's scroll numbers at 500k and 1M rows are not comparable: the grid cannot scroll there (see Reach).
-- **Sorting, the quick filter and grouping run on the main thread in one piece.** Up to 100k rows they finish in a few frames; at 1M a sort blocks the page for about 1.1–1.3 s in Chromium (up to 2.9 s for a string sort in WebKit), and the first quick-filter keystroke for about 2–3 s. For sorting or searching a million rows interactively, use server-side sorting and filtering.
+- **Sorting, the quick filter and grouping run on the main thread in one piece.** Up to 100k rows they finish in a few frames; at 1M a sort blocks the page for about 0.35–0.6 s in every engine, grouping for 0.7 s (1.8 s in Firefox), and the first quick-filter keystroke for about 1.8–3 s. For sorting or searching a million rows interactively, use server-side sorting and filtering.
 - **Reach:** past the browser's height cap rows cannot be scrolled to, and in Firefox the grid stops scrolling altogether. See [Reach](#reach-the-browser-height-ceiling).
 
 ### Method
@@ -154,155 +176,101 @@ Measured with `npm run bench` (`bench/`), which installs the packed npm package 
 ### Results
 
 <!-- bench:start -->
-<!-- Generated by `node bench/report.mjs --write docs/performance.md` from bench/results/2026-10-09-apple-m1-darwin.json. Do not edit by hand. -->
+<!-- Generated by `node bench/report.mjs --write docs/performance.md` from bench/results/2026-10-12-apple-m1-darwin.json. Do not edit by hand. -->
 
 - **Machine:** Apple M1, 8 cores, 8 GB RAM, macOS 26.5.1 (arm64)
 - **Browsers:** Chromium 145.0.7632.6, Firefox 146.0.1, WebKit 26.0 (Playwright, headless, 1280×800 page)
-- **Package:** @opencorestack/opengridx 3.5.0 (commit `f2ad5cb`), production build
-- **Date:** 2026-10-09; load average at start 3.88 / 3.73 / 4.04, at end 3.46 / 3.71 / 3.77
+- **Package:** @opencorestack/opengridx 3.5.1 (commit `e1df2f1`), production build
+- **Date:** 2026-10-12; load average at start 4.61 / 5.66 / 5.46, at end 2.31 / 6.16 / 7.41
 - **Runs:** median of 5 runs after one discarded warm-up run, with the min–max range in brackets
 
 ¹ Chromium only: Firefox and WebKit have no long-task entries, and the heap is read through the Chrome DevTools Protocol.
-
-#### 10,000 rows, 52 px rows
-
-| Metric | Chromium | Firefox | WebKit |
-| :--- | ---: | ---: | ---: |
-| Mount | 79 ms (59–88) | 84 ms (82–85) | 116 ms (110–128) |
-| Sort, number column | 34 ms (28–38) | 44 ms (43–46) | 81 ms (72–85) |
-| Sort, string column | 42 ms (22–45) | 56 ms (36–58) | 83 ms (76–108) |
-| Filter, string `contains` | 19 ms (14–31) | 31 ms (26–40) | 51 ms (47–57) |
-| Filter, number `>` | 18 ms (13–19) | 25 ms (24–28) | 37 ms (34–39) |
-| Quick filter, one term | 52 ms (33–60) | 76 ms (68–83) | 96 ms (84–110) |
-| Group by region + `sum` | 30 ms (22–37) | 41 ms (31–47) | 77 ms (72–126) |
-| Scroll frame time p50 | 16.7 ms | 16.7 ms | 17.0 ms |
-| Scroll frame time p95 | 17.6 ms (17.5–17.6) | 17.6 ms (17.6–18.6) | 45.0 ms (43.0–46.0) |
-| Scroll frame time p99 | 17.6 ms (17.6–17.7) | 33.3 ms (33.3–34.1) | 49.0 ms (47.0–58.0) |
-| Scroll frames over 16.7 ms | 0.0 % (0.0–0.3) | 1.7 % (1.4–4.2) | 8.6 % (7.6–9.7) |
-| Scroll frames over 33 ms | 0.0 % | 0.0 % (0.0–0.7) | 6.5 % (5.4–7.1) |
-| … over 16.7 ms while scrolling steadily | 0.0 % | 0.6 % (0.0–4.7) | 0.0 % |
-| … over 16.7 ms during the jumps | 0.0 % (0.0–0.8) | 3.5 % (2.6–4.3) | 26.1 % (21.9–29.9) |
-| Long tasks during scroll ¹ | 0 | – | – |
-| Longest task during a sort ¹ | none | – | – |
-| JS heap for the grid ¹ | 2.9 MB | – | – |
-| Row elements in the DOM, end of scroll | 76 | 76 | 76 |
-| Cells in the DOM, end of scroll | 912 | 912 | 912 |
-| Row elements in the DOM, at rest | 19 | 19 | 19 |
-| Reach: last row on screen at the bottom | all rows | all rows | all rows |
 
 #### 100,000 rows, 52 px rows
 
 | Metric | Chromium | Firefox | WebKit |
 | :--- | ---: | ---: | ---: |
-| Mount | 89 ms (86–100) | 138 ms (133–155) | 157 ms (138–204) |
-| Sort, number column | 102 ms (85–119) | 129 ms (120–136) | 159 ms (126–237) |
-| Sort, string column | 160 ms (152–165) | 213 ms (180–224) | 241 ms (211–259) |
-| Filter, string `contains` | 28 ms (20–34) | 42 ms (28–46) | 56 ms (47–109) |
-| Filter, number `>` | 33 ms (27–39) | 39 ms (24–57) | 48 ms (31–60) |
-| Quick filter, one term | 205 ms (193–232) | 348 ms (322–359) | 323 ms (269–340) |
-| Group by region + `sum` | 87 ms (81–91) | 107 ms (99–109) | 118 ms (105–143) |
+| Mount | 75 ms (68–131) | 142 ms (113–144) | 138 ms (126–194) |
+| Sort, number column | 49 ms (42–64) | 74 ms (64–85) | 87 ms (70–92) |
+| Sort, string column | 66 ms (61–87) | 75 ms (59–89) | 91 ms (81–126) |
+| Filter, string `contains` | 20 ms (18–37) | 34 ms (21–56) | 47 ms (43–47) |
+| Filter, number `>` | 16 ms (14–28) | 32 ms (24–37) | 30 ms (28–37) |
+| Quick filter, one term | 165 ms (156–190) | 287 ms (266–346) | 282 ms (257–339) |
+| Group by region + `sum` | 74 ms (70–77) | 78 ms (71–97) | 107 ms (94–148) |
 | Scroll frame time p50 | 16.7 ms | 16.7 ms | 17.0 ms |
-| Scroll frame time p95 | 17.4 ms (17.3–17.5) | 17.5 ms (17.4–17.6) | 44.0 ms (43.0–45.0) |
-| Scroll frame time p99 | 17.6 ms (17.6–17.7) | 33.3 ms | 48.0 ms (47.0–55.0) |
-| Scroll frames over 16.7 ms | 0.0 % (0.0–0.3) | 2.4 % (1.0–2.7) | 7.9 % (7.1–9.3) |
-| Scroll frames over 33 ms | 0.0 % | 0.0 % (0.0–0.3) | 6.4 % (5.4–7.0) |
-| … over 16.7 ms while scrolling steadily | 0.0 % | 0.6 % (0.0–1.7) | 0.0 % (0.0–0.6) |
-| … over 16.7 ms during the jumps | 0.0 % (0.0–0.8) | 4.3 % (1.7–6.2) | 22.7 % (20.2–26.1) |
+| Scroll frame time p95 | 18.4 ms (18.2–18.6) | 17.6 ms (17.3–33.3) | 49.0 ms (44.0–62.0) |
+| Scroll frame time p99 | 18.6 ms (18.6–18.7) | 33.3 ms (17.7–50.0) | 60.0 ms (53.0–92.0) |
+| Scroll frames over 16.7 ms | 0.0 % (0.0–0.3) | 2.7 % (0.7–7.6) | 11.8 % (8.1–20.8) |
+| Scroll frames over 33 ms | 0.0 % | 0.0 % (0.0–1.5) | 7.4 % (6.6–10.1) |
+| … over 16.7 ms while scrolling steadily | 0.0 % | 1.1 % (0.0–5.4) | 0.6 % (0.0–8.5) |
+| … over 16.7 ms during the jumps | 0.0 % (0.0–0.8) | 5.3 % (1.7–15.1) | 38.3 % (24.4–65.3) |
 | Long tasks during scroll ¹ | 0 | – | – |
-| Longest task during a sort ¹ | 155 ms (144–160) | – | – |
+| Longest task during a sort ¹ | 59 ms (55–81) | – | – |
 | JS heap for the grid ¹ | 10.4 MB | – | – |
 | Row elements in the DOM, end of scroll | 76 | 76 | 76 |
 | Cells in the DOM, end of scroll | 912 | 912 | 912 |
 | Row elements in the DOM, at rest | 19 | 19 | 19 |
 | Reach: last row on screen at the bottom | all rows | all rows | all rows |
 
-#### 500,000 rows, 52 px rows
-
-| Metric | Chromium | Firefox | WebKit |
-| :--- | ---: | ---: | ---: |
-| Mount | 295 ms (287–307) | 482 ms (473–505) | 402 ms (338–463) |
-| Sort, number column | 493 ms (485–567) | 660 ms (629–936) | 483 ms (413–564) |
-| Sort, string column | 641 ms (600–807) | 1,105 ms (1,045–1,188) | 1,407 ms (1,203–1,568) |
-| Filter, string `contains` | 59 ms (51–67) | 63 ms (56–68) | 75 ms (72–87) |
-| Filter, number `>` | 80 ms (70–111) | 100 ms (92–111) | 89 ms (77–101) |
-| Quick filter, one term | 958 ms (836–976) | 1,565 ms (1,503–1,828) | 1,442 ms (1,275–1,619) |
-| Group by region + `sum` | 331 ms (307–338) | 641 ms (419–675) | 386 ms (351–1,244) |
-| Scroll frame time p50 | 16.7 ms | 16.7 ms | 17.0 ms |
-| Scroll frame time p95 | 17.6 ms (17.5–17.6) | 17.5 ms (17.5–17.6) | 45.0 ms (44.0–46.0) |
-| Scroll frame time p99 | 17.7 ms (17.6–17.7) | 17.6 ms (17.6–17.7) | 49.0 ms (46.0–50.0) |
-| Scroll frames over 16.7 ms | 0.0 % (0.0–0.7) | 0.0 % | 7.7 % (7.6–10.1) |
-| Scroll frames over 33 ms | 0.0 % (0.0–0.3) | 0.0 % | 7.3 % (5.8–7.8) |
-| … over 16.7 ms while scrolling steadily | 0.0 % | 0.0 % | 0.0 % (0.0–1.1) |
-| … over 16.7 ms during the jumps | 0.0 % (0.0–1.8) | 0.0 % | 23.1 % (20.6–28.4) |
-| Long tasks during scroll ¹ | 0 | – | – |
-| Longest task during a sort ¹ | 635 ms (595–799) | – | – |
-| JS heap for the grid ¹ | 39.4 MB | – | – |
-| Row elements in the DOM, end of scroll | 76 | 22 | 76 |
-| Cells in the DOM, end of scroll | 912 | 264 | 912 |
-| Row elements in the DOM, at rest | 19 | 19 | 19 |
-| Reach: last row on screen at the bottom | all rows | 24 (<0.1 %) | all rows |
-
 #### 1,000,000 rows, 52 px rows
 
 | Metric | Chromium | Firefox | WebKit |
 | :--- | ---: | ---: | ---: |
-| Mount | 688 ms (673–715) | 1,097 ms (1,011–1,503) | 589 ms (576–735) |
-| Sort, number column | 1,105 ms (1,094–1,140) | 1,540 ms (1,477–1,795) | 1,023 ms (956–1,075) |
-| Sort, string column | 1,316 ms (1,227–1,463) | 2,434 ms (2,371–2,716) | 2,913 ms (2,715–3,277) |
-| Filter, string `contains` | 95 ms (87–152) | 100 ms (90–108) | 102 ms (102–112) |
-| Filter, number `>` | 144 ms (129–149) | 192 ms (175–237) | 136 ms (123–242) |
-| Quick filter, one term | 1,845 ms (1,761–1,977) | 3,161 ms (2,920–3,327) | 2,914 ms (2,762–3,272) |
-| Group by region + `sum` | 681 ms (664–703) | 1,754 ms (1,695–2,059) | 764 ms (720–901) |
-| Scroll frame time p50 | 16.7 ms | 16.7 ms | 17.0 ms |
-| Scroll frame time p95 | 17.4 ms (17.4–17.6) | 17.6 ms (17.4–17.6) | 44.0 ms (44.0–46.0) |
-| Scroll frame time p99 | 17.7 ms (17.6–17.7) | 17.6 ms (17.6–17.7) | 46.0 ms (45.0–48.0) |
-| Scroll frames over 16.7 ms | 0.0 % (0.0–0.7) | 0.0 % (0.0–0.3) | 7.2 % (7.1–9.3) |
-| Scroll frames over 33 ms | 0.0 % | 0.0 % | 7.0 % (6.5–7.1) |
-| … over 16.7 ms while scrolling steadily | 0.0 % | 0.0 % (0.0–0.6) | 0.0 % |
-| … over 16.7 ms during the jumps | 0.0 % (0.0–1.7) | 0.0 % | 20.8 % (20.0–28.1) |
+| Mount | 621 ms (522–1,024) | 925 ms (861–2,775) | 547 ms (490–616) |
+| Sort, number column | 467 ms (376–546) | 468 ms (430–1,287) | 340 ms (304–690) |
+| Sort, string column | 467 ms (415–530) | 560 ms (433–1,257) | 562 ms (461–639) |
+| Filter, string `contains` | 109 ms (92–113) | 89 ms (80–185) | 95 ms (89–194) |
+| Filter, number `>` | 97 ms (90–123) | 125 ms (102–434) | 89 ms (81–121) |
+| Quick filter, one term | 1,813 ms (1,430–2,183) | 2,789 ms (2,644–7,252) | 3,166 ms (2,877–3,463) |
+| Group by region + `sum` | 693 ms (599–818) | 1,776 ms (1,176–3,715) | 675 ms (614–854) |
+| Scroll frame time p50 | 16.7 ms | 16.7 ms (16.7–50.0) | 17.0 ms |
+| Scroll frame time p95 | 18.4 ms (18.4–18.5) | 33.3 ms (17.4–166.6) | 44.0 ms (44.0–46.0) |
+| Scroll frame time p99 | 18.6 ms (18.6–33.3) | 34.1 ms (33.3–283.4) | 47.0 ms (46.0–52.0) |
+| Scroll frames over 16.7 ms | 0.3 % (0.0–1.0) | 9.5 % (1.7–79.5) | 7.7 % (7.2–9.0) |
+| Scroll frames over 33 ms | 0.0 % (0.0–0.3) | 0.4 % (0.0–54.2) | 7.2 % (6.8–7.9) |
+| … over 16.7 ms while scrolling steadily | 0.0 % | 6.5 % (0.0–75.0) | 0.0 % (0.0–0.6) |
+| … over 16.7 ms during the jumps | 0.8 % (0.0–2.8) | 14.3 % (4.3–94.7) | 22.6 % (20.4–26.4) |
 | Long tasks during scroll ¹ | 0 | – | – |
-| Longest task during a sort ¹ | 1,307 ms (1,220–1,455) | – | – |
-| JS heap for the grid ¹ | 79.1 MB | – | – |
-| Row elements in the DOM, end of scroll | 77 | 22 | 77 |
-| Cells in the DOM, end of scroll | 924 | 264 | 924 |
+| Longest task during a sort ¹ | 462 ms (410–523) | – | – |
+| JS heap for the grid ¹ | 76.9 MB | – | – |
+| Row elements in the DOM, end of scroll | 77 | 76 | 77 |
+| Cells in the DOM, end of scroll | 924 | 912 | 924 |
 | Row elements in the DOM, at rest | 19 | 19 | 19 |
-| Reach: last row on screen at the bottom | 645,277 (64.5 %) | 24 (<0.1 %) | 645,277 (64.5 %) |
+| Reach: last row on screen at the bottom | 645,277 (64.5 %) | 344,139 (34.4 %) | 645,277 (64.5 %) |
 
 #### 1,000,000 rows, 32 px rows
 
 | Metric | Chromium | Firefox | WebKit |
 | :--- | ---: | ---: | ---: |
-| Mount | 674 ms (668–680) | 1,106 ms (1,032–1,329) | 604 ms (585–621) |
-| Sort, number column | 1,143 ms (1,090–1,254) | 1,475 ms (1,462–1,837) | 1,077 ms (986–1,137) |
-| Sort, string column | 1,295 ms (1,236–1,456) | 2,517 ms (2,268–2,675) | 2,758 ms (2,720–2,947) |
-| Filter, string `contains` | 92 ms (91–109) | 99 ms (99–109) | 107 ms (106–121) |
-| Filter, number `>` | 137 ms (133–140) | 206 ms (172–232) | 140 ms (126–161) |
-| Quick filter, one term | 1,818 ms (1,651–1,855) | 2,960 ms (2,910–3,200) | 2,750 ms (2,677–2,776) |
-| Group by region + `sum` | 694 ms (673–758) | 2,071 ms (1,224–2,745) | 749 ms (689–798) |
-| Scroll frame time p50 | 16.7 ms | 16.7 ms | 17.0 ms |
-| Scroll frame time p95 | 17.5 ms (17.5–18.5) | 17.5 ms (17.3–17.5) | 49.0 ms (48.0–49.0) |
-| Scroll frame time p99 | 17.6 ms (17.6–18.7) | 17.6 ms (17.6–17.7) | 52.0 ms (51.0–52.0) |
-| Scroll frames over 16.7 ms | 0.0 % (0.0–0.3) | 0.0 % (0.0–0.3) | 15.5 % (15.4–15.8) |
-| Scroll frames over 33 ms | 0.0 % | 0.0 % | 7.7 % (7.7–7.8) |
-| … over 16.7 ms while scrolling steadily | 0.0 % (0.0–0.6) | 0.0 % (0.0–0.6) | 0.0 % (0.0–0.6) |
-| … over 16.7 ms during the jumps | 0.0 % | 0.0 % | 51.3 % (50.6–53.3) |
-| Long tasks during scroll ¹ | 0 | – | – |
-| Longest task during a sort ¹ | 1,286 ms (1,229–1,436) | – | – |
-| JS heap for the grid ¹ | 79.5 MB | – | – |
-| Row elements in the DOM, end of scroll | 86 | 32 | 86 |
-| Cells in the DOM, end of scroll | 1,032 | 384 | 1,032 |
+| Mount | 741 ms (581–1,283) | 1,356 ms (968–5,966) | 475 ms (472–553) |
+| Sort, number column | 453 ms (403–523) | 627 ms (441–917) | 327 ms (321–338) |
+| Sort, string column | 497 ms (437–673) | 693 ms (489–6,628) | 504 ms (379–566) |
+| Filter, string `contains` | 106 ms (96–162) | 192 ms (147–268) | 100 ms (97–108) |
+| Filter, number `>` | 103 ms (86–136) | 179 ms (154–635) | 91 ms (87–190) |
+| Quick filter, one term | 1,621 ms (1,617–2,569) | 4,265 ms (3,490–10,444) | 3,082 ms (2,684–3,608) |
+| Group by region + `sum` | 880 ms (641–1,137) | 2,096 ms (957–3,309) | 640 ms (579–723) |
+| Scroll frame time p50 | 16.7 ms | 16.7 ms (16.7–49.4) | 17.0 ms |
+| Scroll frame time p95 | 17.6 ms (17.4–17.6) | 66.7 ms (33.2–199.3) | 49.0 ms (48.0–51.0) |
+| Scroll frame time p99 | 17.7 ms (17.6–33.3) | 100.0 ms (33.7–333.3) | 52.0 ms (50.0–55.0) |
+| Scroll frames over 16.7 ms | 0.7 % (0.0–1.0) | 38.4 % (6.7–82.7) | 15.5 % (15.4–15.8) |
+| Scroll frames over 33 ms | 0.0 % (0.0–0.7) | 18.6 % (0.0–50.6) | 7.8 % (7.7–8.8) |
+| … over 16.7 ms while scrolling steadily | 0.0 % (0.0–0.6) | 28.0 % (1.1–80.3) | 0.0 % (0.0–0.6) |
+| … over 16.7 ms during the jumps | 0.8 % (0.0–2.6) | 63.5 % (16.5–96.4) | 52.0 % (50.6–57.4) |
+| Long tasks during scroll ¹ | 0 (0–1) | – | – |
+| Longest task during a sort ¹ | 490 ms (429–655) | – | – |
+| JS heap for the grid ¹ | 77.3 MB | – | – |
+| Row elements in the DOM, end of scroll | 86 | 86 | 86 |
+| Cells in the DOM, end of scroll | 1,032 | 1,032 | 1,032 |
 | Row elements in the DOM, at rest | 28 | 28 | 28 |
-| Reach: last row on screen at the bottom | all rows | 33 (<0.1 %) | all rows |
+| Reach: last row on screen at the bottom | all rows | 559,224 (55.9 %) | all rows |
 
 #### Reach: rows that can be scrolled into view
 
 | Rows × row height | Content height | Chromium | Firefox | WebKit |
 | :--- | ---: | ---: | ---: | ---: |
-| 10,000 × 52 px | 520,000 px | all | all | all |
 | 100,000 × 52 px | 5,200,000 px | all | all | all |
-| 500,000 × 52 px | 26,000,000 px | all | 24 (<0.1 %) | all |
-| 1,000,000 × 52 px | 52,000,000 px | 645,277 (64.5 %) | 24 (<0.1 %) | 645,277 (64.5 %) |
-| 1,000,000 × 32 px | 32,000,000 px | all | 33 (<0.1 %) | all |
+| 1,000,000 × 52 px | 52,000,000 px | 645,277 (64.5 %) | 344,139 (34.4 %) | 645,277 (64.5 %) |
+| 1,000,000 × 32 px | 32,000,000 px | all | 559,224 (55.9 %) | all |
 <!-- bench:end -->
 
 ### Reach: the browser height ceiling
