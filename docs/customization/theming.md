@@ -5,6 +5,8 @@ OpenGridX ships with a complete design-token system built on CSS custom properti
 1. **`DataGridThemeProvider`** — the recommended React API (maps a typed `GridTheme` object → CSS variables)
 2. **Raw CSS override** — set any `--ogx-*` variable yourself on a wrapper element or `:root`
 
+To design a theme without writing code, use the **[Theme Builder](https://opencorestack.github.io/OpenGridX/theme-builder)** demo page: controls for colours, fonts, sizes, borders and dividers, buttons and menus, edited separately for light and dark mode on a live grid, with WCAG AA contrast hints. It copies or downloads the result as a `GridTheme` (only the values that differ from the defaults) and can share it as a link (`#theme=…`).
+
 ---
 
 ## Quick Start — `DataGridThemeProvider`

@@ -1,6 +1,6 @@
 # Theme Builder demo page — proposal
 
-Status: **proposal, awaiting approval** · Target: next minor (with the new theme keys it needs)
+Status: **approved 2026-10-13 — implemented** · Target: next minor (with the new theme keys it needs)
 
 ## Goal
 
