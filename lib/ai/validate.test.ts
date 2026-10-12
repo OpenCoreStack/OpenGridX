@@ -58,6 +58,14 @@ describe('validateGridAiState', () => {
     expect(validateGridAiState('[1]', columns).errors).toEqual([{ path: '', message: 'Expected an object, got a list' }]);
   });
 
+  it('skips a top-level message string in object and JSON string input', () => {
+    const sortModel = [{ field: 'amount', sort: 'asc' }];
+    expect(validateGridAiState({ message: 'Sorted.', sortModel }, columns)).toEqual({ state: { sortModel }, errors: [] });
+    expect(validateGridAiState(JSON.stringify({ message: 'Sorted.', sortModel }), columns)).toEqual({ state: { sortModel }, errors: [] });
+    expect(validateGridAiState({ message: 42 }, columns).errors).toEqual([{ path: 'message', message: 'Expected text, got 42' }]);
+    expect(validateGridAiState('{"message":{"a":1}}', columns).errors).toEqual([{ path: 'message', message: 'Expected text, got an object' }]);
+  });
+
   it('drops unknown parts and parts outside include / exclude', () => {
     const { state, errors } = validateGridAiState({ rowModel: {}, sortModel: [], rowGroupingModel: ['region'] }, columns, { exclude: ['grouping'] });
     expect(state).toEqual({ sortModel: [] });

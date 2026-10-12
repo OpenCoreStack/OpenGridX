@@ -241,8 +241,8 @@ function readPart(ctx: Ctx, part: GridAiPart, raw: unknown, path: string, state:
 
 /**
  * Checks a model's reply against the columns and returns the state that is safe to apply.
- * `json` is an object or a JSON string (bad JSON gives one error and an empty state). Unknown
- * parts, fields, operators and enum values are dropped, each with an error; values are coerced to
+ * `json` is an object or a JSON string (bad JSON gives one error and an empty state). A top-level
+ * string `message` (the model's reply text) is skipped, not reported. Unknown parts, fields, operators and enum values are dropped, each with an error; values are coerced to
  * the column type (`"1,200"` → 1200, a date → `"YYYY-MM-DD"`); filter groups left empty are
  * removed. Never throws, and never returns a field the columns do not allow.
  *
@@ -283,6 +283,9 @@ function validate(json: unknown, columns: readonly GridAiColumn[], options: Grid
       const part = ALL_PARTS.find((p) => PART_KEYS[p] === key);
       if (key === 'schemaVersion') {
         if (input[key] !== 1) fail(ctx, key, `Unsupported schemaVersion ${show(input[key])}`);
+      } else if (key === 'message') {
+        // The model's reply text next to the state (createGridAiPromptHandler shows it): not state.
+        if (typeof input[key] !== 'string') fail(ctx, key, `Expected text, got ${show(input[key])}`);
       } else if (!part) fail(ctx, key, 'Unknown part');
       else if (!allowed.includes(part)) fail(ctx, key, 'Part not allowed');
       else readPart(ctx, part, input[key], key, state);

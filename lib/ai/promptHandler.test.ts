@@ -96,6 +96,25 @@ describe('createGridAiPromptHandler', () => {
     expect(result).toEqual({ state: { sortModel: [{ field: 'amount', sort: 'asc' }] }, errors: [], message: 'Sorted.' });
   });
 
+  it('takes a message key inside a JSON string reply', async () => {
+    const sortModel = [{ field: 'amount', sort: 'asc' }];
+    const onPrompt = createGridAiPromptHandler({ columns, callModel: async () => JSON.stringify({ message: 'Sorted.', sortModel }) });
+    const result = await onPrompt('sort', context());
+    expect(result).toEqual({ state: { sortModel }, errors: [], message: 'Sorted.' });
+    expect(isGridAiValidated(result.state)).toBe(true);
+  });
+
+  it('joins the text around a fenced block and a message key inside it', async () => {
+    const onPrompt = createGridAiPromptHandler({ columns, callModel: async () => 'Done.\n```json\n{"message":"Grouped by region.","rowGroupingModel":["region"]}\n```' });
+    const result = await onPrompt('group', context());
+    expect(result).toEqual({ state: { rowGroupingModel: ['region'] }, errors: [], message: 'Done.\n\nGrouped by region.' });
+  });
+
+  it('still reports bad JSON in a string reply', async () => {
+    const onPrompt = createGridAiPromptHandler({ columns, callModel: async () => '{"sortModel": [' });
+    expect((await onPrompt('sort', context())).errors).toEqual([{ path: '', message: 'Not valid JSON' }]);
+  });
+
   it('drops parts outside `parts`', async () => {
     const onPrompt = createGridAiPromptHandler({ columns, parts: ['sort'], callModel: async () => ({ rowGroupingModel: ['region'] }) });
     const result = await onPrompt('group', context());

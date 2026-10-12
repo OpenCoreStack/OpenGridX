@@ -50,18 +50,22 @@ function emptyResult(errors: GridAiValidationError[], message?: string): GridAiP
 /** Validates a model reply into a branded result. Never throws. */
 export function readModelReply(reply: unknown, columns: readonly GridAiColumn[], parts: GridAiPartOptions): GridAiPromptResult {
   let json: unknown = reply;
-  let message = '';
+  let around = '';
   if (typeof reply === 'string') {
     const text = readModelText(reply);
     if (text.json === null) return emptyResult([], text.message || undefined);
-    json = text.json;
-    message = text.message;
-  } else if (isPlainObject(reply) && hasOwn(reply, 'message') && typeof reply.message === 'string') {
-    // A reply such as { filterModel, message: 'Showing paid orders' }: the message is not state.
-    const { message: text, ...rest } = reply;
-    json = rest;
-    message = text as string;
+    around = text.message;
+    // Parsed here so a `message` key inside the JSON is read as for an object reply. Bad JSON is
+    // passed on as text: validateGridAiState reports it.
+    try {
+      json = JSON.parse(text.json) as unknown;
+    } catch {
+      json = text.json;
+    }
   }
+  // A reply such as { filterModel, message: 'Showing paid orders' }: the validator skips the message.
+  const inner = isPlainObject(json) && hasOwn(json, 'message') && typeof json.message === 'string' ? json.message.trim() : '';
+  const message = [around, inner].filter(Boolean).join('\n\n');
   const result: GridAiPromptResult = validateGridAiState(json, columns, parts);
   if (message) result.message = message;
   return result;

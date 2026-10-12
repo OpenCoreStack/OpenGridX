@@ -104,7 +104,7 @@ getGridAiSchema(
 
 ## `validateGridAiState(json, columns, options?)`
 
-Returns `{ state, errors }`, where `state` is a `GridAiState` (`filterModel`, `sortModel`, `rowGroupingModel`, `aggregationModel`, `pivotModel`, `columnVisibilityModel`, each present only when the reply contained it) and `errors` is a list of `{ path, message }`, such as `{ path: 'filterModel.items[2].field', message: 'Unknown field "revenue"' }`.
+Returns `{ state, errors }`, where `state` is a `GridAiState` (`filterModel`, `sortModel`, `rowGroupingModel`, `aggregationModel`, `pivotModel`, `columnVisibilityModel`, each present only when the reply contained it) and `errors` is a list of `{ path, message }`, such as `{ path: 'filterModel.items[2].field', message: 'Unknown field "revenue"' }`. A top-level string `message` key (the model's reply text, which `createGridAiPromptHandler` shows) is skipped in both object and JSON string input, so you can validate a whole reply without removing it first; a `message` that is not a string is reported.
 
 - `json` may be an object or a JSON string. Bad JSON gives one error and an empty state.
 - Unknown parts, unknown fields, fields a column does not allow (`filterable: false` …), operators that do not fit the column type, and functions or enum values outside the allowed list are **dropped**, each with an error. Parts outside `options.include` / `options.exclude` are dropped too.
@@ -172,7 +172,7 @@ A copied state (`{ ...result.state }`) or a hand-built one is not branded.
 Returns the `onPrompt` function. It builds the schema once (from `columns`, limited to `parts` and `schemaOptions`), then for each prompt:
 
 1. calls `callModel({ prompt, schema, currentState, history }, { signal })`;
-2. reads the reply: a state object, a JSON string, or text with a fenced `json` block (the text around the block becomes `result.message`). An object's string `message` key is the message, not state. Plain text with no JSON becomes the message with nothing to apply;
+2. reads the reply: a state object, a JSON string, or text with a fenced `json` block (the text around the block becomes `result.message`). A string `message` key in the state object (or in the JSON of a string reply) is the message, not state; when a fenced block has text around it and a `message` key inside, both are kept, joined by a blank line. Plain text with no JSON becomes the message with nothing to apply;
 3. validates it with `validateGridAiState` (same `parts`) and returns the branded `{ state, errors, message? }`.
 
 A `callModel` throw or rejection becomes `{ state: {}, errors: [{ path: '', message: 'The model call failed: …' }] }`. An abort (Stop, a new prompt, closing the panel) rejects with an `AbortError`, even when `callModel` ignores the signal.
