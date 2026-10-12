@@ -87,7 +87,7 @@ Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGroupin
 | New core pipeline stage | New hook in `lib/hooks/core/`, added to `DataGrid.tsx` |
 | New component (slot, overlay, etc.) | `lib/components/<Name>/` |
 | New public prop on `DataGrid` | Add to `DataGridProps` in `lib/types/props.ts`, destructure in `DataGrid.tsx` |
-| New column type | `GridColType` union in `lib/types/columns.ts`, operators in `lib/utils/filtering/filtering.ts` |
+| New column type | the `type` union on `GridColDef` in `lib/types/columns.ts`, operators in `getOperatorsForType` (`lib/utils/filtering/index.ts`), paste parsing in `lib/utils/parsing.ts` |
 | New slot | Add to the `slots` / `slotProps` of `DataGridProps` in `lib/types/props.ts` (slot prop types in `lib/types/slots.ts`), wire in `DataGrid.tsx` via `slots?.mySlot` |
 
 ---
