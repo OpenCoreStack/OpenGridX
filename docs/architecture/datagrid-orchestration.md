@@ -71,7 +71,8 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | 31 | `useGridScrollToIndexesApi` | `hooks/core/useGridScrollToIndexesApi.ts` | `scrollToIndexes` |
 | 31a | `useGridColumnAutosize` | `hooks/core/useGridColumnAutosize.ts` | `autosizeColumn` / `autosizeColumns` on the API, and the resize handle's auto-size handler (v3.1) |
 | 32 | `useGridViewport` | `hooks/core/useGridViewport.ts` | Scroll sync, viewport measurement, viewport callback ref |
-| 33 | `useGridVirtualization` | `hooks/core/useGridVirtualization.ts` | Render window |
+| 32a | `useGridMaxContentHeight` | `hooks/core/useGridMaxContentHeight.ts` | The tallest element this browser lays out (`utils/maxElementHeight.ts`, measured once per document after mount; `undefined` until then, `Infinity` without a layout engine) |
+| 33 | `useGridVirtualization` | `hooks/core/useGridVirtualization.ts` | Render window; `virtualContainerHeight` caps the rows' container to `maxContentHeight` (Firefox collapses taller elements) |
 | 34 | `useGridSortHandlers` | `hooks/core/useGridHeaderHandlers.ts` | Header sort / shift-sort |
 | 35 | `useGridKeyboardNavigation` | `hooks/core/useGridKeyboardNavigation.ts` | Focus and keyboard handling; takes `cellSelection.keyboard` (Shift+navigation, Escape, Ctrl/Cmd+A) |
 | 36 | `useGridPointerFocusHandlers` | `hooks/core/useGridFocusHandlers.ts` | Cell and header click focus |

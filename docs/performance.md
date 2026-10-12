@@ -90,9 +90,9 @@ import '@opencorestack/opengridx/styles';
 The grid sizes its scroll content to `rowCount × rowHeight` pixels and does not scale scroll positions. Browsers cap an element's height, and the [benchmark](#reach-the-browser-height-ceiling) measures what happens past the cap:
 
 - **Chromium and WebKit** clamp the content at 33,554,428 px. Rows below that cannot be scrolled to: at the default 52 px row height that is every row past 645,277.
-- **Firefox** does not clamp. Content taller than about 17.9M px collapses, and the grid does not scroll at all: only the first screen of rows is reachable (about 344,000 rows at 52 px, 559,000 at 32 px).
+- **Firefox** has a lower limit, about 17.9M px, and collapses a taller element instead of clamping it. Up to 3.5.0 that made a grid with more content unscrollable in Firefox (only the first screen of rows was reachable). **Since 3.5.1 the grid measures the browser's limit once and caps its scroll content to it**, so Firefox scrolls normally and reaches the rows above the cap: about 344,000 rows at 52 px, 559,000 at 32 px.
 
-A dev-mode warning reports content past 17.8M px. For more rows, use pagination, `paginationMode="server"` or infinite scroll with a `dataSource`, or a smaller `rowHeight` (`density="compact"`, 32 px, keeps 1M rows under the Chromium and WebKit cap).
+In development the grid warns when rows are cut off, naming how many can be scrolled to in that browser. For more rows, use pagination, `paginationMode="server"` or infinite scroll with a `dataSource`, or a smaller `rowHeight` (`density="compact"`, 32 px, keeps 1M rows under the Chromium and WebKit cap).
 
 ## Use server-side operations for very large datasets
 
@@ -310,7 +310,7 @@ Measured with `npm run bench` (`bench/`), which installs the packed npm package 
 The grid makes its scroll area as tall as all the rows: `rowCount × rowHeight` pixels. It does not compress scroll positions, so every row keeps its real offset. Browsers limit how tall an element can be, and the *Reach* rows above report the last row that actually appears on screen after scrolling to the very bottom:
 
 - **Chromium and WebKit** stop the element at 33,554,428 px. Everything above that is reachable, everything below is not. At 52 px that is 645,277 rows, so 1M rows at 52 px reach 64.5 %. At 32 px (`density="compact"`), 1M rows need 32,000,000 px and are all reachable.
-- **Firefox** has a lower limit, about 17.9M px, and handles it differently: an element taller than that collapses instead of stopping at the limit, so the grid has nothing to scroll. 500k rows at 52 px (26M px) and 1M rows at either height show only their first screen of rows (24 or 33 rows here). Up to about 344,000 rows at 52 px, or 559,000 at 32 px, Firefox scrolls normally.
+- **Firefox** has a lower limit, about 17.9M px, and handles it differently: an element taller than that collapses instead of stopping at the limit. On 3.5.0, which these tables were measured on, the grid then had nothing to scroll: 500k rows at 52 px (26M px) and 1M rows at either height showed only their first screen of rows (24 or 33 rows). **3.5.1 fixes this**: the grid caps its scroll content to the limit it measures, so Firefox reaches about 344,000 rows at 52 px and 559,000 at 32 px, like Chromium and WebKit reach theirs.
 
 If you need more rows than this in one scrolling grid, page them (`pagination`), load them from the server (`paginationMode="server"`, or infinite scroll with a `dataSource`), or reduce the row height.
 

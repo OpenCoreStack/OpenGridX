@@ -10,8 +10,16 @@ export interface UseGridDevWarningsParams {
     totalRowCount: number;
     /** `pinnedRows` is set while tree data or row grouping is active, where it has no effect. */
     pinnedRowsIgnored?: boolean;
-    /** Pixel height of the scrollable content. */
+    /** Pixel height of the scrollable content, uncapped. */
     scrollHeight?: number;
+    /**
+     * The tallest element the browser lays out (`getMaxElementHeight`): `undefined` until measured (the warning
+     * waits), `Infinity` where there is no layout engine (the lowest known cap is used).
+     */
+    maxContentHeight?: number;
+    /** Unpinned rows the user can scroll to, and how many unpinned rows there are. */
+    reachableRowCount?: number;
+    unpinnedRowCount?: number;
     /** `listView` is set but `listViewColumn` is not, so the grid view is shown. */
     listViewWithoutColumn?: boolean;
     /** Number of items the list view renders (0 when the list view is not shown). It does not virtualize. */
@@ -31,7 +39,7 @@ export const LIST_VIEW_WARN_THRESHOLD = 2000;
 export const MAX_SCROLLABLE_HEIGHT = 17_800_000;
 
 export function useGridDevWarnings(params: UseGridDevWarningsParams): void {
-    const { paginationRequested, isRowGrouping, autoHeight, viewportHeight, renderedRowCount, totalRowCount, pinnedRowsIgnored = false, scrollHeight = 0, listViewWithoutColumn = false, listViewRowCount = 0 } = params;
+    const { paginationRequested, isRowGrouping, autoHeight, viewportHeight, renderedRowCount, totalRowCount, pinnedRowsIgnored = false, scrollHeight = 0, maxContentHeight, reachableRowCount, unpinnedRowCount, listViewWithoutColumn = false, listViewRowCount = 0 } = params;
     const warnedPaginationRef = useRef(false);
     const warnedUnboundedRef = useRef(false);
     const warnedPinnedRowsRef = useRef(false);
@@ -67,14 +75,21 @@ export function useGridDevWarnings(params: UseGridDevWarningsParams): void {
     }, [pinnedRowsIgnored]);
 
     useEffect(() => {
-        if (process.env.NODE_ENV === 'production' || warnedHeightRef.current || scrollHeight <= MAX_SCROLLABLE_HEIGHT) return;
+        if (process.env.NODE_ENV === 'production' || warnedHeightRef.current || maxContentHeight === undefined) return;
+        const measured = Number.isFinite(maxContentHeight);
+        // Once the browser's cap is measured, warn only when rows are actually cut off; before that (and
+        // where there is no layout engine) fall back to the lowest known cap.
+        if (measured ? scrollHeight <= maxContentHeight : scrollHeight <= MAX_SCROLLABLE_HEIGHT) return;
         warnedHeightRef.current = true;
+        const reach = measured && reachableRowCount !== undefined && unpinnedRowCount !== undefined
+            ? `Only the first ${reachableRowCount.toLocaleString('en-US')} of ${unpinnedRowCount.toLocaleString('en-US')} rows can be scrolled to in this browser. `
+            : 'The last rows may not be reachable by scrolling. ';
         console.warn(
-            `[OpenGridX] The grid content is ${Math.round(scrollHeight)}px tall. Browsers cap element heights ` +
-            '(about 17.9M px in Firefox, 33.5M px in Chrome and Safari), so the last rows may not be reachable by scrolling. ' +
+            `[OpenGridX] The grid content is ${Math.round(scrollHeight)}px tall, more than this browser lays out ` +
+            '(about 17.9M px in Firefox, 33.5M px in Chrome and Safari). ' + reach +
             'Use pagination, server-side or infinite loading, or a smaller rowHeight. See docs/features/virtualization.md.'
         );
-    }, [scrollHeight]);
+    }, [scrollHeight, maxContentHeight, reachableRowCount, unpinnedRowCount]);
 
     useEffect(() => {
         if (process.env.NODE_ENV === 'production' || warnedPaginationRef.current) return;

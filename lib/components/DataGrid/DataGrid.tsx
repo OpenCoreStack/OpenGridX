@@ -4,6 +4,8 @@ import { useGridKeyboardNavigation } from '../../hooks/core/useGridKeyboardNavig
 import { useGridControlledState } from '../../hooks/core/useGridControlledState';
 import { useGridThemeDimensions } from '../../hooks/core/useGridThemeDimensions';
 import { useGridRowPipeline, type GridRowPipelineResult } from '../../hooks/core/useGridRowPipeline';
+import { useGridMaxContentHeight } from '../../hooks/core/useGridMaxContentHeight';
+import { countReachableRows } from '../../utils/maxElementHeight';
 import { useGridVirtualization } from '../../hooks/core/useGridVirtualization';
 import { useGridColumns } from '../../hooks/core/useGridColumns';
 import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
@@ -585,12 +587,14 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onRowsScrollEnd, overscanRowCount, rowCount: layout.unpinnedRowsLength, autoHeight, setDimensions, viewportRef,
     });
 
+    const maxContentHeight = useGridMaxContentHeight(containerRef);
     const virtualization = useGridVirtualization({
         layout, scrollTop, scrollLeft,
         viewportWidth: state.dimensions.viewportWidth,
         viewportHeight: state.dimensions.viewportHeight,
         autoHeight, rowReordering, hasDetailPanel, checkboxSelection, pinCheckboxColumn, pinExpandColumn,
         overscanRows,
+        maxContentHeight: maxContentHeight ?? Infinity,
     });
 
 
@@ -743,6 +747,9 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         totalRowCount: pinnedTopRows.length + centerRows.length + pinnedBottomRows.length,
         pinnedRowsIgnored: isHierarchyEnabled && Boolean(pinnedRows?.top?.length || pinnedRows?.bottom?.length),
         scrollHeight: virtualization.totalHeight,
+        maxContentHeight,
+        reachableRowCount: countReachableRows(virtualization.cumulativeHeights, virtualization.virtualContainerHeight),
+        unpinnedRowCount: virtualization.cumulativeHeights.length,
         listViewWithoutColumn: listViewRequested && !listViewColumn,
         listViewRowCount: listView && listViewColumn ? allRenderableRows.length : 0,
     });
@@ -1008,7 +1015,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
                         <GridVirtualRows<R>
                             {...rowRenderProps}
-                            virtualContainerHeight={virtualization.totalHeight - virtualization.pinnedTopHeight - virtualization.pinnedBottomHeight}
+                            virtualContainerHeight={virtualization.virtualContainerHeight}
                             offsetTop={spanRowWindow.offsetTop}
                             effectiveLoading={effectiveLoading}
                             visibleRows={visibleRows}

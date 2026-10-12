@@ -7,6 +7,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **Large grids did not scroll at all in Firefox.** Firefox lays out elements up to about 17.9M px and collapses a taller one instead of clamping it, so a grid with more content (about 344,000 rows at the default 52 px row height, 559,000 at 32 px) showed only its first screen of rows and had nothing to scroll. The grid now measures the browser's height limit once per page (an invisible probe, `lib/utils/maxElementHeight.ts`) and caps its scroll content to it: Firefox scrolls normally and reaches every row above the limit, as Chromium and WebKit already did up to theirs (about 33.5M px). Rows below the limit are still not reachable in a single scrolling grid; use pagination or server-side loading. Nothing changes for grids under the limit.
+- The dev warning about very tall content now appears only when rows are actually cut off in the current browser, and says how many rows can be scrolled to ("Only the first 344,000 of 500,000 rows can be scrolled to in this browser").
+
 ### Internal
 
 - **Large-dataset benchmark** — `npm run bench` (`bench/run.mjs`) packs the library, installs it into `bench/app` (a Vite + React 19 production app, like the smoke fixtures; port 4320) and measures it with Playwright in Chromium, Firefox and WebKit at 10k, 100k, 500k and 1M rows (1M also at 32 px): mount, sort, filter, quick filter, group + `sum`, a scripted 5 s scroll (frame-time percentiles and missed frames), DOM size, the furthest reachable row, and long tasks and JS heap in Chromium. Times run from the call to the first painted frame showing the result; medians of 5 runs after a warm-up. `bench/report.mjs` writes the Markdown tables; results and method are in `docs/performance.md` → Benchmarks. Flags `--rows`, `--engine`, `--repeat`, `--quick`. The weekly workflow runs a Chromium `--quick` pass and uploads the JSON; it never fails on numbers. Packing and tarball install are shared with the smoke suite (`scripts/lib/package-fixture.mjs`).

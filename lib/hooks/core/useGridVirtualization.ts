@@ -16,6 +16,11 @@ export interface UseGridVirtualizationParams<R extends GridRowModel> {
     pinExpandColumn: boolean;
     /** Adaptive overscan row count from useGridScrollSync. Defaults to 5. */
     overscanRows?: number;
+    /**
+     * The tallest element the browser lays out (`getMaxElementHeight`); the scrollable content is capped to
+     * it. Defaults to no cap.
+     */
+    maxContentHeight?: number;
 }
 
 export interface GridVirtualizationResult<R extends GridRowModel = GridRowModel> {
@@ -28,6 +33,11 @@ export interface GridVirtualizationResult<R extends GridRowModel = GridRowModel>
     offsetTop: number;
     offsetLeft: number;
     totalHeight: number;
+    /**
+     * Height of the unpinned rows' container: their full height, capped so the whole content stays under
+     * `maxContentHeight`. Rows below the cap cannot be scrolled to (the dev warning names how many can).
+     */
+    virtualContainerHeight: number;
     pinnedTopHeight: number;
     pinnedBottomHeight: number;
     totalWidth: number;
@@ -60,6 +70,7 @@ export function useGridVirtualization<R extends GridRowModel>(
         pinCheckboxColumn,
         pinExpandColumn,
         overscanRows = 5,
+        maxContentHeight = Infinity,
     } = params;
 
     return useMemo<GridVirtualizationResult<R>>(() => {
@@ -122,6 +133,12 @@ export function useGridVirtualization<R extends GridRowModel>(
         const hasHorizontalScroll = viewportWidth > 0 && totalWidth > viewportWidth;
         const scrollbarBuffer = hasHorizontalScroll ? 16 : 0;
         const totalHeight = pinnedTopHeight + unpinnedRowsHeight + pinnedBottomHeight + scrollbarBuffer + 2;
+        // Firefox collapses an element taller than its cap (about 17.9M px) instead of clamping it, which
+        // made a large grid unscrollable there; keep the rows' container under the browser's cap.
+        const fullContainerHeight = totalHeight - pinnedTopHeight - pinnedBottomHeight;
+        const virtualContainerHeight = Number.isFinite(maxContentHeight)
+            ? Math.max(0, Math.min(fullContainerHeight, maxContentHeight - pinnedTopHeight - pinnedBottomHeight))
+            : fullContainerHeight;
 
         let firstRowIndex = 0;
         let lastRowIndex  = unpinnedRowsLength - 1;
@@ -157,6 +174,7 @@ export function useGridVirtualization<R extends GridRowModel>(
             offsetTop,
             offsetLeft: 0,
             totalHeight,
+            virtualContainerHeight,
             pinnedTopHeight,
             pinnedBottomHeight,
             totalWidth,
@@ -185,5 +203,6 @@ export function useGridVirtualization<R extends GridRowModel>(
         pinCheckboxColumn,
         pinExpandColumn,
         overscanRows,
+        maxContentHeight,
     ]);
 }
