@@ -4,12 +4,9 @@ import { useGridKeyboardNavigation } from '../../hooks/core/useGridKeyboardNavig
 import { useGridControlledState } from '../../hooks/core/useGridControlledState';
 import { useGridThemeDimensions } from '../../hooks/core/useGridThemeDimensions';
 import { useGridRowPipeline, type GridRowPipelineResult } from '../../hooks/core/useGridRowPipeline';
-import { useGridMaxContentHeight } from '../../hooks/core/useGridMaxContentHeight';
 import { countReachableRows } from '../../utils/maxElementHeight';
-import { useGridVirtualization } from '../../hooks/core/useGridVirtualization';
 import { useGridColumns } from '../../hooks/core/useGridColumns';
 import { useGridVisibleRows } from '../../hooks/core/useGridVisibleRows';
-import { useGridViewport } from '../../hooks/core/useGridViewport';
 import { useGridDetailPanel } from '../../hooks/core/useGridDetailPanel';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings, useGridStylesheetWarning } from '../../hooks/core/useGridDevWarnings';
@@ -28,6 +25,7 @@ import { Header } from '../Header/Header';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useGridHierarchy } from '../../hooks/core/useGridHierarchy';
+import { useGridScrollViewport } from '../../hooks/core/useGridScrollViewport';
 import { useGridViewApis } from '../../hooks/core/useGridViewApis';
 import { useGridEditPipeline } from '../../hooks/core/useGridEditPipeline';
 import { useGridClipboardPaste } from '../../hooks/core/useGridClipboardPaste';
@@ -565,18 +563,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onColumnResize: handleColumnResize,
     });
 
-    const { scrollTop, scrollLeft, overscanRows, handleScroll, setViewportElement } = useGridViewport({
-        onRowsScrollEnd, overscanRowCount, rowCount: layout.unpinnedRowsLength, autoHeight, setDimensions, viewportRef,
-    });
-
-    const maxContentHeight = useGridMaxContentHeight(containerRef);
-    const virtualization = useGridVirtualization({
-        layout, scrollTop, scrollLeft,
+    // Steps 32–33: scroll sync, viewport measurement and the render window.
+    const { handleScroll, setViewportElement, maxContentHeight, virtualization } = useGridScrollViewport<R>({
+        viewport: { onRowsScrollEnd, overscanRowCount, autoHeight, setDimensions },
+        viewportRef, containerRef, layout,
         viewportWidth: state.dimensions.viewportWidth,
         viewportHeight: state.dimensions.viewportHeight,
-        autoHeight, rowReordering, hasDetailPanel, checkboxSelection, pinCheckboxColumn, pinExpandColumn,
-        overscanRows,
-        maxContentHeight: maxContentHeight ?? Infinity,
+        virtualization: { autoHeight, rowReordering, hasDetailPanel, checkboxSelection, pinCheckboxColumn, pinExpandColumn },
     });
 
 
