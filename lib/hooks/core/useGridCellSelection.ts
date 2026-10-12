@@ -133,6 +133,11 @@ interface DragState {
     y: number;
     frame: number;
     moved: boolean;
+    /**
+     * Whether the viewport lays out right to left, read once per drag: `getComputedStyle` every frame
+     * forces a style recalculation, which slowed WebKit's auto-scroll enough to delay the release.
+     */
+    rtl?: boolean;
     /** Ends the drag; `cancelled` unless the button was released normally (tracked drags: Escape cancels). */
     stop: (cancelled?: boolean, altKey?: boolean) => void;
     /** A tracked drag (fill handle): told the cell under the pointer each frame instead of moving the range. */
@@ -451,7 +456,8 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         const headerBottom = headerWrap ? headerWrap.getBoundingClientRect().bottom : bodyTop;
         // Left-pinned columns (and pinned system columns) sit at the inline start: on the right in a
         // right-to-left grid, whose vertical scrollbar is on the left.
-        const rtl = isRtl(viewport);
+        if (drag.rtl === undefined) drag.rtl = isRtl(viewport);
+        const rtl = drag.rtl;
         const contentLeft = rtl ? box.right - width : box.left;
         const startPinnedWidth = layout.pinnedSystemColumnsWidth + layout.leftWidth;
         const bodyLeft = contentLeft + (rtl ? layout.rightWidth : startPinnedWidth);

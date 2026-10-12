@@ -117,6 +117,8 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 
 ## 🔭 Next (Q1 2027)
 
+*   **Fill handle: also start from `mousedown`.** Playwright's WebKit sometimes delivers a press on the handle without a `pointerdown` (seen after the RTL suite, 2026-10-12); the auto-scroll fill test is skipped in WebKit until the handle starts a fill from either event.
+
 *   **Row reordering inside tree data and row groups**, touch-friendly (MUI #4821, 405 👍, not in MUI X).
 *   **Find & highlight** (Ctrl+F through cells), **right-click context menu**, **Excel-style value (set) filter**.
 *   **Calculated columns** (`[price] * [qty]` defined by users).
