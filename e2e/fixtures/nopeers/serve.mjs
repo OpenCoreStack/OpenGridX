@@ -1,5 +1,5 @@
 // Static server for dist/ (the webpack fixture has no preview command of its own).
-// Usage: node serve.mjs --port 4320
+// Usage: node serve.mjs --port 4321
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const dist = join(fileURLToPath(new URL('.', import.meta.url)), 'dist');
 const portArg = process.argv.indexOf('--port');
-const port = portArg === -1 ? 4320 : Number(process.argv[portArg + 1]);
+const port = portArg === -1 ? 4321 : Number(process.argv[portArg + 1]);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.map': 'application/json' };
 
 createServer(async (req, res) => {

@@ -9,7 +9,7 @@ const fixtures = [
 ] as const;
 
 // A webpack 5 app without the optional export peers (exceljs, jspdf): nopeers.spec.ts only.
-const NOPEERS_PORT = 4320;
+const NOPEERS_PORT = 4321;
 
 const browsers = [
   { name: 'chromium', device: devices['Desktop Chrome'] },
