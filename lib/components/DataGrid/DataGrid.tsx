@@ -9,9 +9,8 @@ import { useGridColumns } from '../../hooks/core/useGridColumns';
 import { useGridDetailPanel } from '../../hooks/core/useGridDetailPanel';
 import { useGridStateSnapshot } from '../../hooks/core/useGridStateSnapshot';
 import { useGridDevWarnings, useGridStylesheetWarning } from '../../hooks/core/useGridDevWarnings';
-import { useGridRowInteractions } from '../../hooks/core/useGridRowInteractions';
 import { useGridLiveRowSelection } from '../../hooks/core/useGridLiveRowSelection';
-import { useGridApiMethods } from '../../hooks/core/useGridApiMethods';
+import { useGridSelectionAndStateApi } from '../../hooks/core/useGridSelectionAndStateApi';
 import { useGridColumnLookup } from '../../hooks/core/useGridColumnLookup';
 import { useGridPageCorrection } from '../../hooks/core/useGridPageCorrection';
 import { useGridColumnsPanel } from '../../hooks/core/useGridColumnsPanel';
@@ -131,7 +130,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         selectedRowIds: selectionModelRowIds,
         handleRowSelectionModelChange,
         density: effectiveDensity,
-        rowGroupingModel, handleRowGroupingModelChange,
+        rowGroupingModel,
     } = controlledState;
 
     const pivot = useGridPivot({
@@ -327,50 +326,31 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         clientRowCount: sortedUnpinnedRows.length,
     });
 
-    const { rowSelection, handleRowClick, handleSelectionChange } = useGridRowInteractions<R>({
-        dataRows,
-        getRowId: getRowIdOf,
-        isPivotActive,
-        selectedRowIds,
-        onSelectionModelChange: handleRowSelectionModelChange,
-        disableMultipleRowSelection, disableRowSelectionOnClick, isHierarchyEnabled, rowMetaMap,
-        activeHierarchyHandlers, onRowClick,
-    });
-
-    useGridApiMethods({
-        apiRef: gridData.apiRef,
-        sortModel,
-        multiSort,
-        onSortModelChange: handleSortModelChange,
-        filterModel,
-        onFilterModelChange: handleFilterModelChange,
-        paginationModel: effectivePaginationModel,
-        onPaginationModelChange: handlePaginationModelChange,
-        selectedRowIds,
-        getPendingRowSelectionModel: controlledState.getPendingRowSelectionModel,
-        onRowSelectionModelChange: handleRowSelectionModelChange,
-        disableMultipleRowSelection,
-        isSyntheticRowId: (id) => isSyntheticRowId(id, rowMetaMap),
-        getVisibleRows: () => [...pinnedTopRows, ...centerRows, ...pinnedBottomRows],
-        getAllFilteredRows: () => collectAllFilteredRows<GridRowModel>({
-            hierarchyHandlers: activeHierarchyHandlers,
-            pinnedTopRows,
-            sortedUnpinnedRows,
-            pinnedBottomRows,
-            rowMetaMap,
-            getRowId: getRowIdOf,
-            hierarchyField,
+    // Steps 23–24: row selection and click handlers, then the state API methods.
+    const { rowSelection, handleRowClick, handleSelectionChange } = useGridSelectionAndStateApi<R>({
+        controlledState,
+        interactions: {
             dataRows,
-        }),
-        visibleColumns: renderOrderedColumns as unknown as GridColDef[],
-        rowGroupingModel,
-        onRowGroupingModelChange: handleRowGroupingModelChange,
-        aggregationModel,
-        onAggregationModelChange: handleAggregationModelChange,
-        columnVisibilityModel,
-        onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
-        pivotModel: currentPivotModel,
-        onPivotModelChange: handlePivotModelChange,
+            getRowId: getRowIdOf,
+            isPivotActive, disableRowSelectionOnClick, isHierarchyEnabled, rowMetaMap, activeHierarchyHandlers, onRowClick,
+        },
+        api: {
+            apiRef: gridData.apiRef,
+            multiSort, selectedRowIds, disableMultipleRowSelection,
+            isSyntheticRowId: (id) => isSyntheticRowId(id, rowMetaMap),
+            getVisibleRows: () => [...pinnedTopRows, ...centerRows, ...pinnedBottomRows],
+            getAllFilteredRows: () => collectAllFilteredRows<GridRowModel>({
+                hierarchyHandlers: activeHierarchyHandlers,
+                pinnedTopRows,
+                sortedUnpinnedRows,
+                pinnedBottomRows,
+                rowMetaMap,
+                getRowId: getRowIdOf,
+                hierarchyField,
+                dataRows,
+            }),
+            visibleColumns: renderOrderedColumns as unknown as GridColDef[],
+        },
     });
 
     // Indices address the consumer's own rows, whatever the sort, filter, page or pinning.
