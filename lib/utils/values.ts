@@ -53,6 +53,9 @@ export function tryGetCellValue<R extends GridRowModel>(
  * per column), so one bad record cannot take the whole grid down.
  */
 export function getCellValue<R extends GridRowModel>(row: R, field: string, colDef?: ValueGetterColumn<R>): unknown {
+    // Plain columns read the field directly: this runs once per row and column in every
+    // whole-dataset pass (sort, filter, grouping, aggregation), so it must not allocate.
+    if (!colDef?.valueGetter) return row[field];
     const { value, error } = tryGetCellValue(row, field, colDef);
     if (error !== undefined) {
         warnCallbackFailure(`valueGetter:${field}`, `valueGetter for column "${field}" threw; the value is read as undefined`, error);
