@@ -20,7 +20,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 
 ## Architecture — data flow
 
-Props enter `DataGrid.tsx` (the orchestration layer — no logic lives here, only hook calls and JSX). Put new logic in a hook or pure util and call it from there. Hook **call order is load-bearing** (effects run in call order; several hooks install `apiRef` methods): the full ordered list is in `docs/architecture/datagrid-orchestration.md`.
+Props enter `DataGrid.tsx` (the orchestration layer — no logic lives here, only hook calls and one props object for `GridRoot`). Put new logic in a hook or pure util and call it from there. Hook **call order is load-bearing** (effects run in call order; several hooks install `apiRef` methods): the full ordered list is in `docs/architecture/datagrid-orchestration.md`. Contiguous runs of hooks are wrapped in composite hooks (`useGridEditPipeline`, `useGridSelectionAndStateApi`, `useGridViewApis`, `useGridScrollViewport`, `useGridRangeEditing`, `useGridRenderWindow`, `useGridToolbarStack`) that call their members in the same order; a composite may only wrap consecutive steps.
 
 ```
 DataGridProps
@@ -32,26 +32,28 @@ DataGridProps
   ├─ useDataGrid                — row store, dimensions, live apiRef
   │    useGridRowIdOf / useGridApiRefBinding
   ├─ useGridHierarchy           — useTreeData + useRowGrouping → active handlers + rowMetaMap
-  ├─ useGridEditing, useGridLiveRowSelection, useGridDataSource, useGridDetailPanel
+  ├─ useGridEditPipeline        — edit commit channel → batch edit → useGridEditing
+  ├─ useGridLiveRowSelection, useGridDataSource, useGridDetailPanel
   │
   ├─ useGridColumns             — inject hierarchy renderers; resolve order/visibility
   │    reads rowMetaMap instead of row._* fields
   ├─ useGridRowPipeline         — filter → sort → paginate → split pinned rows
-  ├─ useGridRowInteractions     — selection + row click / checkbox handlers
-  ├─ useGridApiMethods, useGridAggregationApi — imperative API
-  ├─ useLayout, useGridSpanning, useGridClipboardApi, useGridScrollToIndexesApi
+  ├─ useGridSelectionAndStateApi — useGridRowInteractions (selection + row click / checkbox handlers)
+  │                               → useGridApiMethods (imperative state API)
+  ├─ useAggregation, useGridAggregationApi, useLayout, useGridSpanning, useGridCellSelection
+  ├─ useGridViewApis            — useGridClipboardApi, useGridScrollToIndexesApi, useGridColumnAutosize
   │
-  ├─ useGridViewport            — scroll sync + viewport measurement
-  ├─ useGridVirtualization      — compute render window (which rows/columns are visible)
+  ├─ useGridScrollViewport      — useGridViewport (scroll sync + measurement) → useGridMaxContentHeight
+  │                               → useGridVirtualization (render window)
   ├─ useGridKeyboardNavigation  — focus + keys; useGridSortHandlers / useGridPointerFocusHandlers /
   │                               useGridColumnMenuHandlers for header and cell events
-  ├─ useGridAriaRows            — aria-rowcount / aria-rowindex bases
-  ├─ useGridVisibleRows         — merge pinned + virtual center → { row, rowIndex }[]
-  ├─ useGridToolbarProps        — props for slots.toolbar
+  ├─ useGridRangeEditing        — cell selection API → paste / range clear → undo/redo → fill handle
+  ├─ useGridRenderWindow        — useGridAriaRows → span row window → useGridVisibleRows → span column window
+  ├─ useGridToolbarStack        — columns panel, stylesheet warning, useGridAiAssistant, useGridToolbarProps
   │
-  └─ JSX renders:
-       Header, GridPinnedRows, GridVirtualRows, GridAggregationFooter, GridPaginationArea,
-       GridLiveRegion, GridListView (list view), overlays
+  └─ renders <GridRoot>: root element, toolbar, AI panel, columns panel, GridListView (list view) or
+       <GridViewport> (Header, GridPinnedRows, GridVirtualRows, GridAggregationFooter),
+       cell selection stats, footer slot or GridPaginationArea, GridLiveRegion, overlays
 ```
 
 Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGrouping`. They produce flat renderable row arrays of the consumer's own row objects (unchanged — nothing is injected since v3.0) **and** a `rowMetaMap: Map<GridRowId, GridRowMeta>` that carries all hierarchy information.
@@ -63,8 +65,10 @@ Hierarchy (tree data, row grouping) is handled by `useTreeData` / `useRowGroupin
 | File | Purpose |
 | :--- | :--- |
 | `lib/types/` | All public types, one file per domain: `rows.ts` (`GridRowId`, `GridRowModel`, `GridRowMeta`, pinned rows, row params), `columns.ts` (`GridColDef`, cell/value/render params, column pinning/order/visibility), `sorting.ts`, `filtering.ts`, `selection.ts` (row + cell selection), `editing.ts` (batch edit, paste, undo/redo, fill), `grouping.ts` (grouping, aggregation, pivot models), `export.ts` (`PdfExportOptions`, `GridGroupedExportRow`), `dataSource.ts` (data source, pagination model), `state.ts`, `locale.ts` (`GridLocaleText`), `props.ts` (`DataGridProps`), `slots.ts`, `api.ts` (`GridApi`), `ai.ts` (`GridAi*`). `index.ts` only re-exports them (`export type *`), so import from `types`, never from a domain file outside `lib/types/` |
-| `lib/components/DataGrid/DataGrid.tsx` | Orchestration only — hooks + JSX, no business logic. Hook order: `docs/architecture/datagrid-orchestration.md` |
-| `lib/hooks/core/` | Core pipeline hooks (always active): `useGridControlledState`, `useGridRowPipeline`, `useGridColumns`, `useGridVirtualization`, `useGridVisibleRows`, `useGridScrollSync`, `useGridKeyboardNavigation`, `useLayout`; DataGrid wiring: `useGridHierarchy`, `useGridGroupingColumn`, `useGridRowIdOf`, `useGridDetailPanel`, `useGridRowInteractions`, `useGridViewport`, `useGridAriaRows`, `useGridToolbarProps`, `useGridHeaderHandlers`, `useGridFocusHandlers`, and the `apiRef` installers `useGridApiRefBinding` / `useGridApiMethods` / `useGridAggregationApi` / `useGridClipboardApi` / `useGridScrollToIndexesApi` |
+| `lib/components/DataGrid/DataGrid.tsx` | Orchestration only — hooks + one props object for `GridRoot`, no business logic. Hook order: `docs/architecture/datagrid-orchestration.md` |
+| `lib/components/DataGrid/GridRoot.tsx` | The grid's root element and its children (toolbar, panels, list view or viewport, footer, live region, overlays); passes the viewport's props on to `GridViewport` |
+| `lib/components/DataGrid/GridViewport.tsx` | The `role="grid"` viewport: header, pinned rows, empty state, virtual rows, aggregation footer; builds `rowRenderProps` |
+| `lib/hooks/core/` | Core pipeline hooks (always active): `useGridControlledState`, `useGridRowPipeline`, `useGridColumns`, `useGridVirtualization`, `useGridVisibleRows`, `useGridScrollSync`, `useGridKeyboardNavigation`, `useLayout`; DataGrid wiring: `useGridHierarchy`, `useGridGroupingColumn`, `useGridRowIdOf`, `useGridDetailPanel`, `useGridRowInteractions`, `useGridViewport`, `useGridAriaRows`, `useGridToolbarProps`, `useGridHeaderHandlers`, `useGridFocusHandlers`, and the `apiRef` installers `useGridApiRefBinding` / `useGridApiMethods` / `useGridAggregationApi` / `useGridClipboardApi` / `useGridScrollToIndexesApi`; composite hooks that wrap consecutive steps of that order: `useGridEditPipeline`, `useGridSelectionAndStateApi`, `useGridViewApis`, `useGridScrollViewport`, `useGridRangeEditing`, `useGridRenderWindow`, `useGridToolbarStack` |
 | `lib/utils/gridModes.ts` | `resolveGridModes`: the one place features override each other (pivot vs tree/grouping/reorder, grouping vs pagination, infinite vs pages, list view needs `listViewColumn`) |
 | `lib/hooks/features/` | Opt-in feature hooks: `useAggregation`, `usePivot`, `useGridEditing`, `useGridSpanning`, `useGridDataSource`, `useGridClipboard` |
 | `lib/hooks/useTreeData.ts` | Tree-data hierarchy — flat row array + `rowMetaMap` |
@@ -185,7 +189,7 @@ Design: `docs/superpowers/specs/2026-10-09-ai-assistant-header-filters-fill-desi
 - Two buttons swapped by a ternary inside a `<form>` need distinct `key`s, or the click on the outgoing one submits the form (the Stop button re-sent the prompt)
 - **Header filters** (`headerFilters`): each cell owns only the root `filterModel` item `id: 'header:<field>'` (`lib/utils/headerFilters.ts`: `getHeaderFilterState`, `setHeaderFilterItem`, which returns the same object for a model it can't show). Custom = `'or'` root with items, field inside a group, or an untagged/second root item on the field. Off in pivot mode
 - The filter row renders inside `.ogx__header-wrap` after `.ogx__header`; column cells of both rows must use `getHeaderColumnStyle` (`lib/components/Header/headerColumnStyle.ts`). Focus: `FocusedCell.headerFilter`; column header is row -2 when header filters are on, filter row -1. `useGridAriaRows({ headerFilterRow })`. "Custom filter" opens the panel via `GridToolbarHost.registerFiltersPanel` + `forceFiltersOpen` / `onFiltersPanelClose`
-- **Fill handle**: `useGridFillHandle` (hook 36d, after `useGridUndoRedo`) → `rowRenderProps.fillHandle` → `fillHandleCol` on the handle's row only; `RANGE_FILL_HANDLE` (32) flag; `.ogx__cell-fill-handle` (24 px hit area inside the corner cell). Drags go through `cellSelection.startTrackedDrag` (pointer events, touch, auto-scroll, Escape cancels). Pure fill logic in `lib/utils/editing/fill.ts` (no regexes); commits via `applyEdits(edits, 'fill')`; Ctrl/Cmd+D / R always copy
+- **Fill handle**: `useGridFillHandle` (hook 36d, after `useGridUndoRedo`, inside `useGridRangeEditing`) → `rowRenderProps.fillHandle` (built in `GridViewport`) → `fillHandleCol` on the handle's row only; `RANGE_FILL_HANDLE` (32) flag; `.ogx__cell-fill-handle` (24 px hit area inside the corner cell). Drags go through `cellSelection.startTrackedDrag` (pointer events, touch, auto-scroll, Escape cancels). Pure fill logic in `lib/utils/editing/fill.ts` (no regexes); commits via `applyEdits(edits, 'fill')`; Ctrl/Cmd+D / R always copy
 - Smoke suites of parallel agents share ports 4318/4319 — never run two at once
 
 ## v3.4.0 — significant changes

@@ -1,8 +1,23 @@
 # DataGrid orchestration
 
 `lib/components/DataGrid/DataGrid.tsx` is the orchestration layer: it destructures the props, calls
-hooks and pure utils in a fixed order, and renders JSX. Feature logic lives in the hooks and utils
-listed here; add new logic there, not in the component.
+hooks and pure utils in a fixed order, and renders `GridRoot` with one props object. Feature logic lives
+in the hooks and utils listed here; add new logic there, not in the component.
+
+Some contiguous runs of hooks are wrapped in a **composite hook** (`hooks/core/`) that calls its members in
+the same order, so `DataGrid.tsx` calls one hook where the table below lists several (marked with the
+composite's name). A composite only ever wraps consecutive steps: a hook that has to run between two of its
+members goes inside it at that position, never before or after the composite.
+
+| Composite | Steps |
+| :--- | :--- |
+| `useGridEditPipeline` | 12a–13 |
+| `useGridSelectionAndStateApi` | 23–24 |
+| `useGridViewApis` | 30–31a |
+| `useGridScrollViewport` | 32–33 |
+| `useGridRangeEditing` | 36a–36d |
+| `useGridRenderWindow` | 38–41 |
+| `useGridToolbarStack` | 44–46 |
 
 ## Why the order matters
 
@@ -47,9 +62,9 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | 10 | `useGridRowIdOf` | `hooks/core/useGridRowIdOf.ts` | `getRowIdOf` and its stable event-handler twin |
 | 11 | `useGridApiRefBinding` | `hooks/core/useGridApiRefBinding.ts` | Binds the `apiRef` prop (layout effect) |
 | 12 | `useGridHierarchy` | `hooks/core/useGridHierarchy.ts` | `useTreeData` + `useRowGrouping`, the active handlers and `rowMetaMap` |
-| 12a | `useGridEditCommitChannel` | `hooks/core/useGridUndoRedo.ts` | Stable `emit` / `setListener` pair: the commit paths below report stored changes through `emit`, and `useGridUndoRedo` (36c) registers the listener (v3.4) |
-| 12b | `useGridBatchEdit` | `hooks/features/useGridBatchEdit.ts` | Batch edits (v3.4): `applyEdits` runs `valueSetter` → `processRowUpdate` once per row (rows in parallel, failures isolated and sent to `onProcessRowUpdateError`) and stores every successful row in one `replaceRows` update; `getRow` sees rows stored since the last render; `storeRow` stores a single edit |
-| 13 | `useGridEditing` | `hooks/features/useGridEditing.ts` | Cell editing state and handlers; stores through `useGridBatchEdit.storeRow` and reports the committed change to the channel |
+| 12a | `useGridEditCommitChannel` (in `useGridEditPipeline`) | `hooks/core/useGridUndoRedo.ts` | Stable `emit` / `setListener` pair: the commit paths below report stored changes through `emit`, and `useGridUndoRedo` (36c) registers the listener (v3.4) |
+| 12b | `useGridBatchEdit` (in `useGridEditPipeline`) | `hooks/features/useGridBatchEdit.ts` | Batch edits (v3.4): `applyEdits` runs `valueSetter` → `processRowUpdate` once per row (rows in parallel, failures isolated and sent to `onProcessRowUpdateError`) and stores every successful row in one `replaceRows` update; `getRow` sees rows stored since the last render; `storeRow` stores a single edit |
+| 13 | `useGridEditing` (in `useGridEditPipeline`) | `hooks/features/useGridEditing.ts` | Cell editing state and handlers; stores through `useGridBatchEdit.storeRow` and reports the committed change to the channel |
 | 14 | `useGridLiveRowSelection` | `hooks/core/useGridLiveRowSelection.ts` | Selection without removed rows |
 | 15 | `useGridDataSource` | `hooks/features/useGridDataSource.ts` | Server fetching |
 | 16 | `useServerTreeChildren` | `hooks/features/useServerTreeChildren.ts` | Lazy server tree children |
@@ -59,46 +74,48 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 | 20 | `useGridRowPipeline` | `hooks/core/useGridRowPipeline.ts` | Filter → pin → sort → paginate |
 | 21 | `useGridPageCorrection` | `hooks/core/useGridPageCorrection.ts` | Moves a page left past the end back to the last page |
 | 22 | `getPaginationRowCount` (pure) | `utils/pagination/index.ts` | What the pager pages through |
-| 23 | `useGridRowInteractions` | `hooks/core/useGridRowInteractions.ts` | Row selection, `handleRowClick`, `handleSelectionChange` |
-| 24 | `useGridApiMethods` | `hooks/core/useGridApiMethods.ts` | State API methods (`getAllFilteredRows` via `utils/gridApiRows.ts`); since v3.5 also `setSortModel`, `setRowGroupingModel`, `setAggregationModel`, `setColumnVisibilityModel`, `setPivotModel` and `getGridAiState` |
+| 23 | `useGridRowInteractions` (in `useGridSelectionAndStateApi`) | `hooks/core/useGridRowInteractions.ts` | Row selection, `handleRowClick`, `handleSelectionChange` |
+| 24 | `useGridApiMethods` (in `useGridSelectionAndStateApi`) | `hooks/core/useGridApiMethods.ts` | State API methods (`getAllFilteredRows` via `utils/gridApiRows.ts`); since v3.5 also `setSortModel`, `setRowGroupingModel`, `setAggregationModel`, `setColumnVisibilityModel`, `setPivotModel` and `getGridAiState` |
 | 25 | `useRowReorder` | `hooks/useRowReorder.ts` | Row drag-reorder |
 | 26 | `useAggregation` | `hooks/features/useAggregation.ts` | Footer aggregation result |
 | 27 | `useGridAggregationApi` | `hooks/core/useGridAggregationApi.ts` | `getAggregationResult`, `getAggregationModel`, `getGroupedExportRows` |
 | 28 | `useLayout` | `hooks/core/useLayout.ts` | Row heights, pinned column split, widths |
 | 29 | `useGridSpanning` | `hooks/features/useGridSpanning.ts` | Row/column spans |
 | 29a | `useGridCellSelection` | `hooks/core/useGridCellSelection.ts` | Cell range (v3.3): the model's range resolved against `allRenderableRows` and the data columns of `navigationColumns` (grown over spans), the render rectangle, pointer drag with auto-scroll and Shift+click, the Shift-key handlers for the keyboard hook, copy text, status-bar totals and the debounced live-region text. Inert while `cellSelection` is off |
-| 30 | `useGridClipboardApi` | `hooks/core/useGridClipboardApi.ts` | Ctrl/Cmd+C and `copySelectedRows`; with `cellSelection` the shortcut copies the range (`getCellRangeCopyText`) |
-| 31 | `useGridScrollToIndexesApi` | `hooks/core/useGridScrollToIndexesApi.ts` | `scrollToIndexes` |
-| 31a | `useGridColumnAutosize` | `hooks/core/useGridColumnAutosize.ts` | `autosizeColumn` / `autosizeColumns` on the API, and the resize handle's auto-size handler (v3.1) |
-| 32 | `useGridViewport` | `hooks/core/useGridViewport.ts` | Scroll sync, viewport measurement, viewport callback ref |
-| 32a | `useGridMaxContentHeight` | `hooks/core/useGridMaxContentHeight.ts` | The tallest element this browser lays out (`utils/maxElementHeight.ts`, measured once per document after mount; `undefined` until then, `Infinity` without a layout engine) |
-| 33 | `useGridVirtualization` | `hooks/core/useGridVirtualization.ts` | Render window; `virtualContainerHeight` caps the rows' container to `maxContentHeight` (Firefox collapses taller elements) |
+| 30 | `useGridClipboardApi` (in `useGridViewApis`) | `hooks/core/useGridClipboardApi.ts` | Ctrl/Cmd+C and `copySelectedRows`; with `cellSelection` the shortcut copies the range (`getCellRangeCopyText`) |
+| 31 | `useGridScrollToIndexesApi` (in `useGridViewApis`) | `hooks/core/useGridScrollToIndexesApi.ts` | `scrollToIndexes` |
+| 31a | `useGridColumnAutosize` (in `useGridViewApis`) | `hooks/core/useGridColumnAutosize.ts` | `autosizeColumn` / `autosizeColumns` on the API, and the resize handle's auto-size handler (v3.1) |
+| 32 | `useGridViewport` (in `useGridScrollViewport`) | `hooks/core/useGridViewport.ts` | Scroll sync, viewport measurement, viewport callback ref |
+| 32a | `useGridMaxContentHeight` (in `useGridScrollViewport`) | `hooks/core/useGridMaxContentHeight.ts` | The tallest element this browser lays out (`utils/maxElementHeight.ts`, measured once per document after mount; `undefined` until then, `Infinity` without a layout engine) |
+| 33 | `useGridVirtualization` (in `useGridScrollViewport`) | `hooks/core/useGridVirtualization.ts` | Render window; `virtualContainerHeight` caps the rows' container to `maxContentHeight` (Firefox collapses taller elements) |
 | 34 | `useGridSortHandlers` | `hooks/core/useGridHeaderHandlers.ts` | Header sort / shift-sort |
 | 35 | `useGridKeyboardNavigation` | `hooks/core/useGridKeyboardNavigation.ts` | Focus and keyboard handling; takes `cellSelection.keyboard` (Shift+navigation, Escape, Ctrl/Cmd+A) |
 | 36 | `useGridPointerFocusHandlers` | `hooks/core/useGridFocusHandlers.ts` | Cell and header click focus |
-| 36a | `useGridCellSelectionApi` | `hooks/core/useGridCellSelectionApi.ts` | Keeps the range anchor and the focused cell together (layout effect: a new anchor moves focus; focus moved to another data cell collapses the range), clears a range whose corner is gone (`'dataChange'`), and installs `getCellSelectionModel`, `setCellSelectionModel`, `selectCellRange`, `clearCellSelection`, `getSelectedCells`, `copySelectedCells` (once per `apiRef`, reading the latest values from a ref) |
-| 36b | `useGridClipboardPaste` | `hooks/core/useGridClipboardPaste.ts` | Paste and range clear (v3.4): `paste` and Delete/Backspace listeners on the grid root (only for cell targets, not editors or nested grids), TSV parsing (`utils/parsing.ts`), placement against the renderable rows and range columns (`utils/editing/targets.ts`), the batch edit, the new selection, `onBeforeClipboardPaste` / `onClipboardPaste`, and `apiRef.pasteText`. Inert without `cellSelection` except for `pasteText` |
-| 36c | `useGridUndoRedo` | `hooks/core/useGridUndoRedo.ts` | History (v3.4, `undoRedo`): records the channel's changes, replays them as batch edits with an `expect` value per cell (stale cells skipped), queues undo/redo, selects and scrolls to the affected cells, Ctrl/Cmd+Z / Shift+Z / Ctrl+Y on the grid root, `onHistoryChange`, and `apiRef.undo` / `redo` / `canUndo` / `canRedo` / `clearHistory` |
-| 36d | `useGridFillHandle` | `hooks/core/useGridFillHandle.ts` | Fill handle (v3.5, `cellSelection` without `disableFillHandle`): where the handle is drawn (`rowRenderProps.fillHandle`, the range's bottom-right cell or its span origin), a `pointerdown` listener on the viewport for `.ogx__cell-fill-handle` that runs `cellSelection.startTrackedDrag` (the range drag's hit testing, auto-scroll and slow-machine fallback, on pointer events so touch works), the fill itself (`utils/editing/fill.ts`: series detection, lines, `GridColDef.fillValue`) as one batch edit with source `'fill'`, the new selection, `onFill`, and Ctrl/Cmd+D / Ctrl/Cmd+R on the grid root |
+| 36a | `useGridCellSelectionApi` (in `useGridRangeEditing`) | `hooks/core/useGridCellSelectionApi.ts` | Keeps the range anchor and the focused cell together (layout effect: a new anchor moves focus; focus moved to another data cell collapses the range), clears a range whose corner is gone (`'dataChange'`), and installs `getCellSelectionModel`, `setCellSelectionModel`, `selectCellRange`, `clearCellSelection`, `getSelectedCells`, `copySelectedCells` (once per `apiRef`, reading the latest values from a ref) |
+| 36b | `useGridClipboardPaste` (in `useGridRangeEditing`) | `hooks/core/useGridClipboardPaste.ts` | Paste and range clear (v3.4): `paste` and Delete/Backspace listeners on the grid root (only for cell targets, not editors or nested grids), TSV parsing (`utils/parsing.ts`), placement against the renderable rows and range columns (`utils/editing/targets.ts`), the batch edit, the new selection, `onBeforeClipboardPaste` / `onClipboardPaste`, and `apiRef.pasteText`. Inert without `cellSelection` except for `pasteText` |
+| 36c | `useGridUndoRedo` (in `useGridRangeEditing`) | `hooks/core/useGridUndoRedo.ts` | History (v3.4, `undoRedo`): records the channel's changes, replays them as batch edits with an `expect` value per cell (stale cells skipped), queues undo/redo, selects and scrolls to the affected cells, Ctrl/Cmd+Z / Shift+Z / Ctrl+Y on the grid root, `onHistoryChange`, and `apiRef.undo` / `redo` / `canUndo` / `canRedo` / `clearHistory` |
+| 36d | `useGridFillHandle` (in `useGridRangeEditing`) | `hooks/core/useGridFillHandle.ts` | Fill handle (v3.5, `cellSelection` without `disableFillHandle`): where the handle is drawn (`rowRenderProps.fillHandle`, the range's bottom-right cell or its span origin), a `pointerdown` listener on the viewport for `.ogx__cell-fill-handle` that runs `cellSelection.startTrackedDrag` (the range drag's hit testing, auto-scroll and slow-machine fallback, on pointer events so touch works), the fill itself (`utils/editing/fill.ts`: series detection, lines, `GridColDef.fillValue`) as one batch edit with source `'fill'`, the new selection, `onFill`, and Ctrl/Cmd+D / Ctrl/Cmd+R on the grid root |
 | 37 | `useGridColumnMenuHandlers` | `hooks/core/useGridHeaderHandlers.ts` | Column menu Hide / Pin (`pinColumnTo` in `utils/pinning`) |
-| 38 | `useGridAriaRows` | `hooks/core/useGridAriaRows.ts` | `aria-rowcount` and `aria-rowindex` bases |
-| 39 | `useGridSpanRowWindow` | `hooks/features/useGridSpanRenderWindow.ts` | Render window widened to whole row spans |
-| 40 | `useGridVisibleRows` | `hooks/core/useGridVisibleRows.ts` | Pinned + virtual centre rows to render |
-| 41 | `useGridSpanColumnWindow` | `hooks/features/useGridSpanRenderWindow.ts` | Columns to render, widened to whole column spans |
+| 38 | `useGridAriaRows` (in `useGridRenderWindow`) | `hooks/core/useGridAriaRows.ts` | `aria-rowcount` and `aria-rowindex` bases |
+| 39 | `useGridSpanRowWindow` (in `useGridRenderWindow`) | `hooks/features/useGridSpanRenderWindow.ts` | Render window widened to whole row spans |
+| 40 | `useGridVisibleRows` (in `useGridRenderWindow`) | `hooks/core/useGridVisibleRows.ts` | Pinned + virtual centre rows to render |
+| 41 | `useGridSpanColumnWindow` (in `useGridRenderWindow`) | `hooks/features/useGridSpanRenderWindow.ts` | Columns to render, widened to whole column spans |
 | 42 | `useGridDevWarnings` | `hooks/core/useGridDevWarnings.ts` | Dev-only warnings |
 | 43 | `useColumnGroupReorderGuard` | `hooks/features/useColumnGroupReorderGuard.ts` | Header drag-reorder kept inside column groups |
-| 44 | `useGridColumnsPanel` | `hooks/core/useGridColumnsPanel.ts` | Columns panel (toolbar or standalone) |
-| 45 | `useGridStylesheetWarning` | `hooks/core/useGridDevWarnings.ts` | Warns when the stylesheet is missing |
-| 45a | `useGridAiAssistant` | `hooks/features/useGridAiAssistant.ts` | The `aiAssistant` panel (v3.5): open state, the request and its `AbortController` (Stop), applying a branded reply through the `apiRef` setters of step 24 (`utils/aiAssistant.ts`: allowed parts, the Undo snapshot, chips, chip removal), the live-region status, and `apiRef.openAiAssistant` / `closeAiAssistant`. Inert without `aiAssistant`; it runs before step 46 because the toolbar gets its Ask AI button from it |
-| 46 | `useGridToolbarProps` | `hooks/core/useGridToolbarProps.ts` | Props for `slots.toolbar` |
+| 44 | `useGridColumnsPanel` (in `useGridToolbarStack`) | `hooks/core/useGridColumnsPanel.ts` | Columns panel (toolbar or standalone) |
+| 45 | `useGridStylesheetWarning` (in `useGridToolbarStack`) | `hooks/core/useGridDevWarnings.ts` | Warns when the stylesheet is missing |
+| 45a | `useGridAiAssistant` (in `useGridToolbarStack`) | `hooks/features/useGridAiAssistant.ts` | The `aiAssistant` panel (v3.5): open state, the request and its `AbortController` (Stop), applying a branded reply through the `apiRef` setters of step 24 (`utils/aiAssistant.ts`: allowed parts, the Undo snapshot, chips, chip removal), the live-region status, and `apiRef.openAiAssistant` / `closeAiAssistant`. Inert without `aiAssistant`; it runs before step 46 because the toolbar gets its Ask AI button from it |
+| 46 | `useGridToolbarProps` (in `useGridToolbarStack`) | `hooks/core/useGridToolbarProps.ts` | Props for `slots.toolbar` |
 
 ## Rendered components
 
-`GridToolbarSlot`, `GridAiAssistantArea` (the `aiAssistant` panel or `slots.aiAssistantPanel` while open, anchored under the toolbar), `GridStandaloneColumnPanel`, `GridListView` (list view) or the viewport
-(`Header`, `GridPinnedRows` top, `GridEmptyState`, `GridVirtualRows`, `GridPinnedRows` bottom,
+`DataGrid.tsx` renders `GridRoot` (`components/DataGrid/GridRoot.tsx`): the root element with, in this order,
+`GridToolbarSlot`, `GridAiAssistantArea` (the `aiAssistant` panel or `slots.aiAssistantPanel` while open, anchored under the toolbar), `GridStandaloneColumnPanel`, `GridListView` (list view) or `GridViewport` (`components/DataGrid/GridViewport.tsx`, the `role="grid"` viewport:
+`Header`, `GridPinnedRows` top, `GridEmptyState`, `GridVirtualRows`, `GridPinnedRows` bottom,
 `GridAggregationFooter`), `GridCellSelectionStatsArea` (`showCellSelectionStats` with `cellSelection`), then `slots.footer` or `GridPaginationArea`, `GridLiveRegion`,
-`GridLoadingOverlay` and `GridErrorOverlay`. The props all three row renderers take alike are built
-once in `DataGrid.tsx` (`rowRenderProps`) and spread into each. `rowRenderProps.cellRange` is the cell range's
+`GridLoadingOverlay` and `GridErrorOverlay`. `GridRoot` builds the overlay slot elements and passes the
+rest of its props on to `GridViewport`. The props all three row renderers take alike are built once in
+`GridViewport` (`rowRenderProps`) and spread into each. `rowRenderProps.cellRange` is the cell range's
 render rectangle; each row renderer turns it into a per-row `cellRange` (`getRowCellRange`), `null` for rows
 outside it, and `Row` is memoised with a value comparison of that prop, so a drag only re-renders the rows the
 range enters or leaves. `rowRenderProps.fillHandle` (v3.5) adds `fillHandleCol` to the one row that draws the fill

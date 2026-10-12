@@ -5,6 +5,14 @@
 
 ---
 
+## [Unreleased]
+
+### Internal
+
+- **`DataGrid.tsx` split up** (1,128 → 620 lines), with no change to the public API, the rendered DOM, attributes, class names, event order or hook order. The JSX moved into `GridRoot` (root element, toolbar, panels, list view, footer, live region, overlays) and `GridViewport` (the `role="grid"` viewport and the shared row renderer props). Seven composite hooks each wrap a contiguous run of the documented hook order and call it unchanged: `useGridEditPipeline` (12a–13), `useGridSelectionAndStateApi` (23–24), `useGridViewApis` (30–31a), `useGridScrollViewport` (32–33), `useGridRangeEditing` (36a–36d), `useGridRenderWindow` (38–41) and `useGridToolbarStack` (44–46). `docs/architecture/datagrid-orchestration.md` lists each hook with its composite. React DevTools shows the two new components (`GridRoot`, `GridViewport`) under `DataGrid`; each renders once per grid render.
+
+---
+
 ## [3.6.0] — 2026-10-12
 
 ### Added
