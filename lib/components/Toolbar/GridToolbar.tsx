@@ -4,6 +4,7 @@ import type { GridColDef, GridAggregationModel, GridPivotModel, GridFilterModel 
 import { AGGREGATION_FUNCTIONS } from '../../utils/aggregation';
 import type { BuiltInAggFn } from '../../utils/aggregation';
 import { getViewportWidth } from '../../utils/viewport';
+import { getPanelPosition, type GridPanelPosition } from '../../utils/direction';
 import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
 import { PivotPanel, PivotIcon } from './PivotPanel';
 import { GlobalSearch } from './GlobalSearch';
@@ -149,7 +150,7 @@ function FilterIcon() {
     );
 }
 
-interface PanelPosition { top: number; right: number; }
+type PanelPosition = GridPanelPosition;
 
 function AggregationPanel({
     anchorRef,
@@ -176,14 +177,7 @@ function AggregationPanel({
         setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
     }, [anchorRef]);
 
-    const computePos = useCallback((): PanelPosition => {
-        if (!anchorRef.current) return { top: 0, right: 0 };
-        const rect = anchorRef.current.getBoundingClientRect();
-        return {
-            top: rect.bottom + 6,
-            right: getViewportWidth() - rect.right,
-        };
-    }, [anchorRef]);
+    const computePos = useCallback((): PanelPosition => getPanelPosition(anchorRef.current, getViewportWidth()), [anchorRef]);
 
     useEffect(() => {
         setPos(computePos());
@@ -221,7 +215,7 @@ function AggregationPanel({
             className="ogx-toolbar__panel"
             role="dialog"
             aria-label="Summaries configuration"
-            style={{ top: pos.top, right: pos.right, width: 400, maxWidth: 'calc(100vw - 24px)' }}
+            style={{ top: pos.top, right: pos.right, left: pos.left, width: 400, maxWidth: 'calc(100vw - 24px)' }}
         >
             <div className="ogx-toolbar__panel-header">
                 <span className="ogx-toolbar__panel-title">
@@ -309,14 +303,7 @@ function ColumnsPanelWrapper({
         setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
     }, [anchorRef]);
 
-    const computePos = useCallback((): PanelPosition => {
-        if (!anchorRef.current) return { top: 0, right: 0 };
-        const rect = anchorRef.current.getBoundingClientRect();
-        return {
-            top: rect.bottom + 6,
-            right: getViewportWidth() - rect.right,
-        };
-    }, [anchorRef]);
+    const computePos = useCallback((): PanelPosition => getPanelPosition(anchorRef.current, getViewportWidth()), [anchorRef]);
 
     useEffect(() => {
         setPos(computePos());
@@ -354,7 +341,7 @@ function ColumnsPanelWrapper({
             className="ogx-toolbar__panel"
             role="dialog"
             aria-label="Column visibility"
-            style={{ top: pos.top, right: pos.right, width: 280, padding: 0 }}
+            style={{ top: pos.top, right: pos.right, left: pos.left, width: 280, padding: 0 }}
         >
             <ColumnVisibilityPanel
                 columns={columns}
@@ -398,14 +385,7 @@ function FilterPanelWrapper({
         setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
     }, [anchorRef]);
 
-    const computePos = useCallback((): PanelPosition => {
-        if (!anchorRef.current) return { top: 0, right: 0 };
-        const rect = anchorRef.current.getBoundingClientRect();
-        return {
-            top: rect.bottom + 6,
-            right: getViewportWidth() - rect.right,
-        };
-    }, [anchorRef]);
+    const computePos = useCallback((): PanelPosition => getPanelPosition(anchorRef.current, getViewportWidth()), [anchorRef]);
 
     useEffect(() => {
         setPos(computePos());
@@ -442,7 +422,7 @@ function FilterPanelWrapper({
             className="ogx-toolbar__panel ogx-toolbar__panel--filter"
             role="dialog"
             aria-label="Advanced filters"
-            style={{ top: pos.top, right: pos.right, width: 540, maxWidth: 'calc(100vw - 24px)' }}
+            style={{ top: pos.top, right: pos.right, left: pos.left, width: 540, maxWidth: 'calc(100vw - 24px)' }}
         >
             <div className="ogx-toolbar__panel-header">
                 <span className="ogx-toolbar__panel-title">

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { clampResizeWidth } from './clampResizeWidth';
+import { isRtl, logicalArrowKey } from '../../utils/direction';
 
 
 export interface ColumnResizeHandleProps {
@@ -23,6 +24,8 @@ interface ActiveResize {
     pointerId: number;
     startX: number;
     startWidth: number;
+    /** The grid lays out right to left: the handle's edge grows the column towards the left. */
+    rtl: boolean;
     lastUpdate: number;
     moved: boolean;
 }
@@ -53,7 +56,8 @@ export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
     useEffect(() => () => { activeRef.current = null; }, []);
 
     const widthAt = useCallback((active: ActiveResize, clientX: number) => {
-        const deltaX = clientX - active.startX;
+        // Pointer movement towards the column's end edge, in screen pixels.
+        const deltaX = (clientX - active.startX) * (active.rtl ? -1 : 1);
         const raw = active.startWidth + (edge === 'start' ? -deltaX : deltaX);
         return clampResizeWidth(raw, active.startWidth, minWidth, maxWidth);
     }, [edge, minWidth, maxWidth]);
@@ -67,6 +71,7 @@ export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
             startX: event.clientX,
             // The logical stored width: reliable for pinned, flex, and normal columns.
             startWidth: currentWidth,
+            rtl: isRtl(event.currentTarget),
             lastUpdate: 0,
             moved: false,
         };
@@ -114,7 +119,8 @@ export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
         if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
         event.preventDefault();
         event.stopPropagation();
-        const step = (event.shiftKey ? 50 : 10) * (event.key === 'ArrowRight' ? 1 : -1);
+        const key = logicalArrowKey(event.key, isRtl(event.currentTarget));
+        const step = (event.shiftKey ? 50 : 10) * (key === 'ArrowRight' ? 1 : -1);
         onResize(field, clampResizeWidth(currentWidth + step, currentWidth, minWidth, maxWidth));
     }, [field, currentWidth, onResize, onAutosize, minWidth, maxWidth]);
 

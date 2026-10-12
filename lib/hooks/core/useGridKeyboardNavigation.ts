@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
+import { getScrollStart, isRtl, logicalArrowKey, setScrollStart } from '../../utils/direction';
 import { scrollRowIntoView } from '../../utils/scroll';
 import { resolveCellEditable } from '../../utils/editing';
 import { getCellValue } from '../../utils/values';
@@ -256,12 +257,13 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
             const isPinned = field === REORDER_FIELD
                 || (field === EXPAND_FIELD && pinExpandColumn)
                 || (field === CHECKBOX_FIELD && pinCheckboxColumn);
-            if (!isPinned && el.scrollLeft > 0) el.scrollLeft = 0;
+            if (!isPinned && getScrollStart(el) > 0) setScrollStart(el, 0);
             return;
         }
         if (!columnMetrics) return;
 
-        const { clientWidth, scrollLeft } = el;
+        const { clientWidth } = el;
+        const scrollLeft = getScrollStart(el);
         const { leftPinnedWidth, rightPinnedWidth, unpinnedAccWidths, unpinnedCols, totalSpecialsWidth, pinnedSpecialsWidth } = columnMetrics;
         const unpinnedIndex = unpinnedCols.findIndex(c => c.field === field);
         if (unpinnedIndex === -1) return;
@@ -277,7 +279,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         } else if (colRight > visibleEnd) {
             newScrollLeft = colRight - clientWidth + rightPinnedWidth;
         }
-        if (newScrollLeft !== scrollLeft) el.scrollLeft = newScrollLeft;
+        if (newScrollLeft !== scrollLeft) setScrollStart(el, newScrollLeft);
     }, [viewportRef, virtualization, pinnedTopRowCount, rowHeight, pinCheckboxColumn, pinExpandColumn]);
 
     // Keep DOM focus on the element of the focused cell. This covers keyboard moves, a cell that
@@ -365,7 +367,8 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         // While an IME is composing, Enter / Escape / arrows confirm or navigate candidates.
         if (event.nativeEvent?.isComposing || event.keyCode === 229) return;
 
-        const { key } = event;
+        // In a right-to-left grid ArrowLeft moves to the column on the left: the next column.
+        const key = logicalArrowKey(event.key, isRtl(viewport));
         const isSpace = key === ' ' || key === 'Spacebar';
         const isEditing = Boolean(editingHandlers.editingCell);
 

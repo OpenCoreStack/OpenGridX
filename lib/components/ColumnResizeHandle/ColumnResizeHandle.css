@@ -2,7 +2,7 @@
   position: absolute;
   top: 0;
   /* Inside the header cell: the cell clips overflow, so a handle straddling the border lost its outer half. */
-  right: 0;
+  inset-inline-end: 0;
   width: 8px;
   height: 100%;
   cursor: col-resize;
@@ -16,8 +16,8 @@
 }
 /* Right-pinned columns grow leftwards: their handle sits on the left edge. */
 .ogx-column-resize-handle--start {
-  right: auto;
-  left: 0;
+  inset-inline-end: auto;
+  inset-inline-start: 0;
   justify-content: flex-start;
 }
 .ogx-column-resize-handle:focus-visible .ogx-column-resize-handle__line {

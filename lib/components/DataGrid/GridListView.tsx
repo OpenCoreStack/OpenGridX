@@ -1,4 +1,5 @@
 import React from 'react';
+import { isRtl, logicalArrowKey } from '../../utils/direction';
 import { Pagination } from '../Pagination/Pagination';
 import { ListViewRow } from '../ListView/ListViewRow';
 import { getPageCount, normalizePageSize } from '../../utils/pagination';
@@ -138,7 +139,8 @@ export function GridListView<R extends GridRowModel>({
         const canToggle = Boolean(meta?.hasChildren && onToggleExpansion);
         if (event.altKey && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
             event.preventDefault();
-            if (canToggle && (event.key === 'ArrowRight') !== (meta?.isExpanded === true)) onToggleExpansion?.(id);
+            const expands = logicalArrowKey(event.key, isRtl(event.currentTarget)) === 'ArrowRight';
+            if (canToggle && expands !== (meta?.isExpanded === true)) onToggleExpansion?.(id);
             return;
         }
         switch (event.key) {

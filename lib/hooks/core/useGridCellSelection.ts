@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { scrollColumnIntoView, scrollRowIntoView } from '../../utils/scroll';
+import { isRtl } from '../../utils/direction';
 import { isSyntheticRowId } from '../../utils/syntheticRows';
 import { isTextEntryElement } from '../../utils/focus';
 import type { FocusedCell } from '../../utils/focus';
@@ -485,7 +486,10 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         if (drag.x < bodyLeft + AUTO_SCROLL_EDGE) dx = -autoScrollStep(bodyLeft + AUTO_SCROLL_EDGE - drag.x);
         else if (drag.x > bodyRight - AUTO_SCROLL_EDGE) dx = autoScrollStep(drag.x - (bodyRight - AUTO_SCROLL_EDGE));
         const canScrollY = (dy < 0 && viewport.scrollTop > 0) || (dy > 0 && viewport.scrollTop + height < viewport.scrollHeight - 1);
-        const canScrollX = (dx < 0 && viewport.scrollLeft > 0) || (dx > 0 && viewport.scrollLeft + width < viewport.scrollWidth - 1);
+        // scrollLeft runs from 0 to the maximum, or from minus the maximum to 0 right to left.
+        const maxScroll = viewport.scrollWidth - width;
+        const minLeft = isRtl(viewport) ? -maxScroll : 0;
+        const canScrollX = (dx < 0 && viewport.scrollLeft > minLeft) || (dx > 0 && viewport.scrollLeft < minLeft + maxScroll - 1);
         if (!canScrollY && !canScrollX) return;
         if (canScrollY) viewport.scrollTop += dy;
         if (canScrollX) viewport.scrollLeft += dx;

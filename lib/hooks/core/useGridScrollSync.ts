@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
+import { getScrollStart, setScrollStart } from '../../utils/direction';
 import type { GridRowScrollEndParams } from '../../types';
 import { getRowsScrollEndParams } from '../../utils/scroll/scrollEnd';
 
@@ -82,16 +83,18 @@ export function useGridScrollSync(params: UseGridScrollSyncParams): UseGridScrol
     const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
         const target = event.currentTarget;
         const now = performance.now();
+        // Counted from the inline start, so the column window is the same in a right-to-left grid.
+        const scrollLeft = getScrollStart(target);
 
         // Velocity: total positional delta / elapsed time (px/ms)
         const deltaPos = Math.abs(target.scrollTop  - prevRef.current.scrollTop)
-                       + Math.abs(target.scrollLeft - prevRef.current.scrollLeft);
+                       + Math.abs(scrollLeft - prevRef.current.scrollLeft);
         const deltaTime = now - prevRef.current.time;
         const velocity = deltaTime > 0 ? deltaPos / deltaTime : 0;
         const movedVertically = target.scrollTop !== prevRef.current.scrollTop;
 
-        prevRef.current = { scrollTop: target.scrollTop, scrollLeft: target.scrollLeft, time: now };
-        pendingRef.current = { scrollTop: target.scrollTop, scrollLeft: target.scrollLeft, velocity };
+        prevRef.current = { scrollTop: target.scrollTop, scrollLeft, time: now };
+        pendingRef.current = { scrollTop: target.scrollTop, scrollLeft, velocity };
 
         if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
@@ -126,10 +129,10 @@ export function useGridScrollSync(params: UseGridScrollSyncParams): UseGridScrol
         const { scrollTop, scrollLeft } = pendingRef.current;
         if (scrollTop === 0 && scrollLeft === 0) return;
         element.scrollTop = scrollTop;
-        element.scrollLeft = scrollLeft;
+        setScrollStart(element, scrollLeft);
         // The browser clamps to the new content. If it did, sync the state to what the element
         // shows (no scroll event fires when the position ends up unchanged).
-        const actual = { scrollTop: element.scrollTop, scrollLeft: element.scrollLeft };
+        const actual = { scrollTop: element.scrollTop, scrollLeft: getScrollStart(element) };
         if (actual.scrollTop !== scrollTop || actual.scrollLeft !== scrollLeft) {
             pendingRef.current = { ...pendingRef.current, ...actual };
             prevRef.current = { ...prevRef.current, ...actual };

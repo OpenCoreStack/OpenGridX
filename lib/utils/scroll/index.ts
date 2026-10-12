@@ -1,3 +1,4 @@
+import { getScrollStart, setScrollStart } from '../direction';
 /**
  * Height of the sticky block at the bottom of the viewport (bottom-pinned rows, their expanded
  * detail panels and the aggregation footer), measured from the DOM.
@@ -68,11 +69,12 @@ export function scrollColumnIntoView(viewport: HTMLElement, unpinnedIndex: numbe
     const colLeft = contentStart + (unpinnedIndex > 0 ? unpinnedAccWidths[unpinnedIndex - 1] : 0);
     const colRight = contentStart + unpinnedAccWidths[unpinnedIndex];
     const stickyLeft = pinnedSystemColumnsWidth + leftWidth;
-    const { scrollLeft, clientWidth } = viewport;
+    const { clientWidth } = viewport;
+    const scrollLeft = getScrollStart(viewport);
 
     if (colLeft < scrollLeft + stickyLeft) {
-        viewport.scrollLeft = Math.max(0, colLeft - stickyLeft);
+        setScrollStart(viewport, Math.max(0, colLeft - stickyLeft));
     } else if (colRight > scrollLeft + clientWidth - rightWidth) {
-        viewport.scrollLeft = colRight - clientWidth + rightWidth;
+        setScrollStart(viewport, colRight - clientWidth + rightWidth);
     }
 }

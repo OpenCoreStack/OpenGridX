@@ -281,7 +281,7 @@
   box-shadow: inset 10px 0 8px -8px rgba(0, 0, 0, 0.1);
 }
 .ogx__aggregation-cell--pinned-right-first {
-  margin-left: auto;
+  margin-inline-start: auto;
   overflow: visible;
 }
 .ogx__aggregation-cell--pinned-right-first::before {
@@ -321,7 +321,7 @@
 }
 .ogx__group-cell-content {
   font-weight: 500;
-  text-align: left;
+  text-align: start;
   display: flex;
   align-items: center;
   gap: 4px;

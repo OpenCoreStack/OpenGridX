@@ -10,6 +10,7 @@ import { ColumnMenu } from './ColumnMenu';
 import { getHeaderLineClamp, shouldWrapHeaderText } from '../../utils/headerWrap';
 import { getHeaderColumnStyle } from './headerColumnStyle';
 import { HeaderFilterRow } from '../HeaderFilter/HeaderFilterRow';
+import { isRtl, logicalArrowKey } from '../../utils/direction';
 
 
 function MenuIcon() {
@@ -156,7 +157,9 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
             event.preventDefault();
             event.stopPropagation();
             const width = getRenderedColumnWidth(colDef, columnWidths);
-            const step = (event.shiftKey ? 50 : 10) * (event.key === 'ArrowRight' ? 1 : -1);
+            // ArrowRight widens: towards the column's end edge, on the left in a right-to-left grid.
+            const key = logicalArrowKey(event.key, isRtl(event.currentTarget));
+            const step = (event.shiftKey ? 50 : 10) * (key === 'ArrowRight' ? 1 : -1);
             onColumnResize(colDef.field, clampResizeWidth(width + step, width, colDef.minWidth, colDef.maxWidth));
             return;
         }

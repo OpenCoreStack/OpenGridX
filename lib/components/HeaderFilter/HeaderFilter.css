@@ -39,7 +39,7 @@
   box-shadow: var(--ogx-grid-pinned-left-shadow, 4px 0 12px -4px rgba(0, 0, 0, 0.05));
 }
 .ogx__header-filter-cell--pinned-right-first {
-  margin-left: auto;
+  margin-inline-start: auto;
   box-shadow: var(--ogx-grid-pinned-right-shadow, -4px 0 12px -4px rgba(0, 0, 0, 0.05));
 }
 
@@ -152,7 +152,7 @@
   color: var(--ogx-color-primary);
   font: inherit;
   font-style: italic;
-  text-align: left;
+  text-align: start;
 }
 button.ogx__header-filter-custom {
   cursor: pointer;

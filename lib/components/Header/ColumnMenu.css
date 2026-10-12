@@ -28,7 +28,7 @@
     font-family: var(--ogx-font-family, system-ui, sans-serif);
     font-size: var(--ogx-font-size-xs);
     color: var(--ogx-overlay-text, #334155);
-    text-align: left;
+    text-align: start;
     gap: 6px;
     transition: background 0.1s;
 }

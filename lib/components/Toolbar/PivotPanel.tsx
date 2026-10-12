@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import type { GridColDef } from '../../types';
 import type { GridPivotModel, GridPivotAggFn, GridPivotValueField } from '../../types';
 import { getViewportWidth } from '../../utils/viewport';
+import { getPanelPosition, type GridPanelPosition } from '../../utils/direction';
 
 const AGG_FNS: GridPivotAggFn[] = ['sum', 'avg', 'count', 'min', 'max'];
 
@@ -31,18 +32,14 @@ export interface PivotPanelProps {
 
 export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: PivotPanelProps) {
     const panelRef = useRef<HTMLDivElement>(null);
-    const [pos, setPos] = useState({ top: 0, right: 0 });
+    const [pos, setPos] = useState<GridPanelPosition>({ top: 0, right: 0 });
     const [portalContainer, setPortalContainer] = useState<Element | null>(null);
 
     useLayoutEffect(() => {
         setPortalContainer(anchorRef.current?.closest('.ogx-theme-provider') ?? document.body);
     }, [anchorRef]);
 
-    const computePos = useCallback(() => {
-        if (!anchorRef.current) return { top: 0, right: 0 };
-        const rect = anchorRef.current.getBoundingClientRect();
-        return { top: rect.bottom + 6, right: getViewportWidth() - rect.right };
-    }, [anchorRef]);
+    const computePos = useCallback(() => getPanelPosition(anchorRef.current, getViewportWidth()), [anchorRef]);
 
     useEffect(() => {
         setPos(computePos());
@@ -132,7 +129,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
             className="ogx-pivot-panel"
             role="dialog"
             aria-label="Pivot configuration"
-            style={{ top: pos.top, right: pos.right }}
+            style={{ top: pos.top, right: pos.right, left: pos.left }}
         >
             { }
             <div className="ogx-pivot-panel__header">
