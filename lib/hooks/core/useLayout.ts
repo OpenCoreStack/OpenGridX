@@ -255,12 +255,19 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
             return rowHeight + getDetailPanelLayoutHeight(panelHeight, detailPanelHeights?.get(id));
         };
 
-        const rowHeights = unpinnedRows.map((row, index) => heightOf(row, pinnedTopRowsLength + index));
-
-        const cumulativeHeights = rowHeights.reduce((acc, height, index) => {
-            acc.push((acc[index - 1] || 0) + height);
-            return acc;
-        }, [] as number[]);
+        // One pass with preallocated arrays: this runs for every row after each sort or filter. With
+        // no detail panel open every row has the plain height, so row ids are not looked up.
+        const rowCount = unpinnedRows.length;
+        const rowHeights = new Array<number>(rowCount);
+        const cumulativeHeights = new Array<number>(rowCount);
+        const anyPanelOpen = expandedRowIds.size > 0;
+        let runningHeight = 0;
+        for (let index = 0; index < rowCount; index++) {
+            const height = anyPanelOpen ? heightOf(unpinnedRows[index], pinnedTopRowsLength + index) : rowHeight;
+            rowHeights[index] = height;
+            runningHeight = (runningHeight || 0) + height; // as before: a NaN total restarts from 0
+            cumulativeHeights[index] = runningHeight;
+        }
 
         const skeletonCount = (paginationMode === 'infinite' && isLoading && unpinnedRows.length > 0)
             ? Math.min(pageSize, 20)
