@@ -9,6 +9,7 @@ import Ai from './scenarios/Ai';
 import AiAssistant from './scenarios/AiAssistant';
 import HeaderFilters from './scenarios/HeaderFilters';
 import Fill from './scenarios/Fill';
+import ThemeKeys from './scenarios/ThemeKeys';
 
 // React 18 runs the scenarios most sensitive to the JSX runtime and React APIs; the rest are
 // React-version independent and covered by the React 19 fixture.
@@ -23,6 +24,7 @@ const scenarios: Record<string, ComponentType> = {
   'ai-assistant': AiAssistant,
   'header-filters': HeaderFilters,
   fill: Fill,
+  'theme-keys': ThemeKeys,
 };
 
 export default function App() {

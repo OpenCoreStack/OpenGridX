@@ -9,7 +9,7 @@ import { test, expect, type ConsoleMessage, type Locator, type Page } from '@pla
 /** Console output that is expected and harmless. Keep this list short and explain every entry. */
 const ALLOWED_CONSOLE: RegExp[] = [];
 
-const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range', 'paste', 'ai', 'ai-assistant', 'header-filters', 'fill']);
+const REACT18_SCENARIOS = new Set(['basic', 'flex', 'grouping', 'editing', 'range', 'paste', 'ai', 'ai-assistant', 'header-filters', 'fill', 'theme-keys']);
 
 function fixtureOf(projectName: string): string {
   return projectName.split('-')[1] ?? '';
@@ -508,5 +508,29 @@ test.describe('package smoke', () => {
     });
     const [r, g, b] = (bg.match(/\d+/g) ?? []).map(Number);
     expect(r + g + b, `grid background ${bg}`).toBeLessThan(150);
+  });
+
+  test('theme-keys: fonts, dividers, border and overlay font from the v3.7 theme keys apply', async ({ page }) => {
+    consoleRecords = await openScenario(page, 'theme-keys');
+    const header = page.locator('.ogx__header-cell').first();
+    await expect(header).toBeVisible();
+    const style = (loc: Locator, prop: string) => loc.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
+    expect(await style(header, 'font-family')).toContain('Georgia');
+    expect(await style(header, 'font-weight')).toBe('800');
+    expect(await style(header, 'padding-left')).toBe('20px');
+    const cell = page.locator('.ogx__row .ogx__cell').first();
+    expect(await style(cell, 'font-family')).toContain('monospace');
+    expect(await style(cell, 'border-right-width')).toBe('0px');
+    const row = page.locator('.ogx__row').first();
+    expect(await style(row, 'border-bottom-width')).toBe('2px');
+    expect(await style(row, 'border-bottom-color')).toBe('rgb(255, 0, 0)');
+    const root = page.locator('.ogx').first();
+    expect(await style(root, 'border-top-width')).toBe('2px');
+    expect(await style(root, 'border-top-left-radius')).toBe('4px');
+    await page.locator('.ogx__menu-icon-btn').first().click({ force: true });
+    const item = page.locator('.ogx-column-menu .ogx-menu-item').last();
+    await expect(item).toBeVisible();
+    expect(await style(item, 'font-size')).toBe('15px');
+    expect(await style(item, 'font-family')).toContain('Georgia');
   });
 });
