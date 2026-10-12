@@ -15,9 +15,6 @@ import { useGridApiMethods } from '../../hooks/core/useGridApiMethods';
 import { useGridColumnLookup } from '../../hooks/core/useGridColumnLookup';
 import { useGridPageCorrection } from '../../hooks/core/useGridPageCorrection';
 import { useGridColumnsPanel } from '../../hooks/core/useGridColumnsPanel';
-import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
-import { GridToolbarSlot } from './GridToolbarSlot';
-import { GridErrorOverlay } from './GridErrorOverlay';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useGridHierarchy } from '../../hooks/core/useGridHierarchy';
@@ -33,10 +30,7 @@ import { useServerTreeChildren } from '../../hooks/features/useServerTreeChildre
 import { useAggregation, useServerAggregationResults } from '../../hooks/features/useAggregation';
 import { useGridPivot } from '../../hooks/features/useGridPivot';
 import { isServerDrivenDataSource } from '../../utils/dataSource';
-import { GridListView } from './GridListView';
-import { GridLoadingOverlay } from './GridLoadingOverlay';
-import { GridViewport, type GridViewportProps } from './GridViewport';
-import { GridStandaloneColumnPanel } from './GridStandaloneColumnPanel';
+import { GridRoot, type GridRootProps } from './GridRoot';
 import { resolveGridModes } from '../../utils/gridModes';
 import { useGridGroupingColumn } from '../../hooks/core/useGridGroupingColumn';
 import { useGridRowIdOf, getDefaultRowId } from '../../hooks/core/useGridRowIdOf';
@@ -47,15 +41,11 @@ import { isSyntheticRowId } from '../../utils/syntheticRows';
 import { useStableColumns } from '../../hooks/core/useStableColumns';
 import { useGridAggregationApi } from '../../hooks/core/useGridAggregationApi';
 import { useGridCellSelection } from '../../hooks/core/useGridCellSelection';
-import { GridCellSelectionStatsArea } from '../CellSelectionStats/GridCellSelectionStatsArea';
 import { useGridSortHandlers, useGridColumnMenuHandlers } from '../../hooks/core/useGridHeaderHandlers';
 import { useGridKeyboardMode, useGridPointerFocusHandlers } from '../../hooks/core/useGridFocusHandlers';
-import { getPaginationRowCount, pickPaginationLocaleText } from '../../utils/pagination';
-import { GridPaginationArea } from './GridPaginationArea';
-import { GridLiveRegion } from './GridLiveRegion';
+import { getPaginationRowCount } from '../../utils/pagination';
 import { useGridToolbarProps } from '../../hooks/core/useGridToolbarProps';
 import { useGridAiAssistant } from '../../hooks/features/useGridAiAssistant';
-import { GridAiAssistantArea } from '../AiAssistant/GridAiAssistantArea';
 import { DEFAULT_HEADER_FILTER_HEIGHT } from '../../utils/headerFilters';
 import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridColDef } from '../../types';
 
@@ -665,16 +655,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onError: onAiAssistantError,
     });
 
-    const NoRowsOverlaySlot = slots?.noRowsOverlay;
-    const LoadingOverlaySlot = slots?.loadingOverlay;
-    const loadingOverlay = LoadingOverlaySlot ? <LoadingOverlaySlot {...slotProps?.loadingOverlay} /> : undefined;
-    const noRowsOverlay = NoRowsOverlaySlot ? <NoRowsOverlaySlot {...slotProps?.noRowsOverlay} /> : undefined;
-    const FooterSlot = slots?.footer;
-    // Loading with rows on screen: the rows stay and an indicator runs over them. With no rows the
-    // body shows skeletons or the loading overlay instead, and infinite scroll appends skeleton rows.
-    const showLoadingOverRows = effectiveLoading && allRenderableRows.length > 0 && paginationMode !== 'infinite';
-    const ToolbarSlot = slots?.toolbar;
-
     const toolbarProps = useGridToolbarProps<R>({
         toolbar: slots?.toolbar,
         toolbarSlotProps: slotProps?.toolbar,
@@ -725,7 +705,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         fillHandle: fillHandle.handle,
     };
 
-    const viewportProps: GridViewportProps<R> = {
+    const rootProps: GridRootProps<R> = {
         setViewportElement, handleScroll, ariaLabel, ariaRows,
         navigationColumnCount: navigationColumns.length,
         rowSelectionEnabled, disableMultipleRowSelection, cellSelection, effectiveLoading, viewportTabIndex, setKeyboardMode,
@@ -736,7 +716,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         handleHideColumn, columnsPanel, handlePinColumn, wrapHeaderText, headerHeight, showHeaderFilters, filterModel,
         handleFilterModelChange, localeText, rowRenderProps, pinnedTopRows, pinnedBottomRows, pinnedRows, getRowIdOf,
         showEmptyState: !effectiveLoading && !state.dataSource.error && filteredRows.length === 0,
-        effectiveNoRowsLabel, noRowsOverlay, loadingOverlay, spanRowWindow, visibleRows,
+        effectiveNoRowsLabel, spanRowWindow, visibleRows,
         baseColumns: columns as unknown as GridColDef<R>[],
         viewportWidth: state.dimensions.viewportWidth,
         rowReorderHandlers, paginationMode,
@@ -746,146 +726,23 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         unpinnedRowsLength: layout.unpinnedRowsLength,
         showAggregationFooter: hasAggregation && rowGroupingHandlers.rootAggregationPosition !== null,
         aggregationResult, effectiveRowHeight, isAggregationLoading,
+        containerRef, className, autoHeight, height, style, hasRowSpanning, listView, headerFilterHeight, slots, slotProps,
+        toolbarProps, aiAssistantPanel, orderedColumns, columnVisibilityModel, disableColumnReorder,
+        handleColumnVisibilityModelChange, moveColumn, resetColumnOrder, listViewColumn, allRenderableRows, dataRows,
+        pagination, effectivePaginationModel,
+        currentPage: rowPipeline.currentPage,
+        pageSizeOptions, selectedRowIds,
+        columnsByField: columnLookup.byField,
+        rowMetaMap, paginationRowCount, handleRowClick, onRowDoubleClick, handleSelectionChange, handlePaginationModelChange,
+        onRowsScrollEnd,
+        toggleExpansion: activeHierarchyHandlers?.toggleExpansion,
+        showCellSelectionStats,
+        apiRef: gridData.apiRef,
+        hasAggregation, isHierarchyEnabled,
+        dataSourceError: state.dataSource.error,
+        filteredRowCount: filteredRows.length,
+        onRetry: dataSource ? dataSourceHandlers.fetchRows : undefined,
     };
 
-    return (
-        <div
-            ref={containerRef}
-            className={['ogx', className, autoHeight && 'ogx--auto-height', !autoHeight && height === undefined && style?.height === undefined && 'ogx--fill', hasRowSpanning && 'ogx--row-spanning', listView && 'ogx--list-view'].filter(Boolean).join(' ')}
-            style={{
-                ...style,
-                height: height ?? style?.height,
-                '--ogx-row-height': `${effectiveRowHeight}px`,
-                '--ogx-header-height': `${headerHeight}px`,
-                ...(showHeaderFilters ? { '--ogx-header-filter-height': `${headerFilterHeight}px` } : undefined),
-            } as unknown as React.CSSProperties}
-            aria-busy={effectiveLoading}
-        >
-            {ToolbarSlot && toolbarProps && (
-                <GridToolbarHostContext.Provider value={columnsPanel.toolbarHost}>
-                    <GridToolbarSlot component={ToolbarSlot} toolbarProps={toolbarProps} />
-                </GridToolbarHostContext.Provider>
-            )}
-
-            {aiAssistantPanel.panelProps && (
-                <GridAiAssistantArea
-                    panelProps={aiAssistantPanel.panelProps}
-                    slot={slots?.aiAssistantPanel}
-                    slotProps={slotProps?.aiAssistantPanel}
-                />
-            )}
-
-            {/* Used by the column menu's Manage columns when no GridToolbar can show the panel */}
-            <GridStandaloneColumnPanel<R>
-                isOpen={columnsPanel.standalonePanelOpen}
-                containerRef={containerRef}
-                panelRef={columnsPanel.standalonePanelRef}
-                columns={orderedColumns}
-                columnVisibilityModel={columnVisibilityModel}
-                disableColumnReorder={disableColumnReorder}
-                onClose={columnsPanel.closeStandalonePanel}
-                onColumnVisibilityChange={handleColumnVisibilityModelChange}
-                onColumnMove={moveColumn}
-                onColumnOrderReset={resetColumnOrder}
-                columnGroupingModel={columnGroupingModel}
-            />
-
-
-            {listView && listViewColumn && (
-                <GridListView<R>
-                    ariaLabel={ariaLabel}
-                    allRenderableRows={allRenderableRows}
-                    dataRowCount={dataRows.length}
-                    pinnedTopRowCount={pinnedTopRows.length}
-                    pinnedBottomRowCount={pinnedBottomRows.length}
-                    unpinnedRowCount={sortedUnpinnedRows.length}
-                    pagination={pagination}
-                    effectivePaginationModel={effectivePaginationModel}
-                    currentPage={rowPipeline.currentPage}
-                    pageSizeOptions={pageSizeOptions}
-                    selectedRowIds={selectedRowIds}
-                    listViewColumn={listViewColumn}
-                    columnsByField={columnLookup.byField}
-                    rowMetaMap={rowMetaMap}
-                    noRowsLabel={effectiveNoRowsLabel}
-                    rowHeight={effectiveRowHeight}
-                    checkboxSelection={checkboxSelection}
-                    paginationMode={paginationMode}
-                    serverRowCount={paginationRowCount}
-                    paginationSlot={slots?.pagination}
-                    paginationSlotProps={slotProps?.pagination}
-                    localeText={pickPaginationLocaleText(localeText)}
-                    onRowClick={handleRowClick}
-                    onRowDoubleClick={onRowDoubleClick}
-                    onSelectionChange={handleSelectionChange}
-                    onPaginationModelChange={handlePaginationModelChange}
-                    onRowsScrollEnd={onRowsScrollEnd}
-                    getRowId={getRowIdOf}
-                    multiselectable={rowSelectionEnabled && !disableMultipleRowSelection}
-                    selectable={rowSelectionEnabled}
-                    onToggleExpansion={activeHierarchyHandlers?.toggleExpansion}
-                    loading={effectiveLoading}
-                    loadingOverlay={loadingOverlay}
-                    noRowsOverlay={noRowsOverlay}
-                    showPaginationControls={!FooterSlot}
-                />
-            )}
-
-            {/* Standard grid viewport (hidden when listView=true) */}
-            {!listView && <GridViewport<R> {...viewportProps} />}
-
-            {cellSelection.enabled && showCellSelectionStats && (
-                <GridCellSelectionStatsArea
-                    stats={cellSelection.stats}
-                    apiRef={gridData.apiRef}
-                    slot={slots?.cellSelectionStats}
-                    slotProps={slotProps?.cellSelectionStats}
-                />
-            )}
-
-            {FooterSlot && (
-                <FooterSlot
-                    apiRef={gridData.apiRef}
-                    aggregationModel={aggregationModel}
-                    aggregationResult={hasAggregation ? aggregationResult : null}
-                    rowCount={isHierarchyEnabled && paginationMode !== 'server' ? dataRows.length : paginationRowCount}
-                    pagination={pagination}
-                    paginationModel={effectivePaginationModel}
-                    pageSizeOptions={pageSizeOptions}
-                    onPaginationModelChange={handlePaginationModelChange}
-                    {...slotProps?.footer}
-                />
-            )}
-
-            {!listView && !FooterSlot && pagination && (
-                <GridPaginationArea
-                    paginationSlot={slots?.pagination}
-                    paginationSlotProps={slotProps?.pagination}
-                    page={rowPipeline.currentPage}
-                    paginationModel={effectivePaginationModel}
-                    rowCount={paginationRowCount}
-                    pageSizeOptions={pageSizeOptions}
-                    onPaginationModelChange={handlePaginationModelChange}
-                    localeText={localeText}
-                />
-            )}
-
-            <GridLiveRegion
-                loading={effectiveLoading}
-                error={state.dataSource.error}
-                noRowsLabel={effectiveNoRowsLabel}
-                filteredRowCount={filteredRows.length}
-                dataRowCount={dataRows.length}
-                filterModel={filterModel}
-                cellSelectionAnnouncement={cellSelection.announcement}
-                aiAssistantAnnouncement={aiAssistantPanel.announcement}
-            />
-
-            {showLoadingOverRows && (
-                <GridLoadingOverlay overlay={loadingOverlay} />
-            )}
-
-            <GridErrorOverlay error={state.dataSource.error} onRetry={dataSource ? dataSourceHandlers.fetchRows : undefined} />
-        </div>
-    );
+    return <GridRoot<R> {...rootProps} />;
 }
