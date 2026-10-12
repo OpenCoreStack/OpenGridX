@@ -2,6 +2,8 @@
 
 The DataGrid provides built-in export utilities for multiple formats. The standard exports (CSV, JSON, Print, basic Excel) have **zero dependencies**. The advanced Excel export uses [ExcelJS](https://github.com/exceljs/exceljs) loaded lazily.
 
+`exceljs` is an optional peer dependency: install it (`npm install exceljs`) only if you call `exportToExcelAdvanced`. Apps without it still build in Vite, webpack 5 and Next.js (Turbopack and webpack; webpack prints a `Module not found` warning for the optional import), and `exportToExcelAdvanced` then rejects with `exportToExcelAdvanced requires 'exceljs'. Run: npm install exceljs`. Before v3.6, webpack and Next.js builds failed without it.
+
 ## Available Export Formats
 
 | Format | Function | Deps | Description |

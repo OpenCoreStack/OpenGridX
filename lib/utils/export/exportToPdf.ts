@@ -206,7 +206,8 @@ export async function runPdfExport<R extends GridRowModel>(
     };
     checkAbort();
 
-    // Lazy-load peer deps — provides a clear error if not installed
+    // Lazy-load peer deps — provides a clear error if not installed. Keep the imports inside `try`:
+    // webpack and Turbopack only build an app without the peers when the import() sits in a try block.
     let JsPDF: new (opts: Record<string, unknown>) => JsPDFDoc;
     let autoTable: AutoTableFn;
     try {

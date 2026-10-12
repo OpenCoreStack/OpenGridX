@@ -28,41 +28,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
 ### The optional export peers
 
-The grid lazy-loads `exceljs` (`exportToExcelAdvanced`) and `jspdf` + `jspdf-autotable` (`exportToPdf`) with `import()`. Next.js resolves every `import()` at build time, so **if they are not installed, `next build` fails** with `Module not found: Can't resolve 'exceljs'`. Either install them:
+`exportToExcelAdvanced` needs `exceljs`, and `exportToPdf` needs `jspdf` + `jspdf-autotable`. The grid loads them with `import()` only when you call those functions. Install them if you use those exports:
 
 ```bash
 npm install exceljs jspdf jspdf-autotable
 ```
 
-or, if you do not use those two exports, point them at an empty module:
-
-```ts
-// next.config.ts
-import type { NextConfig } from 'next';
-
-const OPTIONAL_PEERS = ['exceljs', 'jspdf', 'jspdf-autotable'];
-
-const nextConfig: NextConfig = {
-    // Turbopack (default `next build` from Next.js 16)
-    turbopack: {
-        resolveAlias: Object.fromEntries(OPTIONAL_PEERS.map(name => [name, './lib/optional-peer-stub.js'])),
-    },
-    // webpack (default on Next.js 15, `next build --webpack` on 16)
-    webpack(config: { resolve: { alias: Record<string, string | false> } }) {
-        for (const name of OPTIONAL_PEERS) config.resolve.alias[name] = false;
-        return config;
-    },
-};
-
-export default nextConfig;
-```
-
-```js
-// lib/optional-peer-stub.js
-export default undefined;
-```
-
-With the stub, `exportToExcelAdvanced` and `exportToPdf` fail when called; every other export works.
+If you do not install them, the app still builds (Turbopack and webpack treat these imports as optional; webpack prints a `Module not found` **warning**, not an error) and every other export works. Calling `exportToExcelAdvanced` or `exportToPdf` then rejects with an install hint such as `exportToExcelAdvanced requires 'exceljs'. Run: npm install exceljs`. No `next.config` alias is needed from v3.6. In 3.5.1 and earlier `next build` failed with `Module not found: Can't resolve 'exceljs'` without the peers.
 
 ## 2. Render the grid from a client component
 
@@ -225,9 +197,8 @@ import { aiColumns } from '../../../lib/aiColumns';
 export async function POST(request: Request) {
     const { prompt, schema, currentState } = await request.json();
     const reply = await callYourModel({ prompt, schema, currentState }); // your SDK, with `schema` as structured output
-    // Optional server-side check. `message` is not grid state, so leave it out of the validation.
-    const { message: _message, ...state } = reply;
-    const { errors } = validateGridAiState(state, aiColumns);
+    // Optional server-side check. A string `message` key is skipped, not reported as an error.
+    const { errors } = validateGridAiState(reply, aiColumns);
     if (errors.length) console.info('Model reply had invalid parts:', errors);
     return Response.json(reply);
 }
@@ -258,7 +229,7 @@ Column functions can stay in the page. Rows from `getServerSideProps` / `getStat
 | `You're importing a module that depends on useState into a React Server Component module` (webpack: `…needs useState. This React hook only works in a Client Component`) | A file of yours that calls hooks (or wraps the grid) has no `'use client'`. Add it at the top of the file that renders `<DataGrid>`. |
 | `TypeError: createContext is not a function` (build: "Failed to collect page data") | 3.5.1 or earlier, imported from a Server Component. Render the grid from a `'use client'` file, or upgrade. |
 | `Functions cannot be passed directly to Client Components` … `{field: "name", valueFormatter: function}` | Columns with functions built in a Server Component. Define them in the client file. |
-| `Module not found: Can't resolve 'exceljs'` (or `jspdf`) | The optional export peers are not installed. Install them or alias them (section 1). |
+| `Module not found: Can't resolve 'exceljs'` (or `jspdf`) | 3.5.1 or earlier without the optional export peers. Upgrade, or install them (section 1). From v3.6 webpack shows this as a warning only. |
 | Unstyled grid, every row rendered, dev warning `[OpenGridX] The grid stylesheet is not loaded` | The stylesheet is not imported. Add `import '@opencorestack/opengridx/styles'` to `app/layout.tsx` (or `pages/_app.tsx`). |
 | `Hydration failed because the server rendered HTML didn't match the client` | Usually rows or cell text that differ between server and client: `Math.random()`, `Date.now()`, `toLocaleString()` without a fixed locale and time zone in a `valueFormatter`. Fetch rows on the server and pass them as props, and format with an explicit locale (`toLocaleString('en-US', { timeZone: 'UTC' })`). Rows created in an effect or with `typeof window` branches render differently on the server; build them once on the server instead. |
 | The grid refetches in a loop with `dataSource` | The `dataSource` object is recreated on every render. Define it at module scope or with `useMemo`. |

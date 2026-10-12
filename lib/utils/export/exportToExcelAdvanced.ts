@@ -358,8 +358,15 @@ export async function exportToExcelAdvanced<R extends GridRowModel>(
         groupSubtotalFillColor = '#f0f4ff',
     } = options;
 
-    // Lazy-load ExcelJS to keep initial bundle lean
-    const ExcelJS = (await import('exceljs')).default;
+    // Lazy-load ExcelJS to keep initial bundle lean. The import must stay inside `try`: webpack
+    // (Next.js 15, plain webpack 5) and Turbopack (Next.js 16) treat an unresolvable import() in a
+    // try block as optional, so apps without the peer still build. Outside `try` the build fails.
+    let ExcelJS: typeof import('exceljs');
+    try {
+        ExcelJS = (await import('exceljs')).default;
+    } catch {
+        throw new Error("exportToExcelAdvanced requires 'exceljs'. Run: npm install exceljs");
+    }
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'OpenGridX';
     workbook.created = new Date();

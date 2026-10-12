@@ -10,6 +10,8 @@ Generate a styled PDF report from grid data using `exportToPdf()`.
 npm install jspdf jspdf-autotable
 ```
 
+They are optional: an app that never calls `exportToPdf` need not install them, and still builds in Vite, webpack 5 and Next.js (webpack prints a `Module not found` warning for the optional import, not an error). Without them `exportToPdf` rejects with the install hint below.
+
 > **Currency symbols such as `₹` print as `?` by default.** The built-in Helvetica font only covers Latin-1. Pass the [`font` option](#non-latin-text-and-unicode-fonts) with a Unicode `.ttf`:
 >
 > ```ts
