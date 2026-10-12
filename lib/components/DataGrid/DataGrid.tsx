@@ -28,6 +28,7 @@ import { Header } from '../Header/Header';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useGridHierarchy } from '../../hooks/core/useGridHierarchy';
+import { useGridViewApis } from '../../hooks/core/useGridViewApis';
 import { useGridEditPipeline } from '../../hooks/core/useGridEditPipeline';
 import { useGridClipboardPaste } from '../../hooks/core/useGridClipboardPaste';
 import { useGridUndoRedo, UNDO_HISTORY_LIMIT } from '../../hooks/core/useGridUndoRedo';
@@ -54,9 +55,6 @@ import { NO_AGGREGATION_MODEL } from '../../utils/aggregation';
 import { isSyntheticRowId } from '../../utils/syntheticRows';
 import { useStableColumns } from '../../hooks/core/useStableColumns';
 import { useGridAggregationApi } from '../../hooks/core/useGridAggregationApi';
-import { useGridClipboardApi } from '../../hooks/core/useGridClipboardApi';
-import { useGridScrollToIndexesApi } from '../../hooks/core/useGridScrollToIndexesApi';
-import { useGridColumnAutosize } from '../../hooks/core/useGridColumnAutosize';
 import { useGridCellSelection } from '../../hooks/core/useGridCellSelection';
 import { useGridCellSelectionApi } from '../../hooks/core/useGridCellSelectionApi';
 import { GridCellSelectionStatsArea } from '../CellSelectionStats/GridCellSelectionStatsArea';
@@ -554,16 +552,18 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         showStats: showCellSelectionStats,
     });
 
-    useGridClipboardApi({
-        apiRef,
-        columns: renderedDataColumns as unknown as GridColDef[],
-        getRowId: getRowIdOf,
-        containerRef,
-        disableKeyboardShortcut: disableClipboardCopy,
+    // Steps 30–31a: copy, scrollToIndexes and column auto-size on the API.
+    const handleColumnAutosize = useGridViewApis<R>({
+        apiRef, containerRef, viewportRef,
+        copyColumns: renderedDataColumns as unknown as GridColDef[],
+        getRowId: getRowIdOf as unknown as (row: GridRowModel) => GridRowId,
+        disableClipboardCopy,
         getCellRangeCopyText: cellSelection.enabled ? cellSelection.getCopyText : undefined,
+        layout,
+        rowHeight: effectiveRowHeight,
+        orderedColumns,
+        onColumnResize: handleColumnResize,
     });
-    useGridScrollToIndexesApi<R>({ apiRef, viewportRef, layout, rowHeight: effectiveRowHeight });
-    const handleColumnAutosize = useGridColumnAutosize<R>({ apiRef, containerRef, columns: orderedColumns, onColumnResize: handleColumnResize });
 
     const { scrollTop, scrollLeft, overscanRows, handleScroll, setViewportElement } = useGridViewport({
         onRowsScrollEnd, overscanRowCount, rowCount: layout.unpinnedRowsLength, autoHeight, setDimensions, viewportRef,
