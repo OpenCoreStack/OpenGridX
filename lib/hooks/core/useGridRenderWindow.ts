@@ -1,8 +1,9 @@
-import type { GridRowId, GridRowModel } from '../../types';
+import type { GridColDef, GridRowId, GridRowModel } from '../../types';
+import type { GridAriaRowLayout } from '../../utils/aria';
 import type { GridSpanningResult } from '../features/useGridSpanning';
 import { useGridSpanRowWindow, useGridSpanColumnWindow } from '../features/useGridSpanRenderWindow';
 import { useGridAriaRows, type UseGridAriaRowsParams } from './useGridAriaRows';
-import { useGridVisibleRows } from './useGridVisibleRows';
+import { useGridVisibleRows, type GridVisibleRow } from './useGridVisibleRows';
 import type { GridVirtualizationResult } from './useGridVirtualization';
 import type { LayoutResult } from './useLayout';
 
@@ -19,12 +20,19 @@ export interface UseGridRenderWindowParams<R extends GridRowModel> {
     getRowId: (row: R) => GridRowId;
 }
 
+export interface UseGridRenderWindowResult<R extends GridRowModel> {
+    ariaRows: GridAriaRowLayout;
+    spanRowWindow: ReturnType<typeof useGridSpanRowWindow>;
+    visibleRows: GridVisibleRow<R>[];
+    renderColumns: GridColDef<R>[];
+}
+
 /**
  * Steps 38–41 of `DataGrid` (docs/architecture/datagrid-orchestration.md), in their call order: the
  * `aria-rowcount` / `aria-rowindex` bases, the render window widened to whole row spans, the rows to
  * render (pinned + virtual centre) and the columns to render, widened to whole column spans.
  */
-export function useGridRenderWindow<R extends GridRowModel>(params: UseGridRenderWindowParams<R>) {
+export function useGridRenderWindow<R extends GridRowModel>(params: UseGridRenderWindowParams<R>): UseGridRenderWindowResult<R> {
     const {
         aria, spanning, virtualization, layout, pinnedTopRows, pinnedBottomRows, paginatedUnpinnedRows, sortedUnpinnedRows,
         pagination, getRowId,
