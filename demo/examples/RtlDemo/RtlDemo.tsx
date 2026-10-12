@@ -64,19 +64,24 @@ function makeColumns(language: Language): GridColDef<Employee>[] {
 export default function RtlDemo() {
     const [rtl, setRtl] = useState(true);
     const [language, setLanguage] = useState<Language>('ar');
+    const [pinned, setPinned] = useState(true);
     const rows = makeRows(language);
     const columns = makeColumns(language);
 
     return (
         <DocsLayout
             title="Right-to-Left"
-            description="Put the grid inside dir=&quot;rtl&quot; (or set document.dir): columns run from the right, ArrowLeft moves to the next column, resize handles and the fill handle sit on the left edge, and toolbar panels open towards the grid. Pinned columns are not supported in RTL yet; see the RTL guide."
+            description="Put the grid inside dir=&quot;rtl&quot; (or set document.dir): columns run from the right, ArrowLeft moves to the next column, resize handles and the fill handle sit on the left edge, and toolbar panels open towards the grid. pinnedColumns.left sticks to the inline start (the right edge) and pinnedColumns.right to the end (the left edge); pagination arrows and tree chevrons are mirrored. See the RTL guide."
             sourceCode={sourceCode}
         >
             <div className="rtl-demo-controls">
                 <label className="rtl-demo-control">
                     <input type="checkbox" checked={rtl} onChange={(e) => setRtl(e.target.checked)} />
                     <code>dir="rtl"</code>
+                </label>
+                <label className="rtl-demo-control">
+                    <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
+                    Pinned columns
                 </label>
                 <label className="rtl-demo-control">
                     <input type="radio" name="rtl-demo-language" checked={language === 'ar'} onChange={() => setLanguage('ar')} />
@@ -96,6 +101,8 @@ export default function RtlDemo() {
                     checkboxSelection
                     cellSelection
                     headerFilters
+                    pinCheckboxColumn={pinned}
+                    pinnedColumns={pinned ? { left: ['id', 'name'], right: ['remote'] } : undefined}
                     slots={{ toolbar: GridToolbar }}
                 />
             </div>

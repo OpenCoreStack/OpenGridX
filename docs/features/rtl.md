@@ -8,7 +8,7 @@ Put the grid inside an element with `dir="rtl"`, or set `dir="rtl"` on `<html>` 
 </div>
 ```
 
-**Status (v3.6):** unpinned grids work in RTL: column order, text, horizontal scrolling with column virtualization, keyboard, cell ranges, the fill handle, resizing and the toolbar panels. **Pinned columns do not work in RTL yet** (see [Known limitations](#known-limitations)). Checked in Chromium, Firefox and WebKit; `lib/components/DataGrid/DataGrid.rtl.browser.test.tsx` covers what is listed as working or fixed.
+**Status (v3.6):** RTL grids work: column order, text, horizontal scrolling with column virtualization, keyboard, cell ranges, the fill handle, resizing, the toolbar panels, pinned columns (see [Pinned columns](#pinned-columns)), mirrored icons and switching `dir` at runtime. Remaining gaps are under [Known limitations](#known-limitations). Checked in Chromium, Firefox and WebKit; `lib/components/DataGrid/DataGrid.rtl.browser.test.tsx` covers what is listed as working or fixed.
 
 Demo: *Right-to-Left* (`/rtl`), with Arabic and Hebrew sample data and an RTL toggle.
 
@@ -27,21 +27,29 @@ Demo: *Right-to-Left* (`/rtl`), with Arabic and Hebrew sample data and an RTL to
 | Column menu, header filter operator menu | Works | Placed under their button. |
 | Header filter row | Works | Filter cells line up with their columns. Operator symbols are mirrored by the browser's bidi rules (`∋` shows as `∈`), as in any RTL text. |
 | Ask AI panel | Works | Opens over the grid. |
-| Left / right pinned columns | **Limitation** | See below. |
-| Column reordering by drag | Not checked | Dropping on a header uses the target header, not pointer offsets, so it is expected to work. |
+| Left / right pinned columns, pinned system columns | **Fixed in v3.6** | Sticky offsets were physical `left` / `right`, so pinned columns scrolled away. They are now logical (`inset-inline-start` / `-end`) in the header, column group rows, header filter row, body, skeleton rows and aggregation footer. See [Pinned columns](#pinned-columns). |
+| Pinned shadows and section borders | **Fixed in v3.6** | Mirrored: they face the scrolling columns. |
+| Range drag with pinned columns | **Fixed in v3.6** | Auto-scroll starts at the inner edge of the pinned section on each side. |
+| Pagination arrows, tree / group chevrons | **Fixed in v3.6** | Mirrored with `scaleX(-1)` under `:dir(rtl)`; tree indentation is on the start side. Sort arrows, search, close and other non-directional icons are not mirrored. |
+| Switching `dir` on a mounted grid | **Fixed in v3.6** | Firefox resets `scrollLeft` without a scroll event, which left the body blank; the grid re-reads the position when any `dir` attribute changes. Changing `direction` through a class or stylesheet is not observed: scroll the grid or remount it. |
+| Column reordering by drag | Works | Drops use the target header, not pointer offsets; the drop marker is on the target's start edge. |
+
+## Pinned columns
+
+`pinnedColumns.left` and `pinnedColumns.right` are **logical**: the inline start and end. In a right-to-left grid left-pinned columns, and the checkbox, expand and reorder columns pinned with `pinCheckboxColumn` / `pinExpandColumn`, stick to the **right** edge; right-pinned columns stick to the left edge. This is what MUI X and AG Grid do (AG Grid's `pinned: 'left'` and MUI's `pinnedColumns.left` move to the right in RTL), and it keeps one configuration for both directions: the identifier column a user reads first stays pinned where reading starts, and the system columns stay next to it.
+
+The column menu is labelled by screen side: in RTL *Pin to Left* adds the column to `pinnedColumns.right`. `onPinnedColumnsChange` and `apiRef` report the logical lists. Shadow tokens are swapped in RTL (`--ogx-grid-pinned-right-shadow` is used for the start section, which casts its shadow leftwards).
 
 ## Known limitations
 
-- **Pinned columns.** Sticky offsets use the physical `left` / `right` properties. In RTL a left-pinned column (`pinnedColumns.left`) starts on the right but sticks to the left edge, so it scrolls away; a right-pinned column is laid out at the far end of the scroll area. The checkbox, expand and reorder system columns pinned with `pinCheckboxColumn` / `pinExpandColumn` have the same problem, as do the pinned-column shadows. **Workaround:** do not pin columns in RTL grids (`pinnedColumns={rtl ? undefined : pinned}`, and leave `pinCheckboxColumn` off).
-- **Range, pinned and resize visuals that use physical sides** beyond those fixed above (for example the borders between pinned sections) are drawn for LTR.
-- **Switching direction at runtime** (toggling `dir` on a mounted, horizontally scrolled grid) was not tested; scroll the grid back to the start, or remount it with a `key`, when you switch.
-- **Icons are not mirrored**: arrows in the pagination and the tree expand chevrons keep their LTR shape.
-
-These are on the roadmap for Q1 2027.
+- **Menu and panel labels are hard-coded English** ("Pin to Left", "Sort Ascending"); there is no `localeText` key for the column menu yet.
+- **Header filter operator symbols** are mirrored by the browser's bidi rules (`∋` shows as `∈`), as in any RTL text.
+- **`direction` set through CSS** (a class or stylesheet, not the `dir` attribute) and changed at runtime is not detected; scroll the grid or remount it with a `key`.
+- **Headless Chromium tests:** Playwright launches Chromium with `--hide-scrollbars`. With classic scrollbars (Linux) `scrollbar-gutter: stable` still reserves the gutter, and in RTL Chromium then cannot scroll the last gutter-width of the start into view (`scrollLeft` stops at minus the gutter). A plain scroller without the grid does the same and real browsers with visible scrollbars do not. Tests must compare with the browser's scroll origin, as `DataGrid.rtl.browser.test.tsx` does. To reproduce on macOS: `defaults write chrome-headless-shell AppleShowScrollBars Always` (undo with `defaults delete chrome-headless-shell`).
 
 ## Left-to-right grids
 
-Every fix uses CSS logical properties (`text-align: start`, `inset-inline-end`, `margin-inline-start`) or applies only when the computed `direction` is `rtl`, so LTR grids are unchanged. A browser test measured 415 element positions (headers, cells, resize and fill handles, header filter controls, toolbar buttons and panels, before and after a horizontal scroll, with pinned columns) in all three engines before and after the change and found no difference; `DataGrid.rtl.browser.test.tsx` keeps an LTR layout check.
+Every fix uses CSS logical properties (`text-align: start`, `inset-inline-end`, `margin-inline-start`) or applies only when the computed `direction` is `rtl`, so LTR grids are unchanged. A browser test measured 415 element positions (headers, cells, resize and fill handles, header filter controls, toolbar buttons and panels, before and after a horizontal scroll, with pinned columns) in all three engines before and after the change and found no difference; RTL part 2 repeated this with 2,211 boxes, shadows, borders and pseudo-element offsets (pinned and system columns, column groups, header filters, aggregation footer, before and after a scroll and with a range); `DataGrid.rtl.browser.test.tsx` keeps an LTR layout check.
 
 ## See also
 

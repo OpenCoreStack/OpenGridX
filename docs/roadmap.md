@@ -124,7 +124,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 *   **Sparklines** and a charts adapter that passes grid state to any chart library.
 *   **AI toolkit, part 3**: smart paste (unstructured text → pending rows) and `apiRef.getAiContext()` for "summarise selection"; an `opengridx-mcp` docs server for coding assistants.
 *   **Tailwind / shadcn theme preset**, sticky header against page scroll.
-*   **RTL, part 2** (see [`rtl.md`](features/rtl.md#known-limitations)): pinned columns and pinned system columns with logical sticky offsets (`inset-inline-start` / `-end`) and mirrored pinned shadows; mirrored icons (pagination arrows, tree chevrons); a direction change on a mounted grid.
+*   ✅ **RTL, part 2** (done 12 Oct, [`rtl.md`](features/rtl.md)): pinned columns and pinned system columns with logical sticky offsets and mirrored shadows, column menu pinning by screen side, mirrored pagination arrows and tree chevrons, a direction change on a mounted grid, column reorder by drag checked. Remaining: hard-coded English menu labels (no `localeText` yet), and the bidi-mirrored header filter operator symbols.
 
 ### Not planned
 

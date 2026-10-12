@@ -35,7 +35,7 @@ Pinned column headers are not draggable and are not drop targets for header drag
 
 ---
 
-> **Right-to-left:** pinned columns do not work in `dir="rtl"` grids yet (they scroll away instead of sticking). See [Right-to-Left](rtl.md#known-limitations).
+> **Right-to-left:** `left` and `right` are the inline **start** and **end** sides. In a `dir="rtl"` grid `pinnedColumns.left` (and the pinned checkbox, expand and reorder columns) stick to the right edge, `pinnedColumns.right` to the left edge, and the shadows fall towards the scrolling columns. The column menu's *Pin to Left* / *Pin to Right* items pin by screen side, so in RTL *Pin to Left* adds the column to `pinnedColumns.right`. See [Right-to-Left](rtl.md#pinned-columns).
 
 ## ⬆️ Row Pinning
 
