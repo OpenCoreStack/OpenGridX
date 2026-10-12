@@ -33,7 +33,7 @@ The grid calculates which rows are visible based on:
 - ✅ About 19 row elements at rest in an 800 px page at 52 px rows, at most about 86 while scrolling fast, whatever the row count (10k to 1M)
 - ✅ Scrolling keeps up with a 60 Hz display at 1M rows in Chromium (no missed frames) and Firefox; WebKit misses a frame or two on each long jump of the scroll position
 - ✅ The grid itself adds about 10 MB of JS heap at 100k rows and 79 MB at 1M (Chromium), on top of your row data
-- ⚠️ Not millions of rows at the default height. Browsers cap an element's height and the grid does no scroll scaling: it lays every row out at its real height. Chromium and WebKit stop at 33,554,428 px, so rows past about `33,554,428 / rowHeight` cannot be scrolled to (645,277 at the default 52 px; 1M rows fit at 32 px). Firefox's limit is about 17.9M px (about 344,000 rows at 52 px); since 3.5.1 the grid caps its content to the limit it measures, so Firefox scrolls normally up to there (on 3.5.0 and earlier, content past the limit collapsed and the grid did not scroll at all). Beyond that, use pagination, or server-side paging / infinite scroll. In development the grid warns when rows are cut off and names how many can be scrolled to. Measured reach per browser: [Performance → Reach](../performance.md#reach-the-browser-height-ceiling).
+- ⚠️ Not millions of rows at the default height: browsers cap an element's height. See [The browser height limit](#the-browser-height-limit) for how many rows fit and what to use beyond that.
 
 ### Column Virtualization
 
@@ -88,6 +88,20 @@ Every flex (or grid) item between the grid and the element with a fixed height (
 In development builds the grid logs a `console.warn` when it is rendering every row of a dataset larger than 200 rows and its viewport is at least as tall as those rows, that is, when its container really is unbounded. The warning names the fixes above.
 
 Pagination can hide this problem, because a paginated grid only has one page of rows to render. Row grouping switches pagination off (see below), so an unbounded container that looked fine with pagination can freeze the tab once grouping is enabled.
+
+### The browser height limit
+
+**How many rows can one scrolling grid hold?**
+
+| Rows (at the default 52 px) | Use |
+| :--- | :--- |
+| up to about 300,000 | client-side rows: they fit in every browser |
+| up to about 600,000 | client-side rows in Chromium and WebKit only; Firefox users cannot scroll past about 344,000 |
+| more | a [`dataSource`](data-source.md) (server-side pages or infinite scroll), or `pagination` |
+
+`density="compact"` (32 px rows) stretches each limit by about 1.6×: about 559,000 rows in Firefox and 1,048,000 in Chromium and WebKit.
+
+Why: the grid lays every row out at its real height (`rowCount × rowHeight` pixels) and does no scroll scaling, and browsers cap an element's height. Chromium and WebKit stop at 33,554,428 px, so rows past about `33,554,428 / rowHeight` cannot be scrolled to (645,277 at 52 px). Firefox's limit is about 17.9M px (about 344,000 rows at 52 px); since 3.5.1 the grid caps its content to the limit it measures, so Firefox scrolls normally up to there (on 3.5.0 and earlier, content past the limit collapsed and the grid did not scroll at all). In development the grid warns when rows are cut off, names how many can be scrolled to and points to `dataSource`. Measured reach per browser: [Performance → Reach](../performance.md#reach-the-browser-height-ceiling).
 
 ## Configuration
 
@@ -243,7 +257,7 @@ You should see console logs only for visible rows + overscan buffer.
 ## Known Limitations
 
 1. **Unbounded containers** - Virtualization needs a bounded viewport height (see above)
-2. **Browser height cap** - Rows past roughly `33,554,432 / rowHeight` (Chromium; less in Firefox) cannot be scrolled to (see above)
+2. **Browser height cap** - Rows past roughly `33,554,428 / rowHeight` (Chromium and WebKit; less in Firefox) cannot be scrolled to ([see above](#the-browser-height-limit))
 3. **Uniform row heights** - Only detail panels vary the height; cumulative heights are recomputed over all rows when panels change
 4. **Horizontal scrolling** - May show brief flicker with very wide grids
 

@@ -87,7 +87,9 @@ export function useGridDevWarnings(params: UseGridDevWarningsParams): void {
         console.warn(
             `[OpenGridX] The grid content is ${Math.round(scrollHeight)}px tall, more than this browser lays out ` +
             '(about 17.9M px in Firefox, 33.5M px in Chrome and Safari). ' + reach +
-            'Use pagination, server-side or infinite loading, or a smaller rowHeight. See docs/features/virtualization.md.'
+            'Load the rows on demand with a `dataSource` (server-side pages or infinite scroll, ' +
+            'docs/features/data-source.md), use `pagination`, or a smaller rowHeight (density="compact"). ' +
+            'See docs/features/virtualization.md#the-browser-height-limit.'
         );
     }, [scrollHeight, maxContentHeight, reachableRowCount, unpinnedRowCount]);
 

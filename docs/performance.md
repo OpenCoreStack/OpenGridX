@@ -87,12 +87,14 @@ import '@opencorestack/opengridx/styles';
 
 ## Know the browser's height limit
 
+In short: up to about 300,000 rows at 52 px fit in every browser, up to about 600,000 in Chromium and WebKit; beyond that load rows with a [`dataSource`](features/data-source.md) or use pagination. The decision guide is in [Virtualization → The browser height limit](features/virtualization.md#the-browser-height-limit).
+
 The grid sizes its scroll content to `rowCount × rowHeight` pixels and does not scale scroll positions. Browsers cap an element's height, and the [benchmark](#reach-the-browser-height-ceiling) measures what happens past the cap:
 
 - **Chromium and WebKit** clamp the content at 33,554,428 px. Rows below that cannot be scrolled to: at the default 52 px row height that is every row past 645,277.
 - **Firefox** has a lower limit, about 17.9M px, and collapses a taller element instead of clamping it. Up to 3.5.0 that made a grid with more content unscrollable in Firefox (only the first screen of rows was reachable). **Since 3.5.1 the grid measures the browser's limit once and caps its scroll content to it**, so Firefox scrolls normally and reaches the rows above the cap: about 344,000 rows at 52 px, 559,000 at 32 px.
 
-In development the grid warns when rows are cut off, naming how many can be scrolled to in that browser. For more rows, use pagination, `paginationMode="server"` or infinite scroll with a `dataSource`, or a smaller `rowHeight` (`density="compact"`, 32 px, keeps 1M rows under the Chromium and WebKit cap).
+In development the grid warns when rows are cut off, naming how many can be scrolled to in that browser and pointing to `dataSource`. For more rows, use a [`dataSource`](features/data-source.md) (`paginationMode="server"` or infinite scroll), `pagination`, or a smaller `rowHeight` (`density="compact"`, 32 px, keeps 1M rows under the Chromium and WebKit cap).
 
 ## Use server-side operations for very large datasets
 
