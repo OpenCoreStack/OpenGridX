@@ -307,13 +307,15 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
     ), [defaultGroupingExpansionDepth]);
 
     const expandedGroupIds = useMemo<Set<GridRowId>>(() => {
+        // Only group nodes have children, so walk the groups rather than every leaf, in tree order.
         const ids = new Set<GridRowId>();
-        treeNodes.forEach((node, id) => {
-            if (!node.children || node.children.length === 0) return;
+        for (const id of groupIds) {
+            const node = treeNodes.get(id);
+            if (!node?.children || node.children.length === 0) continue;
             if (overrides.get(id) ?? isDefaultExpanded(node)) ids.add(id);
-        });
+        }
         return ids;
-    }, [treeNodes, overrides, isDefaultExpanded]);
+    }, [groupIds, treeNodes, overrides, isDefaultExpanded]);
 
     const toggleExpansion = useCallback((id: GridRowId) => {
         setExpansionState(prev => {
@@ -436,14 +438,17 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
     const rowMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
         const map = new Map<GridRowId, GridRowMeta>();
+        // Every leaf at one depth has the same metadata: one object per depth, not one per row.
+        const leafMetaByDepth: GridRowMeta[] = [];
         treeNodes.forEach((node, id) => {
             const variants = groupRowVariants.get(id);
             if (!variants) {
-                map.set(id, {
-                    hasChildren: false,
-                    treeDepth: node.depth,
-                    isGroupRow: false,
-                });
+                let leafMeta = leafMetaByDepth[node.depth];
+                if (!leafMeta) {
+                    leafMeta = { hasChildren: false, treeDepth: node.depth, isGroupRow: false };
+                    leafMetaByDepth[node.depth] = leafMeta;
+                }
+                map.set(id, leafMeta);
                 return;
             }
             const groupMeta: GridRowMeta = {
