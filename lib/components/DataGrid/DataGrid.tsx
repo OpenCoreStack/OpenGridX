@@ -28,10 +28,9 @@ import { Header } from '../Header/Header';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useGridHierarchy } from '../../hooks/core/useGridHierarchy';
-import { useGridEditing } from '../../hooks/features/useGridEditing';
-import { useGridBatchEdit } from '../../hooks/features/useGridBatchEdit';
+import { useGridEditPipeline } from '../../hooks/core/useGridEditPipeline';
 import { useGridClipboardPaste } from '../../hooks/core/useGridClipboardPaste';
-import { useGridUndoRedo, useGridEditCommitChannel, UNDO_HISTORY_LIMIT } from '../../hooks/core/useGridUndoRedo';
+import { useGridUndoRedo, UNDO_HISTORY_LIMIT } from '../../hooks/core/useGridUndoRedo';
 import { useGridFillHandle } from '../../hooks/core/useGridFillHandle';
 import { useGridSpanning } from '../../hooks/features/useGridSpanning';
 import { useGridSpanRowWindow, useGridSpanColumnWindow } from '../../hooks/features/useGridSpanRenderWindow';
@@ -322,32 +321,15 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         getAggregationPosition, columnLookup, filterMode, sortingMode,
     });
 
-    // Commits (single edits and batch edits) reach the undo/redo history created further down.
-    const editCommitChannel = useGridEditCommitChannel();
-    // Batch edits (paste, range clear, undo, redo): one processRowUpdate per row, one store update.
-    const batchEdit = useGridBatchEdit<R>({
+    // Steps 12a–13: the edit commit channel, the batch edit and single-cell editing.
+    const { editCommitChannel, batchEdit, editingHandlers } = useGridEditPipeline<R>({
         rowsLookup: state.rows.idRowsLookup as unknown as ReadonlyMap<GridRowId, R>,
-        columns: activeColumns,
-        processRowUpdate,
-        onProcessRowUpdateError,
-        replaceRows: replaceRows as unknown as (rows: ReadonlyMap<GridRowId, R>) => void,
-        onCommitted: editCommitChannel.emit,
-    });
-
-    const editingHandlers = useGridEditing({
         rows: effectiveRows,
         getRowId: getRowIdOf,
         columns: activeColumns,
         processRowUpdate,
         onProcessRowUpdateError,
-        onRowChange: (updatedRow, rowId) => {
-            // Replaces the edited row in the *current* store, under the edited row's id: this runs
-            // after an awaited processRowUpdate, by which time the rows prop (or a dataSource
-            // fetch) may have replaced the rows this render saw. The returned row is stored as is
-            // (the grid never writes an id onto it), even if it does not carry its key itself.
-            batchEdit.storeRow(rowId, updatedRow);
-        },
-        onCommitted: (changes) => editCommitChannel.emit(changes, 'edit'),
+        replaceRows: replaceRows as unknown as (rows: ReadonlyMap<GridRowId, R>) => void,
     });
 
     // The selection without ids of removed rows. Only client-owned rows are pruned: a server page
