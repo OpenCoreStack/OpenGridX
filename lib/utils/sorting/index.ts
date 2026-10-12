@@ -154,16 +154,20 @@ export function sortRows<R extends GridRowModel>(
   if (sortModel.length === 0) {
     return rows;
   }
-  return sortItemsBySortModel(rows, sortModel, (row, sortItem) => {
+  if (rows.length < 2) return [...rows];
+  const sortColumns = sortModel.map(sortItem => {
     const colDef = columns?.byField.get(sortItem.field);
-    const value = getCellValue(row, sortItem.field, colDef);
-    return {
-      value,
-      type: colDef?.type,
-      comparator: colDef?.sortComparator,
-      params: colDef?.sortComparator ? { id: getRowId(row), field: sortItem.field, row, value } : undefined,
-    };
+    const comparator = colDef?.sortComparator;
+    if (comparator) {
+      return genericSortColumn(rows.map(row => {
+        const value = getCellValue(row, sortItem.field, colDef);
+        return { value, type: colDef.type, comparator, params: { id: getRowId(row), field: sortItem.field, row, value } };
+      }));
+    }
+    const type = colDef?.type;
+    return encodeSortColumn(rows.length, i => getCellValue(rows[i], sortItem.field, colDef), () => type);
   });
+  return sortByColumns(rows, sortModel, sortColumns);
 }
 
 /** The value an item sorts by for one sort key, and how to compare it. */
@@ -194,26 +198,137 @@ export function sortItemsBySortModel<T>(
     return [...items];
   }
 
-  // Read and normalize every sort value once, instead of calling valueGetter and parsing dates
-  // O(n log n) times inside the comparator.
-  const values = sortModel.map(sortItem => items.map(item => readValue(item, sortItem)));
-  const keys = values.map(column => column.map(({ value, type }) => toSortKey(value, type)));
-
-  const order = items.map((_, index) => index);
-  order.sort((ia, ib) => {
-    for (let k = 0; k < sortModel.length; k++) {
-      const a = values[k][ia];
-      const b = values[k][ib];
-      const ascending = a.comparator && a.comparator === b.comparator && a.params && b.params
-        ? callSortComparator(a.comparator, a.params, b.params)
-        : compareSortKeys(keys[k][ia], keys[k][ib]);
-      const comparison = applySortDirection(ascending, sortModel[k].sort);
-      if (comparison !== 0) return comparison;
-    }
-    return ia - ib;
+  // Read every sort value once, instead of calling valueGetter and parsing dates O(n log n) times
+  // inside the comparator.
+  const columns = sortModel.map(sortItem => {
+    const values = items.map(item => readValue(item, sortItem));
+    // A key where no item carries a comparator compares by the built-in order only, so it can be
+    // encoded up front.
+    return values.some(v => v.comparator && v.params)
+      ? genericSortColumn(values)
+      : encodeSortColumn(values.length, i => values[i].value, i => values[i].type);
   });
+  return sortByColumns(items, sortModel, columns);
+}
 
-  return order.map(index => items[index]);
+/** One sort key, ready to compare: encoded into typed arrays, or kept as values when a sortComparator applies. */
+type SortColumn =
+  | { kind: 'encoded'; group: Uint8Array; num: Float64Array }
+  | { kind: 'generic'; values: readonly GridSortValue[]; keys: readonly SortKey[] };
+
+/** The group of the empty bucket: after every rank, as in compareSortKeys. */
+const GROUP_EMPTY = RANK_OTHER + 1;
+
+/** Give each item of `buckets` (distinct text → item indexes) its text's position in collator order. */
+function rankTexts(buckets: Map<string, number[]>, num: Float64Array): void {
+  const distinct = [...buckets.keys()].sort(collator.compare);
+  // Texts the collator calls equal share a position, so they tie exactly as in compareSortKeys.
+  let position = 0;
+  for (let d = 0; d < distinct.length; d++) {
+    if (d > 0 && collator.compare(distinct[d - 1], distinct[d]) !== 0) position++;
+    for (const i of buckets.get(distinct[d]) ?? []) num[i] = position;
+  }
+}
+
+function addToBucket(buckets: Map<string, number[]>, text: string, index: number): void {
+  const bucket = buckets.get(text);
+  if (bucket) bucket.push(index);
+  else buckets.set(text, [index]);
+}
+
+/**
+ * Encode one key as (group, number) per item. The group is the value's rank, with the empty bucket
+ * last; the number is the value itself for numbers, dates and booleans, and for strings (and other
+ * values) the position of its text among the key's distinct texts in collator order. Comparing
+ * (group, number) gives exactly compareSortKeys' order, while the collator runs only to sort the
+ * distinct texts instead of in every row comparison.
+ */
+function encodeSortColumn(count: number, valueAt: (i: number) => unknown, typeAt: (i: number) => GridColDef['type']): SortColumn {
+  const group = new Uint8Array(count);
+  const num = new Float64Array(count);
+  const strings = new Map<string, number[]>();
+  const others = new Map<string, number[]>();
+  for (let i = 0; i < count; i++) {
+    const value = valueAt(i);
+    const type = typeAt(i);
+    if (typeof value === 'number' && type !== 'date') {
+      // toSortKey for a number, without the allocation.
+      if (Number.isNaN(value)) {
+        group[i] = GROUP_EMPTY;
+      } else {
+        group[i] = RANK_NUMBER;
+        num[i] = value;
+      }
+      continue;
+    }
+    const key = toSortKey(value, type);
+    if (key === null) {
+      group[i] = GROUP_EMPTY;
+    } else {
+      group[i] = key.rank;
+      if (key.rank === RANK_STRING) addToBucket(strings, key.str, i);
+      else if (key.rank === RANK_OTHER) addToBucket(others, key.str, i);
+      else num[i] = key.num;
+    }
+  }
+  rankTexts(strings, num);
+  rankTexts(others, num);
+  return { kind: 'encoded', group, num };
+}
+
+function genericSortColumn(values: readonly GridSortValue[]): SortColumn {
+  return { kind: 'generic', values, keys: values.map(({ value, type }) => toSortKey(value, type)) };
+}
+
+/** Ascending comparison of items `ia` and `ib` on one key. */
+function compareInColumn(column: SortColumn, ia: number, ib: number): number {
+  if (column.kind === 'encoded') {
+    const ga = column.group[ia];
+    const gb = column.group[ib];
+    if (ga !== gb) return ga - gb;
+    const na = column.num[ia];
+    const nb = column.num[ib];
+    return na < nb ? -1 : na > nb ? 1 : 0;
+  }
+  const a = column.values[ia];
+  const b = column.values[ib];
+  return a.comparator && a.comparator === b.comparator && a.params && b.params
+    ? callSortComparator(a.comparator, a.params, b.params)
+    : compareSortKeys(column.keys[ia], column.keys[ib]);
+}
+
+/** Stable sort by prepared keys: the first key that differs decides, ties keep the input order. */
+function sortByColumns<T>(items: readonly T[], sortModel: readonly GridSortItem[], columns: readonly SortColumn[]): T[] {
+  const n = items.length;
+  const order = new Array<number>(n);
+  for (let i = 0; i < n; i++) order[i] = i;
+  const first = columns[0];
+  if (columns.length === 1 && first.kind === 'encoded') {
+    // The common single-key case, without the per-comparison key loop.
+    const { group, num } = first;
+    const sign = sortModel[0].sort === 'asc' ? 1 : -1;
+    order.sort((ia, ib) => {
+      const ga = group[ia];
+      const gb = group[ib];
+      if (ga !== gb) return (ga - gb) * sign;
+      const na = num[ia];
+      const nb = num[ib];
+      if (na < nb) return -sign;
+      if (na > nb) return sign;
+      return ia - ib;
+    });
+  } else {
+    order.sort((ia, ib) => {
+      for (let k = 0; k < columns.length; k++) {
+        const comparison = applySortDirection(compareInColumn(columns[k], ia, ib), sortModel[k].sort);
+        if (comparison !== 0) return comparison;
+      }
+      return ia - ib;
+    });
+  }
+  const result = new Array<T>(n);
+  for (let i = 0; i < n; i++) result[i] = items[order[i]];
+  return result;
 }
 
 /**
