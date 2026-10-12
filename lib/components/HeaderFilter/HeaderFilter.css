@@ -7,7 +7,7 @@
   height: var(--ogx-header-filter-height, 40px);
   min-height: var(--ogx-header-filter-height, 40px);
   background: var(--ogx-grid-header-background);
-  border-bottom: 1px solid var(--ogx-grid-border-color);
+  border-bottom: var(--ogx-grid-row-divider-width) solid var(--ogx-grid-row-divider-color, var(--ogx-grid-border-color));
 }
 .ogx__header-filter-cell {
   display: flex;

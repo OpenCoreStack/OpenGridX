@@ -9,7 +9,7 @@
 }
 .ogx-menu-section-label {
     padding: 6px 14px 2px;
-    font-family: var(--ogx-font-family, system-ui, sans-serif);
+    font-family: var(--ogx-overlay-font-family, var(--ogx-font-family, system-ui, sans-serif));
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -25,8 +25,9 @@
     border: none;
     background: transparent;
     cursor: pointer;
-    font-family: var(--ogx-font-family, system-ui, sans-serif);
-    font-size: var(--ogx-font-size-xs);
+    font-family: var(--ogx-overlay-font-family, var(--ogx-font-family, system-ui, sans-serif));
+    font-size: var(--ogx-overlay-font-size, var(--ogx-font-size-xs));
+    font-weight: var(--ogx-overlay-font-weight, 400);
     color: var(--ogx-overlay-text, #334155);
     text-align: start;
     gap: 6px;

@@ -80,6 +80,7 @@
   z-index: 9999;
   overflow: hidden;
   animation: ogx-panel-in 0.15s ease-out;
+  font-family: var(--ogx-overlay-font-family, inherit);
 }
 @keyframes ogx-panel-in {
   from { opacity: 0; transform: translateY(-6px) scale(0.98); }
@@ -97,7 +98,7 @@
   display: flex;
   align-items: center;
   gap: var(--ogx-spacing-xs);
-  font-family: var(--ogx-font-family);
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
   font-size: var(--ogx-font-size-sm);
   font-weight: 600;
   color: var(--ogx-grid-header-text);
@@ -108,7 +109,7 @@
   border-radius: var(--ogx-border-radius-sm);
   background: transparent;
   color: var(--ogx-toolbar-btn-danger-text, var(--ogx-color-error, #ef4444));
-  font-family: var(--ogx-font-family);
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
   font-size: var(--ogx-font-size-xs);
   font-weight: 500;
   cursor: pointer;
@@ -124,7 +125,7 @@
   border-radius: var(--ogx-border-radius-sm);
   background: transparent;
   color: var(--ogx-grid-header-text);
-  font-family: var(--ogx-font-family);
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
   font-size: var(--ogx-font-size-xs);
   font-weight: 500;
   cursor: pointer;
@@ -142,7 +143,7 @@
 }
 .ogx-toolbar__empty {
   padding: var(--ogx-spacing-md) var(--ogx-spacing-md);
-  font-family: var(--ogx-font-family);
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
   font-size: var(--ogx-font-size-sm);
   color: var(--ogx-grid-header-text);
   line-height: 1.5;
@@ -171,9 +172,9 @@
 }
 .ogx-toolbar__agg-label {
   flex: 0 0 100px;
-  font-family: var(--ogx-font-family);
-  font-size: var(--ogx-font-size-xs);
-  font-weight: 500;
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
+  font-size: var(--ogx-overlay-font-size, var(--ogx-font-size-xs));
+  font-weight: var(--ogx-overlay-font-weight, 500);
   color: var(--ogx-grid-row-text);
   overflow: hidden;
   text-overflow: ellipsis;

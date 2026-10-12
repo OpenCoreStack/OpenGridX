@@ -9,7 +9,7 @@
   z-index: 9999;
   overflow: hidden;
   animation: ogx-panel-in 0.15s ease-out;
-  font-family: var(--ogx-font-family);
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
 }
 @keyframes ogx-panel-in {
   from { opacity: 0; transform: translateY(-6px) scale(0.98); }
@@ -37,7 +37,7 @@
   border-radius: var(--ogx-border-radius-sm);
   background: transparent;
   color: var(--ogx-color-error, #ef4444);
-  font-family: var(--ogx-font-family);
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
   font-size: var(--ogx-font-size-xs);
   font-weight: 500;
   cursor: pointer;
@@ -163,7 +163,7 @@
   border-radius: 999px;
   background: var(--ogx-grid-header-background);
   color: var(--ogx-grid-row-text);
-  font-family: var(--ogx-font-family);
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;

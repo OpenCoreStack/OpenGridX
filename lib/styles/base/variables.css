@@ -81,6 +81,18 @@
   --ogx-grid-cell-font-size: 13px;
   --ogx-grid-header-font-size: 13px;
   --ogx-grid-line-height: var(--ogx-line-height-normal);
+  /* Outer border and divider widths (v3.7). 0 hides a divider. Their colours,
+     --ogx-grid-column-divider-color and --ogx-grid-row-divider-color, are unset here and fall back
+     to --ogx-grid-border-color where they are used. So do the other theme-builder variables:
+     --ogx-grid-border-radius (--ogx-border-radius-lg), --ogx-grid-header-padding-x
+     (--ogx-grid-cell-padding-x), --ogx-grid-header-font-family / -font-weight and
+     --ogx-grid-cell-font-family / -font-weight (inherited; header weight 600), and
+     --ogx-overlay-font-family / -font-weight / -font-size (the grid font, each item's own weight,
+     --ogx-font-size-xs for menu and panel items). */
+  --ogx-grid-border-width: 1px;
+  --ogx-grid-column-divider-width: 1px;
+  --ogx-grid-header-column-divider-width: 1px;
+  --ogx-grid-row-divider-width: 1px;
   --ogx-grid-background: var(--ogx-color-white);
   --ogx-grid-border-color: var(--ogx-color-gray-200);
   --ogx-grid-header-background: var(--ogx-color-gray-50);

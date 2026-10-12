@@ -7,7 +7,7 @@
   background: var(--ogx-grid-header-background);
 }
 .ogx-filter__logic-label {
-  font-family: var(--ogx-font-family);
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
   font-size: var(--ogx-font-size-xs);
   font-weight: 500;
   color: var(--ogx-grid-header-text);
@@ -64,9 +64,9 @@
 }
 .ogx-filter__col-label {
   flex: 0 0 140px;
-  font-family: var(--ogx-font-family);
-  font-size: var(--ogx-font-size-xs);
-  font-weight: 500;
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
+  font-size: var(--ogx-overlay-font-size, var(--ogx-font-size-xs));
+  font-weight: var(--ogx-overlay-font-weight, 500);
   color: var(--ogx-grid-row-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -113,8 +113,9 @@
   padding: 4px 8px;
   border: var(--ogx-border-width-thin) solid var(--ogx-border-color);
   border-radius: var(--ogx-border-radius-sm);
-  font-family: var(--ogx-font-family);
-  font-size: var(--ogx-font-size-xs);
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
+  font-size: var(--ogx-overlay-font-size, var(--ogx-font-size-xs));
+  font-weight: var(--ogx-overlay-font-weight, 400);
   line-height: revert;
   background: var(--ogx-grid-background);
   color: var(--ogx-grid-row-text);
@@ -162,7 +163,7 @@
 .ogx-filter__hidden-note {
   padding: 6px var(--ogx-spacing-md);
   border-bottom: var(--ogx-border-width-thin) solid var(--ogx-grid-border-color);
-  font-family: var(--ogx-font-family);
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
   font-size: var(--ogx-font-size-xs);
   color: var(--ogx-overlay-text, var(--ogx-color-gray-400));
 }
@@ -189,7 +190,7 @@
 }
 .ogx-filter__empty {
   padding: var(--ogx-spacing-md);
-  font-family: var(--ogx-font-family);
+  font-family: var(--ogx-overlay-font-family, var(--ogx-font-family));
   font-size: var(--ogx-font-size-sm);
   color: var(--ogx-overlay-text, var(--ogx-color-gray-400));
   opacity: 0.7;

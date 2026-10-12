@@ -99,3 +99,41 @@ describe('DataGridThemeProvider row and header heights', () => {
         expect(renderGrid({ grid: { rowHeightStandard: '3rem' } }).rowVar).toBe('52px');
     });
 });
+
+describe('DataGridThemeProvider theme-builder keys (v3.7)', () => {
+    const grid = {
+        headerFontFamily: 'Georgia, serif', headerFontWeight: '800', cellFontFamily: 'monospace', cellFontWeight: '300',
+        headerPaddingX: '20px', borderWidth: '2px', borderRadius: '0px', columnDividerWidth: '0px',
+        headerColumnDividerWidth: '3px', rowDividerWidth: '2px', columnDividerColor: '#ff0000', rowDividerColor: '#00ff00',
+    };
+    const expected: Record<string, string> = {
+        '--ogx-grid-header-font-family': 'Georgia, serif',
+        '--ogx-grid-header-font-weight': '800',
+        '--ogx-grid-cell-font-family': 'monospace',
+        '--ogx-grid-cell-font-weight': '300',
+        '--ogx-grid-header-padding-x': '20px',
+        '--ogx-grid-border-width': '2px',
+        '--ogx-grid-border-radius': '0px',
+        '--ogx-grid-column-divider-width': '0px',
+        '--ogx-grid-header-column-divider-width': '3px',
+        '--ogx-grid-row-divider-width': '2px',
+        '--ogx-grid-column-divider-color': '#ff0000',
+        '--ogx-grid-row-divider-color': '#00ff00',
+        '--ogx-overlay-font-family': 'Courier',
+        '--ogx-overlay-font-weight': '700',
+        '--ogx-overlay-font-size': '15px',
+    };
+
+    it('maps every new key to its CSS variable', () => {
+        const v = providerVars({ grid, overlays: { fontFamily: 'Courier', fontWeight: '700', fontSize: '15px' } });
+        for (const [name, value] of Object.entries(expected)) expect(v(name), name).toBe(value);
+    });
+
+    it('sets none of them when the theme leaves them out, so the stylesheet defaults apply', () => {
+        for (const theme of [{}, darkTheme, compactTheme, roseTheme]) {
+            const v = providerVars(theme);
+            for (const name of Object.keys(expected)) expect(v(name), name).toBe('');
+            cleanup();
+        }
+    });
+});

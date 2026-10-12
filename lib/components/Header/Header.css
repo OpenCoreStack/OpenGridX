@@ -12,7 +12,7 @@
   display: flex;
   align-items: stretch;
   background: var(--ogx-grid-header-background);
-  border-bottom: 1px solid var(--ogx-grid-border-color);
+  border-bottom: var(--ogx-grid-row-divider-width) solid var(--ogx-grid-row-divider-color, var(--ogx-grid-border-color));
   min-height: var(--ogx-header-height);
   box-shadow: var(--ogx-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.03));
 }
@@ -25,10 +25,11 @@
 .ogx__header-cell {
   display: flex;
   align-items: center;
-  padding: var(--ogx-grid-cell-padding-y) var(--ogx-grid-cell-padding-x);
+  padding: var(--ogx-grid-cell-padding-y) var(--ogx-grid-header-padding-x, var(--ogx-grid-cell-padding-x));
   position: relative;
+  font-family: var(--ogx-grid-header-font-family, inherit);
   font-size: var(--ogx-grid-header-font-size);
-  font-weight: 600; 
+  font-weight: var(--ogx-grid-header-font-weight, 600);
   color: var(--ogx-grid-header-text);
   overflow: hidden;
   box-sizing: border-box;
@@ -42,7 +43,7 @@
   inset-inline-end: 0;
   top: 25%;
   height: 50%;
-  width: 1px;
+  width: var(--ogx-grid-header-column-divider-width);
   background-color: var(--ogx-color-gray-300);
   opacity: 0.5;
 }

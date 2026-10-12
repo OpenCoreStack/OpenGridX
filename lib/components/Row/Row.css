@@ -1,7 +1,7 @@
 .ogx__row {
   display: flex;
   align-items: stretch;
-  border-bottom: 1px solid var(--ogx-grid-border-color);
+  border-bottom: var(--ogx-grid-row-divider-width) solid var(--ogx-grid-row-divider-color, var(--ogx-grid-border-color));
   background: var(--ogx-grid-background);
   position: relative;
   min-height: var(--ogx-row-height);
@@ -94,7 +94,7 @@
 }
 .ogx__row--skeleton {
     pointer-events: none;
-    border-bottom: 1px solid var(--ogx-grid-border-color);
+    border-bottom: var(--ogx-grid-row-divider-width) solid var(--ogx-grid-row-divider-color, var(--ogx-grid-border-color));
     background-color: var(--ogx-grid-background);
 }
 .ogx__row--skeleton .ogx__skeleton-cell {

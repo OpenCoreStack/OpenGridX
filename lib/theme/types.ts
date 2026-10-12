@@ -90,6 +90,13 @@ export interface GridThemeOverlays {
     itemSelectedText?: string;
     itemDangerBackground?: string;
     itemDangerText?: string;
+
+    /** Font of column menus, header filter menus, toolbar panels and the AI panel (`--ogx-overlay-font-family`). Default: the grid font. @since v3.7 */
+    fontFamily?: string;
+    /** Weight of menu items and panel labels (`--ogx-overlay-font-weight`). Default: each item's own weight (400, labels 500). @since v3.7 */
+    fontWeight?: string;
+    /** Size of menu items and panel labels (`--ogx-overlay-font-size`). Default: `--ogx-font-size-xs` (the AI panel: `--ogx-font-size-sm`). @since v3.7 */
+    fontSize?: string;
 }
 
 export interface GridThemeScrollbar {
@@ -145,8 +152,32 @@ export interface GridThemeGrid {
     cellFontSize?: string;
     /** Font size of header cells (`--ogx-grid-header-font-size`, default 13px). */
     headerFontSize?: string;
+    /** Font of header cells (`--ogx-grid-header-font-family`). Default: the grid font. @since v3.7 */
+    headerFontFamily?: string;
+    /** Weight of header cells (`--ogx-grid-header-font-weight`). Default: `600`. @since v3.7 */
+    headerFontWeight?: string;
+    /** Font of body cells (`--ogx-grid-cell-font-family`). Default: the grid font. @since v3.7 */
+    cellFontFamily?: string;
+    /** Weight of body cells (`--ogx-grid-cell-font-weight`). Default: inherited (400). @since v3.7 */
+    cellFontWeight?: string;
     cellPaddingX?: string;
   cellPaddingY?: string;
+    /** Horizontal padding of header cells (`--ogx-grid-header-padding-x`). Default: `cellPaddingX`. @since v3.7 */
+    headerPaddingX?: string;
+    /** Width of the grid's outer border (`--ogx-grid-border-width`). Default: `1px`. @since v3.7 */
+    borderWidth?: string;
+    /** Corner radius of the grid (`--ogx-grid-border-radius`). Default: `borders.radiusLg` (12px). @since v3.7 */
+    borderRadius?: string;
+    /** Width of the lines between body cells, aggregation footer cells and pinned sections (`--ogx-grid-column-divider-width`). Default: `1px`; `0` hides them. @since v3.7 */
+    columnDividerWidth?: string;
+    /** Width of the short separators between header and column-group cells (`--ogx-grid-header-column-divider-width`). Default: `1px`; `0` hides them. @since v3.7 */
+    headerColumnDividerWidth?: string;
+    /** Width of the lines under rows, the header row, column-group rows and the header filter row (`--ogx-grid-row-divider-width`). Default: `1px`; `0` hides them. @since v3.7 */
+    rowDividerWidth?: string;
+    /** Colour of the column dividers (`--ogx-grid-column-divider-color`). Default: `borderColor`. @since v3.7 */
+    columnDividerColor?: string;
+    /** Colour of the row dividers (`--ogx-grid-row-divider-color`). Default: `borderColor`. @since v3.7 */
+    rowDividerColor?: string;
     background?: string;
   borderColor?: string;
   headerBackground?: string;

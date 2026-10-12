@@ -3,8 +3,10 @@
   display: flex;
   align-items: center;
   padding: var(--ogx-grid-cell-padding-y) var(--ogx-grid-cell-padding-x);
-  border-inline-end: 1px solid var(--ogx-grid-border-color);
+  border-inline-end: var(--ogx-grid-column-divider-width) solid var(--ogx-grid-column-divider-color, var(--ogx-grid-border-color));
+  font-family: var(--ogx-grid-cell-font-family, inherit);
   font-size: var(--ogx-grid-cell-font-size);
+  font-weight: var(--ogx-grid-cell-font-weight, inherit);
   color: var(--ogx-grid-row-text);
   line-height: var(--ogx-grid-line-height);
   white-space: nowrap;
@@ -132,7 +134,7 @@
   background-color: var(--ogx-grid-background); 
 }
 .ogx__cell--pinned-right {
-  border-inline-start: 1px solid var(--ogx-grid-border-color);
+  border-inline-start: var(--ogx-grid-column-divider-width) solid var(--ogx-grid-column-divider-color, var(--ogx-grid-border-color));
 }
 /* When the columns are narrower than the grid, the free space goes before the right-pinned section. */
 .ogx__cell--pinned-right-first {

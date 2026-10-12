@@ -2,6 +2,7 @@
   background: var(--ogx-overlay-background, var(--ogx-color-white));
   border: var(--ogx-border-width-thin) solid var(--ogx-overlay-border, var(--ogx-border-color));
   border-radius: var(--ogx-border-radius-sm);
+  font-family: var(--ogx-overlay-font-family, inherit);
   min-width: 250px;
   max-width: 350px;
   box-shadow: var(--ogx-shadow-lg);
@@ -120,7 +121,8 @@
 }
 
 .ogx-column-visibility-panel__label {
-  font-size: var(--ogx-font-size-xs);
+  font-size: var(--ogx-overlay-font-size, var(--ogx-font-size-xs));
+  font-weight: var(--ogx-overlay-font-weight, inherit);
   color: var(--ogx-overlay-text, var(--ogx-color-gray-900));
   user-select: none;
   cursor: inherit;

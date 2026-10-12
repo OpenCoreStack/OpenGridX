@@ -3,8 +3,8 @@
   flex-direction: column;
   width: 100%;
   background: var(--ogx-grid-background);
-  border: 1px solid var(--ogx-grid-border-color);
-  border-radius: var(--ogx-border-radius-lg);
+  border: var(--ogx-grid-border-width) solid var(--ogx-grid-border-color);
+  border-radius: var(--ogx-grid-border-radius, var(--ogx-border-radius-lg));
   font-family: var(--ogx-font-family);
   position: relative;
   box-shadow: var(--ogx-shadow-sm);
@@ -12,12 +12,12 @@
   overflow: hidden;
 }
 .ogx > :first-child {
-  border-top-left-radius: calc(var(--ogx-border-radius-lg) - 1px);
-  border-top-right-radius: calc(var(--ogx-border-radius-lg) - 1px);
+  border-top-left-radius: max(0px, calc(var(--ogx-grid-border-radius, var(--ogx-border-radius-lg)) - var(--ogx-grid-border-width)));
+  border-top-right-radius: max(0px, calc(var(--ogx-grid-border-radius, var(--ogx-border-radius-lg)) - var(--ogx-grid-border-width)));
 }
 .ogx > :last-child {
-  border-bottom-left-radius: calc(var(--ogx-border-radius-lg) - 1px);
-  border-bottom-right-radius: calc(var(--ogx-border-radius-lg) - 1px);
+  border-bottom-left-radius: max(0px, calc(var(--ogx-grid-border-radius, var(--ogx-border-radius-lg)) - var(--ogx-grid-border-width)));
+  border-bottom-right-radius: max(0px, calc(var(--ogx-grid-border-radius, var(--ogx-border-radius-lg)) - var(--ogx-grid-border-width)));
 }
 .ogx:hover {
   box-shadow: var(--ogx-shadow-md);
@@ -150,7 +150,7 @@
   min-height: 0;
   pointer-events: none;
   z-index: var(--ogx-z-index-modal);
-  border-radius: var(--ogx-border-radius-lg);
+  border-radius: var(--ogx-grid-border-radius, var(--ogx-border-radius-lg));
   overflow: hidden;
 }
 .ogx__loading-overlay--custom {
@@ -243,7 +243,7 @@
   justify-content: center;
   overflow: hidden;
   box-sizing: border-box;
-  border-inline-end: 1px solid var(--ogx-grid-border-color);
+  border-inline-end: var(--ogx-grid-column-divider-width) solid var(--ogx-grid-column-divider-color, var(--ogx-grid-border-color));
   position: relative;
 }
 .ogx__aggregation-cell--pinned-left,
@@ -265,7 +265,7 @@
   background: var(--ogx-grid-header-background);
 }
 .ogx__aggregation-cell--pinned-right {
-  border-inline-start: 1px solid var(--ogx-grid-border-color);
+  border-inline-start: var(--ogx-grid-column-divider-width) solid var(--ogx-grid-column-divider-color, var(--ogx-grid-border-color));
 }
 .ogx__aggregation-cell--pinned-left-last {
   overflow: visible;

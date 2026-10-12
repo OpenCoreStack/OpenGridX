@@ -272,6 +272,18 @@ function themeToCSS(theme: GridTheme): Record<string, string> {
         set('--ogx-grid-cell-padding-y', g.cellPaddingY);
         set('--ogx-grid-cell-font-size', g.cellFontSize);
         set('--ogx-grid-header-font-size', g.headerFontSize);
+        set('--ogx-grid-header-font-family', g.headerFontFamily);
+        set('--ogx-grid-header-font-weight', g.headerFontWeight);
+        set('--ogx-grid-cell-font-family', g.cellFontFamily);
+        set('--ogx-grid-cell-font-weight', g.cellFontWeight);
+        set('--ogx-grid-header-padding-x', g.headerPaddingX);
+        set('--ogx-grid-border-width', g.borderWidth);
+        set('--ogx-grid-border-radius', g.borderRadius);
+        set('--ogx-grid-column-divider-width', g.columnDividerWidth);
+        set('--ogx-grid-header-column-divider-width', g.headerColumnDividerWidth);
+        set('--ogx-grid-row-divider-width', g.rowDividerWidth);
+        set('--ogx-grid-column-divider-color', g.columnDividerColor);
+        set('--ogx-grid-row-divider-color', g.rowDividerColor);
         set('--ogx-grid-background', g.background);
         set('--ogx-grid-border-color', g.borderColor);
         set('--ogx-grid-header-background', g.headerBackground);
@@ -338,6 +350,9 @@ function themeToCSS(theme: GridTheme): Record<string, string> {
         set('--ogx-overlay-item-selected-text', o.itemSelectedText);
         set('--ogx-overlay-item-danger-bg', o.itemDangerBackground);
         set('--ogx-overlay-item-danger-text', o.itemDangerText);
+        set('--ogx-overlay-font-family', o.fontFamily);
+        set('--ogx-overlay-font-weight', o.fontWeight);
+        set('--ogx-overlay-font-size', o.fontSize);
     }
 
     if (theme.scrollbar) {

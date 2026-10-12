@@ -21,7 +21,9 @@
   border: 1px solid var(--ogx-overlay-border, var(--ogx-grid-border-color));
   border-radius: var(--ogx-border-radius-lg, 8px);
   box-shadow: var(--ogx-shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.15));
-  font-size: var(--ogx-font-size-sm);
+  font-family: var(--ogx-overlay-font-family, inherit);
+  font-size: var(--ogx-overlay-font-size, var(--ogx-font-size-sm));
+  font-weight: var(--ogx-overlay-font-weight, inherit);
 }
 .ogx-ai-panel__header {
   display: flex;

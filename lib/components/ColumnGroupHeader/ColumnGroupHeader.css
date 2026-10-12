@@ -8,7 +8,7 @@
     display: flex;
     align-items: stretch;
     background: var(--ogx-grid-header-background);
-    border-bottom: 1px solid var(--ogx-grid-border-color);
+    border-bottom: var(--ogx-grid-row-divider-width) solid var(--ogx-grid-row-divider-color, var(--ogx-grid-border-color));
     /* No overflow clipping: it would make the row the scroll container of its sticky (pinned) cells. */
     flex-shrink: 0;
     min-height: var(--ogx-header-height, 48px);
@@ -31,7 +31,7 @@
     inset-inline-end: 0;
     top: 25%;
     height: 50%;
-    width: 1px;
+    width: var(--ogx-grid-header-column-divider-width);
     background-color: var(--ogx-color-gray-300, #cbd5e1);
     opacity: 0.5;
 }

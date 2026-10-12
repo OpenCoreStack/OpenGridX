@@ -9,7 +9,7 @@
   font-size: var(--ogx-font-size-sm);
   color: var(--ogx-grid-row-text);
   min-height: 52px;
-  border-radius: 0 0 var(--ogx-border-radius-lg) var(--ogx-border-radius-lg);
+  border-radius: 0 0 var(--ogx-grid-border-radius, var(--ogx-border-radius-lg)) var(--ogx-grid-border-radius, var(--ogx-border-radius-lg));
 }
 .ogx-pagination__page-size {
   display: flex;
