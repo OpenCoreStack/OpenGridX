@@ -25,12 +25,10 @@ import { Header } from '../Header/Header';
 import { useDataGrid } from '../../hooks/core/useDataGrid';
 import { useRowReorder } from '../../hooks/useRowReorder';
 import { useGridHierarchy } from '../../hooks/core/useGridHierarchy';
+import { useGridRangeEditing } from '../../hooks/core/useGridRangeEditing';
 import { useGridScrollViewport } from '../../hooks/core/useGridScrollViewport';
 import { useGridViewApis } from '../../hooks/core/useGridViewApis';
 import { useGridEditPipeline } from '../../hooks/core/useGridEditPipeline';
-import { useGridClipboardPaste } from '../../hooks/core/useGridClipboardPaste';
-import { useGridUndoRedo, UNDO_HISTORY_LIMIT } from '../../hooks/core/useGridUndoRedo';
-import { useGridFillHandle } from '../../hooks/core/useGridFillHandle';
 import { useGridSpanning } from '../../hooks/features/useGridSpanning';
 import { useGridSpanRowWindow, useGridSpanColumnWindow } from '../../hooks/features/useGridSpanRenderWindow';
 import { useColumnGroupReorderGuard } from '../../hooks/features/useColumnGroupReorderGuard';
@@ -54,7 +52,6 @@ import { isSyntheticRowId } from '../../utils/syntheticRows';
 import { useStableColumns } from '../../hooks/core/useStableColumns';
 import { useGridAggregationApi } from '../../hooks/core/useGridAggregationApi';
 import { useGridCellSelection } from '../../hooks/core/useGridCellSelection';
-import { useGridCellSelectionApi } from '../../hooks/core/useGridCellSelectionApi';
 import { GridCellSelectionStatsArea } from '../CellSelectionStats/GridCellSelectionStatsArea';
 import { useGridSortHandlers, useGridColumnMenuHandlers } from '../../hooks/core/useGridHeaderHandlers';
 import { useGridKeyboardMode, useGridPointerFocusHandlers } from '../../hooks/core/useGridFocusHandlers';
@@ -96,14 +93,6 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         cellSelectionModel: propCellSelectionModel,
         onCellSelectionModelChange,
         showCellSelectionStats = false,
-        disableClipboardPaste = false,
-        disableRangeClear = false,
-        onClipboardPaste,
-        onBeforeClipboardPaste,
-        undoRedo = false,
-        disableFillHandle = false,
-        onFill,
-        onHistoryChange,
         rowSelectionModel: propRowSelectionModel,
         onRowSelectionModelChange: propOnRowSelectionModelChange,
         onRowClick,
@@ -605,70 +594,23 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const { handleCellClick, handleHeaderClick } = useGridPointerFocusHandlers<R>({
         ensureGridFocus, setKeyboardMode, setFocusedCell, getRowId: getRowIdOf, onCellClick,
     });
-    // Keeps the range anchor and the focused cell together; installs the cell selection API.
-    useGridCellSelectionApi({
-        apiRef,
+    // Steps 36a–36d: the cell selection API, paste and range clear, undo/redo, the fill handle.
+    const fillHandle = useGridRangeEditing<R>({
+        props, apiRef, containerRef, viewportRef,
         selection: cellSelection,
         model: controlledState.cellSelectionModel,
         getPendingModel: controlledState.getPendingCellSelectionModel,
-        focusedCell,
-        setFocusedCell,
-        containerRef,
-    });
-
-    // Ctrl/Cmd+V and Delete on a range (cellSelection); apiRef.pasteText.
-    useGridClipboardPaste<R>({
-        apiRef, containerRef, viewportRef,
-        selection: cellSelection,
-        disableClipboardPaste, disableRangeClear,
-        focusedCell,
-        allRenderableRows,
+        focusedCell, setFocusedCell, allRenderableRows,
         getRowId: getRowIdOf,
         navigationColumns: navigationColumns as unknown as GridColDef<R>[],
-        isCellEditable,
-        rowMetaMap,
+        columnIndexMap, isCellEditable, rowMetaMap,
         getSpanOrigin: spanning.getSpanOrigin,
         isEditing: editingHandlers.editingCell !== null,
         batchEdit,
-        onClipboardPaste,
-        onBeforeClipboardPaste,
-    });
-
-    // Undo / redo (undoRedo): history of committed edits, keys and apiRef methods.
-    useGridUndoRedo<R>({
-        apiRef,
-        enabled: Boolean(undoRedo),
-        limit: (typeof undoRedo === 'object' && undoRedo.limit) || UNDO_HISTORY_LIMIT,
-        onHistoryChange,
         channel: editCommitChannel,
-        batchEdit,
-        isEditing: editingHandlers.editingCell !== null,
-        containerRef, viewportRef,
-        selection: cellSelection,
-        setFocusedCell,
-        allRenderableRows,
-        getRowId: getRowIdOf,
-        navigationColumns: navigationColumns as unknown as GridColDef<R>[],
         layout,
         rowHeight: effectiveRowHeight,
         pinnedTopRowCount: pinnedTopRows.length,
-    });
-
-    // Fill handle (cellSelection): drag the range's corner, Ctrl/Cmd+D and Ctrl/Cmd+R.
-    const fillHandle = useGridFillHandle<R>({
-        containerRef, viewportRef,
-        selection: cellSelection,
-        disableFillHandle,
-        isEditing: editingHandlers.editingCell !== null,
-        allRenderableRows,
-        getRowId: getRowIdOf,
-        navigationColumns: navigationColumns as unknown as GridColDef<R>[],
-        columnIndexMap,
-        isCellEditable,
-        rowMetaMap,
-        getSpanOrigin: spanning.getSpanOrigin,
-        batchEdit,
-        onFill,
     });
 
     const { handleHideColumn, handlePinColumn } = useGridColumnMenuHandlers({
