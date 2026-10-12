@@ -75,12 +75,13 @@ export function getFormattedValue<R extends GridRowModel>(
 ): string | undefined {
     const formatter = colDef?.valueFormatter;
     if (!formatter) return undefined;
-    return callSafely(
-        () => formatter({ value, row, field }),
-        undefined,
-        `valueFormatter:${field}`,
-        `valueFormatter for column "${field}" threw; the value is shown unformatted`,
-    );
+    // callSafely inlined: this runs for every cell of the quick filter's first search.
+    try {
+        return formatter({ value, row, field });
+    } catch (error) {
+        warnCallbackFailure(`valueFormatter:${field}`, `valueFormatter for column "${field}" threw; the value is shown unformatted`, error);
+        return undefined;
+    }
 }
 
 /**

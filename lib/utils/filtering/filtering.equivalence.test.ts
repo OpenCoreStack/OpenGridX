@@ -130,3 +130,28 @@ describe('plain columns read cells exactly as columns with a valueGetter', () =>
         }
     });
 });
+
+describe('quick filter after the rows change', () => {
+    it('a new rows array with replaced, inserted and removed rows searches the current rows', () => {
+        const rows = makeRows(600, 21);
+        const lookup = buildColumnLookup(COLUMNS);
+        const model = { items: [], quickFilterValues: ['ab'] };
+        filterRows(rows, model, lookup);
+        const edited = [...rows];
+        edited[3] = { ...edited[3], a: 'zzab' };
+        edited[10] = { ...edited[10], a: 'none' };
+        edited.splice(20, 0, { id: 9999, a: 'xab', b: 1, c: true, d: new Date(2024, 0, 2), e: '' });
+        edited.splice(500, 5);
+        for (const current of [edited, rows, edited]) {
+            expect(filterRows(current, model, lookup).map(r => r.id)).toEqual(refQuickFilter(current, ['ab'], COLUMNS).map(r => r.id));
+        }
+    });
+
+    it('quick filter combined with items', () => {
+        const rows = makeRows(600, 22);
+        const lookup = buildColumnLookup(COLUMNS);
+        const items: GridFilterItem[] = [{ field: 'c', operator: 'is', value: 'true' }];
+        const expected = refQuickFilter(rows, ['a'], COLUMNS).filter(r => r.c === true).map(r => r.id);
+        expect(filterRows(rows, { items, quickFilterValues: ['a'] }, lookup).map(r => r.id)).toEqual(expected);
+    });
+});

@@ -238,21 +238,9 @@ function getQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | unde
 
 // Search texts per column lookup and row object. The grid keeps one lookup while the columns and
 // hidden columns stay the same, so typing in the quick filter reads every cell once, not per keystroke.
-//
-// A row's texts are stored joined by TEXT_SEPARATOR, one string per row instead of an array of a
-// dozen, so the first keystroke allocates less and a term is one `includes` per row. A term that
-// contains the separator could match across two texts, so such terms search the split texts; a
-// row whose own text contains the separator keeps its array.
-const TEXT_SEPARATOR = '\u0000';
-type QuickFilterTexts = string | string[];
-const quickFilterTextCache = new WeakMap<GridColumnLookup, WeakMap<GridRowModel, QuickFilterTexts>>();
+const quickFilterTextCache = new WeakMap<GridColumnLookup, WeakMap<GridRowModel, string[]>>();
 
-function packQuickFilterTexts(texts: string[]): QuickFilterTexts {
-  for (const text of texts) if (text.includes(TEXT_SEPARATOR)) return texts;
-  return texts.join(TEXT_SEPARATOR);
-}
-
-function getCachedQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | undefined): QuickFilterTexts {
+function getCachedQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | undefined): string[] {
   if (!columns) return getQuickFilterTexts(row, columns);
   let byRow = quickFilterTextCache.get(columns);
   if (!byRow) {
@@ -260,33 +248,63 @@ function getCachedQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup 
     quickFilterTextCache.set(columns, byRow);
   }
   let texts = byRow.get(row);
-  if (texts === undefined) {
-    texts = packQuickFilterTexts(getQuickFilterTexts(row, columns));
+  if (!texts) {
+    texts = getQuickFilterTexts(row, columns);
     byRow.set(row, texts);
   }
   return texts;
 }
 
-function textsInclude(texts: QuickFilterTexts, term: string, termHasSeparator: boolean): boolean {
-  if (typeof texts !== 'string') return texts.some(text => text.includes(term));
-  if (!termHasSeparator) return texts.includes(term);
-  // An empty joined string is no texts at all, not one empty text.
-  return texts !== '' && texts.split(TEXT_SEPARATOR).some(text => text.includes(term));
+function quickFilterTerms(values: readonly string[] | undefined): string[] {
+  return (values ?? [])
+    .map(value => String(value ?? '').trim().toLowerCase())
+    .filter(term => term !== '');
+}
+
+function textsMatchTerms(texts: readonly string[], terms: readonly string[]): boolean {
+  // Plain loops: this runs once per row on every keystroke.
+  for (let t = 0; t < terms.length; t++) {
+    const term = terms[t];
+    let found = false;
+    for (let i = 0; i < texts.length; i++) {
+      if (texts[i].includes(term)) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) return false;
+  }
+  return true;
 }
 
 function compileQuickFilter(values: readonly string[] | undefined, columns: GridColumnLookup | undefined): RowPredicate | null {
-  const terms = (values ?? [])
-    .map(value => String(value ?? '').trim().toLowerCase())
-    .filter(term => term !== '');
+  const terms = quickFilterTerms(values);
   if (terms.length === 0) return null;
-  const separated = terms.map(term => term.includes(TEXT_SEPARATOR));
-  return (row) => {
-    const texts = getCachedQuickFilterTexts(row, columns);
-    for (let t = 0; t < terms.length; t++) {
-      if (!textsInclude(texts, terms[t], separated[t])) return false;
-    }
-    return true;
-  };
+  return (row) => textsMatchTerms(getCachedQuickFilterTexts(row, columns), terms);
+}
+
+// filterRows also keeps the texts of the last rows array it searched, by position, per column
+// lookup. Looking a text up by index is much cheaper than one WeakMap entry per row, and after an
+// edit (a new array with mostly the same row objects at the same positions) only the rows whose
+// object changed are read again.
+interface QuickFilterArrayTexts {
+  rows: readonly GridRowModel[];
+  texts: string[][];
+}
+const quickFilterArrayCache = new WeakMap<GridColumnLookup, QuickFilterArrayTexts>();
+
+function getQuickFilterTextsByIndex(rows: readonly GridRowModel[], columns: GridColumnLookup): string[][] {
+  const previous = quickFilterArrayCache.get(columns);
+  if (previous && previous.rows === rows) return previous.texts;
+  const texts = new Array<string[]>(rows.length);
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    texts[i] = previous && i < previous.rows.length && previous.rows[i] === row
+      ? previous.texts[i]
+      : getQuickFilterTexts(row, columns);
+  }
+  quickFilterArrayCache.set(columns, { rows, texts });
+  return texts;
 }
 
 /**
@@ -356,6 +374,17 @@ export function filterRows<R extends GridRowModel>(
   filterModel: GridFilterModel,
   columns?: GridColumnLookup
 ): R[] {
+  const terms = columns && filterModel ? quickFilterTerms(filterModel.quickFilterValues) : [];
+  if (columns && terms.length > 0) {
+    // The same result as createRowFilter's predicate: the quick filter and then the items.
+    const itemsPredicate = compileGroup(filterModel.items ?? [], filterModel.logicOperator ?? 'and', { columns, warned: new Set() });
+    const texts = getQuickFilterTextsByIndex(rows, columns);
+    const result: R[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      if (textsMatchTerms(texts[i], terms) && (!itemsPredicate || itemsPredicate(rows[i]))) result.push(rows[i]);
+    }
+    return result;
+  }
   const predicate = createRowFilter(filterModel, columns);
   if (!predicate) return rows;
   return rows.filter(row => predicate(row));
