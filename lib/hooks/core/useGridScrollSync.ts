@@ -123,6 +123,26 @@ export function useGridScrollSync(params: UseGridScrollSyncParams): UseGridScrol
         checkRowsScrollEnd(el);
     }, [rowCount, autoHeight, checkRowsScrollEnd]);
 
+    // Switching `dir` on the grid or an ancestor moves the content to the other side, and browsers
+    // reset (Firefox without a scroll event) or keep the scroll position as they please. Re-read it
+    // so the column window matches what the viewport shows.
+    useEffect(() => {
+        const doc = elementRef.current?.ownerDocument ?? (typeof document === 'undefined' ? null : document);
+        if (!doc || typeof MutationObserver === 'undefined') return;
+        const observer = new MutationObserver(() => {
+            const target = elementRef.current;
+            if (!target) return;
+            const actual = { scrollTop: target.scrollTop, scrollLeft: getScrollStart(target) };
+            const pending = pendingRef.current;
+            if (actual.scrollTop === pending.scrollTop && actual.scrollLeft === pending.scrollLeft) return;
+            pendingRef.current = { ...pending, ...actual };
+            prevRef.current = { ...prevRef.current, ...actual };
+            setScrollState(prev => ({ ...prev, ...actual }));
+        });
+        observer.observe(doc.documentElement, { attributes: true, attributeFilter: ['dir'], subtree: true });
+        return () => observer.disconnect();
+    }, []);
+
     const attachViewport = useCallback((element: HTMLDivElement | null) => {
         elementRef.current = element;
         if (!element) return;
