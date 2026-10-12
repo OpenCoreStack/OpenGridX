@@ -85,9 +85,64 @@ export function computeAggregations<R extends GridRowModel>(
             console.warn(`[${warnPrefix}] Unknown aggregation function: "${fnName}"`);
             continue;
         }
-        result[field] = fn(rows.map((row) => getCellValue(row, field, colDef as GridColDef | undefined)));
+        result[field] = Object.prototype.hasOwnProperty.call(AGGREGATION_FUNCTIONS, fnName)
+            ? aggregateRows(rows, field, colDef as GridColDef | undefined, fnName as BuiltInAggFn)
+            : fn(rows.map((row) => getCellValue(row, field, colDef as GridColDef | undefined)));
     }
     return result;
+}
+
+/**
+ * AGGREGATION_FUNCTIONS[fnName] over the cells of `field`, read row by row instead of through
+ * intermediate value arrays (group rows and the footer aggregate every row). Same additions in the
+ * same order, so the results are identical.
+ */
+function aggregateRows(rows: readonly GridRowModel[], field: string, colDef: GridColDef | undefined, fnName: BuiltInAggFn): unknown {
+    switch (fnName) {
+        case 'sum':
+        case 'avg': {
+            let sum = 0;
+            let count = 0;
+            for (const row of rows) {
+                const n = toNumber(getCellValue(row, field, colDef));
+                if (n === null) continue;
+                sum += n;
+                count++;
+            }
+            if (fnName === 'sum') return sum;
+            return count ? sum / count : null;
+        }
+        case 'count': {
+            let count = 0;
+            for (const row of rows) if (!isEmptyAggregateValue(getCellValue(row, field, colDef))) count++;
+            return count;
+        }
+        case 'min':
+        case 'max': {
+            const isMin = fnName === 'min';
+            let best: number | null = null;
+            let bestValue: unknown = null;
+            for (const row of rows) {
+                const v = getCellValue(row, field, colDef);
+                const n = toNumber(v);
+                if (n === null) continue;
+                if (best === null || (isMin ? n < best : n > best)) {
+                    best = n;
+                    bestValue = v;
+                }
+            }
+            if (best === null) return null;
+            return bestValue instanceof Date ? bestValue : best;
+        }
+        case 'unique': {
+            const seen = new Set<unknown>();
+            for (const row of rows) {
+                const v = getCellValue(row, field, colDef);
+                if (!isEmptyAggregateValue(v)) seen.add(v);
+            }
+            return seen.size;
+        }
+    }
 }
 
 /** Default display string for an aggregate: `—` when missing, locale-grouped numbers, avg to 2 decimals. */
