@@ -238,9 +238,21 @@ function getQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | unde
 
 // Search texts per column lookup and row object. The grid keeps one lookup while the columns and
 // hidden columns stay the same, so typing in the quick filter reads every cell once, not per keystroke.
-const quickFilterTextCache = new WeakMap<GridColumnLookup, WeakMap<GridRowModel, string[]>>();
+//
+// A row's texts are stored joined by TEXT_SEPARATOR, one string per row instead of an array of a
+// dozen, so the first keystroke allocates less and a term is one `includes` per row. A term that
+// contains the separator could match across two texts, so such terms search the split texts; a
+// row whose own text contains the separator keeps its array.
+const TEXT_SEPARATOR = '\u0000';
+type QuickFilterTexts = string | string[];
+const quickFilterTextCache = new WeakMap<GridColumnLookup, WeakMap<GridRowModel, QuickFilterTexts>>();
 
-function getCachedQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | undefined): string[] {
+function packQuickFilterTexts(texts: string[]): QuickFilterTexts {
+  for (const text of texts) if (text.includes(TEXT_SEPARATOR)) return texts;
+  return texts.join(TEXT_SEPARATOR);
+}
+
+function getCachedQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | undefined): QuickFilterTexts {
   if (!columns) return getQuickFilterTexts(row, columns);
   let byRow = quickFilterTextCache.get(columns);
   if (!byRow) {
@@ -248,11 +260,18 @@ function getCachedQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup 
     quickFilterTextCache.set(columns, byRow);
   }
   let texts = byRow.get(row);
-  if (!texts) {
-    texts = getQuickFilterTexts(row, columns);
+  if (texts === undefined) {
+    texts = packQuickFilterTexts(getQuickFilterTexts(row, columns));
     byRow.set(row, texts);
   }
   return texts;
+}
+
+function textsInclude(texts: QuickFilterTexts, term: string, termHasSeparator: boolean): boolean {
+  if (typeof texts !== 'string') return texts.some(text => text.includes(term));
+  if (!termHasSeparator) return texts.includes(term);
+  // An empty joined string is no texts at all, not one empty text.
+  return texts !== '' && texts.split(TEXT_SEPARATOR).some(text => text.includes(term));
 }
 
 function compileQuickFilter(values: readonly string[] | undefined, columns: GridColumnLookup | undefined): RowPredicate | null {
@@ -260,9 +279,13 @@ function compileQuickFilter(values: readonly string[] | undefined, columns: Grid
     .map(value => String(value ?? '').trim().toLowerCase())
     .filter(term => term !== '');
   if (terms.length === 0) return null;
+  const separated = terms.map(term => term.includes(TEXT_SEPARATOR));
   return (row) => {
     const texts = getCachedQuickFilterTexts(row, columns);
-    return terms.every(term => texts.some(text => text.includes(term)));
+    for (let t = 0; t < terms.length; t++) {
+      if (!textsInclude(texts, terms[t], separated[t])) return false;
+    }
+    return true;
   };
 }
 
