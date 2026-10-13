@@ -3,7 +3,7 @@ import type { GridRowId, GridRowMeta, GridRowModel } from '../../types';
 
 export interface UseGridLiveRowSelectionParams {
     /** The selection model (controlled prop or internal state). */
-    selectedRowIds: Set<GridRowId>;
+    selectedRowIds: ReadonlySet<GridRowId>;
     /** The row store: ids of the rows the grid holds. */
     rowsLookup: ReadonlyMap<GridRowId, GridRowModel>;
     /** Hierarchy rows the grid made (group rows, generated tree parents); their ids are kept. */
@@ -32,7 +32,7 @@ const idsKey = (ids: Iterable<GridRowId>): string =>
  * own state that re-adds them) is not notified again and cannot loop, and StrictMode's re-run of
  * the effect does not report twice.
  */
-export function useGridLiveRowSelection(params: UseGridLiveRowSelectionParams): Set<GridRowId> {
+export function useGridLiveRowSelection(params: UseGridLiveRowSelectionParams): ReadonlySet<GridRowId> {
     const { selectedRowIds, rowsLookup, rowMetaMap, enabled, onSelectionModelChange } = params;
 
     const liveRowIds = useMemo(() => {

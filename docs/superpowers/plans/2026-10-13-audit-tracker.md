@@ -77,3 +77,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — R5 and R6 done (all engines green, compiler baseline). Next: R4 casts.
 - 2026-10-13 — R4 done (43 → 15 casts). All R items done.
 - 2026-10-13 — Insight follow-ups as CI guards: check:versions, check:compiler allowlist (verified it fails on a reintroduced PreserveManualMemo), ESLint no-explicit-any on (demo's 9 `any` typed), no `as unknown as` outside boundary files (verified with a probe).
+- 2026-10-13 — Select-all at 1M: profiled (live check 75, all-selected count 73, Set from model 62, next model 55, GC 48 ms); no API change needed after all: set built once and reused (WeakMap by model array), select-all marks the set as containing the selectable ids. ~260 → ~130 ms. Live check (54 ms) left.

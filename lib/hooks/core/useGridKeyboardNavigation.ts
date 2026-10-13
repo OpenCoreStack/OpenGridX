@@ -55,7 +55,7 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
     /** Focusable columns in render order: system columns first, then the visible data columns. */
     navigationColumns: ReadonlyArray<NavigationColumn<R>>;
     checkboxSelection: boolean;
-    selectedRowIds: Set<GridRowId>;
+    selectedRowIds: ReadonlySet<GridRowId>;
     handleSelectionChange: (id: GridRowId, selected: boolean) => void;
     handleDetailPanelToggle: (id: GridRowId) => void;
     editingHandlers: {

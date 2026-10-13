@@ -14,6 +14,7 @@ import type {
 } from '../../types';
 import type { GridInitialState, GridDensityState } from '../../state/types';
 import { EMPTY_ROW_GROUPING_MODEL } from '../../utils/gridModes';
+import { selectionSetOf } from '../../utils/selectionSets';
 
 export type GridDensity = GridDensityState['density'];
 
@@ -96,7 +97,7 @@ export interface UseGridControlledStateReturn {
 
     // selection
     rowSelectionModel: GridRowId[];
-    selectedRowIds: Set<GridRowId>;
+    selectedRowIds: ReadonlySet<GridRowId>;
     isSelectionControlled: boolean;
     setInternalRowSelectionModel: React.Dispatch<React.SetStateAction<GridRowId[]>>;
     /** Sets the internal model when uncontrolled and fires onRowSelectionModelChange. */
@@ -267,7 +268,7 @@ export function useGridControlledState(params: UseGridControlledStateParams): Us
     const isSelectionControlled = propRowSelectionModel !== undefined;
     const [internalRowSelectionModel, setInternalRowSelectionModel] = useState<GridRowId[]>([]);
     const rowSelectionModel = isSelectionControlled ? propRowSelectionModel! : internalRowSelectionModel;
-    const selectedRowIds = useMemo(() => new Set(rowSelectionModel), [rowSelectionModel]);
+    const selectedRowIds = useMemo(() => selectionSetOf(rowSelectionModel), [rowSelectionModel]);
 
     // Cleared on every commit: the rendered model is current again (a controlled parent may
     // also have rejected the change).

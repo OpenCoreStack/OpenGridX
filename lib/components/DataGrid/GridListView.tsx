@@ -35,7 +35,7 @@ export interface GridListViewProps<R extends GridRowModel> {
     /** The page actually shown (the requested page clamped to the last page). */
     currentPage: number;
     pageSizeOptions: number[];
-    selectedRowIds: Set<GridRowId>;
+    selectedRowIds: ReadonlySet<GridRowId>;
     listViewColumn: GridListViewColDef<R>;
     /** Grid columns by field; a list field that names one gets its valueGetter / valueFormatter. */
     columnsByField: ReadonlyMap<string, GridColDef>;

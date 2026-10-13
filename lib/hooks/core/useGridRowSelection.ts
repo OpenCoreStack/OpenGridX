@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import type { GridRowId } from '../../types';
+import { isKnownToContainAll, markContainsAll, rememberSelectionSet } from '../../utils/selectionSets';
 
 // ── Pure selection transitions (shared by the UI handlers and the imperative API) ──────────
 
@@ -15,7 +16,12 @@ export function nextSelectionForRows(
     }
     const next = new Set(current);
     ids.forEach(id => (isSelected ? next.add(id) : next.delete(id)));
-    return Array.from(next);
+    const model = Array.from(next);
+    // The model's set is `next`: reused when this array comes back as rowSelectionModel, and known to
+    // contain `ids` when they were selected (select-all then skips counting them again).
+    rememberSelectionSet(model, next);
+    if (isSelected) markContainsAll(next, ids);
+    return model;
 }
 
 /** A row click toggles the row; with `single` it replaces the selection instead of adding to it. */
@@ -30,7 +36,7 @@ export function isSameSelection(current: ReadonlySet<GridRowId>, next: readonly 
 }
 
 export interface UseGridRowSelectionParams {
-    selectedRowIds: Set<GridRowId>;
+    selectedRowIds: ReadonlySet<GridRowId>;
     /** Applies a new model: internal state when uncontrolled, plus onRowSelectionModelChange. */
     onSelectionModelChange: (model: GridRowId[]) => void;
     disableMultipleRowSelection: boolean;
@@ -75,6 +81,9 @@ export function useGridRowSelection(params: UseGridRowSelectionParams): UseGridR
     }, [commit, selectedRowIds, selectableRowIds]);
 
     const { allSelected, someSelected } = useMemo(() => {
+        if (selectableRowIds.length > 0 && isKnownToContainAll(selectedRowIds, selectableRowIds)) {
+            return { allSelected: true, someSelected: false };
+        }
         let selectedCount = 0;
         for (const id of selectableRowIds) if (selectedRowIds.has(id)) selectedCount++;
         const all = selectableRowIds.length > 0 && selectedCount === selectableRowIds.length;

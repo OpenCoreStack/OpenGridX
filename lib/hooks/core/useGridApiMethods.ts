@@ -29,7 +29,7 @@ export interface UseGridApiMethodsParams {
     paginationModel: GridPaginationModel;
     onPaginationModelChange: (model: GridPaginationModel) => void;
 
-    selectedRowIds: Set<GridRowId>;
+    selectedRowIds: ReadonlySet<GridRowId>;
     /**
      * A selection change made since the last commit (see useGridControlledState), or null. It
      * wins over `selectedRowIds`, so the API is current inside onRowSelectionModelChange.
@@ -103,7 +103,7 @@ export function useGridApiMethods(params: UseGridApiMethodsParams): void {
         api.setPage = (page) => setPaginationModel({ ...latest().paginationModel, page });
         api.setPageSize = (pageSize) => setPaginationModel({ ...latest().paginationModel, pageSize, page: 0 });
 
-        const currentSelection = (): Set<GridRowId> => {
+        const currentSelection = (): ReadonlySet<GridRowId> => {
             const pending = latest().getPendingRowSelectionModel?.();
             return pending ? new Set(pending) : latest().selectedRowIds;
         };
