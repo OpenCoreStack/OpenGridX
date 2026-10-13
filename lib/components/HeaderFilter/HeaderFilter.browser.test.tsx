@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup, act } from '@testing-library/react';
-import { userEvent } from 'vitest/browser';
+import { commands, userEvent } from 'vitest/browser';
 import { useLayoutEffect } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { DataGrid, useGridApiRef } from '../../index';
@@ -202,7 +202,13 @@ describe('header filter row (real browser)', () => {
         const index = Number(rowsBelowHeader[0].getAttribute('data-rowindex'));
         const middle = rowsBelowHeader[Math.floor(rowsBelowHeader.length / 2)];
         const steps = Number(middle.getAttribute('data-rowindex')) - index + 1;
-        await userEvent.click(middle.querySelector<HTMLElement>('[data-field="name"]')!); // unique text: the click locator is built from it
+        // Click at the cell's own coordinates: userEvent.click scrolls its target into view first, which
+        // re-renders the virtualized rows and can detach the cell mid-click (seen in Firefox).
+        const middleIndex = middle.getAttribute('data-rowindex');
+        const { width, height } = rectOf(middle.querySelector('[data-field="name"]')!);
+        await commands.pointerMoveTo(`.ogx__rows [data-rowindex="${middleIndex}"] [data-field="name"]`, width / 2, height / 2);
+        await commands.pointerDown();
+        await commands.pointerUp();
         for (let i = 0; i < steps; i++) await userEvent.keyboard('{ArrowUp}');
         await settle();
         expect((document.activeElement as HTMLElement).closest('[role="row"]')?.getAttribute('data-rowindex')).toBe(String(index - 1));

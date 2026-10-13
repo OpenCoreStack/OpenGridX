@@ -17,6 +17,10 @@
 - **Sidebar reorganised by what developers look for first**: *Getting started* (with Basic Usage and the API reference), *Sorting & filtering*, *Editing*, *Pagination & server data*, *Export & clipboard*, *Grouping & aggregation*, *Selection & spreadsheet*, *Layout*, *Theming & customization*, *AI*, *Advanced*, *Tutorials*, then *Resources* (licensing, support, migration guides). Page URLs are unchanged. Text pages are marked `doc` (full width) instead of relying on their category.
 - The header shows the package version from `package.json` (it was fixed at v3.7.0).
 
+### Internal
+
+- Four tests that failed now and then under load are steadier: the row and column drag-reorder browser test releases the mouse before and after each test and waits for layout; the header-filter scroll test clicks at the cell's coordinates (Playwright's click scrolled the cell into view, which re-rendered the virtualized rows and detached it); the PDF heartbeat test takes the better of two runs; the tree-data linear-time test interleaves its two sizes over five rounds.
+
 ---
 
 ## [3.8.1] — 2026-10-13

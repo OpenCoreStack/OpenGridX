@@ -66,3 +66,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — CI on `release/3.8.1` (run 38372542437): first attempt failed on the Firefox row drag-reorder browser test (drop never fired; passes 4/4 locally and in 3.8.0 CI); re-run of the failed job passed. Treated as a flaky Firefox drag on Linux.
 - 2026-10-13 — Released 3.8.1 (with `llms.txt` brought up to date).
 - 2026-10-13 — Branch `release/3.9.0`: 9 theme keys + Theme Builder controls (user request), sidebar reorganised by developer priority (user request), demo version label from package.json.
+- 2026-10-13 — Flaky tests fixed (reorder, header-filter scroll, PDF heartbeat, tree-data ratio). R7 (localeText for ~120 strings) delegated to an agent in a worktree; P8 waits for it (same files).
