@@ -41,7 +41,7 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     hasDetailPanel: boolean;
     rowReordering: boolean;
     rowHeight: number;
-    selectedRowIds: Set<GridRowId>;
+    selectedRowIds: ReadonlySet<GridRowId>;
     onRowClick: (params: GridRowParams<R>) => void;
     onRowDoubleClick?: (params: GridRowParams<R>) => void;
     onCellClick: (params: GridCellParams<R>) => void;

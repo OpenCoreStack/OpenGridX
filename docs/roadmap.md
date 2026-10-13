@@ -93,16 +93,16 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 | **3.8.1** ✅ | shipped 13 Oct | **Grid buttons keep their own styles** (AI panel, toolbar active states) | Exact `bigint` sort; stricter number text; dead-code cleanup; every export documented |
 | **3.9.0** ✅ | shipped 13 Oct | **`localeText` for every UI string** (~200 keys) | 9 theme keys + Theme Builder controls; rows stay memoised through selection and editing; demo sidebar by priority |
 | **3.9.1** ✅ | shipped 13 Oct | **npm package no longer ships 1.6 MB of test baselines** | `check:package` guard in CI; version badges read `package.json`; docs brought up to date |
-| 3.10.0 | open | AI change chips translatable | Backlog work below |
+| **3.10.0** ✅ | shipped 13 Oct | **Backlog cleared**: refactors (R4–R6), CI guards, select-all ~2× faster | AI change chips translatable; demo syntax highlighting |
 | Freeze | 19 Dec – 5 Jan | Bug fixes only | — |
 
-### Now: backlog first (feature hold since 13 Oct)
+### Now: backlog first (feature hold since 13 Oct; backlog cleared in 3.10)
 
 New features (the *Next* list below) wait until the open fixes, refactors and performance work are done. Tracked in [`superpowers/plans/2026-10-13-audit-tracker.md`](superpowers/plans/2026-10-13-audit-tracker.md):
 
-*   **Refactors** (no behaviour change): about 40 `as unknown as` casts (R4), files over 600 lines such as `GridToolbar.tsx` (R5), hooks with very wide parameter lists such as keyboard navigation (R6).
-*   **Performance**: the time-sliced filter / sort pipeline (held: 1.5–2× slower in total, needs to be within ~20 %); select-all at 1M rows (~270 ms, bounded by the array `rowSelectionModel`).
-*   **Demo**: syntax highlighting in the source viewer.
+*   ✅ **Refactors** (no behaviour change, 3.10): `as unknown as` casts 43 → 15 (R4), files over 600 lines split (R5), keydown handling as a typed, tested function (R6); CI guards against regressions (`check:compiler`, `check:versions`, ESLint `no-explicit-any` and no new `as unknown as`).
+*   **Performance**: ✅ select-all at 1M rows ~260 → ~130 ms (3.10, no API change). ❌ The time-sliced filter / sort pipeline is closed: it was 1.5–2× slower in total (target ≤ 20 %) and the remaining 1M-row sort pause is better served by a `dataSource`; see the [proposal's status](superpowers/specs/2026-10-12-nonblocking-pipeline-proposal.md).
+*   ✅ **Demo**: syntax highlighting in the source viewer (3.10).
 *   **Bundle size (4.0)**: an app using only `DataGrid` ships 87 KB gzipped; opt-in [feature modules](superpowers/specs/2026-10-13-feature-modules-proposal.md) would save ~20 KB. Breaking, so planned for 4.0.
 
 ### Across the quarter

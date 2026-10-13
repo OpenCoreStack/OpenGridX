@@ -15,6 +15,7 @@ import type {
     GridAggregationModel,
 } from '../../types';
 import type { GridInitialState } from '../../state/types';
+import { untypedColumn, untypedColumns } from '../../utils/untypedColumns';
 
 interface HierarchyHandlers {
     toggleExpansion: (id: GridRowId) => void;
@@ -334,7 +335,7 @@ export function useGridColumns<R extends GridRowModel>(
     }, []);
 
     useEffect(() => {
-        setColumns(activeColumns as unknown as GridColDef[]);
+        setColumns(untypedColumns(activeColumns));
     }, [activeColumns, setColumns]);
 
     // ── Ordered / visible columns ─────────────────────────────────────────────
@@ -370,7 +371,7 @@ export function useGridColumns<R extends GridRowModel>(
         const [movedField] = newOrder.splice(oldIndex, 1);
         newOrder.splice(targetIndex, 0, movedField);
         commitColumnOrder(newOrder, {
-            column: orderedColumns[oldIndex] as unknown as GridColDef,
+            column: untypedColumn(orderedColumns[oldIndex]),
             oldIndex,
             targetIndex,
         });

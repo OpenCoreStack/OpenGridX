@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { GridColDef, GridRowModel } from '../../types';
 import { buildColumnLookup, type GridColumnLookup } from '../../utils/columnLookup';
+import { untypedColumns } from '../../utils/untypedColumns';
 
 const SEPARATOR = '\u0000';
 
@@ -25,6 +26,6 @@ export function useGridColumnLookup<R extends GridRowModel>(
         if (hiddenFieldsKey) {
             for (const field of hiddenFieldsKey.split(SEPARATOR)) hidden[field] = false;
         }
-        return buildColumnLookup(columns as unknown as GridColDef[], hidden);
+        return buildColumnLookup(untypedColumns(columns), hidden);
     }, [columns, hiddenFieldsKey]);
 }

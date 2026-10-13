@@ -50,6 +50,9 @@ jobs:
       - name: Package contents and size budget
         run: npm run check:package
 
+      - name: Versions agree (llms.txt, CLAUDE.md, CHANGELOG vs package.json)
+        run: npm run check:versions
+
       - name: Package smoke suite (packed tarball in React 18 and 19 apps)
         run: npm run test:smoke -- --skip-lib
 

@@ -1,6 +1,6 @@
 {
   "name": "@opencorestack/opengridx",
-  "version": "3.9.1",
+  "version": "3.10.0",
   "description": "OpenGridX: High-performance React data infrastructure. Unlock advanced Row Grouping, Excel Export, and Column Pinning without the usual \"Pro\" gatekeeping. Built for speed, scale, and complete architectural freedom. Fully open, virtualization-ready, and feature-complete.",
   "type": "module",
   "main": "./dist/opengridx.umd.js",
@@ -67,7 +67,8 @@
     "prepublishOnly": "npm run build:lib",
     "wiki:build": "node scripts/build-wiki.mjs",
     "check:compiler": "node scripts/check-react-compiler.mjs",
-    "check:package": "node scripts/check-package.mjs"
+    "check:package": "node scripts/check-package.mjs",
+    "check:versions": "node scripts/check-versions.mjs"
   },
   "keywords": [
     "react",
@@ -140,6 +141,7 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "playwright": "^1.58.2",
+    "prism-react-renderer": "^2.4.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1",

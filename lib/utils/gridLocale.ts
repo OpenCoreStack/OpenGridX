@@ -1,6 +1,7 @@
 import type { GridFilterOperator, GridLocaleText } from '../types';
 import { HEADER_FILTER_OPERATOR_LABELS } from './headerFilters';
 import { defaultCellSelectionAnnouncement } from './cellSelection';
+import { AI_CHIP_TEXTS_EN, type GridAiChipTexts } from './aiAssistant';
 
 /** `localeText` keys that hold a lookup record; the resolved locale has a function for each. */
 type GridLocaleRecordKey = 'headerFilterOperators' | 'filterPanelOperators' | 'toolbarAggregationFunctions' | 'pivotAggregationFunctions';
@@ -197,6 +198,17 @@ export const GRID_LOCALE_EN: GridLocaleScalars = {
     aiAssistantNotValidated: 'The reply was not validated',
     aiAssistantFailed: m => `The assistant could not answer: ${m}`,
     aiAssistantUnknownError: 'Unknown error',
+    aiAssistantChipSearch: AI_CHIP_TEXTS_EN.search,
+    aiAssistantChipNoFilters: AI_CHIP_TEXTS_EN.noFilters,
+    aiAssistantChipSort: AI_CHIP_TEXTS_EN.sort,
+    aiAssistantChipNoSorting: AI_CHIP_TEXTS_EN.noSorting,
+    aiAssistantChipGroup: AI_CHIP_TEXTS_EN.group,
+    aiAssistantChipNoGrouping: AI_CHIP_TEXTS_EN.noGrouping,
+    aiAssistantChipSummary: AI_CHIP_TEXTS_EN.summary,
+    aiAssistantChipNoSummaries: AI_CHIP_TEXTS_EN.noSummaries,
+    aiAssistantChipPivot: AI_CHIP_TEXTS_EN.pivot,
+    aiAssistantChipNoPivot: AI_CHIP_TEXTS_EN.noPivot,
+    aiAssistantChipVisibility: AI_CHIP_TEXTS_EN.visibility,
 
     paginationLabel: 'Pagination',
     paginationFirstPageLabel: 'Go to first page',
@@ -218,6 +230,24 @@ const SCALAR_KEYS = Object.keys(GRID_LOCALE_EN) as GridLocaleScalarKey[];
 function pickScalar<K extends GridLocaleScalarKey>(target: GridLocaleScalars, localeText: GridLocaleText, key: K): void {
     const value = localeText[key];
     if (value !== undefined) target[key] = value as GridLocaleScalars[K];
+}
+
+/** The AI assistant's change-chip texts out of a resolved locale. */
+export function aiChipTextsOf(locale: ResolvedGridLocale): GridAiChipTexts {
+    return {
+        operator: op => locale.filterPanelOperator(op as GridFilterOperator),
+        search: locale.aiAssistantChipSearch,
+        noFilters: locale.aiAssistantChipNoFilters,
+        sort: locale.aiAssistantChipSort,
+        noSorting: locale.aiAssistantChipNoSorting,
+        group: locale.aiAssistantChipGroup,
+        noGrouping: locale.aiAssistantChipNoGrouping,
+        summary: locale.aiAssistantChipSummary,
+        noSummaries: locale.aiAssistantChipNoSummaries,
+        pivot: locale.aiAssistantChipPivot,
+        noPivot: locale.aiAssistantChipNoPivot,
+        visibility: locale.aiAssistantChipVisibility,
+    };
 }
 
 /**

@@ -97,7 +97,7 @@ export default function LoadingStatesDemo() {
                                     loading: false,
                                     error: new Error('Failed to fetch data from the server. Please check your network connection.')
                                 }
-                            } as any}
+                            }}
                         />
                     </div>
                 </section>

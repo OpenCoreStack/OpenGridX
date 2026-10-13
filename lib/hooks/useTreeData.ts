@@ -319,7 +319,9 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
      * indent and the labels of auto-created parents): sorting by it orders auto-created parents by
      * their label, since they have no cell values of their own.
      */
-    const getVisibleRows = useCallback((options?: GridHierarchyVisibleRowsOptions): GridRowModel[] | null => {
+    // Generated parent rows (missing path ancestors) are rendered like the consumer's rows and typed as
+    // `R`, as row grouping's group rows are: the grid's documented convention for rendered rows.
+    const getVisibleRows = useCallback((options?: GridHierarchyVisibleRowsOptions): R[] | null => {
         if (!isActive) return null;
         const labelField = options?.labelField;
         const expandAll = options?.expandAll ?? false;
@@ -364,7 +366,7 @@ export function useTreeData<R extends GridRowModel>(props: UseTreeDataProps<R>) 
         };
 
         traverse(rootIds);
-        return result;
+        return result as R[];
     }, [isActive, visibility, isClientSort, sortModel, syntheticIds, treeNodes, rowLookup, columnLookup, rootIds, expandedGroupIds]);
 
     const isGroupExpanded = useCallback((id: GridRowId) => expandedGroupIds.has(id), [expandedGroupIds]);

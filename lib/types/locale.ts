@@ -364,6 +364,28 @@ export interface GridLocaleText {
     aiAssistantFailed?: (message: string) => string;
     /** Error text when a failed request has no message. Default: `"Unknown error"` @since v3.9 */
     aiAssistantUnknownError?: string;
+    /** Change chip for the quick-filter words. Default: `` (w) => `Search: ${w}` `` @since v3.10 */
+    aiAssistantChipSearch?: (words: string) => string;
+    /** Change chip when the reply cleared the filters. Default: `"No filters"` @since v3.10 */
+    aiAssistantChipNoFilters?: string;
+    /** Change chip for one sort key. Default: `` (f, d) => `Sort: ${f}, ascending|descending` `` @since v3.10 */
+    aiAssistantChipSort?: (field: string, direction: 'asc' | 'desc') => string;
+    /** Change chip when the reply cleared the sort. Default: `"No sorting"` @since v3.10 */
+    aiAssistantChipNoSorting?: string;
+    /** Change chip for one grouping field. Default: `` (f) => `Group: ${f}` `` @since v3.10 */
+    aiAssistantChipGroup?: (field: string) => string;
+    /** Change chip when the reply removed grouping. Default: `"No grouping"` @since v3.10 */
+    aiAssistantChipNoGrouping?: string;
+    /** Change chip for one summary; `fn` is the function id (`sum`, `avg`, …). Default: `` (fn, f) => `Sum: ${f}` `` (Sum, Average, Count, Min, Max, Unique) @since v3.10 */
+    aiAssistantChipSummary?: (fn: string, field: string) => string;
+    /** Change chip when the reply removed the summaries. Default: `"No summaries"` @since v3.10 */
+    aiAssistantChipNoSummaries?: string;
+    /** Change chip for the pivot; receives the column labels joined with ", ". Default: `` (f) => `Pivot: ${f}` `` @since v3.10 */
+    aiAssistantChipPivot?: (fields: string) => string;
+    /** Change chip when the reply turned the pivot off. Default: `"No pivot"` @since v3.10 */
+    aiAssistantChipNoPivot?: string;
+    /** Change chip for a column shown or hidden. Default: `` (f, v) => `Show: ${f}` `` / `` `Hide: ${f}` `` @since v3.10 */
+    aiAssistantChipVisibility?: (field: string, visible: boolean) => string;
 
     // ── Pagination (v3.9) ─────────────────────────────────────────────────────
     /** `aria-label` of the pagination bar. Default: `"Pagination"` @since v3.9 */

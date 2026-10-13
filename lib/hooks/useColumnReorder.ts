@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { GridColDef, GridRowModel, GridColumnOrderChangeParams } from '../types';
 import { COLUMN_DRAG_MIME, hasDragToken, onNativeDragEnd, setDragToken } from '../utils/dragData';
+import { untypedColumn } from '../utils/untypedColumns';
 
 export interface UseColumnReorderProps<R extends GridRowModel = GridRowModel> {
   /** Every current column, in the grid's column order. Reported indices are positions in it. */
@@ -89,7 +90,7 @@ export function useColumnReorder<R extends GridRowModel = GridRowModel>(
       if (oldIndex === -1 || targetIndex === -1 || oldIndex === targetIndex) return;
 
       onColumnOrderChange?.({
-        column: columns[oldIndex] as unknown as GridColDef,
+        column: untypedColumn(columns[oldIndex]),
         oldIndex,
         targetIndex,
       });

@@ -1,0 +1,10 @@
+.docs-code-block--highlighted {
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: ui-monospace, 'JetBrains Mono', Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  tab-size: 4;
+}

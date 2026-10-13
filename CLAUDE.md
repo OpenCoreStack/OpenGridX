@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.9.1
+- **Current version:** 3.10.0
 
 ---
 
@@ -157,6 +157,13 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 
 ---
 
+## v3.10.0 — significant changes
+
+- **CI guards** (each fails the build): `check:versions` (`llms.txt` + its demo copy, CLAUDE.md "Current version" and a CHANGELOG entry must match `package.json`; bump them together), `check:compiler` (React Compiler: only the allowlisted `EXPECTED` results in `scripts/check-react-compiler.mjs`), `check:package` (no test artifacts, DataGrid-only size budget), ESLint `no-explicit-any` (now `error`, also in the demo) and `no-restricted-syntax` against `as unknown as` in `lib/` outside the boundary files listed in `eslint.config.js`
+- **Types (R4)**: a `GridColDef<R>` passed to an untyped public surface (callback params, toolbar, store) goes through `untypedColumn` / `untypedColumns` (`lib/utils/untypedColumns.ts`), the one place that widening is written; narrowing untyped → `GridColDef<R>` / `R[]` is a plain `as`. `useDataGrid` types `setRows` / `replaceRows` / `rowsLookup` with `R`; call generic hooks with `<R>` explicitly when an untyped argument would otherwise infer `GridRowModel`. Remaining `as unknown as` (15) are synthetic rows, third-party module typings, `window` / CSS custom properties: do not add new ones elsewhere
+- R5 splits (no behaviour change): `GridToolbar` panels in `AggregationPanel` / `ColumnsPanelWrapper` / `FilterPanelWrapper` with shared `useToolbarPanel` (portal, position, Escape / outside press; `onClose` through a ref); exporters one file per format (`exportCsv`, `exportExcelHtml`, `exportJson`, `printGrid`, shared `exportRows`; `utils/export/index.ts` only re-exports); xlsx helpers in `excelCells.ts`; the range drag in `useGridCellRangeDrag`, called from inside `useGridCellSelection` (hook order unchanged); keydown handling in `handleGridKeyDown(event, context)` (`hooks/core/gridKeyDown.ts`, a plain function over a typed `GridKeyDownContext`, unit-testable without rendering; `useGridKeyboardNavigation` calls it from a `useCallback` with the same dependencies). A hook that takes refs as parameters must list them in its dependency arrays, or React Compiler skips it (`PreserveManualMemo`)
+- Demo code samples go through `demo/components/CodeBlock.tsx` (prism-react-renderer, demo-only devDependency); live output panels (JSON state, logs) stay plain `<pre>`
+
 ## v3.9.1 — significant changes
 
 - **`npm run check:package`** (after `build:lib`; in `ci.yml` and `npm-publish.yml`): fails if `npm pack` would ship a test artifact (`*.test.*`, `__baseline__`, `__screenshots__`, `__snapshots__`, `__fixtures__`) and if `DataGrid` alone, minified with esbuild and gzipped, exceeds `DATAGRID_GZIP_BUDGET` (92 KB; 85.5 KB at 3.9.0). `files` in package.json works by exclusion: add a negation for any new kind of test folder under `lib/`. Raise the budget only in the commit that needs it
@@ -193,7 +200,7 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 - **RTL**: read/write horizontal scroll only through `getScrollStart` / `setScrollStart` (`lib/utils/direction.ts`; scroll state is the offset from the inline start, never negative); map arrows with `logicalArrowKey(key, isRtl(el))`; panels with `getPanelPosition`. `pinnedColumns.left` / `right` are logical (inline start / end): sticky offsets use `insetInlineStart` / `insetInlineEnd` (jsdom: `style.getPropertyValue('inset-inline-start')`), borders `border-inline-*`, box-shadow x-offsets need `:dir(rtl)` mirrors. The column menu pins by screen side. `useGridScrollSync` observes `dir` mutations
 - Testing RTL: Playwright's headless Chromium runs with `--hide-scrollbars`; with classic scrollbars and `scrollbar-gutter: stable`, RTL cannot reach `scrollLeft` 0 — compare against the scroll origin. Reproduce on macOS with `defaults write chrome-headless-shell AppleShowScrollBars Always`. The grid's `scrollbar-width` / `scrollbar-color` disable `::-webkit-scrollbar` in Chromium
 - Header filter strings are in `localeText` (`headerFilter*`, resolved in `lib/utils/headerFilterLocale.ts`)
-- Not in this release: the time-sliced pipeline (Option A of `docs/superpowers/specs/2026-10-12-nonblocking-pipeline-proposal.md`) is held (backlog) until its overhead is within ~20 %
+- The time-sliced pipeline (Option A of `docs/superpowers/specs/2026-10-12-nonblocking-pipeline-proposal.md`) is closed: 1.5–2× slower in total; branch `archive/timesliced-pipeline-2026-10-12` kept for reference
 
 ## v3.5.1 — significant changes
 

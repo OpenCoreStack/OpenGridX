@@ -79,3 +79,19 @@ describe('resolveGridLocale', () => {
         expect(GRID_LOCALE_EN.gridLabel).toBe('Data grid');
     });
 });
+
+describe('AI change chip texts (v3.10)', () => {
+    it('defaults to the English chips and takes overrides', async () => {
+        const { buildAiChips } = await import('./aiAssistant');
+        const { aiChipTextsOf } = await import('./gridLocale');
+        const state = { sortModel: [{ field: 'amount', sort: 'desc' as const }], rowGroupingModel: [], aggregationModel: { amount: 'avg' } };
+        const en = buildAiChips(state, f => f, aiChipTextsOf(resolveGridLocale(undefined))).map(c => c.label);
+        expect(en).toEqual(['Sort: amount, descending', 'No grouping', 'Average: amount']);
+        const fr = buildAiChips(state, f => f, aiChipTextsOf(resolveGridLocale({
+            aiAssistantChipSort: (f, d) => `Tri : ${f}, ${d === 'desc' ? 'décroissant' : 'croissant'}`,
+            aiAssistantChipNoGrouping: 'Aucun regroupement',
+            aiAssistantChipSummary: (fn, f) => `${fn === 'avg' ? 'Moyenne' : fn} : ${f}`,
+        }))).map(c => c.label);
+        expect(fr).toEqual(['Tri : amount, décroissant', 'Aucun regroupement', 'Moyenne : amount']);
+    });
+});

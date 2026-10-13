@@ -54,7 +54,7 @@ export function useGridHierarchy<R extends GridRowModel>(params: UseGridHierarch
         sortingMode,
     });
 
-    const rowGroupingHandlers = useRowGrouping({
+    const rowGroupingHandlers = useRowGrouping<R>({
         rows,
         getRowId,
         columns,

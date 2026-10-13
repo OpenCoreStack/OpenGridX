@@ -5,6 +5,26 @@
 
 ---
 
+## [3.10.0] — 2026-10-13
+
+### Added
+
+- **The AI assistant's change chips are translatable**: 11 `localeText` keys (`aiAssistantChipSearch`, `ChipNoFilters`, `ChipSort(field, direction)`, `ChipNoSorting`, `ChipGroup`, `ChipNoGrouping`, `ChipSummary(fn, field)`, `ChipNoSummaries`, `ChipPivot`, `ChipNoPivot`, `ChipVisibility(field, visible)`), English by default; filter operators in the chips use `filterPanelOperators`. `buildAiChips` takes the texts as an optional third argument.
+
+### Performance
+
+- **Select all at 1,000,000 rows takes ~130 ms instead of ~260 ms** (deselect ~95 instead of ~120), with no API change. The selection set built for the new model is reused when that array comes back as `rowSelectionModel` (instead of `new Set(model)` again), and a set built by selecting all rows is known to contain them, so the header checkbox's "all selected" count is skipped. The shared selection set is typed `ReadonlySet` internally, so nothing can change it in place.
+
+### Internal
+
+- **Guards that fail CI instead of relying on review:** `check:versions` (llms.txt, CLAUDE.md and CHANGELOG must name the `package.json` version), `check:compiler` (fails on any React Compiler result outside a short allowlist, so a refactor that stops it from optimizing a hook is caught), ESLint `no-explicit-any` turned on (it was off; the library had none, the demo's 9 are now typed) and a rule against new `as unknown as` casts in the library outside the documented boundary files.
+
+- **Refactors (no behaviour change):** `GridToolbar` split into its panels with a shared `useToolbarPanel` (861 → 492 lines); the exporters one file per format; the xlsx cell helpers in `excelCells`; the cell range drag in `useGridCellRangeDrag`; keydown handling in a plain, unit-tested `handleGridKeyDown` function. Type casts `as unknown as` 43 → 15: the row pipeline, data source and grouping are called with the row type, the row store is typed with it, and column widenings go through one documented helper. DOM, styles and behaviour unchanged (theme baseline and the full browser suite in three engines).
+
+- Demo: the source viewer on every example page is syntax-highlighted (`CodeBlock`, prism-react-renderer), and the integration tips under it are corrected (inline columns and handlers are fine since 3.0 / 3.9; replace rows instead of mutating them).
+
+---
+
 ## [3.9.1] — 2026-10-13
 
 ### Fixed

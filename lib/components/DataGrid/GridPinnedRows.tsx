@@ -31,7 +31,7 @@ export interface GridPinnedRowsProps<R extends GridRowModel> {
     rows: R[];
     position: 'top' | 'bottom';
     columns: GridColDef<R>[];
-    selectedRowIds: Set<GridRowId>;
+    selectedRowIds: ReadonlySet<GridRowId>;
     checkboxSelection: boolean;
     onRowClick: (params: GridRowParams<R>) => void;
     onRowDoubleClick?: (params: GridRowParams<R>) => void;

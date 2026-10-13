@@ -9,6 +9,7 @@ import type {
   GridApi
 } from '../../types';
 import { createGridApiPlaceholder } from './gridApiPlaceholder';
+import { untypedColumn, untypedColumns } from '../../utils/untypedColumns';
 
 // Sort, filter, pagination and selection deliberately have no slice here: they live in
 // useGridControlledState, which is what the grid renders from. (Copies of them in this
@@ -76,14 +77,14 @@ function createInitialState<R extends GridRowModel>(rows: R[], getRowId: GetRowI
   const orderedFields: string[] = [];
 
   columns.forEach(col => {
-    columnLookup.set(col.field, col as unknown as GridColDef);
+    columnLookup.set(col.field, untypedColumn(col));
     orderedFields.push(col.field);
   });
 
   return {
     rows: buildRowsState(rows, getRowId),
     columns: {
-      all: columns as unknown as GridColDef[],
+      all: untypedColumns(columns),
       lookup: columnLookup,
       orderedFields,
       columnVisibilityModel
@@ -287,8 +288,13 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
 
   // `_preserveRowCount` is still accepted from callers written against the old signature;
   // replacing rows never changes the server row count any more.
-  const setRows = useCallback((rowsOrUpdater: GridRowModel[] | ((prev: GridRowModel[]) => GridRowModel[]), _preserveRowCount?: boolean) => {
-    dispatch({ type: 'SET_ROWS', payload: rowsOrUpdater, getRowId: getRowIdRef.current });
+  // Typed with the grid's own row type `R`. The store holds those very objects (never copies), so the
+  // stored rows read back here are `R` again: this is the one place the store's untyped rows narrow.
+  const setRows = useCallback((rowsOrUpdater: R[] | ((prev: R[]) => R[]), _preserveRowCount?: boolean) => {
+    const payload = typeof rowsOrUpdater === 'function'
+      ? (prev: GridRowModel[]) => rowsOrUpdater(prev as R[])
+      : rowsOrUpdater;
+    dispatch({ type: 'SET_ROWS', payload, getRowId: getRowIdRef.current });
   }, []);
 
   /** Replaces the row stored under `id` (a committed edit); does nothing if that row is gone. */
@@ -297,7 +303,7 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
   }, []);
 
   /** Replaces several stored rows in one update (a batch edit); ids no longer stored are ignored. */
-  const replaceRows = useCallback((rowsById: ReadonlyMap<GridRowId, GridRowModel>) => {
+  const replaceRows = useCallback((rowsById: ReadonlyMap<GridRowId, R>) => {
     if (rowsById.size > 0) dispatch({ type: 'REPLACE_ROWS', rows: rowsById });
   }, []);
 
@@ -334,6 +340,8 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
 
   return {
     state,
+    /** The stored rows by id, typed with the grid's row type (see `setRows`). */
+    rowsLookup: (state.rows.idRowsLookup as ReadonlyMap<GridRowId, GridRowModel>) as ReadonlyMap<GridRowId, R>,
     dispatch,
     apiRef,
     setRows,

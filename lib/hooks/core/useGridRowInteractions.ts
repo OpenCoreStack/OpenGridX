@@ -10,7 +10,7 @@ export interface UseGridRowInteractionsParams<R extends GridRowModel> {
     dataRows: R[];
     getRowId: (row: GridRowModel) => GridRowId;
     isPivotActive: boolean;
-    selectedRowIds: Set<GridRowId>;
+    selectedRowIds: ReadonlySet<GridRowId>;
     onSelectionModelChange: (model: GridRowId[]) => void;
     disableMultipleRowSelection: boolean;
     disableRowSelectionOnClick: boolean;

@@ -25,6 +25,7 @@ import {
 import type { GridTheme } from '@opencorestack/opengridx';
 import { generateEmployees } from '../../data/mockData';
 import { allColumns } from '../../data/columns';
+import type { GridApi, GridRowModel, GridToolbarSlotProps } from '@opencorestack/opengridx';
 import { DocsLayout } from '../../components/DocsLayout';
 import './ThemingDemo.css';
 
@@ -84,9 +85,9 @@ const Icons = {
 };
 
 interface ExportToolbarProps {
-    apiRef?: any;
-    fallbackRows: any[];
-    fallbackColumns: GridColDef<any>[];
+    apiRef?: React.RefObject<GridApi | null>;
+    fallbackRows: GridRowModel[];
+    fallbackColumns: GridColDef[];
 }
 
 function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarProps) {
@@ -105,7 +106,7 @@ function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarP
         const selectedIds: (string | number)[] = apiRef?.current?.getSelectedRows?.() || [];
         if (selectedIds.length > 0) {
             const allRows = getAllRows();
-            return allRows.filter((r: any) => selectedIds.includes(r.id));
+            return allRows.filter((r: GridRowModel) => selectedIds.includes(r.id));
         }
         return getAllRows();
     };
@@ -192,7 +193,10 @@ function ExportToolbar({ apiRef, fallbackRows, fallbackColumns }: ExportToolbarP
 // If this were defined inside the component body, every render would create a
 // new function reference, causing React to unmount/remount the entire toolbar
 // and losing all state (search expansion, filter panel open, etc.).
-function ToolbarWithExport(props: any) {
+/** The toolbar slot plus the demo's own fallback data, passed through `slotProps.toolbar`. */
+type ExportToolbarSlotProps = GridToolbarSlotProps & { _fallbackRows?: GridRowModel[]; _fallbackColumns?: GridColDef[] };
+
+function ToolbarWithExport(props: ExportToolbarSlotProps) {
     return (
         <GridToolbar
             {...props}

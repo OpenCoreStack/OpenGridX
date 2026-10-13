@@ -69,3 +69,24 @@ for (const { file, event } of problems) {
 }
 
 console.log('\nReact Compiler over lib/:', Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(', ') || 'nothing to compile');
+
+// The known baseline. Anything else fails the check (and CI): a new CompileError means React Compiler
+// stopped optimizing a hook or component, e.g. PreserveManualMemo after a refactor turned a local ref
+// into a parameter without listing it in a dependency array.
+const EXPECTED = [
+    // try/finally is not supported by the compiler yet; the hook keeps manual memoization.
+    { kind: 'CompileError', file: 'lib/hooks/features/useGridDataSource.ts' },
+    // They call consumer functions that may use hooks, so they opt out with 'use no memo'.
+    { kind: 'CompileSkip', file: 'lib/components/Cell/CellErrorBoundary.tsx' },
+    { kind: 'CompileSkip', file: 'lib/components/DataGrid/GridToolbarSlot.tsx' },
+];
+const isExpected = ({ file, event }) => EXPECTED.some(e => e.kind === event.kind && file.endsWith(e.file));
+const unexpected = problems.filter(p => !isExpected(p));
+const missing = EXPECTED.filter(e => !problems.some(p => p.event.kind === e.kind && p.file.endsWith(e.file)));
+if (unexpected.length > 0) {
+    console.error(`\ncheck:compiler: ${unexpected.length} unexpected result(s) above. Fix them (see docs/contributing/react-compiler.md), or, if intended, add them to EXPECTED in scripts/check-react-compiler.mjs.`);
+    process.exit(1);
+}
+if (missing.length > 0) {
+    console.log(`\ncheck:compiler: ${missing.map(m => `${m.kind} ${m.file}`).join(', ')} no longer reported: remove from EXPECTED.`);
+}
