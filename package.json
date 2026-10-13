@@ -29,6 +29,7 @@
     "!lib/**/*.test.tsx",
     "!lib/**/__screenshots__",
     "!lib/**/__snapshots__",
+    "!lib/**/__baseline__",
     "docs/architecture",
     "docs/assets",
     "docs/components",

@@ -90,6 +90,8 @@ Row heights include an expanded detail panel's height, so the prefix sums accoun
 
 Columns use the same search on `unpinnedAccWidths` (also inclusive), relative to the left edge of the unpinned area (`scrollLeft - leftPinnedWidth`), widened by 6 columns on each side. The skipped widths become `__spacer_left__` / `__spacer_right__` entries (`isSpacer: true`) in `virtualColumns`.
 
+The column window is computed in its own `useMemo` (v3.9), over the column parts of the layout (`unpinnedAccWidths`, `unpinnedColsWithWidth`, the pinned column lists and widths), `scrollLeft` and the viewport width only. A row change (an edit), a vertical scroll or a row-height change therefore keeps the same `virtualColumns` array, and `Row`, which is memoised on its props, does not re-render for it. `useLayout` returns the row and column parts from separate memos (v3.7.1), so the column fields keep their identity while rows change.
+
 When a column declares `colSpan` / `rowSpan`, `DataGrid` widens this window afterwards (`useGridSpanRowWindow` / `useGridSpanColumnWindow`) so a span whose origin is outside the window is not cut.
 
 ---

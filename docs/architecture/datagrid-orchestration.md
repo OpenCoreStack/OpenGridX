@@ -113,10 +113,12 @@ in an effect, so **keep the call order when you move or add a hook**. In particu
 `GridToolbarSlot`, `GridAiAssistantArea` (the `aiAssistant` panel or `slots.aiAssistantPanel` while open, anchored under the toolbar), `GridStandaloneColumnPanel`, `GridListView` (list view) or `GridViewport` (`components/DataGrid/GridViewport.tsx`, the `role="grid"` viewport:
 `Header`, `GridPinnedRows` top, `GridEmptyState`, `GridVirtualRows`, `GridPinnedRows` bottom,
 `GridAggregationFooter`), `GridCellSelectionStatsArea` (`showCellSelectionStats` with `cellSelection`), then `slots.footer` or `GridPaginationArea`, `GridLiveRegion`,
-`GridLoadingOverlay` and `GridErrorOverlay`. `GridRoot` builds the overlay slot elements and passes the
+`GridLoadingOverlay` and `GridErrorOverlay`. `GridRoot` also provides `GridLocaleContext` (v3.9) around all of them: `localeText`, kept stable while shallowly equal (`useShallowStableValue`), resolved once by `resolveGridLocale` (`lib/utils/gridLocale.ts`); components and `Row` read it with `useGridLocale()` instead of a prop, so `Row` gets no prop that changes per render. `GridRoot` builds the overlay slot elements and passes the
 rest of its props on to `GridViewport`. The props all three row renderers take alike are built once in
 `GridViewport` (`rowRenderProps`) and spread into each. `rowRenderProps.cellRange` is the cell range's
 render rectangle; each row renderer turns it into a per-row `cellRange` (`getRowCellRange`), `null` for rows
 outside it, and `Row` is memoised with a value comparison of that prop, so a drag only re-renders the rows the
-range enters or leaves. `rowRenderProps.fillHandle` (v3.5) adds `fillHandleCol` to the one row that draws the fill
+range enters or leaves. The same rule holds for every row prop (v3.9): `editingCell` goes only to the row being
+edited, `focusedCellField` only to the focused row, and the row click and checkbox handlers keep one identity
+(`useGridRowInteractions` reads the latest handlers when called). `DataGrid.rowMemo.test.tsx` guards it. `rowRenderProps.fillHandle` (v3.5) adds `fillHandleCol` to the one row that draws the fill
 handle (a single selected cell gets an empty column interval, so it draws the handle but no range).

@@ -42,7 +42,7 @@ The column menu is labelled by screen side: in RTL *Pin to Left* adds the column
 
 ## Known limitations
 
-- **Menu and panel labels are hard-coded English** ("Pin to Left", "Sort Ascending"); there is no `localeText` key for the column menu yet.
+- ~~Menu and panel labels are hard-coded English~~: since v3.9 every built-in string, including the column menu (`columnMenuPinLeft`, `columnMenuSortAscending`, …), is a `localeText` key. See *Locale text for every UI string* in [`API_REFERENCE.md`](../API_REFERENCE.md).
 - **Header filter operator symbols** are mirrored by the browser's bidi rules (`∋` shows as `∈`), as in any RTL text.
 - **`direction` set through CSS** (a class or stylesheet, not the `dir` attribute) and changed at runtime is not detected; scroll the grid or remount it with a `key`.
 - **Headless Chromium tests:** Playwright launches Chromium with `--hide-scrollbars`. With classic scrollbars (Linux) `scrollbar-gutter: stable` still reserves the gutter, and in RTL Chromium then cannot scroll the last gutter-width of the start into view (`scrollLeft` stops at minus the gutter). A plain scroller without the grid does the same and real browsers with visible scrollbars do not. Tests must compare with the browser's scroll origin, as `DataGrid.rtl.browser.test.tsx` does. To reproduce on macOS: `defaults write chrome-headless-shell AppleShowScrollBars Always` (undo with `defaults delete chrome-headless-shell`).
