@@ -33,7 +33,7 @@ Release plan:
 | P5 | Cheaper select-all and incremental group expand | 1M select-all 316 → <50 ms | M | 3.8.0 | ✅ | Group toggle: leaf metas built once + `LayeredMap` (expand 279 → ~135 ms, collapse ~120 → ~1 ms). Select-all ~270 ms unchanged: bounded by the public array `rowSelectionModel` (several 1M-id Set builds); only the live-selection copy was removed |
 | P7 | Per-row quick-filter cache (WeakMap) | no rebuild per edit; less memory (~32 MB/100k now) | M | 3.8.0 | ❌ | Not needed: `filterRows` already reuses texts per row object at the same index, so an edit re-reads only the edited row |
 | P8 | Skip re-render of unchanged cells/header; remove double commit | ~half React work per interaction | M | later | ✅ | Rows re-rendered on every click/edit/scroll: `onRowClick` + selection handlers stable (latest ref), `editingCell` only to the edited row, `virtualColumns` own memo. Click: 14 rows → 1. Double commit = two separate updates; left as is |
-| P9 | Lazy/modular opt-in features | up to ~35 KB gz for minimal apps | L | later | ⬜ | |
+| P9 | Lazy/modular opt-in features | up to ~35 KB gz for minimal apps | L | later | ⏸ | Measured: DataGrid-only app 87 KB gz. Lazy UI would save ~6 KB gz (rejected: flicker, chunks, no UMD gain). Feature modules (~20 KB gz) need a breaking API → `docs/superpowers/specs/2026-10-13-feature-modules-proposal.md`, for 4.0 |
 
 Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fill 783 ms · select-all 316 ms · expand 279 ms · sort 403 ms.
 
@@ -71,3 +71,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — R7 done (agent, reviewed): 196 localeText keys via GridLocaleContext; added useShallowStableValue so an inline localeText of strings keeps rows memoised. Unit 1972, browser 585/585 in 3 engines.
 - 2026-10-13 — Released 3.9.0 (CI run 38381619839).
 - 2026-10-13 — 3.9.1 patch (PR flow): baseline exclusion, check:package, version badges, docs. Cherry-picked from release/3.10.0.
+- 2026-10-13 — AI change chips translatable (11 keys, branch `release/3.10.0`). P9 measured and deferred to a 4.0 feature-modules proposal (user agreed).
