@@ -172,3 +172,23 @@ describe('parseValueByType / parseCellText', () => {
         expect(parseCellText('x', { field: 'price', valueParser: () => undefined }, row).ok).toBe(false);
     });
 });
+
+describe('parseDateText — audit fixes', () => {
+    it('rejects free text that Date.parse would read as a date', () => {
+        expect(parseDateText('hello 5').ok).toBe(false);
+        expect(parseDateText('Jan 5, 2024').ok).toBe(true);
+        expect(parseDateText('Tue Mar 05 2024 10:00:00 GMT+0000').ok).toBe(true);
+    });
+
+    it('keeps the pasted local day when the cell holds a UTC date-time', () => {
+        const current = new Date(2024, 0, 10, 9, 30).toISOString();
+        const result = parseDateText('2024-03-05', current);
+        const stored = new Date(value(result) as string);
+        expect([stored.getFullYear(), stored.getMonth(), stored.getDate(), stored.getHours(), stored.getMinutes()])
+            .toEqual([2024, 2, 5, 9, 30]);
+    });
+
+    it('still appends the time part of a date-time without a zone', () => {
+        expect(value(parseDateText('2024-03-05', '2024-01-10T09:30:00'))).toBe('2024-03-05T09:30:00');
+    });
+});

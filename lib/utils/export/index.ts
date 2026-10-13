@@ -10,6 +10,7 @@ import {
     getRawExportValue,
     hasSelection,
     isNonTextValue,
+    isTrustedNonText,
     neutralizeFormula,
     pickExportedAggregates,
     rowsForExport,
@@ -55,11 +56,14 @@ export interface CsvExportOptions<R extends GridValidRowModel = GridRowModel> {
 interface ExportCell {
     text: string;
     raw: unknown;
+    /** The text came from the grid's own formatting of a number, date or boolean (see `isTrustedNonText`). */
+    fromNonText: boolean;
 }
 
 function exportCell<R extends GridRowModel>(row: R, col: GridColDef<R>): ExportCell {
     const raw = getRawExportValue(row, col);
-    return { text: formatExportValue(row, col, raw), raw };
+    const text = formatExportValue(row, col, raw);
+    return { text, raw, fromNonText: isTrustedNonText(raw, text, !!col.valueFormatter) };
 }
 
 /** Aggregate text per export column for one subtotal / total record. */
@@ -111,7 +115,7 @@ export function exportToCsv<R extends GridRowModel>(
                 const row = entry.row as R;
                 const cells = exportColumns.map((col, i) => {
                     const cell = exportCell(row, col);
-                    const text = escapeFormulas ? neutralizeFormula(cell.text, isNonTextValue(cell.raw)) : cell.text;
+                    const text = escapeFormulas ? neutralizeFormula(cell.text, cell.fromNonText) : cell.text;
                     return escapeCSV((i === 0 ? indent : '') + text, delimiter);
                 });
                 csvContent += cells.join(delimiter) + '\n';
@@ -138,7 +142,7 @@ export function exportToCsv<R extends GridRowModel>(
         rowsToExport.forEach(row => {
             const values = exportColumns.map(col => {
                 const cell = exportCell(row, col);
-                return field(cell.text, isNonTextValue(cell.raw));
+                return field(cell.text, cell.fromNonText);
             });
             csvContent += values.join(delimiter) + '\n';
         });
@@ -255,7 +259,7 @@ export function exportToExcel<R extends GridRowModel>(
     html += '<tbody>';
 
     const dataCell = (cell: ExportCell, col: GridColDef<R>, prefix = ''): string => {
-        const content = prefix + cellText(cell.text, isNonTextValue(cell.raw));
+        const content = prefix + cellText(cell.text, cell.fromNonText);
         return isXlsTextCell(col, cell.raw) ? textTd(content) : `<td>${content}</td>`;
     };
 

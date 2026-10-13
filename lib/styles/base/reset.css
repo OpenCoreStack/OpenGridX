@@ -1,6 +1,8 @@
-*,
-*::before,
-*::after {
+/* Only the grid's own elements, including its portalled menus and panels (all carry an ogx class).
+   :where() keeps the specificity at zero, so a consumer's own box-sizing rule still wins. */
+:where([class*="ogx"], [class*="ogx"] *),
+:where([class*="ogx"], [class*="ogx"] *)::before,
+:where([class*="ogx"], [class*="ogx"] *)::after {
   box-sizing: border-box;
 }
 .ogx--dragging {

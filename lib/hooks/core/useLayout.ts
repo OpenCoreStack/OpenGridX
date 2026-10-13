@@ -245,7 +245,9 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
         getRowId = defaultGetRowId,
     } = params;
 
-    return useMemo<LayoutResult<R>>(() => {
+    // Rows and columns are measured in separate memos: a column resize must not walk every row
+    // (1M rows), and a sort or filter must not recompute column widths.
+    const rowLayout = useMemo(() => {
         const unpinnedRows = pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
 
         const heightOf = (row: R, rowIndex: number) => {
@@ -279,6 +281,35 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
         const pinnedTopHeight = pinnedBlockHeight(pinnedTopRows, pinnedTopRowsLength);
         const pinnedBottomHeight = pinnedBlockHeight(pinnedBottomRows, pinnedBottomRowsLength);
 
+        return {
+            rowHeights,
+            cumulativeHeights,
+            unpinnedRowsHeight,
+            pinnedTopHeight,
+            pinnedBottomHeight,
+            pinnedTopRowsLength,
+            pinnedBottomRowsLength,
+            unpinnedRowsLength: rowCount,
+        };
+    }, [
+        rowHeight,
+        pagination,
+        paginatedUnpinnedRows,
+        sortedUnpinnedRows,
+        expandedRowIds,
+        getDetailPanelHeight,
+        detailPanelHeights,
+        pinnedTopRowsLength,
+        pinnedBottomRowsLength,
+        pinnedTopRows,
+        pinnedBottomRows,
+        paginationMode,
+        isLoading,
+        pageSize,
+        getRowId,
+    ]);
+
+    const columnLayout = useMemo(() => {
         // Pinned columns render in pinnedColumns.left / .right order; unpinned ones in column order.
         const { left: rawLeftPinnedCols, center: unpinnedCols, right: rawRightPinnedCols } =
             getPinnedColumnGroups(visibleOrderedColumns, pinnedColumns);
@@ -326,11 +357,6 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
         }, [] as number[]);
 
         return {
-            rowHeights,
-            cumulativeHeights,
-            unpinnedRowsHeight,
-            pinnedTopHeight,
-            pinnedBottomHeight,
             leftPinnedCols,
             rightPinnedCols,
             unpinnedColsWithWidth,
@@ -342,22 +368,8 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
             unpinnedTotalWidth,
             systemColumnsWidth,
             pinnedSystemColumnsWidth,
-            pinnedTopRowsLength,
-            pinnedBottomRowsLength,
-            unpinnedRowsLength: unpinnedRows.length,
         };
     }, [
-        rowHeight,
-        pagination,
-        paginatedUnpinnedRows,
-        sortedUnpinnedRows,
-        expandedRowIds,
-        getDetailPanelHeight,
-        detailPanelHeights,
-        pinnedTopRowsLength,
-        pinnedBottomRowsLength,
-        pinnedTopRows,
-        pinnedBottomRows,
         visibleOrderedColumns,
         pinnedColumns,
         columnWidths,
@@ -367,9 +379,7 @@ export function useLayout<R extends GridRowModel>(params: UseLayoutParams<R>): L
         rowReordering,
         pinCheckboxColumn,
         pinExpandColumn,
-        paginationMode,
-        isLoading,
-        pageSize,
-        getRowId,
     ]);
+
+    return useMemo<LayoutResult<R>>(() => ({ ...rowLayout, ...columnLayout }), [rowLayout, columnLayout]);
 }

@@ -1,6 +1,6 @@
 import type { GridAggregationModel, GridColDef, GridGroupedExportRow, GridRowId, GridRowModel } from '../../types';
 import { computeAggregations, formatAggregateForColumn } from '../aggregation';
-import { formatValueByType } from '../values';
+import { formatValueByType, getCellValue } from '../values';
 import { isSystemField } from '../focus';
 
 /**
@@ -77,10 +77,12 @@ export function aggregationForExport<R extends GridRowModel>(
     return computeAggregations(exportedRows, aggregationModel, lookup, 'export');
 }
 
-/** The cell's raw value: `row[field]`, then the column's `valueGetter`. */
+/**
+ * The cell's raw value, read like the grid reads it (`getCellValue`): a `valueGetter` that throws
+ * exports as an empty value instead of aborting the export.
+ */
 export function getRawExportValue<R extends GridRowModel>(row: R, col: GridColDef<R>): unknown {
-    const value: unknown = (row as GridRowModel)[col.field];
-    return col.valueGetter ? col.valueGetter({ row, field: col.field, value }) : value;
+    return getCellValue(row, col.field, col);
 }
 
 /**
@@ -157,6 +159,22 @@ const PLAIN_NUMBER = /^[-+]?(?=[\d.,\s]*\d)[\d.,\s]*%?$/;
 export function neutralizeFormula(text: string, fromNonText = false): string {
     if (fromNonText || !FORMULA_TRIGGER.test(text) || PLAIN_NUMBER.test(text)) return text;
     return `'${text}`;
+}
+
+/**
+ * Text that reads as a formatted number (digits, signs, separators, brackets, %, currency symbols),
+ * which no spreadsheet runs as a formula. One character class: linear on any input.
+ */
+const NUMERIC_DISPLAY = /^[\d\s.,'%+\-()\p{Sc}]*$/u;
+
+/**
+ * Whether a data cell's text may skip formula escaping: the grid formatted a number, date or
+ * boolean itself, or a `valueFormatter` turned such a value into plain numeric text ("-$3").
+ * Anything else a formatter writes is escaped like text, since it may come from user data.
+ */
+export function isTrustedNonText(raw: unknown, text: string, hasFormatter: boolean): boolean {
+    if (!isNonTextValue(raw)) return false;
+    return !hasFormatter || NUMERIC_DISPLAY.test(text);
 }
 
 /** Whether a raw value is a number, bigint, boolean or Date, whose formatted text is not user-typed. */

@@ -131,6 +131,19 @@ export function parseNumberText(text: string): GridParsedValue {
 
 const ISO_DATE_PREFIX = /^(\d{4}-\d{2}-\d{2})/;
 const pad2 = (n: number) => String(n).padStart(2, '0');
+/** Whether an ISO date-time string ends with `Z` or a `±hh:mm` / `±hhmm` offset. A loop, not a regex. */
+function hasZone(text: string): boolean {
+    const end = text.trimEnd();
+    if (end.endsWith('Z') || end.endsWith('z')) return true;
+    const tIndex = end.indexOf('T');
+    if (tIndex < 0) return false;
+    for (let i = end.length - 1; i > tIndex; i--) {
+        const ch = end[i];
+        if (ch === '+' || ch === '-') return true;
+        if (!(ch >= '0' && ch <= '9') && ch !== ':') return false;
+    }
+    return false;
+}
 const localDay = (date: Date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 
 /**
@@ -147,7 +160,17 @@ export function parseDateText(text: string, current?: unknown): GridParsedValue 
     if (typeof current === 'number') return valid(date.getTime());
     if (typeof current === 'string') {
         const day = localDay(date);
-        return valid(ISO_DATE_PREFIX.test(current) && current.length > 10 ? day + current.slice(10) : day);
+        if (!ISO_DATE_PREFIX.test(current) || current.length <= 10) return valid(day);
+        // A zoned date-time ("…Z", "…+05:30") is shown as a local day: keep its local time of day on
+        // the pasted day and write UTC, or west of UTC the cell would show the day before.
+        const held = hasZone(current) ? new Date(current) : null;
+        if (held && !Number.isNaN(held.getTime())) {
+            return valid(new Date(
+                date.getFullYear(), date.getMonth(), date.getDate(),
+                held.getHours(), held.getMinutes(), held.getSeconds(), held.getMilliseconds(),
+            ).toISOString());
+        }
+        return valid(day + current.slice(10));
     }
     return valid(date);
 }

@@ -129,7 +129,7 @@ const scenarios: Scenario[] = [
 async function capture(scenario: Scenario): Promise<string[]> {
     const grid = <DataGrid rows={rows} columns={columns} height={360} {...scenario.props} />;
     const { container } = render(
-        <div style={{ width: 640, padding: 8 }}>
+        <div style={{ width: 640, padding: 8, boxSizing: 'border-box' }}>
             {scenario.theme ? <DataGridThemeProvider theme={scenario.theme}>{grid}</DataGridThemeProvider> : grid}
         </div>
     );

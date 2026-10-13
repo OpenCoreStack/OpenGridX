@@ -112,6 +112,35 @@ describe('exportToCsv — escaping', () => {
         exportToCsv([{ id: 1, a: '=1+1' }], [{ field: 'a' }], { escapeFormulas: false });
         expect((await csvLines())[1]).toBe('=1+1');
     });
+
+    it('escapes formula text that a valueFormatter writes for a number column', async () => {
+        exportToCsv(
+            [{ id: 1, n: 5 }],
+            [{ field: 'n', type: 'number', valueFormatter: () => '=HYPERLINK("http://x")' }],
+        );
+        expect((await csvLines())[1]).toBe(`"'=HYPERLINK(""http://x"")"`);
+    });
+
+    it('keeps negative numbers formatted by the grid unescaped', async () => {
+        exportToCsv([{ id: 1, n: -5 }], [{ field: 'n', type: 'number' }]);
+        expect((await csvLines())[1]).toBe('-5');
+    });
+});
+
+describe('exports — throwing valueGetter', () => {
+    const columns = [
+        { field: 'a' },
+        { field: 'b', valueGetter: () => { throw new Error('boom'); } },
+    ];
+
+    it('exports an empty cell instead of crashing (CSV, JSON, Excel)', async () => {
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+        exportToCsv([{ id: 1, a: 'x' }], columns);
+        expect((await csvLines())[1]).toBe('x,');
+        exportToJson([{ id: 1, a: 'x' }], columns);
+        expect(JSON.parse(await text())).toEqual([{ a: 'x' }]);
+        expect(() => exportToExcel([{ id: 1, a: 'x' }], columns)).not.toThrow();
+    });
 });
 
 describe('exportToCsv — encoding', () => {
@@ -404,7 +433,7 @@ describe('printGrid — HTML injection', () => {
     it('escapes the error message shown when building the table fails', async () => {
         const { win } = fakePrintWindow();
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        const cols: GridColDef[] = [{ field: 'a', valueGetter: () => { throw new Error('<img src=x onerror="window.__pwned=1">'); } }];
+        const cols: GridColDef[] = [{ field: 'a', valueFormatter: () => { throw new Error('<img src=x onerror="window.__pwned=1">'); } }];
         await printGrid([{ id: 1, a: 1 }], cols);
         expect(win.document.body.innerHTML).not.toContain('<img');
         expect(win.document.body.innerHTML).toContain('&lt;img src=x onerror=&quot;window.__pwned=1&quot;&gt;');

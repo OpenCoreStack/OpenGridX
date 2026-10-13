@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { filterRows } from './index';
 import { buildColumnLookup } from '../columnLookup';
-import { getCellValue, getFormattedValue, toLocalDateString } from '../values';
+import { formatValueByType, getCellValue, getFormattedValue, toLocalDateString } from '../values';
 import type { GridColDef, GridFilterItem, GridRowModel } from '../../types';
 
 // ── Reference oracle: the v3.5.1 quick filter (an array of texts per row, `some(includes)`) ──
@@ -41,6 +41,10 @@ function refQuickFilter(rows: GridRowModel[], values: string[], columns: GridCol
             const value = getCellValue(row, col.field, col);
             const formatted = getFormattedValue(row, col.field, value, col);
             if (formatted != null && formatted !== '') texts.push(String(formatted).toLowerCase());
+            else if (col.type === 'date' || col.type === 'boolean' || col.type === 'singleSelect') {
+                const shown = formatValueByType(value, col);
+                if (shown !== '') texts.push(shown.toLowerCase());
+            }
             refPush(texts, value);
         }
         return terms.every(term => texts.some(text => text.includes(term)));

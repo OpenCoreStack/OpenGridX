@@ -5,6 +5,28 @@
 
 ---
 
+## [Unreleased — 3.7.1]
+
+### Fixed
+
+- **Exports no longer crash when a column's `valueGetter` throws.** CSV, Excel (HTML and `exportToExcelAdvanced`), JSON, print and PDF read cell values through `getCellValue`, as the grid does: a throwing getter exports an empty value with a one-time development warning.
+- **Formula escaping covers `valueFormatter` text on number, date and boolean columns** (security). A formatter returning `=HYPERLINK(...)` for a number column was written to CSV and HTML-Excel unescaped, because only the raw value's type was checked. Formatter text is now left unescaped only when it reads as a plain formatted number (digits, signs, separators, brackets, `%`, currency symbols), so `-$3` stays as is.
+- **The quick filter matches the text the grid shows** for `singleSelect` (option label), `boolean` (Yes / No) and `date` (locale date) columns without a `valueFormatter`, in addition to the raw value.
+- **Free text is no longer read as a date.** `Date.parse` accepts text such as `hello 5` (a 2001 date in V8); pasting it into a date column stored that date. Date text may now only contain month and weekday names, `T`, `Z`, `AM`/`PM`, `GMT`/`UTC` besides digits and punctuation. The same rule applies to date filters and sorting of date strings.
+- **Pasting a date into a cell that holds a UTC date-time** (`…Z` or `±hh:mm`) kept the time part but changed the zone meaning, so west of UTC the cell showed the day before. The pasted day now keeps the cell's local time of day and is written as UTC.
+- **List view follows the theme.** Its row text read the undeclared `--ogx-grid-cell-text`, and hover / selection used fixed colours; they now use `--ogx-grid-row-text`, `--ogx-grid-row-hover-background`, `--ogx-grid-row-selected-background` and `--ogx-grid-row-selected-hover-background` (`--ogx-selection-bg` / `--ogx-selection-hover-bg` still win when set).
+- **The stylesheet no longer changes the host page.** The `box-sizing: border-box` reset applied to every element on the page; it now applies only to elements with an `ogx` class and their descendants (including portalled menus and panels), at zero specificity. A page that relied on it for its own elements (for example a padded container with a fixed width around the grid) may need its own `box-sizing: border-box` rule.
+
+### Changed
+
+- The grid no longer draws a shadow on hover (`.ogx:hover`), which repainted the whole grid on every pointer enter and leave. Add `.ogx:hover { box-shadow: var(--ogx-shadow-md); }` to keep it.
+
+### Performance
+
+- `useLayout` computes row heights and column widths in separate memos: resizing a column no longer walks every row, and sorting or filtering no longer recomputes column widths.
+
+---
+
 ## [3.7.0] — 2026-10-13
 
 ### Added

@@ -389,3 +389,19 @@ describe('quick filter with column definitions', () => {
         vi.restoreAllMocks();
     });
 });
+
+describe('quick filter matches the text the grid shows', () => {
+    const lookup = buildColumnLookup([
+        { field: 'status', type: 'singleSelect', valueOptions: [{ value: 'a', label: 'Active' }, { value: 'i', label: 'Inactive' }] },
+        { field: 'vip', type: 'boolean' },
+    ]);
+    const rows = [{ id: 1, status: 'a', vip: true }, { id: 2, status: 'i', vip: false }];
+
+    it('finds a singleSelect option by its label', () => {
+        expect(ids(filterRows(rows, { quickFilterValues: ['inactive'] }, lookup))).toEqual([2]);
+    });
+
+    it('finds a boolean cell by Yes / No', () => {
+        expect(ids(filterRows(rows, { quickFilterValues: ['yes'] }, lookup))).toEqual([1]);
+    });
+});

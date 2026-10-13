@@ -1,7 +1,7 @@
 
 import type { GridRowModel, GridFilterItem, GridFilterModel, GridFilterGroup, GridFilterOperator, GridColDef } from '../../types';
 import type { GridColumnLookup } from '../columnLookup';
-import { getCellValue, getFormattedValue, toLocalDateString, toLocalDayKey, toNumber } from '../values';
+import { getCellValue, formatValueByType, getFormattedValue, toLocalDateString, toLocalDayKey, toNumber } from '../values';
 
 /** Compares a cell value with the filter item's value. */
 export type GridFilterOperatorFn = (value: unknown, filterValue?: unknown) => boolean;
@@ -230,7 +230,13 @@ function getQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | unde
   for (const col of columns.quickFilterColumns) {
     const value = getCellValue(row, col.field, col);
     const formatted = getFormattedValue(row, col.field, value, col);
-    if (formatted != null && formatted !== '') texts.push(String(formatted).toLowerCase());
+    if (formatted != null && formatted !== '') {
+      texts.push(String(formatted).toLowerCase());
+    } else if (col.type === 'date' || col.type === 'boolean' || col.type === 'singleSelect') {
+      // Without a formatter the grid shows a locale date, Yes / No or the option label: search that too.
+      const shown = formatValueByType(value, col);
+      if (shown !== '') texts.push(shown.toLowerCase());
+    }
     pushSearchText(texts, value);
   }
   return texts;

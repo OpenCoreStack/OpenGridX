@@ -132,12 +132,43 @@ export function toDate(value: unknown): Date | null {
             // Reject roll-overs such as 2024-02-31.
             if (date.getMonth() !== month || date.getDate() !== day) return null;
         } else {
+            if (!hasOnlyDateWords(trimmed)) return null;
             date = new Date(trimmed);
         }
     } else {
         return null;
     }
     return Number.isNaN(date.getTime()) ? null : date;
+}
+
+const DATE_WORDS = [
+    'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october',
+    'november', 'december', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+];
+const DATE_TOKENS = new Set(['t', 'z', 'am', 'pm', 'gmt', 'utc', 'sept']);
+
+function isDateWord(word: string): boolean {
+    if (DATE_TOKENS.has(word)) return true;
+    return word.length >= 3 && DATE_WORDS.some(name => name.startsWith(word));
+}
+
+/**
+ * Whether every run of letters in `text` is a month or weekday name (or abbreviation), or one of
+ * T, Z, AM, PM, GMT, UTC. `Date.parse` accepts free text such as "hello 5" (as a 2001 date in V8),
+ * which must not become a date. A loop, not a regex.
+ */
+function hasOnlyDateWords(text: string): boolean {
+    let word = '';
+    for (let i = 0; i <= text.length; i++) {
+        const ch = i < text.length ? text[i].toLowerCase() : '';
+        if (ch >= 'a' && ch <= 'z') {
+            word += ch;
+            continue;
+        }
+        if (word !== '' && !isDateWord(word)) return false;
+        word = '';
+    }
+    return true;
 }
 
 /** A sortable integer for the local calendar day of a date (YYYYMMDD), or null when unparsable. */

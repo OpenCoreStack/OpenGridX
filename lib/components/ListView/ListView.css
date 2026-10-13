@@ -28,7 +28,7 @@
 }
 
 .ogx-list-view__row:hover {
-  background: var(--ogx-color-gray-50, #f8fafc);
+  background: var(--ogx-grid-row-hover-background);
 }
 
 /* Keyboard focus (roving tab stop between list rows). */
@@ -41,11 +41,11 @@
 }
 
 .ogx-list-view__row--selected {
-  background: var(--ogx-selection-bg, rgba(59, 130, 246, 0.08));
+  background: var(--ogx-selection-bg, var(--ogx-grid-row-selected-background));
 }
 
 .ogx-list-view__row--selected:hover {
-  background: var(--ogx-selection-hover-bg, rgba(59, 130, 246, 0.13));
+  background: var(--ogx-selection-hover-bg, var(--ogx-grid-row-selected-hover-background));
 }
 
 /* ─── Checkbox column inside list row ────────────────────────────────────── */
@@ -79,7 +79,7 @@
   min-width: 0;
   font-family: var(--ogx-font-family);
   font-size: var(--ogx-font-size-sm);
-  color: var(--ogx-grid-cell-text);
+  color: var(--ogx-grid-row-text);
 }
 
 /* ─── Toolbar in list view mode ──────────────────────────────────────────── */

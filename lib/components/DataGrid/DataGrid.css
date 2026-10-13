@@ -19,9 +19,6 @@
   border-bottom-left-radius: max(0px, calc(var(--ogx-grid-border-radius, var(--ogx-border-radius-lg)) - var(--ogx-grid-border-width)));
   border-bottom-right-radius: max(0px, calc(var(--ogx-grid-border-radius, var(--ogx-border-radius-lg)) - var(--ogx-grid-border-width)));
 }
-.ogx:hover {
-  box-shadow: var(--ogx-shadow-md);
-}
 .ogx__viewport {
   flex: 1;
   overflow: auto;
