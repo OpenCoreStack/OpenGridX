@@ -11,21 +11,12 @@
 
 - **The AI assistant's change chips are translatable**: 11 `localeText` keys (`aiAssistantChipSearch`, `ChipNoFilters`, `ChipSort(field, direction)`, `ChipNoSorting`, `ChipGroup`, `ChipNoGrouping`, `ChipSummary(fn, field)`, `ChipNoSummaries`, `ChipPivot`, `ChipNoPivot`, `ChipVisibility(field, visible)`), English by default; filter operators in the chips use `filterPanelOperators`. `buildAiChips` takes the texts as an optional third argument.
 
-### Fixed
-
-- **The npm package no longer ships the theme test baselines.** `lib/theme/__baseline__/` (three JSON files, 1.6 MB, added in 3.7.0) was published because `files` excluded tests, screenshots and snapshots but not that folder. Unpacked size 9.4 → 7.8 MB.
-
-### Documentation
-
-- Roadmap brought up to date (3.5.1 – 3.9.0 shipped; new features on hold until the backlog of fixes, refactors and performance work is closed; the 4.0 feature-modules proposal). `docs/performance.md`: edit, paste, fill, group toggle and select-all timings at 1M rows (3.8 – 3.9) and how to keep rows memoised. README: spreadsheet editing, Ask AI panel, `localeText`, RTL and Theme Builder in the feature list; bundle sizes re-measured (an app using only `DataGrid` ships 87 KB gzipped). `rtl.md` and `components/pagination.md` no longer say their labels cannot be translated. Architecture notes on the column-window memo and the locale context. The wiki home links the newer feature pages.
-
 ### Internal
 
 - **Guards that fail CI instead of relying on review:** `check:versions` (llms.txt, CLAUDE.md and CHANGELOG must name the `package.json` version), `check:compiler` (fails on any React Compiler result outside a short allowlist, so a refactor that stops it from optimizing a hook is caught), ESLint `no-explicit-any` turned on (it was off; the library had none, the demo's 9 are now typed) and a rule against new `as unknown as` casts in the library outside the documented boundary files.
 
 - **Refactors (no behaviour change):** `GridToolbar` split into its panels with a shared `useToolbarPanel` (861 → 492 lines); the exporters one file per format; the xlsx cell helpers in `excelCells`; the cell range drag in `useGridCellRangeDrag`; keydown handling in a plain, unit-tested `handleGridKeyDown` function. Type casts `as unknown as` 43 → 15: the row pipeline, data source and grouping are called with the row type, the row store is typed with it, and column widenings go through one documented helper. DOM, styles and behaviour unchanged (theme baseline and the full browser suite in three engines).
 
-- **`npm run check:package`**, run in CI and before publishing: fails when `npm pack` would ship a test artifact (the gap that let the theme baselines through) or when `DataGrid` alone, minified and gzipped, grows past its budget (92 KB; 85.5 KB now).
 - Demo: the source viewer on every example page is syntax-highlighted (`CodeBlock`, prism-react-renderer), and the integration tips under it are corrected (inline columns and handlers are fine since 3.0 / 3.9; replace rows instead of mutating them).
 
 ---
