@@ -16,6 +16,37 @@ export interface GridLeafIndex {
 // leaf object; nothing in the grid iterates them.
 
 /**
+ * The leaves of a grouping as `id -> row index` plus each row index's group: one map write per leaf.
+ * A class rather than an object with a getter, which React Compiler cannot compile inside a hook.
+ */
+export class RowIndexLeafIndex implements GridLeafIndex {
+    private readonly leafAt: ReadonlyMap<GridRowId, number>;
+    private readonly parentAt: readonly (GridRowId | null)[];
+
+    constructor(leafAt: ReadonlyMap<GridRowId, number>, parentAt: readonly (GridRowId | null)[]) {
+        this.leafAt = leafAt;
+        this.parentAt = parentAt;
+    }
+
+    get size(): number {
+        return this.leafAt.size;
+    }
+
+    has(id: GridRowId): boolean {
+        return this.leafAt.has(id);
+    }
+
+    parentOf(id: GridRowId): GridRowId | null | undefined {
+        const index = this.leafAt.get(id);
+        return index === undefined ? undefined : this.parentAt[index];
+    }
+
+    keys(): MapIterator<GridRowId> {
+        return this.leafAt.keys();
+    }
+}
+
+/**
  * `treeNodes` of row grouping: group nodes stored as given, leaf nodes made on first `get` from the
  * leaf index and the (shared) leaf depth.
  */

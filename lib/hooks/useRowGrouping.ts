@@ -16,7 +16,7 @@ import { callSafely, getCellValue } from '../utils/values';
 import type { GridColumnLookup } from '../utils/columnLookup';
 import { computeAggregations } from '../utils/aggregation';
 import { LayeredMap } from '../utils/grouping/layeredMap';
-import { LazyLeafMetaMap, LazyLeafTreeNodes, type GridLeafIndex } from '../utils/grouping/lazyLeafMaps';
+import { LazyLeafMetaMap, LazyLeafTreeNodes, RowIndexLeafIndex, type GridLeafIndex } from '../utils/grouping/lazyLeafMaps';
 
 /** Where a group's aggregates are shown: on the group row, on a subtotal row after its children, or not at all. */
 export type GridGroupAggregationPosition = 'inline' | 'footer' | null;
@@ -223,15 +223,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
         // One map write per leaf: id -> row index. Its row is rows[index], its group parentAt[index].
         const leafAt = new Map<GridRowId, number>();
         const parentAt = new Array<GridRowId | null>(rows.length);
-        const leafIndex: GridLeafIndex = {
-            get size() { return leafAt.size; },
-            has: id => leafAt.has(id),
-            parentOf: id => {
-                const index = leafAt.get(id);
-                return index === undefined ? undefined : parentAt[index];
-            },
-            keys: () => leafAt.keys(),
-        };
+        const leafIndex: GridLeafIndex = new RowIndexLeafIndex(leafAt, parentAt);
         const rowLookup = {
             get: (id: GridRowId): R | undefined => {
                 const index = leafAt.get(id);
