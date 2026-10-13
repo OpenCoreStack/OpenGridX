@@ -17,6 +17,10 @@
 - **Sidebar reorganised by what developers look for first**: *Getting started* (with Basic Usage and the API reference), *Sorting & filtering*, *Editing*, *Pagination & server data*, *Export & clipboard*, *Grouping & aggregation*, *Selection & spreadsheet*, *Layout*, *Theming & customization*, *AI*, *Advanced*, *Tutorials*, then *Resources* (licensing, support, migration guides). Page URLs are unchanged. Text pages are marked `doc` (full width) instead of relying on their category.
 - The header shows the package version from `package.json` (it was fixed at v3.7.0).
 
+### Performance
+
+- **Selecting a row, starting or committing an edit, and scrolling no longer re-render every visible row.** Three props broke the rows' memoisation: the row click and checkbox handlers changed identity on every selection change (they now keep one identity and read the latest handlers when called), `editingCell` was passed to every row (now only to the row being edited), and the visible column list was rebuilt on every row change or vertical scroll (it now has its own memo over column widths and the horizontal scroll). Measured on the editing demo: a click re-rendered all 14 visible rows, now 1; starting an edit re-rendered all rows twice, now 2 renders in total. Guarded by `DataGrid.rowMemo.test.tsx`.
+
 ### Internal
 
 - Four tests that failed now and then under load are steadier: the row and column drag-reorder browser test releases the mouse before and after each test and waits for layout; the header-filter scroll test clicks at the cell's coordinates (Playwright's click scrolled the cell into view, which re-rendered the virtualized rows and detached it); the PDF heartbeat test takes the better of two runs; the tree-data linear-time test interleaves its two sizes over five rounds.

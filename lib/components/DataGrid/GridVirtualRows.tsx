@@ -208,7 +208,7 @@ export function GridVirtualRows<R extends GridRowModel>({
                             onDrop={rowReorderHandlers.onDrop}
                             isDragging={rowReorderHandlers.draggedRowId === id}
                             isDragOver={rowReorderHandlers.dragOverRowId === id}
-                            editingCell={editingHandlers.editingCell}
+                            editingCell={editingHandlers.editingCell?.id === id ? editingHandlers.editingCell : null}
                             onEditStart={editingHandlers.startCellEdit}
                             onEditStop={editingHandlers.stopCellEdit}
                             onEditCellValueChange={editingHandlers.setEditCellValue}

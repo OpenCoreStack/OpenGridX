@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { useGridRowSelection, type UseGridRowSelectionReturn } from './useGridRowSelection';
 import { PIVOT_GRAND_TOTAL_ID } from '../../utils/pivot';
 import { isSyntheticRowId } from '../../utils/syntheticRows';
@@ -56,7 +56,7 @@ export function useGridRowInteractions<R extends GridRowModel>(
     // handlers keep their identity and memoised rows do not re-render.
     const { clickRow, toggleRow } = rowSelection;
 
-    const handleRowClick = useCallback((rowParams: GridRowParams<R>) => {
+    const rowClick = useCallback((rowParams: GridRowParams<R>) => {
         const { id } = rowParams;
 
         // Synthetic group rows toggle on click and are never selected. Tree-data parents are real rows:
@@ -77,10 +77,20 @@ export function useGridRowInteractions<R extends GridRowModel>(
 
     // Honors disableMultipleRowSelection like a row click does. Synthetic group / subtotal rows
     // and the pivot Grand Total are not data: their ids never enter the selection model.
-    const handleSelectionChange = useCallback((rowId: GridRowId, isSelected: boolean) => {
+    const selectionChange = useCallback((rowId: GridRowId, isSelected: boolean) => {
         if (isSyntheticRowId(rowId, rowMetaMap)) return;
         toggleRow(rowId, isSelected);
     }, [rowMetaMap, toggleRow]);
+
+    // Rows receive these handlers and are memoised on their props: stable identities (reading the
+    // latest handlers at event time) keep a selection change from re-rendering every visible row.
+    const latestRef = useRef({ rowClick, selectionChange });
+    useLayoutEffect(() => { latestRef.current = { rowClick, selectionChange }; });
+    const handleRowClick = useCallback((rowParams: GridRowParams<R>) => latestRef.current.rowClick(rowParams), []);
+    const handleSelectionChange = useCallback(
+        (rowId: GridRowId, isSelected: boolean) => latestRef.current.selectionChange(rowId, isSelected),
+        []
+    );
 
     return { rowSelection, handleRowClick, handleSelectionChange };
 }

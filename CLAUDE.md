@@ -157,6 +157,11 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 
 ---
 
+## v3.9.0 — significant changes
+
+- **Rows stay memoised.** Every prop passed to `Row` must keep its identity unless that row changed: handlers go through the latest-ref pattern (`useGridRowInteractions`: stable `handleRowClick` / `handleSelectionChange`), per-row state is passed only to the row it concerns (`editingCell`, `focusedCellField`, `cellRange`), and `useGridVirtualization` builds `virtualColumns` in its own memo over column inputs only. `DataGrid.rowMemo.test.tsx` counts `Row` renders through `isCellEditable` (`Cell` is memoised, so `renderCell` would not show them)
+- 9 theme keys (checkbox checked fill / check mark, expand chevron, menu indicator / selected icon / icons / section labels / dividers) read `var(--x, <old value>)`, so the default look is unchanged
+
 ## v3.8.0 — significant changes
 
 - **Row store edits are in place.** `REPLACE_ROW(S)` (`replaceStoredRows` in `useDataGrid.ts`) mutate `state.rows.idRowsLookup` / `idByRow` / `indexById` and only copy `state.rows.rows` (the stored rows in order; `effectiveRows` is that array). Never detect an edit by those maps' identity; depend on `rows`. The writes must stay idempotent (StrictMode re-runs reducers; `DataGrid.storeInPlace.test.tsx`). `SET_ROWS` still builds new maps, which gives `getRowIdOf` a new identity

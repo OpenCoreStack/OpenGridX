@@ -154,7 +154,7 @@ export function GridPinnedRows<R extends GridRowModel>({
                     rowSpanningCaches={rowSpanningCaches}
                     rowHeight={rowHeight}
                     rowMeta={rowMetaMap.get(id)}
-                    editingCell={editingHandlers?.editingCell}
+                    editingCell={editingHandlers?.editingCell?.id === id ? editingHandlers.editingCell : null}
                     onEditStart={editingHandlers?.startCellEdit}
                     onEditStop={editingHandlers?.stopCellEdit}
                     onEditCellValueChange={editingHandlers?.setEditCellValue}

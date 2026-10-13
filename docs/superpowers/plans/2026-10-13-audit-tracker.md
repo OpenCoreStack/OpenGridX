@@ -32,7 +32,7 @@ Release plan:
 | P4 | Split `useLayout` memo (column widths vs row heights) | ~40 ms per resize move at 1M | S | 3.7.1 | ✅ | row and column memos split, merged by a third memo |
 | P5 | Cheaper select-all and incremental group expand | 1M select-all 316 → <50 ms | M | 3.8.0 | ✅ | Group toggle: leaf metas built once + `LayeredMap` (expand 279 → ~135 ms, collapse ~120 → ~1 ms). Select-all ~270 ms unchanged: bounded by the public array `rowSelectionModel` (several 1M-id Set builds); only the live-selection copy was removed |
 | P7 | Per-row quick-filter cache (WeakMap) | no rebuild per edit; less memory (~32 MB/100k now) | M | 3.8.0 | ❌ | Not needed: `filterRows` already reuses texts per row object at the same index, so an edit re-reads only the edited row |
-| P8 | Skip re-render of unchanged cells/header; remove double commit | ~half React work per interaction | M | later | ⬜ | |
+| P8 | Skip re-render of unchanged cells/header; remove double commit | ~half React work per interaction | M | later | ✅ | Rows re-rendered on every click/edit/scroll: `onRowClick` + selection handlers stable (latest ref), `editingCell` only to the edited row, `virtualColumns` own memo. Click: 14 rows → 1. Double commit = two separate updates; left as is |
 | P9 | Lazy/modular opt-in features | up to ~35 KB gz for minimal apps | L | later | ⬜ | |
 
 Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fill 783 ms · select-all 316 ms · expand 279 ms · sort 403 ms.
@@ -67,3 +67,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — Released 3.8.1 (with `llms.txt` brought up to date).
 - 2026-10-13 — Branch `release/3.9.0`: 9 theme keys + Theme Builder controls (user request), sidebar reorganised by developer priority (user request), demo version label from package.json.
 - 2026-10-13 — Flaky tests fixed (reorder, header-filter scroll, PDF heartbeat, tree-data ratio). R7 (localeText for ~120 strings) delegated to an agent in a worktree; P8 waits for it (same files).
+- 2026-10-13 — P8 done (row memoisation), regression test proven to fail without the fixes.

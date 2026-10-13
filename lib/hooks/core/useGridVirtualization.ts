@@ -73,33 +73,23 @@ export function useGridVirtualization<R extends GridRowModel>(
         maxContentHeight = Infinity,
     } = params;
 
-    return useMemo<GridVirtualizationResult<R>>(() => {
-        const {
-            unpinnedAccWidths,
-            unpinnedColsWithWidth,
-            leftPinnedCols,
-            rightPinnedCols,
-            totalWidth,
-            leftWidth,
-            rightWidth,
-            unpinnedTotalWidth,
-            systemColumnsWidth,
-            cumulativeHeights,
-            pinnedTopHeight,
-            pinnedBottomHeight,
-            unpinnedRowsHeight,
-            rowHeights,
-            unpinnedRowsLength,
-        } = layout;
+    const {
+        unpinnedAccWidths,
+        unpinnedColsWithWidth,
+        leftPinnedCols,
+        rightPinnedCols,
+        leftWidth,
+        unpinnedTotalWidth,
+    } = layout;
 
+    // The column window has its own memo: it depends only on column widths and the horizontal scroll,
+    // so a row change (an edit) or a vertical scroll keeps the same `virtualColumns` array, and rows
+    // memoised on their columns do not re-render.
+    const columnWindow = useMemo(() => {
         const viewportWidth  = rawViewportWidth  || 1000;
-        const viewportHeight = autoHeight
-            ? pinnedTopHeight + unpinnedRowsHeight + pinnedBottomHeight + 50
-            : rawViewportHeight || 600;
-
-        const overscanCols = 6;
         const visibleLocalStart = Math.max(0, scrollLeft - leftWidth);
         const visibleLocalEnd   = scrollLeft + viewportWidth - leftWidth;
+        const overscanCols = 6;
 
         let firstUnpinnedIndex = 0;
         let lastUnpinnedIndex  = unpinnedColsWithWidth.length - 1;
@@ -129,6 +119,28 @@ export function useGridVirtualization<R extends GridRowModel>(
             ...(rightSpacerWidth > 0 ? [{ field: '__spacer_right__', width: rightSpacerWidth, isSpacer: true }] : []),
             ...rightPinnedCols,
         ];
+        return { firstUnpinnedIndex, lastUnpinnedIndex, virtualColumns };
+    }, [unpinnedAccWidths, unpinnedColsWithWidth, leftPinnedCols, rightPinnedCols, leftWidth, unpinnedTotalWidth, scrollLeft, rawViewportWidth]);
+
+    return useMemo<GridVirtualizationResult<R>>(() => {
+        const {
+            totalWidth,
+            rightWidth,
+            systemColumnsWidth,
+            cumulativeHeights,
+            pinnedTopHeight,
+            pinnedBottomHeight,
+            unpinnedRowsHeight,
+            rowHeights,
+            unpinnedRowsLength,
+        } = layout;
+
+        const viewportWidth  = rawViewportWidth  || 1000;
+        const viewportHeight = autoHeight
+            ? pinnedTopHeight + unpinnedRowsHeight + pinnedBottomHeight + 50
+            : rawViewportHeight || 600;
+
+        const { firstUnpinnedIndex, lastUnpinnedIndex, virtualColumns } = columnWindow;
 
         const hasHorizontalScroll = viewportWidth > 0 && totalWidth > viewportWidth;
         const scrollbarBuffer = hasHorizontalScroll ? 16 : 0;
@@ -192,8 +204,11 @@ export function useGridVirtualization<R extends GridRowModel>(
         };
     }, [
         layout,
+        columnWindow,
+        leftWidth,
+        unpinnedAccWidths,
+        unpinnedColsWithWidth,
         scrollTop,
-        scrollLeft,
         rawViewportWidth,
         rawViewportHeight,
         autoHeight,
