@@ -481,3 +481,30 @@ describe('useRowGrouping — models passed inline', () => {
         expect(result.current.treeNodes).toBe(treeNodes);
     });
 });
+
+describe('useRowGrouping — leaf objects are made lazily (3.10.1)', () => {
+    it('getVisibleRows over every row makes no leaf node or metadata; reading a few makes only those', async () => {
+        const { LazyLeafTreeNodes } = await import('../utils/grouping/lazyLeafMaps');
+        const rows = Array.from({ length: 5000 }, (_, i) => ({ id: i, dept: `d${i % 5}`, name: `n${i}` }));
+        const { result } = renderHook(() => useRowGrouping({
+            rows,
+            getRowId: (r: { id: number }) => r.id,
+            columns: [{ field: 'dept' }, { field: 'name' }],
+            rowGroupingModel: ['dept'],
+            defaultGroupingExpansionDepth: -1,
+        }));
+        const visible = result.current.getVisibleRows();
+        expect(visible?.length).toBe(5005);
+        const nodes = result.current.treeNodes;
+        expect(nodes).toBeInstanceOf(LazyLeafTreeNodes);
+        // The whole-dataset pass (row pipeline) must not touch the leaves' objects.
+        expect((nodes as InstanceType<typeof LazyLeafTreeNodes>).madeLeafCount).toBe(0);
+        // Rendering reads the metadata of the rows on screen only: one object per row, the same on
+        // every read, so writes to params.rowMeta stay on that row.
+        const first = result.current.rowMetaMap.get(7);
+        expect(first).toEqual({ hasChildren: false, treeDepth: 1, isGroupRow: false });
+        expect(result.current.rowMetaMap.get(7)).toBe(first);
+        expect(result.current.rowMetaMap.get(8)).not.toBe(first);
+        expect((nodes as InstanceType<typeof LazyLeafTreeNodes>).madeLeafCount).toBe(0);
+    });
+});

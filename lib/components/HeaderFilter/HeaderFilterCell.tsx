@@ -281,6 +281,9 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
                     type="button"
                     className={`ogx__header-filter-operator${menuAnchor ? ' ogx__header-filter-operator--open' : ''}`}
                     tabIndex={-1}
+                    // The operator symbol is a glyph, not text: left-to-right in every direction, so the
+                    // bidi rules do not mirror it in RTL (∋ "contains" would show as ∈ "is any of").
+                    dir="ltr"
                     aria-haspopup="menu"
                     aria-expanded={menuAnchor !== null}
                     aria-label={locale.operatorButtonLabel(label, operatorLabel)}

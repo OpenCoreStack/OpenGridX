@@ -174,7 +174,9 @@ Measured in Chromium on an Apple M1, 1,000,000 rows, from the event to the end o
 | Fill 1,000 cells | 809 ms | ~50 ms | |
 | Expand a group | 279 ms | ~135 ms | leaf row metadata built once per tree |
 | Collapse a group | ~120 ms | ~1 ms | |
-| Select all | ~270 ms | ~270 ms (~130 ms in 3.10) | 3.10 builds the 1M-id set once and reuses it for the model it returns; the rest is the live-selection check |
+| Quick filter, first search at 1M rows | ~2.7 s (3.10.0) | ~1.6–2 s (3.10.1) | dates formatted once per day; shown texts lower-cased once per distinct text; later keystrokes ~210 ms |
+| Group 1M rows (apply a grouping) | ~540 ms (3.10.0) | ~190 ms (3.10.1) | leaf nodes and row metadata made on first read; ids from the store, not looked up |
+| Select all | ~270 ms | ~270 ms (~130 ms in 3.10.0, ~60–90 ms in 3.10.1) | 3.10 builds the 1M-id set once and reuses it for the model it returns; the rest is the live-selection check |
 
 3.9.0 keeps rows memoised: selecting a row, starting or committing an edit, and vertical scrolling re-render only the rows they change (a click re-rendered every visible row, now one). React's own work per interaction is about 3–5 ms at 100k rows.
 

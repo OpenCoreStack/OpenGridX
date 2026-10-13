@@ -213,6 +213,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const { treeDataHandlers, rowGroupingHandlers, activeHierarchyHandlers, rowMetaMap } = useGridHierarchy<R>({
         rows: effectiveRows,
+        // The store's ids, aligned with its rows: grouping reads each leaf's id from here.
+        rowIds: state.rows.allRows,
         getRowId: getRowIdOf,
         getTreeDataPath, isTreeDataRequested, isTreeData,
         columns: activeColumns,

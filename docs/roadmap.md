@@ -94,6 +94,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 | **3.9.0** ✅ | shipped 13 Oct | **`localeText` for every UI string** (~200 keys) | 9 theme keys + Theme Builder controls; rows stay memoised through selection and editing; demo sidebar by priority |
 | **3.9.1** ✅ | shipped 13 Oct | **npm package no longer ships 1.6 MB of test baselines** | `check:package` guard in CI; version badges read `package.json`; docs brought up to date |
 | **3.10.0** ✅ | shipped 13 Oct | **Backlog cleared**: refactors (R4–R6), CI guards, select-all ~2× faster | AI change chips translatable; demo syntax highlighting |
+| **3.10.1** ✅ | shipped 13 Oct | **1M-row performance**: select-all ~60–90 ms, grouping ~190 ms, quick filter first search ~1.6–2 s | Next.js smoke fixture; RTL operator symbols not mirrored |
 | Freeze | 19 Dec – 5 Jan | Bug fixes only | — |
 
 ### Now: backlog first (feature hold since 13 Oct; backlog cleared in 3.10)

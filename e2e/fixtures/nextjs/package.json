@@ -1,0 +1,25 @@
+{
+  "name": "opengridx-smoke-nextjs",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Consumer fixture for the package smoke suite: a Next.js App Router app (Turbopack) without the optional export peers. A Server Component passes rows to a 'use client' grid; `next build` must succeed with no next.config aliases, as docs/features/nextjs.md says.",
+  "scripts": {
+    "build": "next build",
+    "preview": "next start -p 4323"
+  },
+  "dependencies": {
+    "@opencorestack/opengridx": "file:../../../.pack/opencorestack-opengridx.tgz",
+    "next": "^16.4.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "source-map-js": "^1.2.2"
+  }
+}

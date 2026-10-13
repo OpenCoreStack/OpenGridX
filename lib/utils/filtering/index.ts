@@ -221,6 +221,20 @@ function pushSearchText(out: string[], value: unknown): void {
   // Other objects have no meaningful text ("[object Object]") and are skipped.
 }
 
+// Shown texts of date, boolean and singleSelect columns repeat across rows (a few labels, Yes / No,
+// some days): lower-case each once instead of once per cell, which allocated a new string per row of
+// a 1M-row first search. Bounded; free text (names, notes) does not go through it.
+const lowerShownCache = new Map<string, string>();
+function lowerShownText(text: string): string {
+  let lower = lowerShownCache.get(text);
+  if (lower === undefined) {
+    lower = text.toLowerCase();
+    if (lowerShownCache.size >= 10_000) lowerShownCache.clear();
+    lowerShownCache.set(text, lower);
+  }
+  return lower;
+}
+
 function getQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | undefined): string[] {
   const texts: string[] = [];
   if (!columns) {
@@ -235,7 +249,12 @@ function getQuickFilterTexts(row: GridRowModel, columns: GridColumnLookup | unde
     } else if (col.type === 'date' || col.type === 'boolean' || col.type === 'singleSelect') {
       // Without a formatter the grid shows a locale date, Yes / No or the option label: search that too.
       const shown = formatValueByType(value, col);
-      if (shown !== '') texts.push(shown.toLowerCase());
+      if (shown !== '') {
+        const lower = lowerShownText(shown);
+        texts.push(lower);
+        // A string option whose label is the value itself: the same text once is enough.
+        if (typeof value === 'string' && value.length === lower.length && value.toLowerCase() === lower) continue;
+      }
     }
     pushSearchText(texts, value);
   }

@@ -8,6 +8,7 @@ const EMPTY_ROW_META_MAP: ReadonlyMap<GridRowId, GridRowMeta> = new Map();
 export interface UseGridHierarchyParams<R extends GridRowModel> extends Pick<
     UseRowGroupingParams<R>,
     | 'rows'
+    | 'rowIds'
     | 'getRowId'
     | 'columns'
     | 'aggregationModel'
@@ -35,7 +36,7 @@ export interface UseGridHierarchyParams<R extends GridRowModel> extends Pick<
  */
 export function useGridHierarchy<R extends GridRowModel>(params: UseGridHierarchyParams<R>) {
     const {
-        rows, getRowId, getTreeDataPath, isTreeDataRequested, isTreeData, columns, rowGroupingModel, isRowGrouping,
+        rows, rowIds, getRowId, getTreeDataPath, isTreeDataRequested, isTreeData, columns, rowGroupingModel, isRowGrouping,
         aggregationModel, defaultGroupingExpansionDepth, filterModel, sortModel, getAggregationPosition,
         columnLookup, filterMode, sortingMode,
     } = params;
@@ -56,6 +57,7 @@ export function useGridHierarchy<R extends GridRowModel>(params: UseGridHierarch
 
     const rowGroupingHandlers = useRowGrouping<R>({
         rows,
+        rowIds,
         getRowId,
         columns,
         rowGroupingModel,

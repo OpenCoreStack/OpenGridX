@@ -10,6 +10,8 @@ const fixtures = [
 
 // A webpack 5 app without the optional export peers (exceljs, jspdf): nopeers.spec.ts only.
 const NOPEERS_PORT = 4321;
+// A Next.js App Router app (Turbopack) without the optional peers: nextjs.spec.ts only.
+const NEXTJS_PORT = 4323;
 
 const browsers = [
   { name: 'chromium', device: devices['Desktop Chrome'] },
@@ -50,6 +52,12 @@ export default defineConfig({
       metadata: { fixture: 'nopeers' },
       use: { ...b.device, viewport: { width: 1400, height: 900 }, baseURL: `http://localhost:${NOPEERS_PORT}` },
     },
+    {
+      name: `${b.name}-nextjs`,
+      testMatch: 'nextjs.spec.ts',
+      metadata: { fixture: 'nextjs' },
+      use: { ...b.device, viewport: { width: 1400, height: 900 }, baseURL: `http://localhost:${NEXTJS_PORT}` },
+    },
   ]),
   webServer: [
     ...fixtures.map((f) => ({
@@ -64,6 +72,13 @@ export default defineConfig({
       command: `node serve.mjs --port ${NOPEERS_PORT}`,
       cwd: 'fixtures/nopeers',
       url: `http://localhost:${NOPEERS_PORT}`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: `npx next start -p ${NEXTJS_PORT}`,
+      cwd: 'fixtures/nextjs',
+      url: `http://localhost:${NEXTJS_PORT}`,
       reuseExistingServer: false,
       timeout: 60_000,
     },

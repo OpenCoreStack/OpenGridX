@@ -34,3 +34,32 @@ export function markContainsAll(set: ReadonlySet<GridRowId>, ids: readonly GridR
 export function isKnownToContainAll(set: ReadonlySet<GridRowId>, ids: readonly GridRowId[]): boolean {
     return containsAll.get(set) === ids;
 }
+
+// Live-selection check: a set already checked against the row store's current maps, or built from
+// such a set by adding ids of rendered rows (the grid's own toggles, row clicks and select-all), holds
+// only ids of existing rows. Rows are removed only by replacing the rows, which gives the store new
+// maps, so the check is skipped while the maps are the same objects.
+const validatedAgainst = new WeakMap<ReadonlySet<GridRowId>, { rows: object; meta: object }>();
+const derivedFrom = new WeakMap<ReadonlySet<GridRowId>, ReadonlySet<GridRowId>>();
+
+/** Records that every id of `set` named an existing row in these maps. */
+export function markValidated(set: ReadonlySet<GridRowId>, rows: object, meta: object): void {
+    validatedAgainst.set(set, { rows, meta });
+}
+
+/**
+ * Records that `set` was built from `parent` by adding ids of rendered rows only (never ids from the
+ * API, which may name anything), so it is live wherever `parent` is.
+ */
+export function markDerivedFromLive(set: ReadonlySet<GridRowId>, parent: ReadonlySet<GridRowId>): void {
+    if (set !== parent) derivedFrom.set(set, parent);
+}
+
+/** Whether `set` (or the set it was derived from) was checked against these very maps. */
+export function isKnownLive(set: ReadonlySet<GridRowId>, rows: object, meta: object): boolean {
+    for (let s: ReadonlySet<GridRowId> | undefined = set, depth = 0; s && depth < 4; s = derivedFrom.get(s), depth++) {
+        const v = validatedAgainst.get(s);
+        if (v && v.rows === rows && v.meta === meta) return true;
+    }
+    return false;
+}
