@@ -108,6 +108,10 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
     cellRange?: GridRowCellRange | null;
 }
 
+// The system columns' definitions passed to error params of their cells (stable, module level).
+const EXPAND_COLUMN: GridColDef = { field: '__expand_col__', width: 48 };
+const CHECKBOX_COLUMN: GridColDef = { field: '__checkbox_col__', width: 48 };
+
 function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     const locale = useGridLocale();
     const {
@@ -341,7 +345,7 @@ function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                                 row,
                                 field: '__expand_col__',
                                 value: isDetailPanelExpanded,
-                                colDef: { field: '__expand_col__', width: 48 } as unknown as GridColDef<R>,
+                                colDef: EXPAND_COLUMN as GridColDef<R>,
                                 rowIndex,
                                 colIndex: -1
                             });
@@ -379,7 +383,7 @@ function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                                 row,
                                 field: '__checkbox_col__',
                                 value: isSelected,
-                                colDef: { field: '__checkbox_col__', width: 48 } as unknown as GridColDef<R>,
+                                colDef: CHECKBOX_COLUMN as GridColDef<R>,
                                 rowIndex,
                                 colIndex: -1
                             });

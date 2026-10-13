@@ -21,6 +21,8 @@
 
 ### Internal
 
+- **Refactors (no behaviour change):** `GridToolbar` split into its panels with a shared `useToolbarPanel` (861 → 492 lines); the exporters one file per format; the xlsx cell helpers in `excelCells`; the cell range drag in `useGridCellRangeDrag`; keydown handling in a plain, unit-tested `handleGridKeyDown` function. Type casts `as unknown as` 43 → 15: the row pipeline, data source and grouping are called with the row type, the row store is typed with it, and column widenings go through one documented helper. DOM, styles and behaviour unchanged (theme baseline and the full browser suite in three engines).
+
 - **`npm run check:package`**, run in CI and before publishing: fails when `npm pack` would ship a test artifact (the gap that let the theme baselines through) or when `DataGrid` alone, minified and gzipped, grows past its budget (92 KB; 85.5 KB now).
 - Demo: the source viewer on every example page is syntax-highlighted (`CodeBlock`, prism-react-renderer), and the integration tips under it are corrected (inline columns and handlers are fine since 3.0 / 3.9; replace rows instead of mutating them).
 

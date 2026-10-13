@@ -8,6 +8,7 @@ import { CellErrorBoundary } from './CellErrorBoundary';
 import { formatValueByType } from '../../utils/values';
 import { attempt } from '../../utils/attempt';
 import { RANGE_BOTTOM, RANGE_CELL, RANGE_FILL_HANDLE, RANGE_LEFT, RANGE_RIGHT, RANGE_TOP } from '../../utils/cellSelection';
+import { untypedColumn } from '../../utils/untypedColumns';
 
 export interface CellProps<R extends GridRowModel = GridRowModel> {
     onCellClick?: (params: GridCellParams<R>) => void;
@@ -306,7 +307,7 @@ function CellImpl<R extends GridRowModel = GridRowModel>(props: CellProps<R>) {
                             formattedValue={formattedValue}
                             row={row}
                             field={colDef.field}
-                            colDef={colDef as unknown as GridColDef}
+                            colDef={untypedColumn(colDef)}
                             rowIndex={rowIndex}
                             colIndex={colIndex}
                             rowMeta={rowMeta}

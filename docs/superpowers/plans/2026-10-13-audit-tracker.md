@@ -44,7 +44,7 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 | R1 | Remove dead code: `lib/theme/defaultStyles.ts`, 12 unused util exports, 9 never-emitted CSS classes, 27 unread CSS vars; decide on `QuickFilter` CSS | S | ✅ | 11 dead functions + `defaultStyles.ts` removed; 9 never-set class rules removed; CSS vars kept (public tokens); theme baseline unchanged |
 | R2 | Shared filter-value helper for FilterPanel + HeaderFilterCell (6 valueOptions readers) | S–M | ✅ | `lib/utils/filtering/filterInput.ts` (4 helpers) used by FilterPanel + HeaderFilterCell |
 | R3 | Stop writing `_isSkeleton` onto rows | M | ✅ | `Row` `skeleton` prop; `_isSkeleton` removed from `GridRowModel` and editing/spanning |
-| R4 | Reduce ~41 `as unknown as` casts (internal column type) | L | ⬜ | |
+| R4 | Reduce ~41 `as unknown as` casts (internal column type) | L | ✅ | 43 → 15 `as unknown as`: pipeline / data source / grouping called with `<R>`; store typed with `R`; column widenings through one `untypedColumns` helper. One cast had hidden ~25 type errors. Remaining 15 are synthetic rows, third-party typings, window/CSS |
 | R5 | Split files >600 lines (`GridToolbar.tsx` 855, …) | M each | ✅ | GridToolbar 861→492 (panels + `useToolbarPanel`), exporters one file per format, xlsx helpers → `excelCells`, range drag → `useGridCellRangeDrag`, keydown → `gridKeyDown.ts`. `DataGrid.tsx` (618) left: it is the documented hook order |
 | R6 | Narrow wide hook interfaces (keyboard nav: 31 params) | L | ✅ | Keyboard: the 225-line keydown body is `handleGridKeyDown(event, GridKeyDownContext)`, a typed, unit-tested function; regrouping the 31 params into objects was rejected (inline objects would break memoised callbacks) |
 | R7 | Route ~70 hard-coded English strings through `localeText` | M | ✅ | 196 keys (more than the ~70 estimated: pivot/toolbar/AI status included), `GridLocaleContext`, `useShallowStableValue`. Not covered: AI chip texts, grouping column default header, file/row contents |
@@ -75,3 +75,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — Docs sweep (roadmap, performance, README, wiki home, rtl, pagination, architecture). Found and fixed: npm package shipped `lib/theme/__baseline__` (1.6 MB). Feature hold recorded (user).
 - 2026-10-13 — Backlog 1/6: demo syntax highlighting done. Insight follow-ups: `check:package` (no test artifacts in the tarball + DataGrid-only 92 KB gz budget) in CI and publish.
 - 2026-10-13 — R5 and R6 done (all engines green, compiler baseline). Next: R4 casts.
+- 2026-10-13 — R4 done (43 → 15 casts). All R items done.

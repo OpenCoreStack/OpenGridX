@@ -3,7 +3,7 @@ import { useLayout } from '../../hooks/core/useLayout';
 import { useGridKeyboardNavigation } from '../../hooks/core/useGridKeyboardNavigation';
 import { useGridControlledState } from '../../hooks/core/useGridControlledState';
 import { useGridThemeDimensions } from '../../hooks/core/useGridThemeDimensions';
-import { useGridRowPipeline, type GridRowPipelineResult } from '../../hooks/core/useGridRowPipeline';
+import { useGridRowPipeline } from '../../hooks/core/useGridRowPipeline';
 import { countReachableRows } from '../../utils/maxElementHeight';
 import { useGridColumns } from '../../hooks/core/useGridColumns';
 import { useGridDetailPanel } from '../../hooks/core/useGridDetailPanel';
@@ -44,7 +44,8 @@ import { useGridKeyboardMode, useGridPointerFocusHandlers } from '../../hooks/co
 import { getPaginationRowCount } from '../../utils/pagination';
 import { useGridToolbarStack } from '../../hooks/core/useGridToolbarStack';
 import { DEFAULT_HEADER_FILTER_HEIGHT } from '../../utils/headerFilters';
-import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridRowId, GridColDef } from '../../types';
+import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridColDef } from '../../types';
+import { untypedColumns } from '../../utils/untypedColumns';
 
 /**
  * The grid. `R` is your row type: any object type (an interface works), inferred from `rows`. `columns`
@@ -133,7 +134,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const pivot = useGridPivot({
         rows: rows as GridRowModel[],
-        columns: columns as unknown as GridColDef[],
+        columns: untypedColumns(columns),
         pivotMode,
         pivotModel: currentPivotModel,
         filterModel,
@@ -166,7 +167,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     });
 
     const activeRows = pivot.rows as unknown as R[];
-    const baseColumns = pivot.columns as unknown as GridColDef<R>[];
+    const baseColumns = pivot.columns as GridColDef<R>[];
 
     const { activeColumns, effectivePinnedColumns } = useGridGroupingColumn<R>({
         baseColumns, pinnedColumns, hasGroupingColumn, groupingColDef, isTreeData, getTreeDataPath,
@@ -222,13 +223,13 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     // Steps 12a–13: the edit commit channel, the batch edit and single-cell editing.
     const { editCommitChannel, batchEdit, editingHandlers } = useGridEditPipeline<R>({
-        rowsLookup: state.rows.idRowsLookup as unknown as ReadonlyMap<GridRowId, R>,
+        rowsLookup: gridData.rowsLookup,
         rows: effectiveRows,
         getRowId: getRowIdOf,
         columns: activeColumns,
         processRowUpdate,
         onProcessRowUpdateError,
-        replaceRows: replaceRows as unknown as (rows: ReadonlyMap<GridRowId, R>) => void,
+        replaceRows,
     });
 
     // The selection without ids of removed rows. Only client-owned rows are pruned: a server page
@@ -241,12 +242,12 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onSelectionModelChange: handleRowSelectionModelChange,
     });
 
-    const dataSourceHandlers = useGridDataSource({
+    const dataSourceHandlers = useGridDataSource<R>({
         dataSource, sortModel, filterModel,
         paginationModel: effectivePaginationModel,
         paginationMode, sortingMode, filterMode, aggregationModel,
         rowGroupingActive: isRowGrouping,
-        getRowId: effectiveGetRowId as unknown as (row: GridRowModel) => GridRowId,
+        getRowId: effectiveGetRowId,
         setRows, setRowCount, setDataSourceLoading, setDataSourceError,
         onAggregationResults: setServerAggregationResults,
         onPaginationModelChange: handlePaginationModelChange,
@@ -290,8 +291,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         density: effectiveDensity,
     });
 
-    const rowPipeline = useGridRowPipeline<GridRowModel>({
-        effectiveRows: effectiveRows as GridRowModel[],
+    const rowPipeline = useGridRowPipeline<R>({
+        effectiveRows,
         activeHierarchyHandlers,
         filterMode,
         filterModel: pivot.pipelineFilterModel,
@@ -303,7 +304,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     });
     const {
         filteredRows, dataRows, pinnedTopRows, pinnedBottomRows, sortedUnpinnedRows, paginatedUnpinnedRows, allRenderableRows,
-    } = rowPipeline as unknown as GridRowPipelineResult<R>;
+    } = rowPipeline;
     // The unpinned rows on screen: the current page, or every row without pagination.
     const centerRows = pagination ? paginatedUnpinnedRows : sortedUnpinnedRows;
 
@@ -345,7 +346,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
                 hierarchyField,
                 dataRows,
             }),
-            visibleColumns: renderOrderedColumns as unknown as GridColDef[],
+            visibleColumns: renderOrderedColumns,
         },
     });
 
@@ -359,7 +360,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
 
     const { aggregationResult, isLoading: isAggregationLoading } = useAggregation({
         rows: dataRows,
-        columns: activeColumns as unknown as GridColDef[],
+        columns: untypedColumns(activeColumns),
         // The pivot's Grand Total row is the aggregate in pivot mode: nothing to total here.
         aggregationModel: isPivotActive ? NO_AGGREGATION_MODEL : aggregationModel,
         // When the server drives the rows (paginates, sorts or filters them), the grid only holds
@@ -437,8 +438,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // Steps 30–31a: copy, scrollToIndexes and column auto-size on the API.
     const handleColumnAutosize = useGridViewApis<R>({
         apiRef, containerRef, viewportRef,
-        copyColumns: renderedDataColumns as unknown as GridColDef[],
-        getRowId: getRowIdOf as unknown as (row: GridRowModel) => GridRowId,
+        copyColumns: renderedDataColumns,
+        getRowId: getRowIdOf,
         disableClipboardCopy,
         getCellRangeCopyText: cellSelection.enabled ? cellSelection.getCopyText : undefined,
         layout,
@@ -497,7 +498,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         getPendingModel: controlledState.getPendingCellSelectionModel,
         focusedCell, setFocusedCell, allRenderableRows,
         getRowId: getRowIdOf,
-        navigationColumns: navigationColumns as unknown as GridColDef<R>[],
+        navigationColumns,
         columnIndexMap, isCellEditable, rowMetaMap,
         getSpanOrigin: spanning.getSpanOrigin,
         isEditing: editingHandlers.editingCell !== null,
@@ -559,7 +560,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         apiRef, containerRef, localeText,
         aiAssistant: {
             options: aiAssistant,
-            columns: activeColumns as unknown as GridColDef[],
+            columns: untypedColumns(activeColumns),
             onApply: onAiAssistantApply,
             onError: onAiAssistantError,
         },
@@ -598,7 +599,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         pinnedTopRows, pinnedBottomRows, pinnedRows, getRowIdOf,
         showEmptyState: !effectiveLoading && !state.dataSource.error && filteredRows.length === 0,
         effectiveNoRowsLabel, spanRowWindow, visibleRows,
-        baseColumns: columns as unknown as GridColDef<R>[], viewportWidth: state.dimensions.viewportWidth,
+        baseColumns: columns as GridColDef<R>[], viewportWidth: state.dimensions.viewportWidth,
         rowReorderHandlers, paginationMode, dataSourceLoading: state.dataSource.loading,
         sortedUnpinnedRowCount: sortedUnpinnedRows.length, pageSize: effectivePaginationModel.pageSize,
         unpinnedRowsLength: layout.unpinnedRowsLength,

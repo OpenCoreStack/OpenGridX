@@ -15,6 +15,7 @@ import type { UseGridViewportResult } from '../../hooks/core/useGridViewport';
 import type { GridVirtualizationResult } from '../../hooks/core/useGridVirtualization';
 import type { UseColumnReorderReturn } from '../../hooks/useColumnReorder';
 import type { GridSpanningResult } from '../../hooks/features/useGridSpanning';
+import { untypedColumns } from '../../utils/untypedColumns';
 
 /** The props the row renderers (top-pinned, centre and bottom-pinned rows) all take. */
 export type GridRowRenderProps<R extends GridRowModel> = Pick<GridVirtualRowsProps<R>,
@@ -294,7 +295,7 @@ export function GridViewport<R extends GridRowModel>(props: GridViewportProps<R>
                          hidden, pinned and scrolled columns line up. Off in pivot mode (hasAggregation). */}
                     {showAggregationFooter && (
                         <GridAggregationFooter
-                            columns={virtualization.virtualColumns as unknown as GridColDef[]}
+                            columns={untypedColumns(virtualization.virtualColumns)}
                             aggregationModel={aggregationModel}
                             aggregationResult={aggregationResult}
                             columnWidths={columnWidths}

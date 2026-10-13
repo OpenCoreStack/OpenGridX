@@ -13,6 +13,7 @@ import type {
     GridRowModel,
     GridToolbarSlotProps,
 } from '../../types';
+import { untypedColumns } from '../../utils/untypedColumns';
 
 type ToolbarSlot = NonNullable<DataGridProps['slots']>['toolbar'];
 type ToolbarSlotProps = NonNullable<DataGridProps['slotProps']>['toolbar'];
@@ -79,8 +80,8 @@ export function useGridToolbarProps<R extends GridRowModel>(
             };
         return {
             apiRef,
-            columns: orderedColumns as unknown as GridColDef[],
-            baseColumns: baseColumns as unknown as GridColDef[],
+            columns: untypedColumns(orderedColumns),
+            baseColumns: baseColumns && untypedColumns(baseColumns),
             aggregationModel,
             onAggregationModelChange,
             ...(pivotMode || pivotModelProp || onPivotModelChangeProp ? {

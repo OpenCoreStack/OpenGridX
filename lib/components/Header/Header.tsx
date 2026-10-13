@@ -12,6 +12,7 @@ import { getHeaderColumnStyle } from './headerColumnStyle';
 import { HeaderFilterRow } from '../HeaderFilter/HeaderFilterRow';
 import { isRtl, logicalArrowKey } from '../../utils/direction';
 import { useGridLocale } from '../DataGrid/gridLocaleContext';
+import { untypedColumn, untypedColumns } from '../../utils/untypedColumns';
 
 
 function MenuIcon() {
@@ -469,7 +470,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                     };
 
                     const headerContent = colDef.renderHeader
-                        ? colDef.renderHeader({ field: colDef.field, colDef: colDef as unknown as GridColDef, colIndex })
+                        ? colDef.renderHeader({ field: colDef.field, colDef: untypedColumn(colDef), colIndex })
                         : colDef.headerName || colDef.field;
 
                     const handleHeaderClick = (e: React.MouseEvent) => {
@@ -560,7 +561,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
 
                 {menuOpenParams && (
                     <ColumnMenu
-                        colDef={menuOpenParams.colDef as unknown as GridColDef<GridRowModel>}
+                        colDef={untypedColumn(menuOpenParams.colDef)}
                         sortModel={sortModel}
                         onSort={onSort || onSortAdd ? handleMenuSort : undefined}
                         onHide={onHideColumn}
@@ -576,7 +577,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
             {/* ── Header filter row ── */}
             {headerFilters && (
                 <HeaderFilterRow
-                    columns={columns as unknown as GridColDef[]}
+                    columns={untypedColumns(columns)}
                     columnWidths={columnWidths}
                     pinnedColumns={pinnedColumns}
                     pinnedPositions={pinnedPositions}
