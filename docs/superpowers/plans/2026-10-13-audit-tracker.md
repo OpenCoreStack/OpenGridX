@@ -17,7 +17,7 @@ Release plan:
 | B4 | Med | Junk paste ("hello 5") into date column saved as a 2001 date | `lib/utils/values.ts:127` | 3.7.1 | ✅ | `hasOnlyDateWords` in `toDate` (loop, no regex) |
 | B5 | Med | Date paste into ISO date-time string lands on previous day west of UTC | `lib/utils/parsing.ts:150-151` | 3.7.1 | ✅ | zoned current → local time of day on pasted day, written as UTC; tested in 3 TZs |
 | B6 | Med | List view reads undeclared `--ogx-grid-cell-text`; selection colours bypass theme | `ListView.css:82` | 3.7.1 | ✅ | list view uses `--ogx-grid-row-*` vars; old `--ogx-selection-*` still win |
-| B7 | Low–Med | Duplicate row ids silently drop rows (no dev warning) | row store | later | ⬜ | |
+| B7 | Low–Med | Duplicate row ids silently drop rows (no dev warning) | row store | later | ✅ | Already handled since 3.0: dev warning naming the ids (`buildRowsState`, tested in `DataGrid.state.test.tsx`); the audit overstated it. Warns once per page |
 | B8 | Low | Quick filter stale on in-place row mutation | quick-filter cache | later | ⏸ | Inherent to the per-row text cache; documented in `docs/features/filtering.md` |
 | B9 | Low | Quick filter stale when a formatter closure changes | quick-filter cache | later | ⏸ | Inherent to the cache; documented (pass new column definitions) |
 | B10 | Low | `bigint` loses precision in sort | `lib/utils/sorting/index.ts:45` | later | ✅ | Exact re-ranking (`rankNumbersExactly`, `compareExact`) when a column has an unsafe bigint; generic path tie-breaks by `big` |
