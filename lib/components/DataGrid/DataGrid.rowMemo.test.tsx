@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, fireEvent, act, cleanup } from '@testing-library/react';
+import { useState } from 'react';
 import { DataGrid } from './DataGrid';
 import type { GridColDef } from '../../types';
 
@@ -40,5 +41,30 @@ describe('row memoisation', () => {
         act(() => { fireEvent.doubleClick(cell(1)); });
         expect(renders.get(0) ?? 0).toBe(0);
         expect(renders.get(3) ?? 0).toBe(0);
+    });
+
+    it('an inline localeText object of plain strings keeps rows memoised', () => {
+        const renders = new Map<number, number>();
+        const isCellEditable = ({ row }: { row: Row }) => {
+            renders.set(row.id, (renders.get(row.id) ?? 0) + 1);
+            return true;
+        };
+        const columns: GridColDef<Row>[] = [{ field: 'name', editable: true }];
+        let bump = () => {};
+        function Parent() {
+            const [n, setN] = useState(0);
+            bump = () => setN(n + 1);
+            return (
+                <div data-n={n}>
+                    <DataGrid<Row> rows={ROWS} columns={columns} height={400} isCellEditable={isCellEditable}
+                        localeText={{ noRowsLabel: 'Keine Daten', columnMenuUnsort: 'Unsortiert' }} />
+                </div>
+            );
+        }
+        render(<Parent />);
+        renders.clear();
+        act(() => { bump(); });
+        expect(renders.get(0) ?? 0).toBe(0);
+        expect(renders.get(4) ?? 0).toBe(0);
     });
 });

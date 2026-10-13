@@ -47,7 +47,7 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 | R4 | Reduce ~41 `as unknown as` casts (internal column type) | L | ⬜ | |
 | R5 | Split files >600 lines (`GridToolbar.tsx` 855, …) | M each | ⬜ | |
 | R6 | Narrow wide hook interfaces (keyboard nav: 31 params) | L | ⬜ | |
-| R7 | Route ~70 hard-coded English strings through `localeText` | M | ⬜ | new public keys → minor release |
+| R7 | Route ~70 hard-coded English strings through `localeText` | M | ✅ | 196 keys (more than the ~70 estimated: pivot/toolbar/AI status included), `GridLocaleContext`, `useShallowStableValue`. Not covered: AI chip texts, grouping column default header, file/row contents |
 | R8 | Document 24 exports missing from `docs/API_REFERENCE.md` | S | ✅ | All 23 missing exports documented in `API_REFERENCE.md` |
 
 ## Log
@@ -68,3 +68,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — Branch `release/3.9.0`: 9 theme keys + Theme Builder controls (user request), sidebar reorganised by developer priority (user request), demo version label from package.json.
 - 2026-10-13 — Flaky tests fixed (reorder, header-filter scroll, PDF heartbeat, tree-data ratio). R7 (localeText for ~120 strings) delegated to an agent in a worktree; P8 waits for it (same files).
 - 2026-10-13 — P8 done (row memoisation), regression test proven to fail without the fixes.
+- 2026-10-13 — R7 done (agent, reviewed): 196 localeText keys via GridLocaleContext; added useShallowStableValue so an inline localeText of strings keeps rows memoised. Unit 1972, browser 585/585 in 3 engines.

@@ -1021,7 +1021,7 @@ Since v3.9 every built-in string of the grid goes through `localeText`: the tool
 - The strings reach portalled menus and panels through React context, so a custom toolbar slot that renders the built-in `GridToolbar` is translated too.
 - Components used outside a grid (`ColumnVisibilityPanel`, `GridToolbar`, `FilterPanel`, `Pagination`, `QuickFilter`) show English. Their own props (`placeholder`, `aiAssistantLabel`, `Pagination`'s `localeText`) still win.
 - Not covered: the grouping column's default header (`'Group'`, set `groupingColDef.headerName`), pivot's `'Grand Total'` row label, export file contents, the AI change chips' labels, and developer console warnings.
-- Pass a stable object (a module constant or `useMemo`): the grid resolves the strings once per `localeText` object.
+- An inline object of strings is fine: while it holds the same entries as on the previous render (records such as `filterPanelOperators` compared one level deep), the grid keeps the resolved strings and the rows are not re-rendered. Functions are compared by identity, so define function entries (`rowSelectLabel: id => …`) outside the render, or keep the whole object in a module constant or `useMemo`.
 
 ### `GridRowMeta`
 

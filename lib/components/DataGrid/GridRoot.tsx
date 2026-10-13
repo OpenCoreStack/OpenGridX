@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { GridLocaleContext } from './gridLocaleContext';
 import { resolveGridLocale } from '../../utils/gridLocale';
+import { useShallowStableValue } from '../../hooks/core/useShallowStableValue';
 import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
 import { GridToolbarSlot } from './GridToolbarSlot';
 import { GridAiAssistantArea } from '../AiAssistant/GridAiAssistantArea';
@@ -97,7 +98,8 @@ export function GridRoot<R extends GridRowModel>(props: GridRootProps<R>) {
     // body shows skeletons or the loading overlay instead, and infinite scroll appends skeleton rows.
     const showLoadingOverRows = effectiveLoading && allRenderableRows.length > 0 && paginationMode !== 'infinite';
     const ToolbarSlot = slots?.toolbar;
-    const locale = useMemo(() => resolveGridLocale(localeText), [localeText]);
+    const stableLocaleText = useShallowStableValue(localeText);
+    const locale = useMemo(() => resolveGridLocale(stableLocaleText), [stableLocaleText]);
 
     return (
         <GridLocaleContext.Provider value={locale}>
