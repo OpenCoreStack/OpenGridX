@@ -101,7 +101,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 New features (the *Next* list below) wait until the open fixes, refactors and performance work are done. Tracked in [`superpowers/plans/2026-10-13-audit-tracker.md`](superpowers/plans/2026-10-13-audit-tracker.md):
 
 *   **Refactors** (no behaviour change): about 40 `as unknown as` casts (R4), files over 600 lines such as `GridToolbar.tsx` (R5), hooks with very wide parameter lists such as keyboard navigation (R6).
-*   **Performance**: the time-sliced filter / sort pipeline (held: 1.5–2× slower in total, needs to be within ~20 %); select-all at 1M rows (~270 ms, bounded by the array `rowSelectionModel`).
+*   **Performance**: ✅ select-all at 1M rows ~260 → ~130 ms (3.10, no API change). ❌ The time-sliced filter / sort pipeline is closed: it was 1.5–2× slower in total (target ≤ 20 %) and the remaining 1M-row sort pause is better served by a `dataSource`; see the [proposal's status](superpowers/specs/2026-10-12-nonblocking-pipeline-proposal.md).
 *   **Demo**: syntax highlighting in the source viewer.
 *   **Bundle size (4.0)**: an app using only `DataGrid` ships 87 KB gzipped; opt-in [feature modules](superpowers/specs/2026-10-13-feature-modules-proposal.md) would save ~20 KB. Breaking, so planned for 4.0.
 

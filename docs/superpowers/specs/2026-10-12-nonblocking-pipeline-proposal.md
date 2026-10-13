@@ -1,6 +1,15 @@
 # Proposal: a non-blocking row pipeline (phase 2)
 
-Status: proposal only, nothing implemented. Follows the phase 1 work (synchronous, algorithmic) from
+Status: **closed, not shipping (2026-10-13).** Option A was implemented on a branch (kept as
+`archive/timesliced-pipeline-2026-10-12`, based on 3.6.0) and measured 1.5–2× slower in total than the
+synchronous pipeline, against a target of ≤ 20 %. Since then sorting became 3–5× faster (~0.4–0.5 s at
+1M rows, most of it a single native `sort()` that cannot be split), and edits, paste, fill and select-all
+no longer block, so the remaining pause is one sort or filter of 1M rows client-side, for which the docs
+recommend a `dataSource`. A Web Worker cannot run consumer `valueGetter` / `sortComparator` functions,
+and React transitions cannot interrupt a synchronous computation. Revisit only with a design that keeps
+the native sort whole (for example sorting off-thread on extracted primitive keys) and meets the target.
+
+Original status: proposal only, nothing implemented. Follows the phase 1 work (synchronous, algorithmic) from
 2026-10-12, measured with `npm run bench` (see `docs/performance.md` → Benchmarks).
 
 ## Why
