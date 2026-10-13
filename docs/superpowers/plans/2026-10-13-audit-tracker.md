@@ -70,3 +70,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — P8 done (row memoisation), regression test proven to fail without the fixes.
 - 2026-10-13 — R7 done (agent, reviewed): 196 localeText keys via GridLocaleContext; added useShallowStableValue so an inline localeText of strings keeps rows memoised. Unit 1972, browser 585/585 in 3 engines.
 - 2026-10-13 — Released 3.9.0 (CI run 38381619839).
+- 2026-10-13 — 3.9.1 patch (PR flow): baseline exclusion, check:package, version badges, docs. Cherry-picked from release/3.10.0.

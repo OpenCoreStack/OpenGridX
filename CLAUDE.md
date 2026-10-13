@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.9.0
+- **Current version:** 3.9.1
 
 ---
 
@@ -157,10 +157,9 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 
 ---
 
-## v3.10.0 — significant changes (unreleased)
+## v3.9.1 — significant changes
 
 - **`npm run check:package`** (after `build:lib`; in `ci.yml` and `npm-publish.yml`): fails if `npm pack` would ship a test artifact (`*.test.*`, `__baseline__`, `__screenshots__`, `__snapshots__`, `__fixtures__`) and if `DataGrid` alone, minified with esbuild and gzipped, exceeds `DATAGRID_GZIP_BUDGET` (92 KB; 85.5 KB at 3.9.0). `files` in package.json works by exclusion: add a negation for any new kind of test folder under `lib/`. Raise the budget only in the commit that needs it
-- Demo code samples go through `demo/components/CodeBlock.tsx` (prism-react-renderer, demo-only devDependency); live output panels (JSON state, logs) stay plain `<pre>`
 
 ## v3.9.0 — significant changes
 
