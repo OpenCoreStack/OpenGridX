@@ -210,3 +210,19 @@ export function formatAggregateForColumn<R extends GridRowModel>(
     if (normalized instanceof Date) return Number.isNaN(normalized.getTime()) ? '' : formatLocalDate(normalized);
     return formatAggregationValue(normalized, fnName);
 }
+
+const BUILT_IN_AGGREGATION_FUNCTIONS = Object.keys(AGGREGATION_FUNCTIONS) as BuiltInAggFn[];
+
+function isBuiltInAggregationFunction(fn: string): fn is BuiltInAggFn {
+    return Object.prototype.hasOwnProperty.call(AGGREGATION_FUNCTIONS, fn);
+}
+
+/**
+ * The summary functions offered for a column: its `availableAggregationFunctions` when set,
+ * otherwise every built-in one. Names the aggregation engine does not implement are dropped,
+ * because choosing one would show the label in the header but never compute a value.
+ */
+export function getOfferedAggregationFunctions(col: Pick<GridColDef, 'availableAggregationFunctions'>): BuiltInAggFn[] {
+    if (!col.availableAggregationFunctions) return BUILT_IN_AGGREGATION_FUNCTIONS;
+    return Array.from(new Set(col.availableAggregationFunctions.filter(isBuiltInAggregationFunction)));
+}
