@@ -228,7 +228,8 @@ export function GridVirtualRows<R extends GridRowModel>({
                         {Array.from({ length: infiniteScrollSkeletonCount }).map((_, i) => (
                             <Row<R>
                                 key={`__skeleton_${i}__`}
-                                row={{ id: `__skeleton_${i}__`, _isSkeleton: true } as unknown as R}
+                                row={{ id: `__skeleton_${i}__` } as unknown as R}
+                                skeleton
                                 columns={virtualColumns}
                                 rowIndex={unpinnedRowsLength + i}
                                 rowHeight={rowHeight}

@@ -109,22 +109,6 @@
   color: var(--ogx-text-secondary, #9ca3af);
 }
 
-/* ─── Responsive: auto switch at ≤768px when using ogx--list-auto class ─── */
-@media (max-width: 768px) {
-  .ogx--list-auto .ogx__viewport {
-    display: none;
-  }
-  .ogx--list-auto .ogx-list-view {
-    display: flex;
-  }
-}
-
-@media (min-width: 769px) {
-  .ogx--list-auto .ogx-list-view {
-    display: none;
-  }
-}
-
 /* Loading with no rows yet: a progress bar, or slots.loadingOverlay centred. */
 .ogx-list-view__loading {
   position: relative;

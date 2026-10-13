@@ -356,7 +356,7 @@ function computeSection<R extends GridRowModel>(
 
     for (let r = 0; r < rows.length; r++) {
         const row = rows[r];
-        if (!row || row._isSkeleton) continue;
+        if (!row) continue;
         // Synthetic rows hold no data of their own: they are never a span origin (spans from above
         // already end before them).
         if (isSyntheticRowId(getRowId(row), rowMetaMap)) continue;

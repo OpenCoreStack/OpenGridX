@@ -5,18 +5,17 @@
 :where([class*="ogx"], [class*="ogx"] *)::after {
   box-sizing: border-box;
 }
-.ogx--dragging {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
+
 .ogx *:focus {
   outline: none;
 }
-.ogx button:not(.ogx-menu-item) {
+/* Background and border at zero specificity: a component's own button class (.ogx-button--contained,
+   the AI panel's suggestions, …) must win over this reset. Font and cursor keep their old weight. */
+:where(.ogx button:not(.ogx-menu-item)) {
   background: none;
   border: none;
+}
+.ogx button:not(.ogx-menu-item) {
   cursor: pointer;
   font-family: inherit;
   font-size: inherit;

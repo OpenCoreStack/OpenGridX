@@ -546,6 +546,21 @@ In every exporter, a non-empty `selectedRows` takes precedence over `groupedRows
 
 Every exporter takes `columns` typed for your rows (`GridColDef<R>[]`) or untyped (`GridColDef[]`), and its options also accept `getRowId?: (row: R) => GridRowId`. Pass the grid's `getRowId` when you use one: `selectedRows` holds those ids, and since v3.0 the grid no longer copies them onto `row.id`.
 
+### Export option types
+
+Each exporter's options are exported as a type. Fields common to all of them: `fileName`, `selectedRows`, `getRowId`, `aggregationResult`, `aggregationModel`, `groupedRows`.
+
+| Type | For | Its own fields |
+| :--- | :--- | :--- |
+| `CsvExportOptions<R>` | `exportToCsv` | `includeHeaders`, `delimiter`, `escapeFormulas`, `bom` |
+| `JsonExportOptions<R>` | `exportToJson` | `pretty` |
+| `ExcelExportOptions<R>` | `exportToExcel` (HTML `.xls`) | `sheetName`, `includeHeaders`, `escapeFormulas` |
+| `ExcelAdvancedExportOptions<R>` | `exportToExcelAdvanced` (`.xlsx`) | `sheets`, `columnStyles`, `headerFillColor`, `headerTextColor`, `headerFontSize`, `bodyFontSize` |
+| `ExcelSheetDefinition` | one entry of `sheets` | `name`, `rows` (`'all'` / `'selected'`), `includeHeaders`, `includeSummary`, `autoFilter`, `frozenHeader`, `alternateRowColor`; `{ type: 'summary', name? }` adds a totals sheet |
+| `ExcelColumnStyle` | a value of `columnStyles` (by field) | `numFmt` (e.g. `'$#,##0.00'`), `width`, `alignment`, `embedImage`, `imageWidth`, `imageHeight` |
+
+`PdfExportOptions` and `PrintOptions` are described in [PDF Export](features/pdf-export.md) and the [Export Guide](features/export-guide.md).
+
 ---
 
 ## 🤖 AI Toolkit (`@opencorestack/opengridx/ai`)
@@ -651,6 +666,10 @@ Context provider for overriding the grid's visual system.
 - **`grid`**: surfaces (`background`, `borderColor`, `headerBackground`, `headerText`, `headerHoverBackground`, `headerSortedBackground`, `rowText`, `rowHoverBackground`, `rowAlternateBackground`, `rowSelectedBackground`, `rowSelectedHoverBackground`, `cellFocusBorder`, `rangeBackground`, `rangeBorder` (v3.3), `pinnedLeftShadow`, `pinnedRightShadow`, `checkboxBg`, `checkboxBorder`), sizing (`rowHeightCompact`, `rowHeightStandard`, `rowHeightComfortable`, `headerHeight` in px, read by the grid's layout; the `rowHeight` / `headerHeight` props win), `cellPaddingX`, `cellPaddingY`, `cellFontSize`, `headerFontSize`; v3.7: fonts (`headerFontFamily`, `headerFontWeight`, `cellFontFamily`, `cellFontWeight`), `headerPaddingX`, outer `borderWidth` and `borderRadius`, dividers (`columnDividerWidth`, `headerColumnDividerWidth`, `rowDividerWidth`, `columnDividerColor`, `rowDividerColor`; `0` hides a divider).
 - **`overlays`**: colours (`background`, `text`, `border`, `shadow`, `item*`) and, v3.7, `fontFamily`, `fontWeight`, `fontSize` for menus and panels.
 - **`toolbar`**, **`scrollbar`** (`thumbColor`, `trackColor`, `size`), **`skeleton`** (`baseColor`, `highlightColor`), **`transitions`**.
+
+#### Theme types
+
+`DataGridThemeProviderProps`: `theme: GridTheme`, `children`, `className?`, `style?` (both on the wrapper element). Each key of `GridTheme` has its own exported type, for building a theme in parts: `GridThemeColors` (with `GridThemeGrayScale` for `gray`), `GridThemeTypography`, `GridThemeSpacing`, `GridThemeBorders`, `GridThemeShadows`, `GridThemeGrid`, `GridThemeOverlays`, `GridThemeToolbar`, `GridThemeScrollbar`, `GridThemeSkeleton`, `GridThemeTransitions`. Every field is optional.
 
 Presets: `darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compactTheme`. See [Theming](customization/theming.md).
 
@@ -835,6 +854,15 @@ If the key can change while the grid stays mounted, remount the grid with it (`<
 ---
 
 ## ⚙️ Interfaces & Types
+
+### Small shared types
+
+| Type | Definition | Used by |
+| :--- | :--- | :--- |
+| `GridAlignment` | `'left' \| 'center' \| 'right'` | `GridColDef.align`, `headerAlign` |
+| `GridSortDirection` | `'asc' \| 'desc' \| null` | a column's sort state (`null`: unsorted) |
+| `GridSortModel` | `{ field: string; sort: GridSortDirection }`: like `GridSortItem`, but `sort` may be `null` | a single column's sort state |
+| `GridPinnedPosition` | `'left' \| 'right'` (logical: inline start / end in RTL) | column pinning |
 
 ### `GridSortItem`
 ```typescript

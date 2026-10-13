@@ -180,7 +180,7 @@ describe('DataGrid cell spanning', () => {
                 seen.length = 0;
                 rerender(<Grid page={1} />);
                 await act(async () => { await vi.advanceTimersByTimeAsync(350); });
-                expect(seen.filter(r => r._isSkeleton)).toEqual([]);
+                expect(seen.filter(r => String(r.id).startsWith('__skeleton_'))).toEqual([]);
             } finally {
                 vi.useRealTimers();
             }

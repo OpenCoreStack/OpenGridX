@@ -67,7 +67,6 @@
 }
 
 /* ─── Dark-mode overrides ────────────────────────────────────────────────────*/
-[data-theme="dark"] .ogx-col-group-cell__label,
-.ogx--dark .ogx-col-group-cell__label {
+[data-theme="dark"] .ogx-col-group-cell__label {
     color: var(--ogx-color-gray-300, #cbd5e1);
 }

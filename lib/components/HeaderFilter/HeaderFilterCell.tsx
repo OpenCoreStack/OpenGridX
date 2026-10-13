@@ -10,6 +10,7 @@ import {
     getHeaderFilterOperators,
     type GridHeaderFilterState,
 } from '../../utils/headerFilters';
+import { filterValueFromInputText, getFilterValueOptions, isSameFilterValue, matchesFilterValueOption } from '../../utils/filtering/filterInput';
 import { Input } from '../ui/Input';
 import { HeaderFilterOperatorMenu } from './HeaderFilterOperatorMenu';
 import type { HeaderFilterLocale } from '../../utils/headerFilterLocale';
@@ -29,42 +30,10 @@ export interface HeaderFilterCellProps {
     locale: HeaderFilterLocale;
 }
 
-interface ValueOption {
-    key: string;
-    value: unknown;
-    label: string;
-}
-
-function getValueOptions(col: GridColDef): ValueOption[] {
-    return (col.valueOptions ?? []).map((option, index) => (
-        option !== null && typeof option === 'object'
-            ? { key: String(index), value: option.value, label: option.label }
-            : { key: String(index), value: option, label: String(option) }
-    ));
-}
-
-function matchesOption(option: ValueOption, value: unknown): boolean {
-    const single = Array.isArray(value) ? value[0] : value;
-    if (Object.is(option.value, single)) return true;
-    return single != null && String(option.value).toLowerCase() === String(single).toLowerCase();
-}
-
-/** The item value for typed text. isAnyOf takes a comma-separated list. */
-function fromInputText(text: string, operator: GridFilterOperator): unknown {
-    if (operator === 'isAnyOf') return text.split(',').map(part => part.trim()).filter(part => part !== '');
-    return text;
-}
-
-function sameValue(a: unknown, b: unknown): boolean {
-    if (Object.is(a, b)) return true;
-    if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => sameValue(v, b[i]));
-    return false;
-}
-
 function sameItem(a: GridFilterItem | undefined, b: GridFilterItem | undefined): boolean {
     if (a === b) return true;
     if (!a || !b) return false;
-    return a.operator === b.operator && sameValue(a.value, b.value);
+    return a.operator === b.operator && isSameFilterValue(a.value, b.value);
 }
 
 function ClearIcon() {
@@ -81,7 +50,7 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
     const label = colDef.headerName || colDef.field;
     const item = state.kind === 'editable' ? state.item : undefined;
     const operator: GridFilterOperator = item?.operator ?? getHeaderFilterDefaultOperator(colDef);
-    const valueOptions = getValueOptions(colDef);
+    const valueOptions = getFilterValueOptions(colDef);
     const usesSelect = colDef.type === 'boolean' || (colDef.type === 'singleSelect' && valueOptions.length > 0);
     const showsValue = !NO_VALUE_OPERATORS.has(operator);
 
@@ -117,7 +86,7 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
         const unchanged = current ? text === filterValueToInputText(current.value, col.type) : text.trim() === '';
         if (unchanged) return;
         const op = current?.operator ?? getHeaderFilterDefaultOperator(col);
-        const next = buildHeaderFilterItem(col, op, fromInputText(text, op));
+        const next = buildHeaderFilterItem(col, op, filterValueFromInputText(text, op));
         setLastEmitted(next);
         emit(col.field, next);
     }, []);
@@ -173,7 +142,7 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
 
     const selectOperator = (op: GridFilterOperator) => {
         // Keep what was typed even if the debounce has not committed it yet.
-        const value = draft !== null ? fromInputText(draft, op) : item?.value;
+        const value = draft !== null ? filterValueFromInputText(draft, op) : item?.value;
         setDraft(null);
         setMenuAnchor(null);
         report(buildHeaderFilterItem(colDef, op, convertHeaderFilterValue(value, op)));
@@ -271,7 +240,7 @@ export function HeaderFilterCell({ colDef, state, style, className, ariaColIndex
                 </select>
             );
         } else if (usesSelect) {
-            const selected = valueOptions.find(o => matchesOption(o, item?.value));
+            const selected = valueOptions.find(o => matchesFilterValueOption(o, item?.value));
             valueControl = (
                 <select
                     ref={selectRef}

@@ -7,8 +7,8 @@ import type {
     GridFilterOperator
 } from '../../types';
 import { filterValueToInputText, getOperatorsForType, NO_VALUE_OPERATORS } from '../../utils/filtering';
+import { filterValueFromInputText, getFilterValueOptions, isSameFilterValue, matchesFilterValueOption } from '../../utils/filtering/filterInput';
 import { Input } from '../ui/Input';
-
 
 export interface FilterPanelProps {
     filterModel: GridFilterModel;
@@ -29,17 +29,10 @@ function getActiveFilter(items: readonly FilterEntry[], field: string): GridFilt
     return items.find((entry): entry is GridFilterItem => isFilterItem(entry) && entry.field === field);
 }
 
-function sameValue(a: unknown, b: unknown): boolean {
-    if (Object.is(a, b)) return true;
-    if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
-    if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => sameValue(v, b[i]));
-    return false;
-}
-
 function sameEntry(a: FilterEntry, b: FilterEntry): boolean {
     if (a === b) return true;
     if (isFilterItem(a) && isFilterItem(b)) {
-        return a.id === b.id && a.field === b.field && a.operator === b.operator && sameValue(a.value, b.value);
+        return a.id === b.id && a.field === b.field && a.operator === b.operator && isSameFilterValue(a.value, b.value);
     }
     if (!isFilterItem(a) && !isFilterItem(b)) {
         return a.id === b.id && a.logicOperator === b.logicOperator && sameEntries(a.items, b.items);
@@ -52,34 +45,9 @@ function sameEntries(a: readonly FilterEntry[], b: readonly FilterEntry[]): bool
     return a.length === b.length && a.every((entry, i) => sameEntry(entry, b[i]));
 }
 
-interface ValueOption {
-    key: string;
-    value: unknown;
-    label: string;
-}
-
-function getValueOptions(col: GridColDef): ValueOption[] {
-    return (col.valueOptions ?? []).map((option, index) => (
-        option !== null && typeof option === 'object'
-            ? { key: String(index), value: option.value, label: option.label }
-            : { key: String(index), value: option, label: String(option) }
-    ));
-}
-
-function matchesOption(option: ValueOption, value: unknown): boolean {
-    if (Object.is(option.value, value)) return true;
-    return value != null && String(option.value).toLowerCase() === String(value).toLowerCase();
-}
-
 /** Text shown in the value input for a committed value. Never used to emit anything. */
 function toInputText(value: unknown, col: GridColDef): string {
     return filterValueToInputText(value, col.type);
-}
-
-/** The item value for typed text. isAnyOf takes a comma-separated list. */
-function fromInputText(text: string, operator: GridFilterOperator): unknown {
-    if (operator === 'isAnyOf') return text.split(',').map(part => part.trim()).filter(part => part !== '');
-    return text;
 }
 
 /** Carry a value over to a newly picked operator: lists for isAnyOf, scalars for the rest. */
@@ -144,7 +112,7 @@ const FilterRow: React.FC<{
         const unchanged = current ? text === toInputText(current.value, colRef.current) : text.trim() === '';
         if (unchanged) return;
         const operator = current?.operator ?? defaultOperator;
-        onChangeRef.current(buildItem(operator, fromInputText(text, operator)));
+        onChangeRef.current(buildItem(operator, filterValueFromInputText(text, operator)));
     }, [defaultOperator, buildItem]);
 
     // Text still waiting for the debounce; flushed when the panel closes (unmounts) meanwhile.
@@ -172,7 +140,7 @@ const FilterRow: React.FC<{
 
     const handleOperatorChange = (op: GridFilterOperator) => {
         // Keep what the user typed even if the debounce has not committed it yet.
-        const value = draft !== null ? fromInputText(draft, op) : item?.value;
+        const value = draft !== null ? filterValueFromInputText(draft, op) : item?.value;
         setDraft(null);
         onChange(buildItem(op, convertValueForOperator(value, op)));
     };
@@ -183,7 +151,7 @@ const FilterRow: React.FC<{
     };
 
     const showValue = !NO_VALUE_OPERATORS.has(currentOperator);
-    const valueOptions = getValueOptions(col);
+    const valueOptions = getFilterValueOptions(col);
     const valueClassName = `ogx-filter__value-input${isActive ? ' ogx-filter__value-input--active' : ''}`;
     const valueLabel = `Filter value for ${label}`;
 
@@ -215,7 +183,7 @@ const FilterRow: React.FC<{
                 className={`${valueClassName} ogx-filter__value-multiselect`}
                 multiple
                 size={Math.min(valueOptions.length, 4)}
-                value={valueOptions.filter(o => selected.some(v => matchesOption(o, v))).map(o => o.key)}
+                value={valueOptions.filter(o => selected.some(v => matchesFilterValueOption(o, v))).map(o => o.key)}
                 onChange={(e) => {
                     const keys = new Set(Array.from(e.target.selectedOptions, option => option.value));
                     onChange(buildItem('isAnyOf', valueOptions.filter(o => keys.has(o.key)).map(o => o.value)));
@@ -226,7 +194,7 @@ const FilterRow: React.FC<{
             </select>
         );
     } else if (showValue && col.type === 'singleSelect' && valueOptions.length > 0 && (currentOperator === 'is' || currentOperator === 'not')) {
-        const current = valueOptions.find(o => matchesOption(o, item?.value));
+        const current = valueOptions.find(o => matchesFilterValueOption(o, item?.value));
         valueControl = (
             <select
                 id={`${filterId}-val`}

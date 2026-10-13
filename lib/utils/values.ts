@@ -84,6 +84,8 @@ export function getFormattedValue<R extends GridRowModel>(
     }
 }
 
+const RADIX_PREFIX = /^[+-]?0[box]/i;
+
 /**
  * Coerce a cell or filter value to a number. Returns null for null/undefined, blank strings,
  * NaN and anything that does not parse, so an empty cell is never read as 0.
@@ -94,8 +96,10 @@ export function toNumber(value: unknown): number | null {
     if (typeof value === 'string') {
         const trimmed = value.trim();
         if (trimmed === '') return null;
+        // Number() also reads "0x10", "0b1", "0o7" and "Infinity", which nobody types as a number.
+        if (RADIX_PREFIX.test(trimmed)) return null;
         const n = Number(trimmed);
-        return Number.isNaN(n) ? null : n;
+        return Number.isFinite(n) ? n : null;
     }
     if (typeof value === 'boolean') return null;
     if (value instanceof Date) {

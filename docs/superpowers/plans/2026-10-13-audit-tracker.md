@@ -20,8 +20,8 @@ Release plan:
 | B7 | Low–Med | Duplicate row ids silently drop rows (no dev warning) | row store | later | ⬜ | |
 | B8 | Low | Quick filter stale on in-place row mutation | quick-filter cache | later | ⏸ | Inherent to the per-row text cache; documented in `docs/features/filtering.md` |
 | B9 | Low | Quick filter stale when a formatter closure changes | quick-filter cache | later | ⏸ | Inherent to the cache; documented (pass new column definitions) |
-| B10 | Low | `bigint` loses precision in sort | `lib/utils/sorting/index.ts:45` | later | ⬜ | |
-| B11 | Low | Number filters accept `0x10`, `Infinity` | `lib/utils/values.ts:96-101` | later | ⬜ | |
+| B10 | Low | `bigint` loses precision in sort | `lib/utils/sorting/index.ts:45` | later | ✅ | Exact re-ranking (`rankNumbersExactly`, `compareExact`) when a column has an unsafe bigint; generic path tie-breaks by `big` |
+| B11 | Low | Number filters accept `0x10`, `Infinity` | `lib/utils/values.ts:96-101` | later | ✅ | `toNumber` rejects radix prefixes and non-finite text; new `values.test.ts` |
 
 ## Performance
 
@@ -41,14 +41,14 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 
 | ID | Item | Effort | Status | Notes |
 | :- | :--- | :----- | :----- | :---- |
-| R1 | Remove dead code: `lib/theme/defaultStyles.ts`, 12 unused util exports, 9 never-emitted CSS classes, 27 unread CSS vars; decide on `QuickFilter` CSS | S | ⬜ | `ogx__` classes are public API — check before removing |
-| R2 | Shared filter-value helper for FilterPanel + HeaderFilterCell (6 valueOptions readers) | S–M | ⬜ | |
-| R3 | Stop writing `_isSkeleton` onto rows | M | ⬜ | v3 "never modify rows" rule |
+| R1 | Remove dead code: `lib/theme/defaultStyles.ts`, 12 unused util exports, 9 never-emitted CSS classes, 27 unread CSS vars; decide on `QuickFilter` CSS | S | ✅ | 11 dead functions + `defaultStyles.ts` removed; 9 never-set class rules removed; CSS vars kept (public tokens); theme baseline unchanged |
+| R2 | Shared filter-value helper for FilterPanel + HeaderFilterCell (6 valueOptions readers) | S–M | ✅ | `lib/utils/filtering/filterInput.ts` (4 helpers) used by FilterPanel + HeaderFilterCell |
+| R3 | Stop writing `_isSkeleton` onto rows | M | ✅ | `Row` `skeleton` prop; `_isSkeleton` removed from `GridRowModel` and editing/spanning |
 | R4 | Reduce ~41 `as unknown as` casts (internal column type) | L | ⬜ | |
 | R5 | Split files >600 lines (`GridToolbar.tsx` 855, …) | M each | ⬜ | |
 | R6 | Narrow wide hook interfaces (keyboard nav: 31 params) | L | ⬜ | |
 | R7 | Route ~70 hard-coded English strings through `localeText` | M | ⬜ | new public keys → minor release |
-| R8 | Document 24 exports missing from `docs/API_REFERENCE.md` | S | ⬜ | |
+| R8 | Document 24 exports missing from `docs/API_REFERENCE.md` | S | ✅ | All 23 missing exports documented in `API_REFERENCE.md` |
 
 ## Log
 
@@ -61,3 +61,5 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — P2 done (`getRowIndex` cache): 1M edit ~35 ms, paste ~45 ms, fill ~50 ms. P5: group toggle done; select-all left at ~270 ms (array model API). P7 dropped (already per-row). B8/B9 documented. CHANGELOG 3.8.0 entry drafted. Browser suite running.
 - 2026-10-13 — Guardrails for the in-place store: doc comment on `GridInternalState.rows`, StrictMode paste/undo/redo test (`DataGrid.storeInPlace.test.tsx`), CLAUDE.md v3.8.0 rules. Browser suite 579/579.
 - 2026-10-13 — CI green on `release/3.8.0` (run 38366056106). Released 3.8.0.
+- 2026-10-13 — 3.8.0 published. Branch `release/3.8.1`. UI fix first (user report, AI panel in dark mode): reset `.ogx button:not(.ogx-menu-item)` out-ranked component button classes; background/border moved under `:where()`, chips' 50% radius fixed, theme baseline regenerated (3 open/active backgrounds). Next: cleanup B10, B11, R1, R2, R3, R8.
+- 2026-10-13 — 3.8.1 batch done locally: B10, B11, R1, R2, R3, R8 (+ the button-reset UI fix). Unit 1953 pass.

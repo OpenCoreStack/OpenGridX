@@ -46,6 +46,8 @@ function mergeColSpan<R extends GridRowModel>(
 
 export interface RowProps<R extends GridRowModel = GridRowModel> {
     row: R;
+    /** A shimmer placeholder shown while infinite scroll loads more rows (`row` is unused). */
+    skeleton?: boolean;
     /** The row's id (from getRowId). Defaults to `row.id`; the grid always passes it. */
     rowId?: GridRowId;
     columns: GridColDef<R>[];
@@ -108,6 +110,7 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
 function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     const {
         row,
+        skeleton = false,
         rowId: rowIdProp,
         columns,
         rowIndex,
@@ -197,7 +200,7 @@ function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
     }, [onEditStop, id]);
 
     // ── Skeleton row (shown during infinite-scroll fetch) ─────────────────────
-    if (row._isSkeleton) {
+    if (skeleton) {
         // Render shimmer placeholders — one per visible column, matching row height
         const cellCount = Math.max(columns.length, 5);
         return (

@@ -206,13 +206,6 @@ describe('useGridSpanning', () => {
             expect(result.current.rowSpanningCaches.spannedCells).toEqual({ 3: { a: 2 } });
             expect(result.current.rowSpanningCaches.hiddenCells).toEqual({ 2: { a: true } });
         });
-
-        it('skips infinite-scroll skeleton rows', () => {
-            const spanFn = vi.fn<(p: GridRenderCellParams<TestRow>) => number>(() => 1);
-            const rows = [...makeRows(2), { id: '__skeleton_0__', _isSkeleton: true }] as TestRow[];
-            renderHook(() => useGridSpanning(params(rows, [{ field: 'a', colSpan: spanFn, rowSpan: spanFn }])));
-            expect(spanFn.mock.calls.every(([p]) => !p.row._isSkeleton)).toBe(true);
-        });
     });
 
     describe('combined spans', () => {

@@ -27,9 +27,7 @@
   outline: 2px solid var(--ogx-grid-cell-focus-border, var(--ogx-color-primary, #2563eb));
   outline-offset: -2px;
 }
-.ogx__cell--editable {
-  cursor: text;
-}
+
 /*
  * Cell range selection (cellSelection, v3.3). The tint is a background image, so it also covers
  * pinned cells' own background; the outline is an inset box-shadow, so the layout never shifts.

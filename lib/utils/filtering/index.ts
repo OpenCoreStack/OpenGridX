@@ -362,19 +362,6 @@ export function applyQuickFilter<R extends GridRowModel>(
   return predicate ? predicate(row) : true;
 }
 
-/**
- * Check if a row matches the filter model. Compiles the model on every call: to test many rows,
- * build a predicate once with createRowFilter.
- */
-export function isRowMatchingFilter<R extends GridRowModel>(
-  row: R,
-  filterModel: GridFilterModel | GridFilterGroup,
-  columns?: GridColumnLookup
-): boolean {
-  const predicate = createRowFilter(filterModel, columns);
-  return predicate ? predicate(row) : true;
-}
-
 export function filterRows<R extends GridRowModel>(
   rows: R[],
   filterModel: GridFilterModel,
@@ -394,21 +381,6 @@ export function filterRows<R extends GridRowModel>(
   const predicate = createRowFilter(filterModel, columns);
   if (!predicate) return rows;
   return rows.filter(row => predicate(row));
-}
-
-export function getDefaultOperator(type?: string): GridFilterOperator {
-  switch (type) {
-    case 'number':
-      return '=';
-    case 'date':
-      return 'is';
-    case 'boolean':
-      return 'is';
-    case 'singleSelect':
-      return 'isAnyOf';
-    default:
-      return 'contains';
-  }
 }
 
 export function getOperatorsForType(type?: string): GridFilterOperator[] {

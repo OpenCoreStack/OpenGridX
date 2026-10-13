@@ -260,3 +260,20 @@ describe('sortComparator', () => {
         warn.mockRestore();
     });
 });
+
+describe('bigint precision', () => {
+    const big = 2n ** 60n;
+    const rows = [
+        { id: 1, v: big + 3n },
+        { id: 2, v: big + 1n },
+        { id: 3, v: 5 },
+        { id: 4, v: big + 2n },
+        { id: 5, v: big },
+    ];
+    for (const type of [undefined, 'number'] as const) {
+        it(`orders bigints beyond 2^53 exactly (type ${type ?? 'none'})`, () => {
+            const sorted = sortRows(rows, [{ field: 'v', sort: 'asc' }], buildColumnLookup([{ field: 'v', type }]));
+            expect(sorted.map(r => r.id)).toEqual([3, 5, 2, 4, 1]);
+        });
+    }
+});

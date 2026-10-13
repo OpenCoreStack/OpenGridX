@@ -5,8 +5,6 @@ export type GridRowId = string | number;
 export interface GridRowModel {
   /** Uniquely identifies the row. */
   id: GridRowId;
-  /** Internal: row is a skeleton placeholder during infinite-scroll loading. */
-  _isSkeleton?: boolean;
   /** Internal: server-reported child count for lazy-loaded tree nodes. */
   serverChildrenCount?: number;
   /** Any other dynamic row properties. */

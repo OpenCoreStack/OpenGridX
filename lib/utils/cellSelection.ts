@@ -17,8 +17,6 @@ export function isRangeColumnField(field: string): boolean {
 export const isSameCoordinates = (a: GridCellCoordinates | null | undefined, b: GridCellCoordinates | null | undefined): boolean =>
     a === b || (!!a && !!b && a.id === b.id && a.field === b.field);
 
-export const isSingleCellRange = (range: GridCellRange): boolean => isSameCoordinates(range.anchor, range.head);
-
 /** A model holding the same range(s) as `b`. */
 export function isSameCellSelectionModel(a: GridCellSelectionModel, b: GridCellSelectionModel): boolean {
     if (a === b) return true;

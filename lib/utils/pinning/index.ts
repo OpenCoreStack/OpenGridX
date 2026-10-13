@@ -137,67 +137,6 @@ export function getPinnedEdgeFields<R extends GridRowModel = GridRowModel>(
     return { lastLeft, firstRight };
 }
 
-export function isColumnPinnable<R extends GridRowModel = GridRowModel>(
-    colDef: GridColDef<R>
-): boolean {
-    return colDef.pinnable !== false;
-}
-
-export function pinColumn(
-    field: string,
-    position: GridPinnedPosition,
-    currentPinning?: GridColumnPinning
-): GridColumnPinning {
-    const newPinning: GridColumnPinning = {
-        left: [...(currentPinning?.left || [])],
-        right: [...(currentPinning?.right || [])]
-    };
-
-    newPinning.left = (newPinning.left || []).filter(f => f !== field);
-    newPinning.right = (newPinning.right || []).filter(f => f !== field);
-
-    if (position === 'left') {
-        if (!newPinning.left) newPinning.left = [];
-        newPinning.left.push(field);
-    } else {
-        if (!newPinning.right) newPinning.right = [];
-        newPinning.right.push(field);
-    }
-
-    return newPinning;
-}
-
-export function unpinColumn(
-    field: string,
-    currentPinning?: GridColumnPinning
-): GridColumnPinning {
-    if (!currentPinning) return {};
-
-    return {
-        left: currentPinning.left?.filter(f => f !== field) || [],
-        right: currentPinning.right?.filter(f => f !== field) || []
-    };
-}
-
-export function getPinnedColumnsWidth(
-    columns: GridColDef[],
-    columnWidths: Record<string, number>,
-    position: GridPinnedPosition,
-    pinnedColumns?: GridColumnPinning
-): number {
-    if (!pinnedColumns) return 0;
-
-    const pinnedFields = position === 'left' ? pinnedColumns.left : pinnedColumns.right;
-    if (!pinnedFields) return 0;
-
-    return pinnedFields.reduce((total, field) => {
-        const col = columns.find(c => c.field === field);
-        if (!col) return total;
-
-        return total + getRenderedColumnWidth(col, columnWidths);
-    }, 0);
-}
-
 export function isRowPinned(
     rowId: GridRowId,
     pinnedRows?: GridRowPinning
@@ -261,52 +200,6 @@ export function getPinnedRowGroups<R extends GridRowModel = GridRowModel>(
     }
 
     return { top, center, bottom };
-}
-
-export function pinRow(
-    rowId: GridRowId,
-    position: 'top' | 'bottom',
-    currentPinning?: GridRowPinning
-): GridRowPinning {
-    const newPinning: GridRowPinning = {
-        top: [...(currentPinning?.top || [])],
-        bottom: [...(currentPinning?.bottom || [])]
-    };
-
-    newPinning.top = (newPinning.top || []).filter(id => id !== rowId);
-    newPinning.bottom = (newPinning.bottom || []).filter(id => id !== rowId);
-
-    if (position === 'top') {
-        if (!newPinning.top) newPinning.top = [];
-        newPinning.top.push(rowId);
-    } else {
-        if (!newPinning.bottom) newPinning.bottom = [];
-        newPinning.bottom.push(rowId);
-    }
-
-    return newPinning;
-}
-
-export function unpinRow(
-    rowId: GridRowId,
-    currentPinning?: GridRowPinning
-): GridRowPinning {
-    if (!currentPinning) return {};
-
-    return {
-        top: currentPinning.top?.filter(id => id !== rowId) || [],
-        bottom: currentPinning.bottom?.filter(id => id !== rowId) || []
-    };
-}
-
-export function getPinnedRowsCount(
-    position: 'top' | 'bottom',
-    pinnedRows?: GridRowPinning
-): number {
-    if (!pinnedRows) return 0;
-
-    const pinnedIds = position === 'top' ? pinnedRows.top : pinnedRows.bottom;
-    return pinnedIds?.length || 0;
 }
 
 /**

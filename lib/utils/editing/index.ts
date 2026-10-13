@@ -20,7 +20,7 @@ export function resolveCellEditable<R extends GridRowModel>(
 ): boolean {
     const { row, field, value, colDef, rowIndex, colIndex, rowMeta } = params;
     if (!colDef.editable) return false;
-    if (rowMeta?.isGroupRow || row._isSkeleton) return false;
+    if (rowMeta?.isGroupRow) return false;
     if (!isCellEditable) return true;
     try {
         return Boolean(isCellEditable({ row, field, value, colDef, rowIndex, colIndex }));

@@ -67,24 +67,7 @@
   background: var(--ogx-grid-background);
   box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
 }
-.ogx--loading {
-  opacity: 0.6;
-  pointer-events: none;
-}
-.ogx--loading::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: color-mix(in srgb, var(--ogx-grid-background) 60%, transparent);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--ogx-z-index-modal);
-}
+
 /* No height prop: fill the container, as a block child of a sized box (height: 100%) or as a
    flex item (flex: 1 with min-height: 0). In an auto-height parent 100% resolves to auto. */
 .ogx--fill {
@@ -312,16 +295,6 @@
   text-overflow: ellipsis;
 }
 
-.ogx--density-compact .ogx__cell,
-.ogx--density-compact .ogx__header-cell {
-  padding: var(--ogx-spacing-xs) var(--ogx-spacing-sm);
-  font-size: var(--ogx-font-size-xs);
-}
-.ogx--density-comfortable .ogx__cell,
-.ogx--density-comfortable .ogx__header-cell {
-  padding: var(--ogx-spacing-md) var(--ogx-spacing-lg);
-  font-size: var(--ogx-font-size-md);
-}
 .ogx__group-cell-content {
   font-weight: 500;
   text-align: start;

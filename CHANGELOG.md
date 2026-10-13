@@ -5,6 +5,28 @@
 
 ---
 
+## [Unreleased — 3.8.1]
+
+### Fixed
+
+- **Buttons inside the grid show their own background and border again.** A reset rule from the first release (`.ogx button:not(.ogx-menu-item)`) out-ranked the buttons' own classes and removed their background and border: the AI assistant's Ask button had no fill (dark text on the dark panel in dark mode), its suggestions and the Undo / microphone buttons had no outline, and the open or active states of the toolbar's Columns / Filters buttons and the header filter's operator button had no background. The reset's background and border now have zero specificity (`:where()`); its font and cursor rules are unchanged. The default-theme baseline (`lib/theme/__baseline__/`) was regenerated: the only differences are those three open / active backgrounds.
+- **`bigint` values sort exactly.** Values beyond ±2^53 were compared as their nearest double, so neighbours could tie or swap. When a column holds such a value, its numbers are ranked with an exact comparison (other columns are unchanged).
+- **Number filters no longer read `0x10`, `0b1`, `0o7`, `Infinity` or `1e999` typed as text as numbers** (`toNumber` in `lib/utils/values.ts`, which number filters, the number column's quick-filter and sorting coercion share).
+- The AI assistant's suggestion pills and change chips were drawn as ellipses: they read `--ogx-border-radius-round`, which is `50%`. They use a fixed pill radius now.
+
+
+### Internal
+
+- Removed code nothing called: seven pinning helpers (`isColumnPinnable`, `pinColumn`, `unpinColumn`, `getPinnedColumnsWidth`, `pinRow`, `unpinRow`, `getPinnedRowsCount`), `isRowMatchingFilter`, `getDefaultOperator`, `compareRowsBySortModel`, `isSingleCellRange` and the empty `lib/theme/defaultStyles.ts` (none were exported from the package). Removed the CSS rules of nine classes the grid never sets: `ogx--dark`, `ogx--density-compact`, `ogx--density-comfortable`, `ogx--dragging`, `ogx--list-auto`, `ogx--loading`, `ogx__cell--editable`, `ogx__header-cell--focus-visible` and `ogx__menu-icon-btn--active`. CSS variables are kept (they are public tokens).
+- Infinite-scroll placeholder rows are drawn through a `skeleton` prop on the internal `Row` instead of a `_isSkeleton` field, which is gone from `GridRowModel` (it was marked internal; the type's index signature still accepts any field).
+- The filter panel and the header filter row share their value helpers (`lib/utils/filtering/filterInput.ts`) instead of two copies.
+
+### Documentation
+
+- `docs/API_REFERENCE.md` covers every export of the package: the export option types (`CsvExportOptions`, `JsonExportOptions`, `ExcelExportOptions`, `ExcelAdvancedExportOptions`, `ExcelSheetDefinition`, `ExcelColumnStyle`), the theme part types and `DataGridThemeProviderProps`, and `GridAlignment`, `GridSortDirection`, `GridSortModel`, `GridPinnedPosition`.
+
+---
+
 ## [3.8.0] — 2026-10-13
 
 ### Performance

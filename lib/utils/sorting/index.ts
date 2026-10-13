@@ -18,7 +18,8 @@ const RANK_STRING = 3;
 const RANK_OTHER = 4;
 
 /** A normalized sort value. null is the empty bucket (null, undefined, NaN, Invalid Date, unparsable). */
-type SortKey = { rank: number; num: number; str: string } | null;
+/** `big`: the exact value of a bigint key, whose `num` is only its nearest double. */
+type SortKey = { rank: number; num: number; str: string; big?: bigint } | null;
 
 function numberKey(rank: number, num: number): SortKey {
   return { rank, num, str: '' };
@@ -32,6 +33,7 @@ function numberKey(rank: number, num: number): SortKey {
 function toSortKey(value: unknown, type?: GridColDef['type']): SortKey {
   if (value == null) return null;
   if (type === 'number') {
+    if (typeof value === 'bigint') return { rank: RANK_NUMBER, num: Number(value), str: '', big: value };
     const n = toNumber(value);
     return n === null ? null : numberKey(RANK_NUMBER, n);
   }
@@ -43,7 +45,7 @@ function toSortKey(value: unknown, type?: GridColDef['type']): SortKey {
     case 'number':
       return Number.isNaN(value) ? null : numberKey(RANK_NUMBER, value);
     case 'bigint':
-      return numberKey(RANK_NUMBER, Number(value));
+      return { rank: RANK_NUMBER, num: Number(value), str: '', big: value };
     case 'boolean':
       return numberKey(RANK_BOOLEAN, value ? 1 : 0);
     case 'string':
@@ -65,8 +67,28 @@ function compareSortKeys(a: SortKey, b: SortKey): number {
   if (b === null) return -1;
   if (a.rank !== b.rank) return a.rank - b.rank;
   if (a.rank === RANK_STRING || a.rank === RANK_OTHER) return collator.compare(a.str, b.str);
-  return a.num < b.num ? -1 : a.num > b.num ? 1 : 0;
+  if (a.num !== b.num) return a.num < b.num ? -1 : 1;
+  // Number(bigint) rounds monotonically, so only equal doubles can hide an order between bigints.
+  return a.big !== undefined || b.big !== undefined ? compareExact(a.big ?? a.num, b.big ?? b.num) : 0;
 }
+
+/** Exact ascending comparison of numbers and bigints (no rounding of either). */
+function compareExact(a: number | bigint, b: number | bigint): number {
+  if (typeof a === 'number' && typeof b === 'number') return a < b ? -1 : a > b ? 1 : 0;
+  if (typeof a === 'bigint' && typeof b === 'bigint') return a < b ? -1 : a > b ? 1 : 0;
+  if (typeof a === 'number') return -compareExact(b, a);
+  // a is a bigint, b a number.
+  const n = b as number;
+  if (!Number.isFinite(n)) return n > 0 ? -1 : 1;
+  const floor = Math.floor(n);
+  const whole = BigInt(floor);
+  if (a < whole) return -1;
+  if (a > whole) return 1;
+  return n > floor ? -1 : 0;
+}
+
+const isUnsafeBigInt = (value: unknown): value is bigint =>
+  typeof value === 'bigint' && (value > BigInt(Number.MAX_SAFE_INTEGER) || value < BigInt(Number.MIN_SAFE_INTEGER));
 
 /** Reverse an ascending comparison for 'desc'. */
 export function applySortDirection(comparison: number, direction: 'asc' | 'desc'): number {
@@ -114,36 +136,6 @@ export function callSortComparator(
 }
 
 const defaultRowId = (row: GridRowModel): GridRowId => row.id;
-
-/**
- * Compare two rows by a sort model, reading cells through `valueGetter` and using each column's
- * `type` (or its `sortComparator`). Returns 0 when every key is equal.
- */
-export function compareRowsBySortModel(
-  a: GridRowModel,
-  b: GridRowModel,
-  sortModel: readonly GridSortItem[],
-  columns?: GridColumnLookup,
-  getRowId: (row: GridRowModel) => GridRowId = defaultRowId
-): number {
-  for (const sortItem of sortModel) {
-    const colDef = columns?.byField.get(sortItem.field);
-    const va = getCellValue(a, sortItem.field, colDef);
-    const vb = getCellValue(b, sortItem.field, colDef);
-    const comparison = colDef?.sortComparator
-      ? applySortDirection(
-          callSortComparator(
-            colDef.sortComparator,
-            { id: getRowId(a), field: sortItem.field, row: a, value: va },
-            { id: getRowId(b), field: sortItem.field, row: b, value: vb }
-          ),
-          sortItem.sort
-        )
-      : compareValues(va, vb, sortItem.sort, colDef?.type);
-    if (comparison !== 0) return comparison;
-  }
-  return 0;
-}
 
 export function sortRows<R extends GridRowModel>(
   rows: R[],
@@ -230,6 +222,19 @@ function rankTexts(buckets: Map<string, number[]>, num: Float64Array): void {
   }
 }
 
+/** Replaces the numbers of a column holding unsafe bigints by their exact ascending position. */
+function rankNumbersExactly(group: Uint8Array, num: Float64Array, bigints: ReadonlyMap<number, bigint>): void {
+  const indices: number[] = [];
+  for (let i = 0; i < group.length; i++) if (group[i] === RANK_NUMBER) indices.push(i);
+  const exact = (i: number): number | bigint => bigints.get(i) ?? num[i];
+  indices.sort((ia, ib) => compareExact(exact(ia), exact(ib)));
+  let position = 0;
+  for (let k = 0; k < indices.length; k++) {
+    if (k > 0 && compareExact(exact(indices[k - 1]), exact(indices[k])) !== 0) position++;
+    num[indices[k]] = position;
+  }
+}
+
 function addToBucket(buckets: Map<string, number[]>, text: string, index: number): void {
   const bucket = buckets.get(text);
   if (bucket) bucket.push(index);
@@ -248,9 +253,12 @@ function encodeSortColumn(count: number, valueAt: (i: number) => unknown, typeAt
   const num = new Float64Array(count);
   const strings = new Map<string, number[]>();
   const others = new Map<string, number[]>();
+  // Bigints beyond 2^53 lose precision as doubles: if any appears, numbers are re-ranked exactly.
+  let bigints: Map<number, bigint> | null = null;
   for (let i = 0; i < count; i++) {
     const value = valueAt(i);
     const type = typeAt(i);
+    if (isUnsafeBigInt(value) && type !== 'date') (bigints ??= new Map()).set(i, value);
     if (typeof value === 'number' && type !== 'date') {
       // toSortKey for a number, without the allocation.
       if (Number.isNaN(value)) {
@@ -273,6 +281,7 @@ function encodeSortColumn(count: number, valueAt: (i: number) => unknown, typeAt
   }
   rankTexts(strings, num);
   rankTexts(others, num);
+  if (bigints) rankNumbersExactly(group, num, bigints);
   return { kind: 'encoded', group, num };
 }
 

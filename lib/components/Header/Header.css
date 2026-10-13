@@ -207,12 +207,7 @@
   background-color: var(--ogx-grid-header-hover-background);
   z-index: 6;
 }
-.ogx__header-cell--focus-visible {
-  outline: 2px solid var(--ogx-grid-cell-focus-border, var(--ogx-color-primary));
-  outline-offset: -2px;
-  background-color: var(--ogx-grid-header-hover-background);
-  z-index: 6; 
-}
+
 .ogx__header-cell:focus, .ogx__header-cell:focus-visible {
   outline: none !important;
 }
@@ -241,8 +236,4 @@
   background: var(--ogx-grid-header-hover-background);
   color: var(--ogx-grid-header-text);
 }
-.ogx__menu-icon-btn--active {
-  opacity: 1;
-  background: var(--ogx-color-primary-light);
-  color: var(--ogx-color-primary);
-}
+
