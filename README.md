@@ -76,11 +76,13 @@ Without a `height` prop the grid fills its container (`height: 100%`, or the fre
 - **Fully Customizable**: Slots system for replacing any component (pagination, overlays, toolbar).
 - **Export Functionality**: Built-in CSV, Excel (HTML `.xls`, or real `.xlsx` with the optional ExcelJS peer), JSON, PDF (optional jsPDF peer) and Print export.
 - **Clipboard**: `Ctrl+C` / `Cmd+C` copies the selected rows' visible columns as TSV for Excel/Sheets.
+- **Spreadsheet editing** (v3.4–3.5): paste from Excel / Google Sheets into a cell range (parsed per column type, through `processRowUpdate`), Delete clears a range, **undo / redo** (`undoRedo`, Ctrl+Z / Ctrl+Shift+Z), and a **fill handle** that extends series, patterns or copies (Ctrl/Cmd+D / R).
 - **Header Filters** (v3.5): `headerFilters` adds a filter row under the column headers (text, number, date and select controls with an operator menu) that edits the same `filterModel` as the filter panel and the quick filter.
 - **Cell Range Selection** (v3.3): drag, Shift+click or Shift+arrows select a rectangle of cells; copy it as TSV and see its count, sum and average in a status bar (`cellSelection`, `showCellSelectionStats`).
-- **AI Toolkit** (v3.4): `@opencorestack/opengridx/ai` turns your columns into a JSON Schema for your own model and validates its reply before the grid applies it (`getGridAiSchema`, `validateGridAiState`). No AI SDK, no row data sent by default.
+- **AI Toolkit** (v3.4–3.5): `@opencorestack/opengridx/ai` turns your columns into a JSON Schema for your own model and validates its reply before the grid applies it (`getGridAiSchema`, `validateGridAiState`); `aiAssistant` adds an **Ask AI panel** whose changes show as removable chips with one-click undo, and `createGridAgentTools` gives agents typed tools. No AI SDK, no row data sent by default.
+- **Internationalisation** (v3.9): every built-in string (menus, toolbar, panels, AI panel, pagination, screen-reader announcements) is a `localeText` key, and **right-to-left** layouts work with `dir="rtl"` (v3.6), including pinned columns.
 - **Accessibility**: WCAG 2.1 AA — full ARIA roles and keyboard navigation.
-- **Theming**: CSS variable API, `DataGridThemeProvider` with 5 built-in themes (`darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compactTheme`) and custom themes.
+- **Theming**: CSS variable API, `DataGridThemeProvider` with 5 built-in themes (`darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compactTheme`) and custom themes; the demo's **Theme Builder** edits every theme key live and exports the result as code.
 - **Column & Row Reordering**: Drag-and-drop column reordering and row reordering.
 - **Inline Cell Editing**: Full inline editing with `processRowUpdate` validation.
 - **State Persistence**: Save and restore grid state (sort, filter, pagination, columns, density) via `useGridStateStorage`.
@@ -120,7 +122,7 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `rowHeight` | `number` | `52` | Row height in pixels. |
 | `headerHeight` | `number` | `56` | Header height in pixels. |
 | `noRowsLabel` | `string` | `'No Data'` | Custom empty-state message. |
-| `localeText` | `GridLocaleText` | — | Overrides for the pager and empty-state strings (i18n). |
+| `localeText` | `GridLocaleText` | — | Overrides for every built-in UI string (v3.9; pagination and the empty state before). |
 | `ariaLabel` | `string` | — | Accessible name for the grid. |
 | `initialState` | `GridInitialState` | — | Starting sort, filter, pagination, column and density state (uncontrolled). |
 | `onStateChange` | `(state: GridState) => void` | — | Fires when sort, filter, pagination, columns or density change. |
@@ -490,12 +492,14 @@ Built-in themes: `darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compac
 
 | Artifact | Size | Gzipped | Notes |
 | :--- | :--- | :--- | :--- |
-| **Core ES Module** (`opengridx.es.js`) | 331 KB | **86 KB** | Use this — tree-shakeable |
-| **Core UMD** (`opengridx.umd.js`) | 233 KB | **73 KB** | CommonJS / CDN compat |
-| **Styles** (`opengridx.css`) | 65 KB | **10 KB** | `import '@opencorestack/opengridx/styles'` |
+| **What an app ships for `DataGrid`** (your bundler minifies) | 271 KB | **87 KB** | Measured v3.9.0: esbuild, minified, React external, `DataGrid` only |
+| **Core ES Module** (`opengridx.es.js`, as published) | 493 KB | 130 KB | Unminified with readable names; use this — tree-shakeable |
+| **Core UMD** (`opengridx.umd.js`) | 357 KB | 112 KB | CommonJS / CDN compat |
+| **Styles** (`opengridx.css`) | 81 KB | **12 KB** | `import '@opencorestack/opengridx/styles'` |
+| **AI toolkit** (`/ai`, optional import) | 20 KB | **7 KB** | Adds nothing unless imported |
 | **ExcelJS** (optional peer dep) | — | — | `npm install exceljs` |
 | **jsPDF** (optional peer dep) | — | — | `npm install jspdf jspdf-autotable` |
-| **npm package download** | — | **~1.1 MB** | Compressed tarball (includes `lib/` source, docs and source maps) |
+| **npm package download** | — | **~2.5 MB** | Compressed tarball (includes `lib/` source, docs and source maps; 7.8 MB unpacked) |
 
 - **Tree-shaking Ready**: ES Module build — bundlers (Vite, Webpack) only include what you use.
 - **Zero UI Dependencies**: No MUI, Ant Design, or Radix. Pure React + vanilla CSS.

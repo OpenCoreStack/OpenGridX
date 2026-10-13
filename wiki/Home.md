@@ -28,6 +28,8 @@ npm install @opencorestack/opengridx
 
 - **Data:** [Virtualization](Virtualization) · [Filtering & Search](Filtering) · [Sorting & Pagination](Sorting-and-Pagination) · [Infinite Scroll](Infinite-Scroll) · [Data Source](Data-Source)
 - **Interaction:** [Editing & Reordering](Editing-and-Reordering) · [Row Selection](Row-Selection) · [Clipboard](Clipboard) · [Keyboard & Accessibility](Keyboard-and-Accessibility)
+- **Spreadsheet:** [Cell Range Selection](Cell-Range-Selection) · [Undo & Redo](Undo-Redo) · [Fill Handle](Fill-Handle) · [Header Filters](Header-Filters)
+- **AI & integration:** [AI Toolkit](AI-Toolkit) · [Next.js](Nextjs) · [Right-to-Left](Right-to-Left) · [Theming](Theming) · [Performance](Performance)
 - **Layout:** [Pinning](Pinning) · [Column Grouping](Column-Grouping) · [Cell Spanning](Cell-Spanning) · [Master-Detail](Master-Detail) · [List View](List-View)
 - **Analysis:** [Tree Data & Grouping](Tree-Data-and-Grouping) · [Aggregation & Pivot](Aggregation-and-Pivot)
 - **Output:** [Export Guide](Export-Guide) · [PDF Export](PDF-Export) · [State Persistence](State-Persistence)

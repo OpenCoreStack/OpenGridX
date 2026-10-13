@@ -85,14 +85,32 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 | **3.3.0** ✅ | shipped 7 Oct | **Cell range selection** (opt-in `cellSelection` prop): mouse drag, Shift+click, Shift+arrows; Ctrl+C / Cmd+C copies the block as TSV | Selection status bar (count, sum, average of selected cells); wrapped header text; React Compiler compatibility check |
 | **3.4.0** ✅ | shipped 8 Oct | **Paste from Excel / Google Sheets** into the selection, through `processRowUpdate` (values parsed per column type or `valueParser`, non-editable cells skipped, `onClipboardPaste` summary); **Delete clears a range**; built-in inputs and editors use the shared `Input` / `Checkbox` (`Input variant="cell"`). **Undo / redo** for cell edits and pastes (Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y, `apiRef.undo()` / `redo()`) | **AI toolkit, part 1** in a new `@opencorestack/opengridx/ai` entry point: `getGridAiSchema(columns)` (JSON Schema of the filter, sort, grouping, aggregation, pivot and visibility models the columns allow) and `validateGridAiState(json, columns)` (drops unknown fields and operators, coerces values, returns errors) |
 | **3.5.0** ✅ | shipped 9 Oct | **AI toolkit, part 2**: `aiAssistant={{ onPrompt }}` Ask AI panel (chips, Undo, voice) that calls the app's own model through `createGridAiPromptHandler`; only validated replies apply; `createGridAgentTools(apiRef, columns)` (plain tool objects for CopilotKit, the Vercel AI SDK, provider tool calling or WebMCP) | **Header filter row** (`headerFilters`); **fill handle** (series, Alt copy, Ctrl/Cmd+D / R); `rowGroupingModel` controlled/uncontrolled pair |
+| **3.5.1** ✅ | shipped 10 Oct | **Content height capped to the browser's limit** (Firefox collapsed grids taller than ~17.9M px) | Dev warning names the reachable row count |
+| **3.6.0** ✅ | shipped 12 Oct | **Sorting 3–5× faster** (typed-array keys) | Next.js `'use client'` banner; optional peers safe in webpack / Turbopack; **RTL parts 1 and 2** (pinned columns); header filter `localeText` |
+| **3.7.0** ✅ | shipped 13 Oct | **Theme Builder** demo page + 16 theme keys | `DataGrid.tsx` split (`GridRoot` / `GridViewport`, composite hooks); types split per domain; demo smoke test |
+| **3.7.1** ✅ | shipped 13 Oct | Audit fixes: exports survive a throwing `valueGetter`; **formula escaping of `valueFormatter` text** (security) | Quick filter matches shown text; date paste fixes; list view theme; CSS reset scoped to the grid |
+| **3.8.0** ✅ | shipped 13 Oct | **Edits at 1M rows 10–20× faster** (in-place row store; edit ~35 ms, paste ~45 ms) | Group expand ~2×, collapse ~1 ms |
+| **3.8.1** ✅ | shipped 13 Oct | **Grid buttons keep their own styles** (AI panel, toolbar active states) | Exact `bigint` sort; stricter number text; dead-code cleanup; every export documented |
+| **3.9.0** ✅ | shipped 13 Oct | **`localeText` for every UI string** (~200 keys) | 9 theme keys + Theme Builder controls; rows stay memoised through selection and editing; demo sidebar by priority |
+| **3.9.1** ✅ | shipped 13 Oct | **npm package no longer ships 1.6 MB of test baselines** | `check:package` guard in CI; version badges read `package.json`; docs brought up to date |
+| 3.10.0 | open | AI change chips translatable | Backlog work below |
 | Freeze | 19 Dec – 5 Jan | Bug fixes only | — |
+
+### Now: backlog first (feature hold since 13 Oct)
+
+New features (the *Next* list below) wait until the open fixes, refactors and performance work are done. Tracked in [`superpowers/plans/2026-10-13-audit-tracker.md`](superpowers/plans/2026-10-13-audit-tracker.md):
+
+*   **Refactors** (no behaviour change): about 40 `as unknown as` casts (R4), files over 600 lines such as `GridToolbar.tsx` (R5), hooks with very wide parameter lists such as keyboard navigation (R6).
+*   **Performance**: the time-sliced filter / sort pipeline (held: 1.5–2× slower in total, needs to be within ~20 %); select-all at 1M rows (~270 ms, bounded by the array `rowSelectionModel`).
+*   **Demo**: syntax highlighting in the source viewer.
+*   **Bundle size (4.0)**: an app using only `DataGrid` ships 87 KB gzipped; opt-in [feature modules](superpowers/specs/2026-10-13-feature-modules-proposal.md) would save ~20 KB. Breaking, so planned for 4.0.
 
 ### Across the quarter
 
 *   ✅ **Published benchmark** (done 9 Oct): reproducible 10k / 100k / 500k / 1M-row numbers (scroll frame times, sort, filter and grouping time, memory, the reachable row) in [`docs/performance.md`](performance.md#benchmarks); rerun with `npm run bench`.
 *   ✅ **Next.js App Router guide** (done 12 Oct): [`docs/features/nextjs.md`](features/nextjs.md), verified with `next build` / `next start` on Next.js 15.5 and 16.4. The ES bundle now starts with `'use client'`.
-*   ✅ **RTL check** (done 12 Oct): [`docs/features/rtl.md`](features/rtl.md). Fixed: text alignment, horizontal scrolling and column virtualization, arrow keys, the resize and fill handles, range outlines and auto-scroll, toolbar panel placement. Pinned columns remain a limitation (Q1 2027).
-*   **Demo site**: source viewer on all examples (`DocsLayout` with Vite `?raw`) and syntax highlighting, done alongside each release's demo page.
+*   ✅ **RTL check** (done 12 Oct): [`docs/features/rtl.md`](features/rtl.md). Fixed: text alignment, horizontal scrolling and column virtualization, arrow keys, the resize and fill handles, range outlines and auto-scroll, toolbar panel placement; pinned columns followed in RTL part 2.
+*   **Demo site**: ✅ source viewer on every example (`DocsLayout` with Vite `?raw`); syntax highlighting still open.
 
 ### Definition of done for each feature
 
@@ -115,7 +133,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 *   **Undo must cover rejected updates**: a `processRowUpdate` that throws or a paste that partly fails must leave the history consistent.
 *   **Wrong AI filters** that look plausible: the validator, visible chips and undo are required, not optional.
 
-## 🔭 Next (Q1 2027)
+## 🔭 Next (Q1 2027) — on hold until the backlog above is closed
 
 
 *   **Row reordering inside tree data and row groups**, touch-friendly (MUI #4821, 405 👍, not in MUI X).
@@ -125,7 +143,7 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 *   **Sparklines** and a charts adapter that passes grid state to any chart library.
 *   **AI toolkit, part 3**: smart paste (unstructured text → pending rows) and `apiRef.getAiContext()` for "summarise selection"; an `opengridx-mcp` docs server for coding assistants.
 *   **Tailwind / shadcn theme preset**, sticky header against page scroll.
-*   ✅ **RTL, part 2** (done 12 Oct, [`rtl.md`](features/rtl.md)): pinned columns and pinned system columns with logical sticky offsets and mirrored shadows, column menu pinning by screen side, mirrored pagination arrows and tree chevrons, a direction change on a mounted grid, column reorder by drag checked. Remaining: hard-coded English menu labels (no `localeText` yet), and the bidi-mirrored header filter operator symbols.
+*   ✅ **RTL, part 2** (done 12 Oct, [`rtl.md`](features/rtl.md)): pinned columns and pinned system columns with logical sticky offsets and mirrored shadows, column menu pinning by screen side, mirrored pagination arrows and tree chevrons, a direction change on a mounted grid, column reorder by drag checked. Remaining: the bidi-mirrored header filter operator symbols (the menu labels became `localeText` keys in 3.9).
 
 ### Not planned
 
@@ -135,6 +153,9 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 *   **Scaled scrolling past ~645,000 rows** and **list-view virtualization**: revisit if users ask.
 
 ## ✅ Implemented Features (Recent)
+
+### 3.3 – 3.9 *(2026-10-07 → 2026-10-13)*
+- Spreadsheet editing (range selection, paste, undo / redo, fill handle), the AI toolkit (schema, validator, Ask AI panel, agent tools), header filters, the 1M-row benchmark and height cap, 3–5× faster sorting, RTL, the Theme Builder, a full audit with security and correctness fixes, 10–20× faster edits at 1M rows and `localeText` for every string. See the release table above and [CHANGELOG.md](../CHANGELOG.md).
 
 ### 3.x releases *(2026-09-29 → 2026-10-01)*
 - **3.0.0** correctness release (rows never modified, typed generics, React 18 support), **3.0.1** fill-height layout fix, **3.1.0** `sortComparator` and column auto-size, **3.2.0** non-blocking PDF export, **3.2.1** Safari boolean editor fix, **3.2.2** linear-time export regexes. Details in [CHANGELOG.md](../CHANGELOG.md); upgrade guide in [migration/v2-to-v3.md](migration/v2-to-v3.md).
@@ -158,5 +179,5 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 - **Core hook tests**: `useGridRowPipeline`, `useGridControlledState`, `useGridKeyboardNavigation` now have full test coverage (25 new tests).
 - **`CLAUDE.md`**: Root-level AI context file auto-loaded by Claude Code and other AI coding assistants.
 
-*   **Demo app (partial)**: 32 interactive examples across 6 categories (Main features, Advanced features, Components, Customization, Tutorials, Resources) with categorized sidebar navigation and per-page Table of Contents. Source code viewer present on 6 of 32 examples. Syntax highlighting and public deployment are in the upcoming Demo Site section above.
+*   **Demo app**: 56 pages in 13 categories ordered by what developers look for first (3.9), a per-page table of contents, the source viewer on every example, and public deployment on GitHub Pages with a smoke test of every route. Syntax highlighting is still open.
 *   **Quickstart & Installation Guides**: Comprehensive onboarding documentation for developers.

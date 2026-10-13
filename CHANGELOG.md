@@ -5,6 +5,23 @@
 
 ---
 
+## [3.9.1] — 2026-10-13
+
+### Fixed
+
+- **The npm package no longer ships the theme test baselines.** `lib/theme/__baseline__/` (three JSON files, 1.6 MB, added in 3.7.0) was published because `files` excluded tests, screenshots and snapshots but not that folder. Unpacked size 9.4 → 7.8 MB.
+- The demo's home page badge showed v3.7.0; it and the header now read the version from `package.json`.
+
+### Internal
+
+- **`npm run check:package`**, run in CI and before publishing: fails when `npm pack` would ship a test artifact or when `DataGrid` alone, minified and gzipped, grows past its budget (92 KB; 85.5 KB now).
+
+### Documentation
+
+- Roadmap brought up to date (3.5.1 – 3.9.1 shipped; new features on hold until the backlog of fixes, refactors and performance work is closed; the 4.0 feature-modules proposal). `docs/performance.md`: edit, paste, fill, group toggle and select-all timings at 1M rows and how to keep rows memoised. README: spreadsheet editing, Ask AI panel, `localeText`, RTL and Theme Builder in the feature list; bundle sizes re-measured. `rtl.md` and `components/pagination.md` no longer say their labels cannot be translated. Architecture notes on the column-window memo and the locale context. The wiki home links the newer feature pages.
+
+---
+
 ## [3.9.0] — 2026-10-13
 
 ### Added

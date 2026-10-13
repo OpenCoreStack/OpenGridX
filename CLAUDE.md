@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.9.0
+- **Current version:** 3.9.1
 
 ---
 
@@ -157,6 +157,10 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 
 ---
 
+## v3.9.1 — significant changes
+
+- **`npm run check:package`** (after `build:lib`; in `ci.yml` and `npm-publish.yml`): fails if `npm pack` would ship a test artifact (`*.test.*`, `__baseline__`, `__screenshots__`, `__snapshots__`, `__fixtures__`) and if `DataGrid` alone, minified with esbuild and gzipped, exceeds `DATAGRID_GZIP_BUDGET` (92 KB; 85.5 KB at 3.9.0). `files` in package.json works by exclusion: add a negation for any new kind of test folder under `lib/`. Raise the budget only in the commit that needs it
+
 ## v3.9.0 — significant changes
 
 - **Rows stay memoised.** Every prop passed to `Row` must keep its identity unless that row changed: handlers go through the latest-ref pattern (`useGridRowInteractions`: stable `handleRowClick` / `handleSelectionChange`), per-row state is passed only to the row it concerns (`editingCell`, `focusedCellField`, `cellRange`), and `useGridVirtualization` builds `virtualColumns` in its own memo over column inputs only. `DataGrid.rowMemo.test.tsx` counts `Row` renders through `isCellEditable` (`Cell` is memoised, so `renderCell` would not show them)
@@ -189,7 +193,7 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 - **RTL**: read/write horizontal scroll only through `getScrollStart` / `setScrollStart` (`lib/utils/direction.ts`; scroll state is the offset from the inline start, never negative); map arrows with `logicalArrowKey(key, isRtl(el))`; panels with `getPanelPosition`. `pinnedColumns.left` / `right` are logical (inline start / end): sticky offsets use `insetInlineStart` / `insetInlineEnd` (jsdom: `style.getPropertyValue('inset-inline-start')`), borders `border-inline-*`, box-shadow x-offsets need `:dir(rtl)` mirrors. The column menu pins by screen side. `useGridScrollSync` observes `dir` mutations
 - Testing RTL: Playwright's headless Chromium runs with `--hide-scrollbars`; with classic scrollbars and `scrollbar-gutter: stable`, RTL cannot reach `scrollLeft` 0 — compare against the scroll origin. Reproduce on macOS with `defaults write chrome-headless-shell AppleShowScrollBars Always`. The grid's `scrollbar-width` / `scrollbar-color` disable `::-webkit-scrollbar` in Chromium
 - Header filter strings are in `localeText` (`headerFilter*`, resolved in `lib/utils/headerFilterLocale.ts`)
-- Not in this release: the time-sliced pipeline (Option A of `docs/superpowers/specs/2026-10-12-nonblocking-pipeline-proposal.md`) is held for 3.7.0 until its overhead is within ~20 %
+- Not in this release: the time-sliced pipeline (Option A of `docs/superpowers/specs/2026-10-12-nonblocking-pipeline-proposal.md`) is held (backlog) until its overhead is within ~20 %
 
 ## v3.5.1 — significant changes
 

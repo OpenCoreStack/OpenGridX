@@ -136,7 +136,7 @@ Measured with `npm run bench` (`bench/`), which installs the packed npm package 
 | 500,000 (3.5.0) | 295 ms | 493 / 641 ms | 59 ms | 958 ms | 331 ms | 0 % | 39.4 MB |
 | 1,000,000 | 621 ms | 467 / 467 ms | 109 ms | 1,813 ms | 693 ms | 0 % | 76.9 MB |
 
-### Before and after the faster sort, quick filter and grouping (unreleased)
+### Before and after the faster sort, quick filter and grouping (3.6.0)
 
 Medians of 5 runs, the same machine, the 3.5.1 code (`122d431`) and the changed code (`e1df2f1`) measured back to back on 2026-10-12 (`bench/results/2026-10-12-apple-m1-darwin-before.json` and `bench/results/2026-10-12-apple-m1-darwin.json`). Load average at the start of each run: 2.9 (before) and 4.6 (after); an IDE, a browser and other tools were open. Row counts after every filter and grouping were identical in both runs.
 
@@ -161,6 +161,24 @@ What changed: sort keys are read once per row into typed arrays and strings are 
 - **Scrolling keeps up with the display at every size.** Chromium missed no frames; Firefox missed 0–2.4 %. The DOM holds about 19 row elements at rest (28 at 32 px) and at most 86 while scrolling fast, whatever the row count. WebKit scrolls steadily without missed frames too, but misses one or two frames each time the scroll position jumps far (the *during the jumps* rows below). Firefox's scroll numbers at 500k and 1M rows are not comparable: the grid cannot scroll there (see Reach).
 - **Sorting, the quick filter and grouping run on the main thread in one piece.** Up to 100k rows they finish in a few frames; at 1M a sort blocks the page for about 0.35–0.6 s in every engine, grouping for 0.7 s (1.8 s in Firefox), and the first quick-filter keystroke for about 1.8–3 s. For sorting or searching a million rows interactively, use server-side sorting and filtering.
 - **Reach:** past the browser's height cap rows cannot be scrolled to, and in Firefox the grid stops scrolling altogether. See [Reach](#reach-the-browser-height-ceiling).
+
+### Editing, selection and grouping at 1M rows (3.8 – 3.9)
+
+Measured in Chromium on an Apple M1, 1,000,000 rows, from the event to the end of its long task (best of three; not part of `npm run bench`, which covers mount, scroll, sort and filter).
+
+| Interaction | 3.7.0 | 3.8.0 | |
+| :--- | ---: | ---: | :--- |
+| Edit one cell | 561 ms | ~35 ms | the row store is updated in place; id lists over the visible rows are reused |
+| Paste 1,000 × 10 cells | ~790 ms | ~45 ms | |
+| Undo / redo of that paste | ~790 ms | ~45 ms | |
+| Fill 1,000 cells | 809 ms | ~50 ms | |
+| Expand a group | 279 ms | ~135 ms | leaf row metadata built once per tree |
+| Collapse a group | ~120 ms | ~1 ms | |
+| Select all | ~270 ms | ~270 ms | bounded by building 1M-id sets for the array `rowSelectionModel` |
+
+3.9.0 keeps rows memoised: selecting a row, starting or committing an edit, and vertical scrolling re-render only the rows they change (a click re-rendered every visible row, now one). React's own work per interaction is about 3–5 ms at 100k rows.
+
+To keep this, change rows by passing new row objects (never mutate them), keep `columns` and `localeText` shallowly stable (inline objects of plain values are fine; define function entries outside the render). Handlers such as `onRowClick` may be inline: the grid passes rows its own stable handlers.
 
 ### Method
 

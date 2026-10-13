@@ -41,7 +41,7 @@ You can replace the internal pagination UI using the `pagination` slot:
 
 ## 🌍 Internationalisation
 
-Pass `localeText` on `<DataGrid />` to override the text labels in the Pagination component (rows-per-page, range, and page-counter labels). The rows-per-page select takes its accessible name from the `paginationRowsPerPage` label. The navigation landmark label (`aria-label="Pagination"`) and the button labels and titles (`Go to next page`, `Next page`, …) are hardcoded and not overrideable via `localeText`.
+Pass `localeText` on `<DataGrid />` to override the text labels in the Pagination component (rows-per-page, range, and page-counter labels). The rows-per-page select takes its accessible name from the `paginationRowsPerPage` label. Since v3.9 the navigation landmark label (`paginationLabel`, default `"Pagination"`) and each button's label and tooltip (`paginationNextPageLabel` / `paginationNextPageTooltip` → `"Go to next page"` / `"Next page"`, and the same for First, Previous and Last) are `localeText` keys as well.
 
 | Key | Type | Default |
 | :--- | :--- | :--- |
