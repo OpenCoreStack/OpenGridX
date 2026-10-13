@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 3.9.1
+# Version: 3.10.0
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 
@@ -733,3 +733,5 @@ Arrows move between cells (skipping hidden columns); Home/End, Ctrl+Home/End, Pa
 25. **Quick filter text** (3.7.1+): besides the raw value and any `valueFormatter` text, `singleSelect` columns match their option label, `boolean` columns Yes / No, and `date` columns the locale date shown. Exports read values through the same `valueGetter` handling as the grid (a throw exports an empty cell), and CSV / HTML-Excel escape formula text from a `valueFormatter` unless it reads as a plain number.
 26. **localeText covers every UI string (3.9+)**: ~200 optional keys (column menu, toolbar, filter / columns / pivot panels, AI panel, pagination, row and header checkboxes, overlays, announcements), English by default. An inline object of strings is fine; define function entries (`rowSelectLabel: id => …`) outside the render so rows stay memoised. Components used outside a grid show English.
 27. **Theme keys added in 3.9**: `grid.checkboxCheckedBackground`, `checkboxCheckmark`, `expandIconColor`, `expandIconHoverColor`; `overlays.itemIndicatorColor` (menu selection dot), `itemSelectedIcon`, `iconColor`, `sectionLabelText`, `dividerColor`. The demo's Theme Builder edits all of them.
+28. **3.10**: the AI assistant's change chips are `localeText` keys too (`aiAssistantChipSort(field, direction)`, `aiAssistantChipSummary(fn, field)`, …). Select-all at 1M rows takes ~130 ms. The library forbids `as unknown as` outside documented boundaries and `any` everywhere (ESLint), and CI checks that `llms.txt`, CLAUDE.md and the CHANGELOG name the `package.json` version.
+29. **Large client-side datasets**: sorting or filtering 1M rows blocks for ~0.4–0.5 s (one native sort). There is no time-sliced mode (measured and rejected: 1.5–2× slower overall). For interactive sorting and filtering at that size use a `dataSource`.
