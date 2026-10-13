@@ -46,6 +46,7 @@ export const CONTROL_GROUPS: ControlGroup[] = [
             c('rowAlternateBackground', 'Alternate row', 'color', 'grid.rowAlternateBackground'),
             c('rowHoverBackground', 'Row hover', 'color', 'grid.rowHoverBackground'),
             c('rowSelectedBackground', 'Selected row', 'color', 'grid.rowSelectedBackground'),
+            c('rowSelectedHoverBackground', 'Selected row hover', 'color', 'grid.rowSelectedHoverBackground'),
             c('cellFocusBorder', 'Focus ring', 'color', 'grid.cellFocusBorder'),
             c('rangeBackground', 'Range selection', 'color', 'grid.rangeBackground'),
             c('rangeBorder', 'Range outline', 'color', 'grid.rangeBorder'),
@@ -67,6 +68,20 @@ export const CONTROL_GROUPS: ControlGroup[] = [
             c('cellFontFamily', 'Font', 'font', 'grid.cellFontFamily'),
             c('cellFontWeight', 'Weight', 'weight', 'grid.cellFontWeight'),
             c('cellFontSize', 'Size', 'length', 'grid.cellFontSize', { min: 10, max: 20 }),
+        ],
+    },
+    {
+        id: 'checkboxes', title: 'Checkboxes', controls: [
+            c('checkboxBg', 'Background', 'color', 'grid.checkboxBg'),
+            c('checkboxBorder', 'Border', 'color', 'grid.checkboxBorder'),
+            c('checkboxCheckedBackground', 'Checked fill', 'color', 'grid.checkboxCheckedBackground'),
+            c('checkboxCheckmark', 'Check mark', 'color', 'grid.checkboxCheckmark'),
+        ],
+    },
+    {
+        id: 'hierarchy', title: 'Group and tree rows', controls: [
+            c('expandIconColor', 'Expand chevron', 'color', 'grid.expandIconColor'),
+            c('expandIconHoverColor', 'Expand chevron hover', 'color', 'grid.expandIconHoverColor'),
         ],
     },
     {
@@ -105,13 +120,31 @@ export const CONTROL_GROUPS: ControlGroup[] = [
         ],
     },
     {
+        id: 'toolbar', title: 'Toolbar and search box', controls: [
+            c('toolbarText', 'Toolbar text', 'color', 'toolbar.text'),
+            c('inputBackground', 'Search box background', 'color', 'toolbar.inputBackground'),
+            c('inputText', 'Search box text', 'color', 'toolbar.inputText'),
+            c('inputBorder', 'Search box border', 'color', 'toolbar.inputBorder'),
+            c('inputFocusBorder', 'Search box focus border', 'color', 'toolbar.inputFocusBorder'),
+        ],
+    },
+    {
         id: 'overlays', title: 'Column menu and panels', controls: [
             c('overlayBackground', 'Background', 'color', 'overlays.background'),
             c('overlayText', 'Text', 'color', 'overlays.text'),
             c('overlayBorder', 'Border', 'color', 'overlays.border'),
             c('overlayShadow', 'Shadow', 'text', 'overlays.shadow'),
             c('itemHoverBackground', 'Item hover', 'color', 'overlays.itemHoverBackground'),
+            c('itemHoverText', 'Item hover text', 'color', 'overlays.itemHoverText'),
             c('itemSelectedBackground', 'Item selected', 'color', 'overlays.itemSelectedBackground'),
+            c('itemSelectedText', 'Selected item text', 'color', 'overlays.itemSelectedText'),
+            c('itemIndicatorColor', 'Selection dot', 'color', 'overlays.itemIndicatorColor'),
+            c('itemSelectedIcon', 'Selected item icon', 'color', 'overlays.itemSelectedIcon'),
+            c('iconColor', 'Icons', 'color', 'overlays.iconColor'),
+            c('sectionLabelText', 'Section labels', 'color', 'overlays.sectionLabelText'),
+            c('dividerColor', 'Dividers', 'color', 'overlays.dividerColor'),
+            c('itemDangerBackground', 'Danger item hover', 'color', 'overlays.itemDangerBackground'),
+            c('itemDangerText', 'Danger item text', 'color', 'overlays.itemDangerText'),
             c('overlayFontFamily', 'Font', 'font', 'overlays.fontFamily'),
             c('overlayFontWeight', 'Weight', 'weight', 'overlays.fontWeight'),
             c('overlayFontSize', 'Size', 'length', 'overlays.fontSize', { min: 10, max: 18 }),
@@ -160,6 +193,9 @@ type Getter = (path: string) => string;
 
 const DEFAULT_LIGHT: Record<string, string | ((get: Getter) => string)> = {
     'colors.primary': '#3b82f6',
+    // Not controls: derived defaults read them.
+    'colors.primaryDark': '#2563eb',
+    'colors.primaryLight': '#eff6ff',
     'grid.background': '#ffffff',
     'grid.borderColor': '#e2e8f0',
     'borders.color': '#e2e8f0',
@@ -208,6 +244,27 @@ const DEFAULT_LIGHT: Record<string, string | ((get: Getter) => string)> = {
     'overlays.fontFamily': '',
     'overlays.fontWeight': '400',
     'overlays.fontSize': '12px',
+    'grid.rowSelectedHoverBackground': get => `color-mix(in srgb, ${get('colors.primary')} 14%, ${get('colors.primaryLight')})`,
+    'grid.checkboxBg': '#ffffff',
+    'grid.checkboxBorder': '#94a3b8',
+    'grid.checkboxCheckedBackground': get => get('colors.primary'),
+    'grid.checkboxCheckmark': '#ffffff',
+    'grid.expandIconColor': get => get('grid.headerText'),
+    'grid.expandIconHoverColor': get => get('grid.rowText'),
+    'toolbar.text': get => get('grid.headerText'),
+    'toolbar.inputBackground': get => get('grid.background'),
+    'toolbar.inputText': get => get('grid.rowText'),
+    'toolbar.inputBorder': '#cbd5e1',
+    'toolbar.inputFocusBorder': get => get('colors.primary'),
+    'overlays.itemHoverText': '#0f172a',
+    'overlays.itemSelectedText': get => get('colors.primaryDark'),
+    'overlays.itemIndicatorColor': get => get('overlays.itemSelectedText'),
+    'overlays.itemSelectedIcon': get => get('colors.primary'),
+    'overlays.iconColor': '#94a3b8',
+    'overlays.sectionLabelText': '#94a3b8',
+    'overlays.dividerColor': get => get('overlays.border'),
+    'overlays.itemDangerBackground': 'rgba(239, 68, 68, 0.08)',
+    'overlays.itemDangerText': '#ef4444',
 };
 
 const DEFAULT_DARK: Record<string, string | ((get: Getter) => string)> = {
@@ -229,6 +286,16 @@ const DEFAULT_DARK: Record<string, string | ((get: Getter) => string)> = {
     'overlays.border': '#334155',
     'overlays.shadow': '0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -1px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.2)',
     'overlays.itemHoverBackground': '#334155',
+    'colors.primaryDark': '#3b82f6',
+    'colors.primaryLight': '#1e3a5f',
+    'grid.checkboxBg': '#1e293b',
+    'grid.checkboxBorder': '#64748b',
+    'toolbar.inputBorder': '#334155',
+    'overlays.itemHoverText': '#f1f5f9',
+    // On a dark surface the selected item uses the lighter primary.
+    'overlays.itemSelectedText': get => get('colors.primary'),
+    'overlays.itemDangerBackground': 'rgba(239, 68, 68, 0.15)',
+    'overlays.itemDangerText': '#fca5a5',
 };
 
 /** The value the grid uses for `path` under `theme`: the theme's own, else the default for its mode. */

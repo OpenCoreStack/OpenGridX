@@ -84,4 +84,31 @@ describe('theme-builder keys', () => {
         cleanup();
         expect(css(renderGrid({ grid: { cellPaddingX: '4px' } }).q('.ogx__header-cell'), 'padding-left')).toBe('4px');
     });
+
+    it('applies the checkbox and expand chevron keys (v3.9)', () => {
+        const grid = { checkboxCheckedBackground: 'rgb(1, 2, 3)', checkboxCheckmark: 'rgb(4, 5, 6)', expandIconColor: 'rgb(7, 8, 9)' };
+        const { q } = renderGrid({ grid }, { checkboxSelection: true, rowSelectionModel: [1] });
+        const checked = q('.ogx-checkbox__input:checked + .ogx-checkbox__box');
+        expect(css(checked, 'background-color')).toBe('rgb(1, 2, 3)');
+        expect(css(checked, 'color')).toBe('rgb(4, 5, 6)');
+        cleanup();
+        const grouped = renderGrid({ grid }, { rowGroupingModel: ['name'] });
+        expect(css(grouped.q('.ogx-expand-icon'), 'color')).toBe('rgb(7, 8, 9)');
+    });
+
+    it('applies the menu icon, section label, selected icon, selection dot and divider keys (v3.9)', async () => {
+        const { q } = renderGrid({
+            overlays: {
+                iconColor: 'rgb(10, 11, 12)', sectionLabelText: 'rgb(13, 14, 15)', itemSelectedIcon: 'rgb(16, 17, 18)',
+                itemIndicatorColor: 'rgb(19, 20, 21)', dividerColor: 'rgb(22, 23, 24)',
+            },
+        });
+        await userEvent.click(q('.ogx__menu-icon-btn'));
+        await expect.poll(() => document.querySelector('.ogx-column-menu .ogx-menu-item')).not.toBeNull();
+        expect(css(q('.ogx-column-menu .ogx-menu-item:not(.ogx-menu-item--active) .ogx-menu-item__icon'), 'color')).toBe('rgb(10, 11, 12)');
+        expect(css(q('.ogx-column-menu .ogx-menu-section-label'), 'color')).toBe('rgb(13, 14, 15)');
+        expect(css(q('.ogx-column-menu .ogx-menu-item--active .ogx-menu-item__icon'), 'color')).toBe('rgb(16, 17, 18)');
+        expect(css(q('.ogx-column-menu .ogx-menu-item__indicator'), 'color')).toBe('rgb(19, 20, 21)');
+        expect(css(q('.ogx-column-menu .ogx-menu-divider'), 'background-color')).toBe('rgb(22, 23, 24)');
+    });
 });

@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { version as packageVersion } from '../package.json';
 import { BrowserRouter as Router, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
 import { Toc } from './components/Toc';
@@ -55,75 +56,91 @@ const HeaderWrapDemo = lazy(() => import('./examples/HeaderWrapDemo/HeaderWrapDe
 const HeaderFiltersDemo = lazy(() => import('./examples/HeaderFiltersDemo/HeaderFiltersDemo'));
 const RtlDemo = lazy(() => import('./examples/RtlDemo/RtlDemo'));
 
+// Sidebar order: categories and pages most developers look for first come first. Paths never change
+// (links and the demo smoke test depend on them). `doc`: a text page, shown full width without a table of contents.
 const examplesConfig = [
-    // Resources
-    { path: '/home', name: 'Home', component: Home, category: 'Resources' },
-    { path: '/installation', name: 'Installation', component: lazy(() => import('./pages/Installation')), category: 'Resources' },
-    { path: '/quickstart', name: 'Quickstart', component: lazy(() => import('./pages/Quickstart')), category: 'Resources' },
-    { path: '/api-reference', name: 'API Reference', component: lazy(() => import('./pages/APIDocumentation')), category: 'Resources' },
-    { path: '/licensing', name: 'Licensing', component: lazy(() => import('./pages/Licensing')), category: 'Resources' },
-    { path: '/support', name: 'Support', component: lazy(() => import('./pages/Support')), category: 'Resources' },
-    { path: '/migration-v3', name: 'Migrating to v3', component: lazy(() => import('./pages/MigrationV3')), category: 'Resources' },
-    { path: '/migration-v2', name: 'Migrating to v2', component: lazy(() => import('./pages/MigrationV2')), category: 'Resources' },
+    // Getting started
+    { path: '/home', name: 'Home', component: Home, category: 'Getting started', doc: true },
+    { path: '/installation', name: 'Installation', component: lazy(() => import('./pages/Installation')), category: 'Getting started', doc: true },
+    { path: '/quickstart', name: 'Quickstart', component: lazy(() => import('./pages/Quickstart')), category: 'Getting started', doc: true },
+    { path: '/basic', name: 'Basic Usage', component: BasicExample, category: 'Getting started' },
+    { path: '/api-reference', name: 'API Reference', component: lazy(() => import('./pages/APIDocumentation')), category: 'Getting started', doc: true },
 
-    // Main Features
-    { path: '/basic', name: 'Basic Usage', component: BasicExample, category: 'Main features' },
-    { path: '/loading', name: 'Loading States', component: LoadingStatesDemo, category: 'Main features' },
-    { path: '/cell-error-boundary', name: 'Cell Error Boundary', component: CellErrorBoundaryDemo, category: 'Main features' },
-    { path: '/pdf-export', name: 'PDF Export', component: PdfExportDemo, category: 'Main features' },
-    { path: '/export', name: 'Export Data', component: ExportDemo, category: 'Main features' },
-    { path: '/clipboard', name: 'Clipboard Copy', component: ClipboardDemo, category: 'Main features' },
-    { path: '/cell-selection', name: 'Cell Range Selection', component: CellSelectionDemo, category: 'Main features' },
-    { path: '/clipboard-paste', name: 'Paste from Excel', component: ClipboardPasteDemo, category: 'Main features' },
-    { path: '/undo-redo', name: 'Undo & Redo', component: UndoRedoDemo, category: 'Main features' },
-    { path: '/fill-handle', name: 'Fill Handle', component: FillHandleDemo, category: 'Main features' },
-    { path: '/multi-sort', name: 'Multi-Column Sort', component: MultiSortDemo, category: 'Main features' },
-    { path: '/header-wrap', name: 'Wrapped Header Text', component: HeaderWrapDemo, category: 'Main features' },
-    { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Main features' },
-    { path: '/header-filters', name: 'Header Filters', component: HeaderFiltersDemo, category: 'Main features' },
-    { path: '/rtl', name: 'Right-to-Left', component: RtlDemo, category: 'Main features' },
-    { path: '/editing', name: 'Cell Editing', component: EditingExample, category: 'Main features' },
-    { path: '/custom-editors', name: 'Custom Cell Editors', component: CustomEditorsDemo, category: 'Main features' },
-    { path: '/events', name: 'Events Observer', component: EventsDemo, category: 'Main features' },
-    { path: '/scroll-to', name: 'Scroll To Indexes', component: ScrollToIndexesDemo, category: 'Main features' },
-    { path: '/ai-schema', name: 'AI: Grid Schema & Validator', component: AiSchemaDemo, category: 'Main features' },
-    { path: '/ai-assistant', name: 'AI Assistant', component: AiAssistantDemo, category: 'Main features' },
-    { path: '/full-test', name: 'Full Feature Test', component: DataGridTest, category: 'Main features' },
+    // Sorting & filtering
+    { path: '/filtering', name: 'Advanced Filtering', component: AdvancedFilteringDemo, category: 'Sorting & filtering' },
+    { path: '/multi-sort', name: 'Multi-Column Sort', component: MultiSortDemo, category: 'Sorting & filtering' },
+    { path: '/header-filters', name: 'Header Filters', component: HeaderFiltersDemo, category: 'Sorting & filtering' },
+    { path: '/filter-panel', name: 'Filter Panel', component: FilterPanelDemo, category: 'Sorting & filtering' },
 
-    // Advanced Features
-    { path: '/grouping', name: 'Row Grouping', component: GroupingExample, category: 'Advanced features' },
-    { path: '/tree-data', name: 'Tree Data', component: TreeDataExample, category: 'Advanced features' },
-    { path: '/master-detail', name: 'Master Detail', component: MasterDetailExample, category: 'Advanced features' },
-    { path: '/aggregation', name: 'Aggregation', component: AggregationFooterExample, category: 'Advanced features' },
-    { path: '/row-span', name: 'Row Spanning', component: RowSpanningShowcase, category: 'Advanced features' },
-    { path: '/cell-span', name: 'Cell Spanning', component: CellSpanningShowcase, category: 'Advanced features' },
-    { path: '/pivot', name: 'Pivot Mode', component: PivotModeDemo, category: 'Advanced features' },
-    { path: '/col-grouping', name: 'Column Grouping', component: ColumnGroupingExample, category: 'Advanced features' },
-    { path: '/persistence', name: 'State Persistence', component: StatePersistenceDemo, category: 'Advanced features' },
-    { path: '/excel-export', name: 'Advanced Excel Export', component: AdvancedExcelExportDemo, category: 'Advanced features' },
-    { path: '/lazy-loading', name: 'Lazy Loading', component: LazyLoadingExample, category: 'Advanced features' },
-    { path: '/infinite', name: 'Infinite Scroll', component: InfiniteScrollDemo, category: 'Advanced features' },
-    { path: '/server-tree', name: 'Server-Side Tree', component: ServerSideTreeDemo, category: 'Advanced features' },
-    { path: '/server-agg', name: 'Server-Side Aggregation', component: ServerSideAggregationDemo, category: 'Advanced features' },
-    { path: '/custom-pagination', name: 'Custom Pagination', component: CustomPaginationDemo, category: 'Advanced features' },
+    // Editing
+    { path: '/editing', name: 'Cell Editing', component: EditingExample, category: 'Editing' },
+    { path: '/custom-editors', name: 'Custom Cell Editors', component: CustomEditorsDemo, category: 'Editing' },
+    { path: '/undo-redo', name: 'Undo & Redo', component: UndoRedoDemo, category: 'Editing' },
 
-    // Components
-    { path: '/toolbar', name: 'Toolbar', component: ToolbarDemo, category: 'Components' },
-    { path: '/toolbar-customization', name: 'Toolbar Customization', component: ToolbarCustomizationDemo, category: 'Components' },
-    { path: '/filter-panel', name: 'Filter Panel', component: FilterPanelDemo, category: 'Components' },
+    // Pagination & server data
+    { path: '/custom-pagination', name: 'Custom Pagination', component: CustomPaginationDemo, category: 'Pagination & server data' },
+    { path: '/infinite', name: 'Infinite Scroll', component: InfiniteScrollDemo, category: 'Pagination & server data' },
+    { path: '/lazy-loading', name: 'Lazy Loading', component: LazyLoadingExample, category: 'Pagination & server data' },
+    { path: '/loading', name: 'Loading States', component: LoadingStatesDemo, category: 'Pagination & server data' },
+    { path: '/server-tree', name: 'Server-Side Tree', component: ServerSideTreeDemo, category: 'Pagination & server data' },
+    { path: '/server-agg', name: 'Server-Side Aggregation', component: ServerSideAggregationDemo, category: 'Pagination & server data' },
+    { path: '/scroll-to', name: 'Scroll To Indexes', component: ScrollToIndexesDemo, category: 'Pagination & server data' },
 
-    // Customization
-    { path: '/locale-text', name: 'Locale Text (i18n)', component: LocaleTextDemo, category: 'Customization' },
-    { path: '/theming', name: 'Theming', component: ThemingDemo, category: 'Customization' },
+    // Export & clipboard
+    { path: '/export', name: 'Export Data', component: ExportDemo, category: 'Export & clipboard' },
+    { path: '/excel-export', name: 'Advanced Excel Export', component: AdvancedExcelExportDemo, category: 'Export & clipboard' },
+    { path: '/pdf-export', name: 'PDF Export', component: PdfExportDemo, category: 'Export & clipboard' },
+    { path: '/clipboard', name: 'Clipboard Copy', component: ClipboardDemo, category: 'Export & clipboard' },
+    { path: '/clipboard-paste', name: 'Paste from Excel', component: ClipboardPasteDemo, category: 'Export & clipboard' },
+
+    // Grouping & aggregation
+    { path: '/grouping', name: 'Row Grouping', component: GroupingExample, category: 'Grouping & aggregation' },
+    { path: '/aggregation', name: 'Aggregation', component: AggregationFooterExample, category: 'Grouping & aggregation' },
+    { path: '/tree-data', name: 'Tree Data', component: TreeDataExample, category: 'Grouping & aggregation' },
+    { path: '/master-detail', name: 'Master Detail', component: MasterDetailExample, category: 'Grouping & aggregation' },
+    { path: '/pivot', name: 'Pivot Mode', component: PivotModeDemo, category: 'Grouping & aggregation' },
+
+    // Selection & spreadsheet
+    { path: '/cell-selection', name: 'Cell Range Selection', component: CellSelectionDemo, category: 'Selection & spreadsheet' },
+    { path: '/fill-handle', name: 'Fill Handle', component: FillHandleDemo, category: 'Selection & spreadsheet' },
+
+    // Layout
+    { path: '/col-grouping', name: 'Column Grouping', component: ColumnGroupingExample, category: 'Layout' },
+    { path: '/header-wrap', name: 'Wrapped Header Text', component: HeaderWrapDemo, category: 'Layout' },
+    { path: '/row-span', name: 'Row Spanning', component: RowSpanningShowcase, category: 'Layout' },
+    { path: '/cell-span', name: 'Cell Spanning', component: CellSpanningShowcase, category: 'Layout' },
+    { path: '/list-view', name: 'List View', component: ListViewDemo, category: 'Layout' },
+    { path: '/rtl', name: 'Right-to-Left', component: RtlDemo, category: 'Layout' },
+
+    // Theming & customization
+    { path: '/theming', name: 'Theming', component: ThemingDemo, category: 'Theming & customization' },
     // fullWidth: no table of contents column, so the controls and the preview fit side by side.
-    { path: '/theme-builder', name: 'Theme Builder', component: ThemeBuilderDemo, category: 'Customization', fullWidth: true },
-    { path: '/list-view', name: 'List View', component: ListViewDemo, category: 'Customization' },
-    { path: '/slots', name: 'Slots & Renderers', component: SlotsDemo, category: 'Customization' },
+    { path: '/theme-builder', name: 'Theme Builder', component: ThemeBuilderDemo, category: 'Theming & customization', fullWidth: true },
+    { path: '/toolbar', name: 'Toolbar', component: ToolbarDemo, category: 'Theming & customization' },
+    { path: '/toolbar-customization', name: 'Toolbar Customization', component: ToolbarCustomizationDemo, category: 'Theming & customization' },
+    { path: '/slots', name: 'Slots & Renderers', component: SlotsDemo, category: 'Theming & customization' },
+    { path: '/locale-text', name: 'Locale Text (i18n)', component: LocaleTextDemo, category: 'Theming & customization' },
+
+    // AI
+    { path: '/ai-assistant', name: 'AI Assistant', component: AiAssistantDemo, category: 'AI' },
+    { path: '/ai-schema', name: 'Grid Schema & Validator', component: AiSchemaDemo, category: 'AI' },
+
+    // Advanced
+    { path: '/persistence', name: 'State Persistence', component: StatePersistenceDemo, category: 'Advanced' },
+    { path: '/events', name: 'Events Observer', component: EventsDemo, category: 'Advanced' },
+    { path: '/cell-error-boundary', name: 'Cell Error Boundary', component: CellErrorBoundaryDemo, category: 'Advanced' },
+    { path: '/full-test', name: 'Full Feature Test', component: DataGridTest, category: 'Advanced' },
 
     // Tutorials
+    { path: '/crud', name: 'Interactive CRUD', component: CRUDTutorial, category: 'Tutorials' },
     { path: '/real-estate', name: 'Real Estate Portfolio', component: RealEstatePortfolioDemo, category: 'Tutorials' },
     { path: '/calendar', name: 'Time Off Calendar', component: EmployeeCalendarDemo, category: 'Tutorials' },
-    { path: '/crud', name: 'Interactive CRUD', component: CRUDTutorial, category: 'Tutorials' },
+
+    // Resources
+    { path: '/licensing', name: 'Licensing', component: lazy(() => import('./pages/Licensing')), category: 'Resources', doc: true },
+    { path: '/support', name: 'Support', component: lazy(() => import('./pages/Support')), category: 'Resources', doc: true },
+    { path: '/migration-v3', name: 'Migrating to v3', component: lazy(() => import('./pages/MigrationV3')), category: 'Resources', doc: true },
+    { path: '/migration-v2', name: 'Migrating to v2', component: lazy(() => import('./pages/MigrationV2')), category: 'Resources', doc: true },
 ];
 
 function DemoSkeleton() {
@@ -138,12 +155,10 @@ function DemoSkeleton() {
 function PageWrapper({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     
-    // Check if current route is in 'Resources' category
+    // Text pages (doc) and pages that ask for it are full width; the others get a table of contents.
     const currentConfig = examplesConfig.find(item => item.path === location.pathname);
-    const isResourcePage = currentConfig?.category === 'Resources';
-    const isFullWidth = isResourcePage || currentConfig?.fullWidth === true;
+    const isFullWidth = currentConfig?.doc === true || currentConfig?.fullWidth === true;
 
-    // Automatically extract TOC from current page, except for Resources
     return (
         <div className="app-page-wrapper" key={location.pathname}>
             <div className={`app-content-column ${isFullWidth ? 'app-content-column--full-width' : ''}`}>
@@ -161,7 +176,7 @@ export default function App() {
         return acc;
     }, {} as Record<string, typeof examplesConfig>);
 
-    const categories = ['Resources', 'Main features', 'Advanced features', 'Components', 'Customization', 'Tutorials'];
+    const categories = ['Getting started', 'Sorting & filtering', 'Editing', 'Pagination & server data', 'Export & clipboard', 'Grouping & aggregation', 'Selection & spreadsheet', 'Layout', 'Theming & customization', 'AI', 'Advanced', 'Tutorials', 'Resources'];
 
     return (
         <Router basename={import.meta.env.BASE_URL}>
@@ -171,7 +186,7 @@ export default function App() {
                         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="OpenGridX Logo" className="app-logo" />
                         <h2 className="app-title">
                             OpenGridX
-                            <span className="app-version">v3.7.0</span>
+                            <span className="app-version">v{packageVersion}</span>
                         </h2>
                     </div>
 

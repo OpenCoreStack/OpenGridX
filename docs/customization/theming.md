@@ -262,8 +262,12 @@ For visible gaps between cells instead of lines, set the divider colour to the g
 | `--ogx-fill-handle-color` | `var(--ogx-range-border)` | `var(--ogx-range-border)` | The fill handle square (`ogx__cell-fill-handle`, v3.5). Unset in the stylesheet, where it falls back to `--ogx-range-border`; every theme of `DataGridThemeProvider` sets it to `var(--ogx-range-border)`. Theme key `grid.fillHandleColor` |
 | `--ogx-grid-pinned-left-shadow` | `4px 0 24px...` | (darker) | Shadow on left-pinned columns |
 | `--ogx-grid-pinned-right-shadow` | `-4px 0 24px...` | (darker) | Shadow on right-pinned columns |
-| `--ogx-checkbox-bg` | — | `#1e293b` | Checkbox background (dark only) |
-| `--ogx-checkbox-border` | — | `#64748b` | Checkbox border (dark only) |
+| `--ogx-checkbox-bg` | — | `#1e293b` | Checkbox background (dark only). Theme key `grid.checkboxBg` |
+| `--ogx-checkbox-border` | — | `#64748b` | Checkbox border (dark only). Theme key `grid.checkboxBorder` |
+| `--ogx-checkbox-checked-bg` | primary | primary | Fill and border of a checked or indeterminate checkbox (v3.9). Theme key `grid.checkboxCheckedBackground` |
+| `--ogx-checkbox-checkmark` | `white` | `white` | Check mark and indeterminate dash (v3.9). Theme key `grid.checkboxCheckmark` |
+| `--ogx-expand-icon-color` | header text | header text | Expand / collapse chevron of group and tree rows (v3.9). Theme key `grid.expandIconColor` |
+| `--ogx-expand-icon-hover-color` | row text | row text | The chevron on hover (v3.9). Theme key `grid.expandIconHoverColor` |
 
 ### Toolbar, Overlay and Scrollbar Colors
 
@@ -282,6 +286,11 @@ Read with a fallback, so a grid without a provider looks the same as before. Ins
 | `--ogx-overlay-*` | `overlays.*` | white surface, gray border | Menus, panels, tooltips |
 | `--ogx-overlay-item-selected-bg` / `-text` | `overlays.itemSelected*` | 8% primary / primary-dark | Selected menu item |
 | `--ogx-overlay-item-danger-bg` / `-text` | `overlays.itemDanger*` | red tints | Remove-condition button in the filter panel |
+| `--ogx-overlay-item-indicator` | `overlays.itemIndicatorColor` (v3.9) | the selected item text | Dot before the selected option of a menu group (sort, pin) |
+| `--ogx-overlay-item-selected-icon` | `overlays.itemSelectedIcon` (v3.9) | primary | Icon of the selected menu option |
+| `--ogx-overlay-icon` | `overlays.iconColor` (v3.9) | gray-400 | Menu item icons |
+| `--ogx-overlay-section-label-text` | `overlays.sectionLabelText` (v3.9) | gray-400 | Menu section labels ("Pin column") |
+| `--ogx-overlay-divider` | `overlays.dividerColor` (v3.9) | overlay border | Lines between menu sections |
 | `--ogx-scrollbar-thumb` / `-track` / `-size` | `scrollbar.thumbColor` / `trackColor` / `size` | gray-300 / transparent / 8px | Grid viewport scrollbars |
 | `--ogx-skeleton-base` / `-highlight` | `skeleton.baseColor` / `highlightColor` | light grays | Loading skeleton rows |
 

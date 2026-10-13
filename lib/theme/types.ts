@@ -90,6 +90,16 @@ export interface GridThemeOverlays {
     itemSelectedText?: string;
     itemDangerBackground?: string;
     itemDangerText?: string;
+    /** The dot before the selected option of a menu group (`--ogx-overlay-item-indicator`). Default: `itemSelectedText`. @since v3.9 */
+    itemIndicatorColor?: string;
+    /** The icon of the selected option (`--ogx-overlay-item-selected-icon`). Default: the primary colour. @since v3.9 */
+    itemSelectedIcon?: string;
+    /** Menu item icons (`--ogx-overlay-icon`). Default: gray-400. @since v3.9 */
+    iconColor?: string;
+    /** Section labels such as "Pin column" (`--ogx-overlay-section-label-text`). Default: gray-400. @since v3.9 */
+    sectionLabelText?: string;
+    /** Lines between menu sections (`--ogx-overlay-divider`). Default: `border`. @since v3.9 */
+    dividerColor?: string;
 
     /** Font of column menus, header filter menus, toolbar panels and the AI panel (`--ogx-overlay-font-family`). Default: the grid font. @since v3.7 */
     fontFamily?: string;
@@ -200,6 +210,14 @@ export interface GridThemeGrid {
   pinnedRightShadow?: string;
     checkboxBg?: string;
   checkboxBorder?: string;
+    /** Fill and border of a checked or indeterminate checkbox (`--ogx-checkbox-checked-bg`). Default: the primary colour. @since v3.9 */
+    checkboxCheckedBackground?: string;
+    /** The check mark and indeterminate dash (`--ogx-checkbox-checkmark`). Default: white. @since v3.9 */
+    checkboxCheckmark?: string;
+    /** The expand / collapse chevron of group and tree rows (`--ogx-expand-icon-color`). Default: the header text colour. @since v3.9 */
+    expandIconColor?: string;
+    /** The chevron on hover (`--ogx-expand-icon-hover-color`). Default: the row text colour. @since v3.9 */
+    expandIconHoverColor?: string;
 }
 
 export interface GridThemeTransitions {

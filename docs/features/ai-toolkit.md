@@ -1,6 +1,6 @@
 # AI Toolkit: Schema, Validator, Assistant & Agent Tools
 
-*Since v3.4.0 (schema and validator); v3.5.0 (assistant panel, prompt handler, agent tools)* · Demos: [AI: Grid Schema & Validator](https://opencorestack.github.io/OpenGridX/ai-schema), [AI Assistant](https://opencorestack.github.io/OpenGridX/ai-assistant)
+*Since v3.4.0 (schema and validator); v3.5.0 (assistant panel, prompt handler, agent tools)* · Demos: [Grid Schema & Validator](https://opencorestack.github.io/OpenGridX/ai-schema), [AI Assistant](https://opencorestack.github.io/OpenGridX/ai-assistant)
 
 Let users drive the grid in plain language ("paid orders over $10k in the North, biggest first") with the model your app already uses. The `@opencorestack/opengridx/ai` entry point gives you the pieces the grid can own:
 

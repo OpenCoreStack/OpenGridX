@@ -8,13 +8,13 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  color: var(--ogx-grid-header-text);
+  color: var(--ogx-expand-icon-color, var(--ogx-grid-header-text));
   transition: color 0.2s ease;
   border-radius: 4px;
 }
 .ogx-expand-icon:hover {
-  background: transparent; 
-  color: var(--ogx-grid-row-text);
+  background: transparent;
+  color: var(--ogx-expand-icon-hover-color, var(--ogx-grid-row-text));
 }
 .ogx-expand-icon:focus {
   outline: none; 

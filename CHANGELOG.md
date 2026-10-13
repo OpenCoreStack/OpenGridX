@@ -5,6 +5,20 @@
 
 ---
 
+## [Unreleased — 3.9.0]
+
+### Added
+
+- **Nine theme keys** (additive; each defaults to exactly what the grid draws today, checked by the default-theme baseline in Chromium, Firefox and WebKit): `grid.checkboxCheckedBackground` (`--ogx-checkbox-checked-bg`, the fill and border of a checked or indeterminate checkbox, default the primary colour), `grid.checkboxCheckmark` (`--ogx-checkbox-checkmark`, default white), `grid.expandIconColor` / `expandIconHoverColor` (`--ogx-expand-icon-color` / `-hover-color`, the group and tree chevron, default header text / row text), and for menus `overlays.itemIndicatorColor` (`--ogx-overlay-item-indicator`, the selection dot, default the selected item text), `itemSelectedIcon` (`--ogx-overlay-item-selected-icon`, default primary), `iconColor` (`--ogx-overlay-icon`, default gray-400), `sectionLabelText` (`--ogx-overlay-section-label-text`, default gray-400) and `dividerColor` (`--ogx-overlay-divider`, default the overlay border).
+- **Theme Builder controls** for those keys and for existing keys it did not offer: a *Checkboxes* group (background, border, checked fill, check mark), a *Group and tree rows* group (chevron, chevron hover), *Selected row hover*, a *Toolbar and search box* group (toolbar text, search box background, text, border, focus border), and in *Column menu and panels* the item hover text, selected item text, selection dot, selected item icon, icons, section labels, dividers and danger item colours.
+
+### Demo
+
+- **Sidebar reorganised by what developers look for first**: *Getting started* (with Basic Usage and the API reference), *Sorting & filtering*, *Editing*, *Pagination & server data*, *Export & clipboard*, *Grouping & aggregation*, *Selection & spreadsheet*, *Layout*, *Theming & customization*, *AI*, *Advanced*, *Tutorials*, then *Resources* (licensing, support, migration guides). Page URLs are unchanged. Text pages are marked `doc` (full width) instead of relying on their category.
+- The header shows the package version from `package.json` (it was fixed at v3.7.0).
+
+---
+
 ## [3.8.1] — 2026-10-13
 
 ### Fixed

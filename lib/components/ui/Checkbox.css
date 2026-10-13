@@ -26,7 +26,7 @@
   border-radius: 4px;
   background: var(--ogx-checkbox-bg, var(--ogx-color-white));
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  color: white; 
+  color: var(--ogx-checkbox-checkmark, white);
   flex-shrink: 0;
 }
 .ogx-checkbox__icon {
@@ -43,15 +43,15 @@
   line-height: 1;
 }
 .ogx-checkbox__input:checked + .ogx-checkbox__box {
-  background: var(--ogx-color-primary);
-  border-color: var(--ogx-color-primary);
+  background: var(--ogx-checkbox-checked-bg, var(--ogx-color-primary));
+  border-color: var(--ogx-checkbox-checked-bg, var(--ogx-color-primary));
 }
 .ogx-checkbox__input:checked + .ogx-checkbox__box .ogx-checkbox__icon {
   transform: scale(1);
 }
 .ogx-checkbox__input:indeterminate + .ogx-checkbox__box {
-  background: var(--ogx-color-primary);
-  border-color: var(--ogx-color-primary);
+  background: var(--ogx-checkbox-checked-bg, var(--ogx-color-primary));
+  border-color: var(--ogx-checkbox-checked-bg, var(--ogx-color-primary));
 }
 .ogx-checkbox__input:indeterminate + .ogx-checkbox__box .ogx-checkbox__icon {
   transform: scale(1);

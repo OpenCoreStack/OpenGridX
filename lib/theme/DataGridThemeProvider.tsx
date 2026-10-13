@@ -303,6 +303,10 @@ function themeToCSS(theme: GridTheme): Record<string, string> {
         set('--ogx-grid-pinned-right-shadow', g.pinnedRightShadow);
         set('--ogx-checkbox-bg', g.checkboxBg);
         set('--ogx-checkbox-border', g.checkboxBorder);
+        set('--ogx-checkbox-checked-bg', g.checkboxCheckedBackground);
+        set('--ogx-checkbox-checkmark', g.checkboxCheckmark);
+        set('--ogx-expand-icon-color', g.expandIconColor);
+        set('--ogx-expand-icon-hover-color', g.expandIconHoverColor);
     }
 
     if (theme.transitions) {
@@ -350,6 +354,11 @@ function themeToCSS(theme: GridTheme): Record<string, string> {
         set('--ogx-overlay-item-selected-text', o.itemSelectedText);
         set('--ogx-overlay-item-danger-bg', o.itemDangerBackground);
         set('--ogx-overlay-item-danger-text', o.itemDangerText);
+        set('--ogx-overlay-item-indicator', o.itemIndicatorColor);
+        set('--ogx-overlay-item-selected-icon', o.itemSelectedIcon);
+        set('--ogx-overlay-icon', o.iconColor);
+        set('--ogx-overlay-section-label-text', o.sectionLabelText);
+        set('--ogx-overlay-divider', o.dividerColor);
         set('--ogx-overlay-font-family', o.fontFamily);
         set('--ogx-overlay-font-weight', o.fontWeight);
         set('--ogx-overlay-font-size', o.fontSize);
