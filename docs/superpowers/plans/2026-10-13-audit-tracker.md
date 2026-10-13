@@ -69,3 +69,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — Flaky tests fixed (reorder, header-filter scroll, PDF heartbeat, tree-data ratio). R7 (localeText for ~120 strings) delegated to an agent in a worktree; P8 waits for it (same files).
 - 2026-10-13 — P8 done (row memoisation), regression test proven to fail without the fixes.
 - 2026-10-13 — R7 done (agent, reviewed): 196 localeText keys via GridLocaleContext; added useShallowStableValue so an inline localeText of strings keeps rows memoised. Unit 1972, browser 585/585 in 3 engines.
+- 2026-10-13 — Released 3.9.0 (CI run 38381619839).
