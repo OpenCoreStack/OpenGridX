@@ -988,6 +988,10 @@ interface GridLocaleText {
   aiAssistantAppliedChanges; aiAssistantRemoveChange(label); aiAssistantUndo; aiAssistantIgnored; aiAssistantIgnoredItem(message);
   aiAssistantEarlier; aiAssistantThinking; aiAssistantStopped; aiAssistantUndone; aiAssistantChangeRemoved;
   aiAssistantApplied(applied, ignored); aiAssistantNotValidated; aiAssistantFailed(message); aiAssistantUnknownError;
+  // AI assistant change chips (v3.10; filter operators in the chips use filterPanelOperators)
+  aiAssistantChipSearch(words); aiAssistantChipNoFilters; aiAssistantChipSort(field, 'asc' | 'desc'); aiAssistantChipNoSorting;
+  aiAssistantChipGroup(field); aiAssistantChipNoGrouping; aiAssistantChipSummary(fn, field); aiAssistantChipNoSummaries;
+  aiAssistantChipPivot(fields); aiAssistantChipNoPivot; aiAssistantChipVisibility(field, visible);
   // Pagination buttons
   paginationLabel; paginationFirstPageLabel; paginationFirstPageTooltip; paginationPreviousPageLabel;
   paginationPreviousPageTooltip; paginationNextPageLabel; paginationNextPageTooltip;

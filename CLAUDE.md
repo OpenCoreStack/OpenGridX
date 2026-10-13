@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.9.1
+- **Current version:** 3.10.0
 
 ---
 
@@ -157,7 +157,7 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 
 ---
 
-## v3.10.0 — significant changes (unreleased)
+## v3.10.0 — significant changes
 
 - **CI guards** (each fails the build): `check:versions` (`llms.txt` + its demo copy, CLAUDE.md "Current version" and a CHANGELOG entry must match `package.json`; bump them together), `check:compiler` (React Compiler: only the allowlisted `EXPECTED` results in `scripts/check-react-compiler.mjs`), `check:package` (no test artifacts, DataGrid-only size budget), ESLint `no-explicit-any` (now `error`, also in the demo) and `no-restricted-syntax` against `as unknown as` in `lib/` outside the boundary files listed in `eslint.config.js`
 - **Types (R4)**: a `GridColDef<R>` passed to an untyped public surface (callback params, toolbar, store) goes through `untypedColumn` / `untypedColumns` (`lib/utils/untypedColumns.ts`), the one place that widening is written; narrowing untyped → `GridColDef<R>` / `R[]` is a plain `as`. `useDataGrid` types `setRows` / `replaceRows` / `rowsLookup` with `R`; call generic hooks with `<R>` explicitly when an untyped argument would otherwise infer `GridRowModel`. Remaining `as unknown as` (15) are synthetic rows, third-party module typings, `window` / CSS custom properties: do not add new ones elsewhere
