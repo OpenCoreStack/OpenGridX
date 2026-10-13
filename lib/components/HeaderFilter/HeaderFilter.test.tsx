@@ -423,3 +423,12 @@ describe('header filter row — keyboard', () => {
         expect(document.activeElement?.closest('[role="row"]')?.getAttribute('data-rowindex')).toBe('0');
     });
 });
+
+describe('header filter operator symbol in RTL (3.10.1)', () => {
+    it('lays the operator button out left to right, so the bidi rules do not mirror its symbol', () => {
+        const { container } = render(<div dir="rtl"><DataGrid rows={ROWS} columns={COLS} headerFilters /></div>);
+        const buttons = container.querySelectorAll('.ogx__header-filter-operator');
+        expect(buttons.length).toBeGreaterThan(0);
+        buttons.forEach(b => expect(b.getAttribute('dir')).toBe('ltr'));
+    });
+});

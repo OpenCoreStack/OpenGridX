@@ -5,7 +5,11 @@
 
 ---
 
-## [Unreleased — 3.10.1]
+## [3.10.1] — 2026-10-13
+
+### Fixed
+
+- **RTL: header filter operator symbols are no longer mirrored.** The browser's bidi rules drew `∋` (contains) as `∈` (is any of) in right-to-left grids, so the two operators swapped their look. The operator button is now laid out left to right in every direction.
 
 ### Performance
 
@@ -16,6 +20,8 @@
 - **The quick filter's first search at 1,000,000 rows takes ~1.6–2 s instead of ~2.7 s**, later keystrokes ~210 ms instead of 250–530 ms. Locale dates are formatted once per calendar day instead of once per cell (Intl formatting was ~0.5 s of it), and the shown texts of date, boolean and select columns are lower-cased once per distinct text; a select option whose label is its value is stored once. What remains is reading and formatting every cell once (your `valueFormatter` included) for the per-row text cache that makes later keystrokes fast. For instant search over 1M rows use a `dataSource`.
 
 ### Internal
+
+- A unit test runs row grouping on 5,000 rows and checks that the whole-dataset pass creates no leaf tree node and that a row's metadata object is made once and reused, so the lazy leaf maps cannot silently turn eager again.
 
 - **Next.js fixture in the package smoke suite** (`e2e/fixtures/nextjs`, `e2e/nextjs.spec.ts`): a Next.js 16 App Router app built with `next build` (Turbopack) against the packed tarball, without the optional export peers and without `next.config` aliases. In Chromium, Firefox and WebKit the server-rendered HTML must contain the grid, the page must hydrate without console errors, sorting must work and `exportToExcelAdvanced` must reject with its install hint. The claims of `docs/features/nextjs.md` were checked once by hand before; CI now re-checks them on every run.
 

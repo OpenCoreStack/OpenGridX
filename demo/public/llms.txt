@@ -1,6 +1,6 @@
 # OpenGridX — AI Agent Context
 # Package: @opencorestack/opengridx
-# Version: 3.10.0
+# Version: 3.10.1
 # Docs: https://opencorestack.github.io/OpenGridX/
 # This file is machine-readable. AI developers: start here.
 
@@ -735,3 +735,4 @@ Arrows move between cells (skipping hidden columns); Home/End, Ctrl+Home/End, Pa
 27. **Theme keys added in 3.9**: `grid.checkboxCheckedBackground`, `checkboxCheckmark`, `expandIconColor`, `expandIconHoverColor`; `overlays.itemIndicatorColor` (menu selection dot), `itemSelectedIcon`, `iconColor`, `sectionLabelText`, `dividerColor`. The demo's Theme Builder edits all of them.
 28. **3.10**: the AI assistant's change chips are `localeText` keys too (`aiAssistantChipSort(field, direction)`, `aiAssistantChipSummary(fn, field)`, …). Select-all at 1M rows takes ~130 ms. The library forbids `as unknown as` outside documented boundaries and `any` everywhere (ESLint), and CI checks that `llms.txt`, CLAUDE.md and the CHANGELOG name the `package.json` version.
 29. **Large client-side datasets**: sorting or filtering 1M rows blocks for ~0.4–0.5 s (one native sort). There is no time-sliced mode (measured and rejected: 1.5–2× slower overall). For interactive sorting and filtering at that size use a `dataSource`.
+30. **3.10.1**: at 1M rows select-all ~60–90 ms, deselect-all < 50 ms, applying a grouping ~190 ms, the quick filter's first search ~1.6–2 s (later keystrokes ~210 ms). Grouping creates leaf tree nodes and row metadata only when read, still one `params.rowMeta` object per row. A Next.js 16 App Router fixture in the package smoke suite re-checks the Next.js guide on every CI run.

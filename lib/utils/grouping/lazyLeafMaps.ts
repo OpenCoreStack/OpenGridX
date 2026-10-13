@@ -76,6 +76,11 @@ export class LazyLeafTreeNodes extends Map<GridRowId, GridTreeNode> {
         return super.has(id) || this.leafIndex.has(id);
     }
 
+    /** How many leaf nodes were made so far (tests: rendering must not make one per row). */
+    get madeLeafCount(): number {
+        return this.leaves.size;
+    }
+
     override get size(): number {
         return super.size + this.leafIndex.size;
     }
