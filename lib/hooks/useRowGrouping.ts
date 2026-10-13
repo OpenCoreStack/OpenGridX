@@ -15,6 +15,7 @@ import { sortItemsBySortModel, type GridSortValue } from '../utils/sorting';
 import { callSafely, getCellValue } from '../utils/values';
 import type { GridColumnLookup } from '../utils/columnLookup';
 import { computeAggregations } from '../utils/aggregation';
+import { LayeredMap } from '../utils/grouping/layeredMap';
 
 /** Where a group's aggregates are shown: on the group row, on a subtotal row after its children, or not at all. */
 export type GridGroupAggregationPosition = 'inline' | 'footer' | null;
@@ -436,16 +437,24 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
     const getNode = useCallback((id: GridRowId) => treeNodes.get(id), [treeNodes]);
 
-    const rowMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
+    // Leaf entries do not depend on expansion: built once per tree, so expanding or collapsing a
+    // group rebuilds only the group entries (a LayeredMap reads both without copying).
+    const leafMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
         const map = new Map<GridRowId, GridRowMeta>();
         treeNodes.forEach((node, id) => {
-            const variants = groupRowVariants.get(id);
-            if (!variants) {
-                // One object per row (not shared per depth): `params.rowMeta` is public, and a consumer that
-                // writes to it must not change other rows.
-                map.set(id, { hasChildren: false, treeDepth: node.depth, isGroupRow: false });
-                return;
-            }
+            if (groupRowVariants.has(id)) return;
+            // One object per row (not shared per depth): `params.rowMeta` is public, and a consumer that
+            // writes to it must not change other rows.
+            map.set(id, { hasChildren: false, treeDepth: node.depth, isGroupRow: false });
+        });
+        return map;
+    }, [treeNodes, groupRowVariants]);
+
+    const rowMetaMap = useMemo<ReadonlyMap<GridRowId, GridRowMeta>>(() => {
+        const map = new Map<GridRowId, GridRowMeta>();
+        groupRowVariants.forEach((variants, id) => {
+            const node = treeNodes.get(id);
+            if (!node) return;
             const groupMeta: GridRowMeta = {
                 hasChildren: true,
                 treeDepth: node.depth,
@@ -467,8 +476,8 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                 });
             }
         });
-        return map;
-    }, [treeNodes, groupRowVariants, expandedGroupIds, aggregationPositions]);
+        return new LayeredMap(leafMetaMap, map);
+    }, [leafMetaMap, treeNodes, groupRowVariants, expandedGroupIds, aggregationPositions]);
 
     return useMemo(() => ({
         treeNodes,

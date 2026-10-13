@@ -301,7 +301,7 @@ const SORT_DESC = [{ field: 'name', sort: 'desc' as const }];
 
 type SaleRow = GridRowModel & { id: number; region: unknown; team: string; amount: number; first?: string; last?: string };
 const saleId = (r: SaleRow) => r.id;
-const groupMetasOf = (map: Map<unknown, GridRowMeta>) =>
+const groupMetasOf = (map: ReadonlyMap<unknown, GridRowMeta>) =>
     [...map.values()].filter(meta => meta.isGroupRow && !meta.isGroupFooter);
 
 describe('useRowGrouping — groupable: false keeps the other levels at their depth', () => {

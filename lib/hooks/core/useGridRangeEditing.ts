@@ -29,7 +29,7 @@ export interface UseGridRangeEditingParams<R extends GridRowModel> {
     navigationColumns: GridColDef<R>[];
     columnIndexMap: Map<string, number>;
     isCellEditable?: (params: GridCellParams<R>) => boolean;
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>;
     getSpanOrigin?: (rowId: GridRowId, field: string) => { rowId: GridRowId; field: string } | null;
     isEditing: boolean;
     batchEdit: UseGridBatchEditReturn<R>;

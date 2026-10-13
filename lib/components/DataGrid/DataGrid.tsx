@@ -208,9 +208,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const isInternalLoading = state.dataSource.loading;
     const effectiveLoading = loading || isInternalLoading;
 
-    const effectiveRows = useMemo(() => {
-        return state.rows.allRows.map(id => state.rows.idRowsLookup.get(id)!) as R[];
-    }, [state.rows]);
+    const effectiveRows = state.rows.rows as R[];
 
     const { treeDataHandlers, rowGroupingHandlers, activeHierarchyHandlers, rowMetaMap } = useGridHierarchy<R>({
         rows: effectiveRows,
@@ -354,7 +352,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     // Indices address the consumer's own rows, whatever the sort, filter, page or pinning.
     const rowReorderHandlers = useRowReorder({
         rows: effectiveRows,
-        getRowId: getRowIdOf,
+        indexById: state.rows.indexById,
         onRowOrderChange,
         rowReordering
     });

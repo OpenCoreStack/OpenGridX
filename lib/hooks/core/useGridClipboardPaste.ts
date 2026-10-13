@@ -49,7 +49,7 @@ export interface UseGridClipboardPasteParams<R extends GridRowModel> {
     /** System columns and the rendered data columns, in render order. */
     navigationColumns: ReadonlyArray<GridColDef<R>>;
     isCellEditable?: (params: GridCellParams<R>) => boolean;
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>;
     getSpanOrigin?: (rowId: GridRowId, field: string) => { rowId: GridRowId; field: string } | null;
     /** Whether a cell editor is open: paste and Delete then belong to it. */
     isEditing: boolean;

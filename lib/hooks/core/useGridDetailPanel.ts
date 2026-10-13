@@ -9,7 +9,7 @@ export interface UseGridDetailPanelParams {
     /** `detailPanelExpandedRowIds` prop (controlled when defined). */
     controlledExpandedRowIds: Set<GridRowId> | undefined;
     onDetailPanelExpandedRowIdsChange: ((expandedRowIds: Set<GridRowId>) => void) | undefined;
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>;
 }
 
 export interface UseGridDetailPanelResult {

@@ -5,6 +5,24 @@
 
 ---
 
+## [Unreleased — 3.8.0]
+
+### Performance
+
+- **Cell edits, paste, undo, redo and fill no longer re-process every row.** A committed edit updates the row store's id maps in place and patches only the edited positions of the row array, instead of copying two maps and rebuilding the array. The row-reorder index comes from the store. The id lists that cell selection, paste / fill / undo targets and row selection derive from the displayed rows are reused when an edit leaves every row at its position with its id (a reference comparison per row, a lookup only for replaced rows). Measured at 1,000,000 rows in Chromium (Apple M1): one cell edit 561 → ~35 ms, paste of 1,000 × 10 cells ~790 → ~45 ms, undo / redo ~790 → ~45 ms, fill of 1,000 cells 809 → ~50 ms.
+- **Expanding and collapsing a group no longer rebuilds row metadata for every row.** Leaf rows' `GridRowMeta` objects are built once per grouping tree; a toggle rebuilds only the group rows' entries and reads both through one read-only map. At 1,000,000 rows: expand 279 → ~135 ms, collapse ~120 → ~1 ms.
+- Row selection checks for removed ids before copying the selection, so selecting all rows no longer copies the selection once more.
+
+### Documentation
+
+- `docs/features/filtering.md` (*Quick Filter*): the searched text is cached per row object, so rows must be replaced, not mutated, and a `valueFormatter` that reads outside state needs new column definitions when that state changes.
+
+### Internal
+
+- `GridInternalState.rows` also holds `rows` (the stored rows in order) and `indexById`. `GridApi.getAllRows()` returns a copy of it. New `lib/utils/rowIndex.ts` (`getRowIndex`) and `lib/utils/grouping/layeredMap.ts` (`LayeredMap`); internal `rowMetaMap` parameters are typed `ReadonlyMap`.
+
+---
+
 ## [3.7.1] — 2026-10-13
 
 ### Fixed

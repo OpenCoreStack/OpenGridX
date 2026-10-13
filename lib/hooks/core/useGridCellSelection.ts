@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
+import { getRowIndex } from '../../utils/rowIndex';
 import { scrollColumnIntoView, scrollRowIntoView } from '../../utils/scroll';
 import { isRtl } from '../../utils/direction';
 import { isSyntheticRowId } from '../../utils/syntheticRows';
@@ -76,7 +77,7 @@ export interface UseGridCellSelectionParams<R extends GridRowModel> {
     navigationColumns: ReadonlyArray<RangeColumn<R>>;
     columnIndexMap: Map<string, number>;
     spanning: GridSpanningResult;
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>;
     layout: LayoutResult<R>;
     rowHeight: number;
     pinnedTopRowCount: number;
@@ -223,9 +224,7 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
 
     const context = useMemo<CellRangeContext | null>(() => {
         if (!enabled) return null;
-        const rowIds = allRenderableRows.map(getRowId);
-        const rowIndexById = new Map<GridRowId, number>();
-        rowIds.forEach((id, index) => { if (!rowIndexById.has(id)) rowIndexById.set(id, index); });
+        const { rowIds, rowIndexById } = getRowIndex(allRenderableRows, getRowId, 'renderable');
         const fields = rangeColumns.map(c => c.field);
         return {
             rowIds,

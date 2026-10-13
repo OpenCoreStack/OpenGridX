@@ -41,7 +41,9 @@ let warnedDuplicateIds = false;
 function buildRowsState(rows: GridRowModel[], getRowId: GetRowId, knownIds?: Map<GridRowModel, GridRowId>): GridState['rows'] {
   const idRowsLookup = new Map<GridRowId, GridRowModel>();
   const idByRow = new Map<GridRowModel, GridRowId>();
+  const indexById = new Map<GridRowId, number>();
   const allRows: GridRowId[] = [];
+  const stored: GridRowModel[] = [];
   const duplicates: GridRowId[] = [];
 
   rows.forEach(row => {
@@ -52,7 +54,9 @@ function buildRowsState(rows: GridRowModel[], getRowId: GetRowId, knownIds?: Map
     }
     idRowsLookup.set(id, row);
     idByRow.set(row, id);
+    indexById.set(id, allRows.length);
     allRows.push(id);
+    stored.push(row);
   });
 
   if (duplicates.length > 0 && !warnedDuplicateIds && process.env.NODE_ENV !== 'production') {
@@ -64,7 +68,7 @@ function buildRowsState(rows: GridRowModel[], getRowId: GetRowId, knownIds?: Map
     );
   }
 
-  return { idRowsLookup, allRows, idByRow };
+  return { idRowsLookup, allRows, idByRow, rows: stored, indexById };
 }
 
 function createInitialState<R extends GridRowModel>(rows: R[], getRowId: GetRowId, columns: GridColDef<R>[], columnVisibilityModel: GridColumnVisibilityModel = {}): GridState {
@@ -104,10 +108,39 @@ function createInitialState<R extends GridRowModel>(rows: R[], getRowId: GetRowI
   };
 }
 
+/**
+ * Stores committed edits under the ids of the rows that were edited. Edits never add, remove or
+ * reorder rows, so the id maps are updated in place (copying them cost ~100 ms each at 1M rows)
+ * and keep their identity: `getRowIdOf` and everything memoized on it stay valid. Only the row
+ * array is copied, with the edited positions patched. Writing the same entries again is a no-op,
+ * so React re-running the reducer (StrictMode, rebasing) gives the same result.
+ */
+function replaceStoredRows(
+  state: GridState,
+  edits: Iterable<readonly [GridRowId, GridRowModel]>,
+): GridState {
+  const { idRowsLookup, idByRow, indexById } = state.rows;
+  let rows: GridRowModel[] | null = null;
+  for (const [id, row] of edits) {
+    const index = indexById.get(id);
+    if (index === undefined) continue;
+    const previous = idRowsLookup.get(id);
+    if (previous !== undefined && previous !== row) idByRow.delete(previous);
+    idRowsLookup.set(id, row);
+    idByRow.set(row, id);
+    if (state.rows.rows[index] !== row) {
+      rows ??= state.rows.rows.slice();
+      rows[index] = row;
+    }
+  }
+  if (!rows) return state;
+  return { ...state, rows: { ...state.rows, rows } };
+}
+
 function gridReducer(state: GridState, action: GridAction): GridState {
   switch (action.type) {
     case 'SET_ROWS': {
-      const currentRows = state.rows.allRows.map(id => state.rows.idRowsLookup.get(id)!);
+      const currentRows = state.rows.rows;
       const newRows = typeof action.payload === 'function'
         ? action.payload(currentRows)
         : action.payload;
@@ -120,40 +153,12 @@ function gridReducer(state: GridState, action: GridAction): GridState {
       };
     }
 
-    case 'REPLACE_ROW': {
-      // Stores a committed edit under the id of the row that was edited, in the current store.
-      const previous = state.rows.idRowsLookup.get(action.id);
-      if (previous === undefined) return state;
-      const idRowsLookup = new Map(state.rows.idRowsLookup);
-      idRowsLookup.set(action.id, action.row);
-      const idByRow = new Map(state.rows.idByRow);
-      idByRow.delete(previous);
-      idByRow.set(action.row, action.id);
-      return {
-        ...state,
-        rows: { ...state.rows, idRowsLookup, idByRow },
-      };
-    }
+    case 'REPLACE_ROW':
+      return replaceStoredRows(state, [[action.id, action.row]]);
 
-    case 'REPLACE_ROWS': {
+    case 'REPLACE_ROWS':
       // A batch edit (paste, range clear, undo, redo): every stored row in one update.
-      let changed = false;
-      const idRowsLookup = new Map(state.rows.idRowsLookup);
-      const idByRow = new Map(state.rows.idByRow);
-      for (const [id, row] of action.rows) {
-        const previous = idRowsLookup.get(id);
-        if (previous === undefined) continue;
-        changed = true;
-        idRowsLookup.set(id, row);
-        idByRow.delete(previous);
-        idByRow.set(row, id);
-      }
-      if (!changed) return state;
-      return {
-        ...state,
-        rows: { ...state.rows, idRowsLookup, idByRow },
-      };
-    }
+      return replaceStoredRows(state, action.rows);
 
     case 'SET_COLUMNS': {
       const columnLookup = new Map<string, GridColDef>();
@@ -321,7 +326,7 @@ export function useDataGrid<R extends GridRowModel = GridRowModel>(params: UseDa
   const [initialApi] = useState<GridApi>(() => ({
     ...createGridApiPlaceholder(),
     getRow: (id: GridRowId) => stateRef.current.rows.idRowsLookup.get(id) || null,
-    getAllRows: () => stateRef.current.rows.allRows.map(id => stateRef.current.rows.idRowsLookup.get(id)!),
+    getAllRows: () => stateRef.current.rows.rows.slice(),
     getColumn: (field: string) => stateRef.current.columns.lookup.get(field) || null,
     getAllColumns: () => stateRef.current.columns.all,
   }));

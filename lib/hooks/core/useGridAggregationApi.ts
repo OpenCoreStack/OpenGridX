@@ -25,7 +25,7 @@ export interface UseGridAggregationApiParams<R extends GridRowModel> {
         rootAggregationPosition: GridGroupAggregationPosition;
         aggregationPositions: Map<GridRowId, GridGroupAggregationPosition>;
     };
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>;
     columns: GridColDef<R>[];
     getRowId: (row: GridRowModel) => GridRowId;
     /** The column that shows the group labels, so export order matches the screen when sorting by it. */

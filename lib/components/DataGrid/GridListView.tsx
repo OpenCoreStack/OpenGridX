@@ -38,7 +38,7 @@ export interface GridListViewProps<R extends GridRowModel> {
     listViewColumn: GridListViewColDef<R>;
     /** Grid columns by field; a list field that names one gets its valueGetter / valueFormatter. */
     columnsByField: ReadonlyMap<string, GridColDef>;
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>;
     noRowsLabel: string;
     rowHeight: number;
     checkboxSelection: boolean;

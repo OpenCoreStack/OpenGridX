@@ -53,7 +53,7 @@ export interface GridPinnedRowsProps<R extends GridRowModel> {
     colspanMap?: Map<GridRowId, Record<string, CellColSpanInfo>>;
     rowSpanningCaches?: RowSpanningCaches;
     rowHeight: number;
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>;
     /** Resolves a row's id; defaults to `row.id`. */
     getRowId?: (row: R) => GridRowId;
     /** Index of the first of these rows in the grid's renderable rows (top-pinned + centre + bottom-pinned). */

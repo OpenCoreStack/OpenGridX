@@ -3,6 +3,7 @@ import { useGridRowSelection, type UseGridRowSelectionReturn } from './useGridRo
 import { PIVOT_GRAND_TOTAL_ID } from '../../utils/pivot';
 import { isSyntheticRowId } from '../../utils/syntheticRows';
 import type { GridRowId, GridRowMeta, GridRowModel, GridRowParams } from '../../types';
+import { getRowIndex } from '../../utils/rowIndex';
 
 export interface UseGridRowInteractionsParams<R extends GridRowModel> {
     /** Data rows that pass the filter (pinned included, synthetic group rows excluded). */
@@ -14,7 +15,7 @@ export interface UseGridRowInteractionsParams<R extends GridRowModel> {
     disableMultipleRowSelection: boolean;
     disableRowSelectionOnClick: boolean;
     isHierarchyEnabled: boolean;
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>;
     /** The active tree-data / row-grouping handlers, if any. */
     activeHierarchyHandlers: { toggleExpansion: (id: GridRowId) => void } | null;
     onRowClick: ((params: GridRowParams<R>) => void) | undefined;
@@ -41,7 +42,7 @@ export function useGridRowInteractions<R extends GridRowModel>(
     // filter: never rows hidden by it, synthetic group rows, the pivot grand total, or stale
     // ids in the selection.
     const selectableRowIds = useMemo(() => {
-        const ids = dataRows.map(getRowId);
+        const { rowIds: ids } = getRowIndex(dataRows, getRowId, 'data');
         return isPivotActive ? ids.filter(id => id !== PIVOT_GRAND_TOTAL_ID) : ids;
     }, [dataRows, getRowId, isPivotActive]);
     const rowSelection = useGridRowSelection({

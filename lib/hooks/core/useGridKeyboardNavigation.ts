@@ -71,7 +71,7 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
     /** Resolves a row's id (getRowId); defaults to `row.id`. */
     getRowId?: (row: R) => GridRowId;
     /** Hierarchy metadata. Synthetic group rows are never edited or selected from the keyboard. */
-    rowMetaMap?: Map<GridRowId, GridRowMeta>;
+    rowMetaMap?: ReadonlyMap<GridRowId, GridRowMeta>;
     /** Enter on a non-editable cell: the same handler a row click runs. */
     onRowActivate?: (params: GridRowParams<R>) => void;
     /**

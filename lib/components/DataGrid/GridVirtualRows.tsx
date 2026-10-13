@@ -69,7 +69,7 @@ export interface GridVirtualRowsProps<R extends GridRowModel> {
     unpinnedRowsLength: number;
     /** Last center row index in the render window: skeleton rows render only once it reaches the end of the data. */
     lastRenderedRowIndex: number;
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>;
     loadingOverlay?: React.ReactNode;
     /** Added to a row's rowIndex to get its `aria-rowindex` (header rows and earlier pages included). */
     ariaRowIndexOffset?: number;

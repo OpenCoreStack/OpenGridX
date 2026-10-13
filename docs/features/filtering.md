@@ -104,7 +104,9 @@ Every operator in `GridFilterOperator` also works in a programmatic `filterModel
 
 - Only **visible** columns with `filterable !== false` are searched. The row `id` and fields that are not columns are not searched.
 - Each column is searched by its value after `valueGetter` and, when the column has a `valueFormatter`, by the formatted text as well. `Date` values are searched as `YYYY-MM-DD`; objects are skipped.
+- Without a `valueFormatter`, `singleSelect` columns are also searched by their option label, `boolean` columns by Yes / No and `date` columns by the locale date the cell shows (since v3.7.1).
 - The toolbar search box splits what the user types on whitespace, so `john london` becomes `['john', 'london']` and matches a row with first name John and city London.
+- The searched text is cached per row object and column set, so typing does not re-read every cell. Two consequences: change a row by passing a **new** row object (mutating it in place keeps the old text), and when a `valueFormatter` reads state outside the row, pass new column definitions when that state changes.
 
 ---
 

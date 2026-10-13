@@ -63,7 +63,7 @@ export interface UseGridSpanningParams<R extends GridRowModel> {
     rightPinnedColumns: GridColDef<R>[];
     /** Rows whose detail panel is expanded. A row span ends at such a row, above its panel. */
     expandedRowIds?: Set<GridRowId>;
-    rowMetaMap?: Map<GridRowId, GridRowMeta>;
+    rowMetaMap?: ReadonlyMap<GridRowId, GridRowMeta>;
     /** Resolves a row's id (the grid's getRowId); span caches are keyed by it. Defaults to `row.id`. */
     getRowId?: (row: R) => GridRowId;
 }
@@ -246,7 +246,7 @@ export function useGridSpanning<R extends GridRowModel>(params: UseGridSpanningP
 interface SectionContext<R extends GridRowModel> {
     spanColumns: { columns: SpanColumn<R>[]; leftCount: number; unpinnedCount: number };
     expandedRowIds?: Set<GridRowId>;
-    rowMetaMap?: Map<GridRowId, GridRowMeta>;
+    rowMetaMap?: ReadonlyMap<GridRowId, GridRowMeta>;
     getRowId: (row: R) => GridRowId;
     warned: Set<string>;
     out: SpanComputation;
@@ -390,7 +390,7 @@ function buildParams<R extends GridRowModel>(
     colDef: GridColDef<R>,
     rowIndex: number,
     colIndex: number,
-    rowMetaMap: Map<GridRowId, GridRowMeta> | undefined,
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta> | undefined,
     warned: Set<string>,
 ): GridRenderCellParams<R> {
     const raw = row[colDef.field as keyof R];

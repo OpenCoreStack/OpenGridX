@@ -3,7 +3,7 @@ import { useTreeData } from '../useTreeData';
 import { useRowGrouping, type UseRowGroupingParams } from '../useRowGrouping';
 import type { GridRowGroupingModel, GridRowId, GridRowMeta, GridRowModel } from '../../types';
 
-const EMPTY_ROW_META_MAP: Map<GridRowId, GridRowMeta> = new Map();
+const EMPTY_ROW_META_MAP: ReadonlyMap<GridRowId, GridRowMeta> = new Map();
 
 export interface UseGridHierarchyParams<R extends GridRowModel> extends Pick<
     UseRowGroupingParams<R>,
@@ -71,7 +71,7 @@ export function useGridHierarchy<R extends GridRowModel>(params: UseGridHierarch
 
     const activeHierarchyHandlers = isTreeData ? treeDataHandlers : (isRowGrouping ? rowGroupingHandlers : null);
 
-    const rowMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
+    const rowMetaMap = useMemo<ReadonlyMap<GridRowId, GridRowMeta>>(() => {
         if (isTreeData) return treeDataHandlers.rowMetaMap;
         if (isRowGrouping) return rowGroupingHandlers.rowMetaMap;
         return EMPTY_ROW_META_MAP;

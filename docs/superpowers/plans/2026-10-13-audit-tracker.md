@@ -18,8 +18,8 @@ Release plan:
 | B5 | Med | Date paste into ISO date-time string lands on previous day west of UTC | `lib/utils/parsing.ts:150-151` | 3.7.1 | ✅ | zoned current → local time of day on pasted day, written as UTC; tested in 3 TZs |
 | B6 | Med | List view reads undeclared `--ogx-grid-cell-text`; selection colours bypass theme | `ListView.css:82` | 3.7.1 | ✅ | list view uses `--ogx-grid-row-*` vars; old `--ogx-selection-*` still win |
 | B7 | Low–Med | Duplicate row ids silently drop rows (no dev warning) | row store | later | ⬜ | |
-| B8 | Low | Quick filter stale on in-place row mutation | quick-filter cache | later | ⬜ | fixed by P7 |
-| B9 | Low | Quick filter stale when a formatter closure changes | quick-filter cache | later | ⬜ | fixed by P7 |
+| B8 | Low | Quick filter stale on in-place row mutation | quick-filter cache | later | ⏸ | Inherent to the per-row text cache; documented in `docs/features/filtering.md` |
+| B9 | Low | Quick filter stale when a formatter closure changes | quick-filter cache | later | ⏸ | Inherent to the cache; documented (pass new column definitions) |
 | B10 | Low | `bigint` loses precision in sort | `lib/utils/sorting/index.ts:45` | later | ⬜ | |
 | B11 | Low | Number filters accept `0x10`, `Infinity` | `lib/utils/values.ts:96-101` | later | ⬜ | |
 
@@ -27,11 +27,11 @@ Release plan:
 
 | ID | Improvement | Expected gain | Effort | Target | Status | Notes |
 | :- | :---------- | :------------ | :----- | :----- | :----- | :---- |
-| P2 | Incremental row-store updates (`REPLACE_ROW(S)`, `effectiveRows`, `indexById` only when reorder on, dedupe `rowIndexById`, `useGridRowIdOf`) | 1M edit/paste/undo 0.5–0.8 s → ~0.05 s | M | 3.8.0 | ⬜ | |
+| P2 | Incremental row-store updates (`REPLACE_ROW(S)`, `effectiveRows`, `indexById` only when reorder on, dedupe `rowIndexById`, `useGridRowIdOf`) | 1M edit/paste/undo 0.5–0.8 s → ~0.05 s | M | 3.8.0 | ✅ | Store maps updated in place, row array patched, reorder index from store, `getRowIndex` reuses id lists. 1M: edit 561 → ~35 ms, paste/undo/redo ~790 → ~45 ms, fill 809 → ~50 ms |
 | P3 | Scope `*` box-sizing reset to `.ogx`; drop `.ogx:hover` box-shadow | no host-page side effect | S | 3.7.1 | ✅ | reset scoped with `:where([class*="ogx"] …)`; `.ogx:hover` shadow removed |
 | P4 | Split `useLayout` memo (column widths vs row heights) | ~40 ms per resize move at 1M | S | 3.7.1 | ✅ | row and column memos split, merged by a third memo |
-| P5 | Cheaper select-all and incremental group expand | 1M select-all 316 → <50 ms | M | 3.8.0 | ⬜ | |
-| P7 | Per-row quick-filter cache (WeakMap) | no rebuild per edit; less memory (~32 MB/100k now) | M | 3.8.0 | ⬜ | |
+| P5 | Cheaper select-all and incremental group expand | 1M select-all 316 → <50 ms | M | 3.8.0 | ✅ | Group toggle: leaf metas built once + `LayeredMap` (expand 279 → ~135 ms, collapse ~120 → ~1 ms). Select-all ~270 ms unchanged: bounded by the public array `rowSelectionModel` (several 1M-id Set builds); only the live-selection copy was removed |
+| P7 | Per-row quick-filter cache (WeakMap) | no rebuild per edit; less memory (~32 MB/100k now) | M | 3.8.0 | ❌ | Not needed: `filterRows` already reuses texts per row object at the same index, so an edit re-reads only the edited row |
 | P8 | Skip re-render of unchanged cells/header; remove double commit | ~half React work per interaction | M | later | ⬜ | |
 | P9 | Lazy/modular opt-in features | up to ~35 KB gz for minimal apps | L | later | ⬜ | |
 
@@ -56,3 +56,7 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — Branch `release/3.7.1`. B1–B6, P3, P4 implemented; CHANGELOG entry added; lint, typecheck, build and 1936 unit tests pass. Browser suite running.
 - 2026-10-13 — Browser suite: 576/579 passed; the 3 failures were the theme baseline test, whose wrapper relied on the old page-wide box-sizing reset (P3 working as intended). Wrapper given its own `box-sizing`; baseline passes in all 3 engines with no baseline regeneration.
 - 2026-10-13 — Linux CI green on `release/3.7.1` (run 38360671317). Awaiting approval to bump, merge and tag.
+- 2026-10-13 — 3.7.1 published (npm publish run 38362187150, demo deployed). Branch `release/3.8.0` started.
+- 2026-10-13 — P2 step 1: profiled 1M edit (reducer map copies 194 ms, `getRowIdOf` passes 127 ms, reorder index 109 ms, row array 60 ms). After: edit ~100 ms, fill ~370 ms. Unit tests pass; browser suite running.
+- 2026-10-13 — P2 done (`getRowIndex` cache): 1M edit ~35 ms, paste ~45 ms, fill ~50 ms. P5: group toggle done; select-all left at ~270 ms (array model API). P7 dropped (already per-row). B8/B9 documented. CHANGELOG 3.8.0 entry drafted. Browser suite running.
+- 2026-10-13 — Guardrails for the in-place store: doc comment on `GridInternalState.rows`, StrictMode paste/undo/redo test (`DataGrid.storeInPlace.test.tsx`), CLAUDE.md v3.8.0 rules. Browser suite 579/579.

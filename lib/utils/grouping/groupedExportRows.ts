@@ -16,7 +16,7 @@ export interface BuildGroupedExportRowsParams<R extends GridRowModel> {
      */
     rows: R[];
     getRowId: (row: R) => GridRowId;
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>;
     columns: GridColDef<R>[];
     aggregationModel: GridAggregationModel;
     /** The footer's grand total (already over the filtered data rows); omitted when null. */

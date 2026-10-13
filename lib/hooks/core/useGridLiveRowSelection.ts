@@ -37,13 +37,20 @@ export function useGridLiveRowSelection(params: UseGridLiveRowSelectionParams): 
 
     const liveRowIds = useMemo(() => {
         if (!enabled || selectedRowIds.size === 0) return selectedRowIds;
+        // Check first, copy only when something is stale: select-all at 1M rows selects 1M ids.
         let stale = false;
+        for (const id of selectedRowIds) {
+            if (!rowsLookup.has(id) && !rowMetaMap.has(id)) {
+                stale = true;
+                break;
+            }
+        }
+        if (!stale) return selectedRowIds;
         const live = new Set<GridRowId>();
         for (const id of selectedRowIds) {
             if (rowsLookup.has(id) || rowMetaMap.has(id)) live.add(id);
-            else stale = true;
         }
-        return stale ? live : selectedRowIds;
+        return live;
     }, [enabled, selectedRowIds, rowsLookup, rowMetaMap]);
 
     // Latest callback, so an inline onRowSelectionModelChange does not report again on every render.

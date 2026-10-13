@@ -5,6 +5,7 @@ import { isSystemField } from '../focus';
 import { isSyntheticRowId } from '../syntheticRows';
 import { resolveCellEditable } from './index';
 import { getCellValue } from '../values';
+import { getRowIndex } from '../rowIndex';
 
 /**
  * Where batch edits (paste, range clear, undo/redo) land: the renderable rows and the range columns
@@ -26,9 +27,7 @@ export function buildEditTargetContext<R extends GridRowModel>(
     getRowId: (row: R) => GridRowId,
     navigationColumns: ReadonlyArray<GridColDef<R>>,
 ): GridEditTargetContext<R> {
-    const rowIds = rows.map(getRowId);
-    const rowIndexById = new Map<GridRowId, number>();
-    rowIds.forEach((id, index) => { if (!rowIndexById.has(id)) rowIndexById.set(id, index); });
+    const { rowIds, rowIndexById } = getRowIndex(rows, getRowId, 'renderable');
     const columns = navigationColumns.filter(c => isRangeColumnField(c.field));
     const colIndexByField = new Map<string, number>();
     columns.forEach((c, index) => { colIndexByField.set(c.field, index); });

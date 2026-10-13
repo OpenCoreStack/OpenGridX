@@ -11,6 +11,11 @@ export interface UseRowReorderProps<R extends GridRowModel = GridRowModel> {
      */
     rows: R[];
     getRowId?: (row: R) => GridRowId;
+    /**
+     * Row id → index in `rows`, when the caller already has it (the grid's row store does). Saves
+     * a pass over every row each time `rows` changes, such as after every cell edit.
+     */
+    indexById?: ReadonlyMap<GridRowId, number>;
     rowReordering?: boolean;
 }
 
@@ -28,16 +33,17 @@ export interface UseRowReorderReturn {
 export function useRowReorder<R extends GridRowModel = GridRowModel>(
     props: UseRowReorderProps<R>
 ): UseRowReorderReturn {
-    const { onRowOrderChange, rows, getRowId, rowReordering = false } = props;
+    const { onRowOrderChange, rows, getRowId, indexById: givenIndexById, rowReordering = false } = props;
     const [draggedRowId, setDraggedRowId] = useState<GridRowId | null>(null);
     const [dragOverRowId, setDragOverRowId] = useState<GridRowId | null>(null);
     const detachDragEndRef = useRef<() => void>(() => {});
 
-    const indexById = useMemo(() => {
+    const indexById = useMemo<ReadonlyMap<GridRowId, number>>(() => {
+        if (givenIndexById) return givenIndexById;
         const map = new Map<GridRowId, number>();
         rows.forEach((row, index) => map.set(getRowId ? getRowId(row) : row.id, index));
         return map;
-    }, [rows, getRowId]);
+    }, [givenIndexById, rows, getRowId]);
 
     const canReorderRow = useCallback((id: GridRowId) => indexById.has(id), [indexById]);
 

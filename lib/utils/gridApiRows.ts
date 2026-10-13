@@ -9,7 +9,7 @@ export interface CollectAllFilteredRowsParams<R extends GridRowModel> {
     /** Every unpinned row that passes the filter, sorted, across all pages. */
     sortedUnpinnedRows: R[];
     pinnedBottomRows: R[];
-    rowMetaMap: Map<GridRowId, GridRowMeta>;
+    rowMetaMap: ReadonlyMap<GridRowId, GridRowMeta>;
     getRowId: (row: GridRowModel) => GridRowId;
     /**
      * With a hierarchy: the rows that pass the filter (the set select-all and the footer use).
