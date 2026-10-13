@@ -177,6 +177,7 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 
 - **Row store edits are in place.** `REPLACE_ROW(S)` (`replaceStoredRows` in `useDataGrid.ts`) mutate `state.rows.idRowsLookup` / `idByRow` / `indexById` and only copy `state.rows.rows` (the stored rows in order; `effectiveRows` is that array). Never detect an edit by those maps' identity; depend on `rows`. The writes must stay idempotent (StrictMode re-runs reducers; `DataGrid.storeInPlace.test.tsx`). `SET_ROWS` still builds new maps, which gives `getRowIdOf` a new identity
 - Id lists over a row view go through `getRowIndex(rows, getRowId, view)` (`lib/utils/rowIndex.ts`): it returns the previous object when every position keeps its id, so memos on it survive edits. Don't write `rows.map(getRowId)` over the renderable or data rows
+- Row grouping records leaves as one `id → row index` map (`GridLeafIndex`); leaf tree nodes and leaf `GridRowMeta` are `LazyLeafTreeNodes` / `LazyLeafMetaMap` (`lib/utils/grouping/lazyLeafMaps.ts`), made on first read and cached (one object per row). Rows are partitioned by index and leaf ids come from the store's `allRows` (`rowIds` param), so `rows` passed to `useRowGrouping` must stay aligned with `rowIds`. Iterating these maps materializes every leaf: keep it off hot paths
 - Row grouping's `rowMetaMap` is a `LayeredMap` (leaf metas built once per tree + group metas per toggle); internal `rowMetaMap` parameters are `ReadonlyMap`. Nothing may rely on its iteration order
 
 ## v3.7.0 — significant changes

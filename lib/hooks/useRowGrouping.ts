@@ -16,6 +16,7 @@ import { callSafely, getCellValue } from '../utils/values';
 import type { GridColumnLookup } from '../utils/columnLookup';
 import { computeAggregations } from '../utils/aggregation';
 import { LayeredMap } from '../utils/grouping/layeredMap';
+import { LazyLeafMetaMap, LazyLeafTreeNodes, type GridLeafIndex } from '../utils/grouping/lazyLeafMaps';
 
 /** Where a group's aggregates are shown: on the group row, on a subtotal row after its children, or not at all. */
 export type GridGroupAggregationPosition = 'inline' | 'footer' | null;
@@ -23,6 +24,11 @@ export type GridGroupAggregationPosition = 'inline' | 'footer' | null;
 export interface UseRowGroupingParams<R extends GridRowModel> {
     rows: R[];
     getRowId: (row: R) => GridRowId;
+    /**
+     * The ids of `rows`, in the same order (the row store's `allRows`). Saves one id lookup per row
+     * when grouping is applied; without it the ids are read with `getRowId`.
+     */
+    rowIds?: readonly GridRowId[];
     columns?: GridColDef<R>[];
     rowGroupingModel?: GridRowGroupingModel;
     aggregationModel?: GridAggregationModel;
@@ -127,13 +133,15 @@ interface GroupRowVariants<R> {
 
 interface GroupingBuild<R extends GridRowModel> {
     treeNodes: Map<GridRowId, GridTreeNode>;
+    /** The leaf rows (leaf nodes and metadata are made from it on demand). */
+    leafIndex: GridLeafIndex;
     rootIds: GridRowId[];
     groupIds: GridRowId[];
     groupRowVariants: Map<GridRowId, GroupRowVariants<R>>;
     /** Synthetic rows by id: every group row (with its aggregates) and every subtotal row. */
     groupingRows: Map<GridRowId, R>;
     /** The leaf rows in the tree, by id. */
-    rowLookup: Map<GridRowId, R>;
+    rowLookup: { get(id: GridRowId): R | undefined };
 }
 
 const encodePosition = (position: GridGroupAggregationPosition): string =>
@@ -146,6 +154,7 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
     const {
         rows,
         getRowId,
+        rowIds: givenRowIds,
         columns,
         rowGroupingModel = EMPTY_ROW_GROUPING_MODEL,
         aggregationModel = EMPTY_AGGREGATION_MODEL,
@@ -209,40 +218,61 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
     }, [isActive, rows, filterMode, filterModel, columnLookup]);
 
     const build = useMemo<GroupingBuild<R>>(() => {
-        const treeNodes = new Map<GridRowId, GridTreeNode>();
+        // Leaves (every data row) are recorded compactly: id -> parent id. Their tree nodes and row
+        // metadata are made on first read (lazyLeafMaps); only group nodes are built here.
+        // One map write per leaf: id -> row index. Its row is rows[index], its group parentAt[index].
+        const leafAt = new Map<GridRowId, number>();
+        const parentAt = new Array<GridRowId | null>(rows.length);
+        const leafIndex: GridLeafIndex = {
+            get size() { return leafAt.size; },
+            has: id => leafAt.has(id),
+            parentOf: id => {
+                const index = leafAt.get(id);
+                return index === undefined ? undefined : parentAt[index];
+            },
+            keys: () => leafAt.keys(),
+        };
+        const rowLookup = {
+            get: (id: GridRowId): R | undefined => {
+                const index = leafAt.get(id);
+                return index === undefined ? undefined : rows[index];
+            },
+        };
+        const treeNodes = new LazyLeafTreeNodes(leafIndex, groupingFields.length);
         const rootIds: GridRowId[] = [];
         const groupIds: GridRowId[] = [];
         const groupRowVariants = new Map<GridRowId, GroupRowVariants<R>>();
         const groupingRows = new Map<GridRowId, R>();
-        const rowLookup = new Map<GridRowId, R>();
 
         if (!isActive) {
-            return { treeNodes, rootIds, groupIds, groupRowVariants, groupingRows, rowLookup };
+            return { treeNodes, leafIndex, rootIds, groupIds, groupRowVariants, groupingRows, rowLookup };
         }
 
-        const groupRows = (currentRows: R[], depth: number, parentId: GridRowId | null): GridRowId[] => {
+        // Rows are partitioned by index, so a leaf's id comes from the aligned id list, not a lookup.
+        const ids = givenRowIds && givenRowIds.length === rows.length ? givenRowIds : null;
+        const idAt = (index: number): GridRowId => (ids ? ids[index] : getRowId(rows[index]));
+
+        const groupRows = (currentRows: number[], depth: number, parentId: GridRowId | null): GridRowId[] => {
             if (depth >= groupingFields.length) {
-                const leaves = matchingRows ? currentRows.filter(row => matchingRows.has(row)) : currentRows;
-                return leaves.map(row => {
-                    const id = getRowId(row);
-                    rowLookup.set(id, row);
-                    treeNodes.set(id, {
-                        id,
-                        parentId,
-                        depth,
-                        groupingKey: '',
-                        isExpanded: false
-                    });
-                    return id;
-                });
+                const leafIds: GridRowId[] = [];
+                for (const index of currentRows) {
+                    const row = rows[index];
+                    if (matchingRows && !matchingRows.has(row)) continue;
+                    const id = idAt(index);
+                    leafAt.set(id, index);
+                    parentAt[index] = parentId;
+                    leafIds.push(id);
+                }
+                return leafIds;
             }
 
             const field = groupingFields[depth];
             const colDef = columnsLookup.get(field);
 
             // Bucket by the value the cell shows (through valueGetter), keyed so distinct values stay apart.
-            const buckets = new Map<string, { value: unknown; rows: R[] }>();
-            for (const row of currentRows) {
+            const buckets = new Map<string, { value: unknown; rows: number[] }>();
+            for (const index of currentRows) {
+                const row = rows[index];
                 const value = getCellValue(row, field, colDef as GridColDef | undefined);
                 const key = groupKeyOf(value);
                 let bucket = buckets.get(key);
@@ -250,17 +280,18 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                     bucket = { value, rows: [] };
                     buckets.set(key, bucket);
                 }
-                bucket.rows.push(row);
+                bucket.rows.push(index);
             }
 
-            const ids: GridRowId[] = [];
+            const groupIdsHere: GridRowId[] = [];
             buckets.forEach((bucket, key) => {
                 // Group order is the order of first appearance among all rows, so filtering never
                 // reorders the groups; a group with no matching row is left out.
-                const matching = matchingRows ? bucket.rows.filter(row => matchingRows.has(row)) : bucket.rows;
+                const bucketRows = bucket.rows.map(index => rows[index]);
+                const matching = matchingRows ? bucketRows.filter(row => matchingRows.has(row)) : bucketRows;
                 if (matching.length === 0) return;
                 const groupId = groupIdOf(field, key, parentId);
-                ids.push(groupId);
+                groupIdsHere.push(groupId);
                 groupIds.push(groupId);
 
                 // Aggregated over this group's (filtered) leaf rows.
@@ -293,14 +324,16 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
                 treeNodes.set(groupId, treeNode);
                 treeNode.children = groupRows(bucket.rows, depth + 1, groupId);
             });
-            return ids;
+            return groupIdsHere;
         };
 
-        rootIds.push(...groupRows(rows, 0, null));
-        return { treeNodes, rootIds, groupIds, groupRowVariants, groupingRows, rowLookup };
-    }, [isActive, rows, matchingRows, groupingFields, hasAggregation, stableAggregationModel, getRowId, columnsLookup]);
+        const all = new Array<number>(rows.length);
+        for (let i = 0; i < rows.length; i++) all[i] = i;
+        rootIds.push(...groupRows(all, 0, null));
+        return { treeNodes, leafIndex, rootIds, groupIds, groupRowVariants, groupingRows, rowLookup };
+    }, [isActive, rows, givenRowIds, matchingRows, groupingFields, hasAggregation, stableAggregationModel, getRowId, columnsLookup]);
 
-    const { treeNodes, rootIds, groupIds, groupRowVariants, groupingRows, rowLookup } = build;
+    const { treeNodes, leafIndex, rootIds, groupIds, groupRowVariants, groupingRows, rowLookup } = build;
 
     const isDefaultExpanded = useCallback((node: GridTreeNode | undefined) => (
         Boolean(node?.children && node.children.length > 0) &&
@@ -439,16 +472,10 @@ export function useRowGrouping<R extends GridRowModel>(params: UseRowGroupingPar
 
     // Leaf entries do not depend on expansion: built once per tree, so expanding or collapsing a
     // group rebuilds only the group entries (a LayeredMap reads both without copying).
-    const leafMetaMap = useMemo<Map<GridRowId, GridRowMeta>>(() => {
-        const map = new Map<GridRowId, GridRowMeta>();
-        treeNodes.forEach((node, id) => {
-            if (groupRowVariants.has(id)) return;
-            // One object per row (not shared per depth): `params.rowMeta` is public, and a consumer that
-            // writes to it must not change other rows.
-            map.set(id, { hasChildren: false, treeDepth: node.depth, isGroupRow: false });
-        });
-        return map;
-    }, [treeNodes, groupRowVariants]);
+    const leafMetaMap = useMemo<ReadonlyMap<GridRowId, GridRowMeta>>(
+        () => new LazyLeafMetaMap(leafIndex, groupingFields.length),
+        [leafIndex, groupingFields.length]
+    );
 
     const rowMetaMap = useMemo<ReadonlyMap<GridRowId, GridRowMeta>>(() => {
         const map = new Map<GridRowId, GridRowMeta>();
