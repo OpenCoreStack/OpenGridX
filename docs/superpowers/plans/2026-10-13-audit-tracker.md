@@ -45,8 +45,8 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 | R2 | Shared filter-value helper for FilterPanel + HeaderFilterCell (6 valueOptions readers) | S–M | ✅ | `lib/utils/filtering/filterInput.ts` (4 helpers) used by FilterPanel + HeaderFilterCell |
 | R3 | Stop writing `_isSkeleton` onto rows | M | ✅ | `Row` `skeleton` prop; `_isSkeleton` removed from `GridRowModel` and editing/spanning |
 | R4 | Reduce ~41 `as unknown as` casts (internal column type) | L | ⬜ | |
-| R5 | Split files >600 lines (`GridToolbar.tsx` 855, …) | M each | ⬜ | |
-| R6 | Narrow wide hook interfaces (keyboard nav: 31 params) | L | ⬜ | |
+| R5 | Split files >600 lines (`GridToolbar.tsx` 855, …) | M each | ✅ | GridToolbar 861→492 (panels + `useToolbarPanel`), exporters one file per format, xlsx helpers → `excelCells`, range drag → `useGridCellRangeDrag`, keydown → `gridKeyDown.ts`. `DataGrid.tsx` (618) left: it is the documented hook order |
+| R6 | Narrow wide hook interfaces (keyboard nav: 31 params) | L | ✅ | Keyboard: the 225-line keydown body is `handleGridKeyDown(event, GridKeyDownContext)`, a typed, unit-tested function; regrouping the 31 params into objects was rejected (inline objects would break memoised callbacks) |
 | R7 | Route ~70 hard-coded English strings through `localeText` | M | ✅ | 196 keys (more than the ~70 estimated: pivot/toolbar/AI status included), `GridLocaleContext`, `useShallowStableValue`. Not covered: AI chip texts, grouping column default header, file/row contents |
 | R8 | Document 24 exports missing from `docs/API_REFERENCE.md` | S | ✅ | All 23 missing exports documented in `API_REFERENCE.md` |
 
@@ -74,3 +74,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — AI change chips translatable (11 keys, branch `release/3.10.0`). P9 measured and deferred to a 4.0 feature-modules proposal (user agreed).
 - 2026-10-13 — Docs sweep (roadmap, performance, README, wiki home, rtl, pagination, architecture). Found and fixed: npm package shipped `lib/theme/__baseline__` (1.6 MB). Feature hold recorded (user).
 - 2026-10-13 — Backlog 1/6: demo syntax highlighting done. Insight follow-ups: `check:package` (no test artifacts in the tarball + DataGrid-only 92 KB gz budget) in CI and publish.
+- 2026-10-13 — R5 and R6 done (all engines green, compiler baseline). Next: R4 casts.
