@@ -119,47 +119,78 @@ function valueText(value: unknown): string {
     return value === undefined || value === null ? '' : String(value);
 }
 
-function filterLabel(node: GridFilterItem | GridFilterGroup, label: (field: string) => string): string {
-    if ('items' in node) return `(${node.items.map((child) => filterLabel(child, label)).join(` ${node.logicOperator} `)})`;
-    return [label(node.field), node.operator, valueText(node.value)].filter(Boolean).join(' ');
+function filterLabel(node: GridFilterItem | GridFilterGroup, label: (field: string) => string, operator: (op: string) => string): string {
+    if ('items' in node) return `(${node.items.map((child) => filterLabel(child, label, operator)).join(` ${node.logicOperator} `)})`;
+    return [label(node.field), operator(node.operator), valueText(node.value)].filter(Boolean).join(' ');
 }
 
 const FN_LABELS: Record<string, string> = { sum: 'Sum', avg: 'Average', count: 'Count', min: 'Min', max: 'Max', unique: 'Unique' };
 
+/** The chips' texts (the grid passes its `localeText`; English by default). */
+export interface GridAiChipTexts {
+    operator: (operator: string) => string;
+    search: (words: string) => string;
+    noFilters: string;
+    sort: (field: string, direction: 'asc' | 'desc') => string;
+    noSorting: string;
+    group: (field: string) => string;
+    noGrouping: string;
+    summary: (fn: string, field: string) => string;
+    noSummaries: string;
+    pivot: (fields: string) => string;
+    noPivot: string;
+    visibility: (field: string, visible: boolean) => string;
+}
+
+export const AI_CHIP_TEXTS_EN: GridAiChipTexts = {
+    operator: op => op,
+    search: words => `Search: ${words}`,
+    noFilters: 'No filters',
+    sort: (field, direction) => `Sort: ${field}, ${direction === 'desc' ? 'descending' : 'ascending'}`,
+    noSorting: 'No sorting',
+    group: field => `Group: ${field}`,
+    noGrouping: 'No grouping',
+    summary: (fn, field) => `${FN_LABELS[fn] ?? fn}: ${field}`,
+    noSummaries: 'No summaries',
+    pivot: fields => `Pivot: ${fields}`,
+    noPivot: 'No pivot',
+    visibility: (field, visible) => `${visible ? 'Show' : 'Hide'}: ${field}`,
+};
+
 /** One chip per change: filter item, quick-filter words, sort key, grouping field, aggregation, visibility change, pivot. */
-export function buildAiChips(applied: GridAiState, label: (field: string) => string): GridAiChip[] {
+export function buildAiChips(applied: GridAiState, label: (field: string) => string, texts: GridAiChipTexts = AI_CHIP_TEXTS_EN): GridAiChip[] {
     const chips: GridAiChip[] = [];
     const { filterModel, sortModel, rowGroupingModel, aggregationModel, pivotModel, columnVisibilityModel } = applied;
     if (filterModel) {
         const items = filterModel.items ?? [];
-        items.forEach((item, i) => chips.push({ id: `filter:${i}`, part: 'filter', label: filterLabel(item, label) }));
+        items.forEach((item, i) => chips.push({ id: `filter:${i}`, part: 'filter', label: filterLabel(item, label, texts.operator) }));
         const words = filterModel.quickFilterValues ?? [];
-        if (words.length > 0) chips.push({ id: 'filter:quick', part: 'filter', label: `Search: ${words.join(' ')}` });
-        if (items.length === 0 && words.length === 0) chips.push({ id: 'filter:clear', part: 'filter', label: 'No filters' });
+        if (words.length > 0) chips.push({ id: 'filter:quick', part: 'filter', label: texts.search(words.join(' ')) });
+        if (items.length === 0 && words.length === 0) chips.push({ id: 'filter:clear', part: 'filter', label: texts.noFilters });
     }
     if (sortModel) {
-        sortModel.forEach((s, i) => chips.push({ id: `sort:${i}`, part: 'sort', label: `Sort: ${label(s.field)}, ${s.sort === 'desc' ? 'descending' : 'ascending'}` }));
-        if (sortModel.length === 0) chips.push({ id: 'sort:clear', part: 'sort', label: 'No sorting' });
+        sortModel.forEach((s, i) => chips.push({ id: `sort:${i}`, part: 'sort', label: texts.sort(label(s.field), s.sort === 'desc' ? 'desc' : 'asc') }));
+        if (sortModel.length === 0) chips.push({ id: 'sort:clear', part: 'sort', label: texts.noSorting });
     }
     if (rowGroupingModel) {
-        rowGroupingModel.forEach((field, i) => chips.push({ id: `grouping:${i}`, part: 'grouping', label: `Group: ${label(field)}` }));
-        if (rowGroupingModel.length === 0) chips.push({ id: 'grouping:clear', part: 'grouping', label: 'No grouping' });
+        rowGroupingModel.forEach((field, i) => chips.push({ id: `grouping:${i}`, part: 'grouping', label: texts.group(label(field)) }));
+        if (rowGroupingModel.length === 0) chips.push({ id: 'grouping:clear', part: 'grouping', label: texts.noGrouping });
     }
     if (aggregationModel) {
         const fields = Object.keys(aggregationModel);
         fields.forEach((field) => {
             const fn = aggregationModel[field];
-            chips.push({ id: `aggregation:${field}`, part: 'aggregation', label: `${FN_LABELS[fn] ?? fn}: ${label(field)}` });
+            chips.push({ id: `aggregation:${field}`, part: 'aggregation', label: texts.summary(fn, label(field)) });
         });
-        if (fields.length === 0) chips.push({ id: 'aggregation:clear', part: 'aggregation', label: 'No summaries' });
+        if (fields.length === 0) chips.push({ id: 'aggregation:clear', part: 'aggregation', label: texts.noSummaries });
     }
     if (pivotModel) {
         const fields = [...pivotModel.rowFields, ...pivotModel.columnFields, ...pivotModel.valueFields.map((v) => v.field)];
-        chips.push({ id: 'pivot', part: 'pivot', label: fields.length > 0 ? `Pivot: ${fields.map(label).join(', ')}` : 'No pivot' });
+        chips.push({ id: 'pivot', part: 'pivot', label: fields.length > 0 ? texts.pivot(fields.map(label).join(', ')) : texts.noPivot });
     }
     if (columnVisibilityModel) {
         for (const field of Object.keys(columnVisibilityModel)) {
-            chips.push({ id: `columnVisibility:${field}`, part: 'columnVisibility', label: `${columnVisibilityModel[field] ? 'Show' : 'Hide'}: ${label(field)}` });
+            chips.push({ id: `columnVisibility:${field}`, part: 'columnVisibility', label: texts.visibility(label(field), Boolean(columnVisibilityModel[field])) });
         }
     }
     return chips;

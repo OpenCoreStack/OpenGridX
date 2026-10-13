@@ -12,7 +12,7 @@ import type {
     GridColDef,
     GridLocaleText,
 } from '../../types';
-import { resolveGridLocale, type ResolvedGridLocale } from '../../utils/gridLocale';
+import { aiChipTextsOf, resolveGridLocale, type ResolvedGridLocale } from '../../utils/gridLocale';
 import { attempt } from '../../utils/attempt';
 import { isGridAiValidated } from '../../utils/aiBrand';
 import {
@@ -143,7 +143,8 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
         const byField = new Map(columns.map((col) => [col.field, col.headerName || col.field]));
         return (field: string) => byField.get(field) ?? field;
     }, [columns]);
-    const chips = useMemo(() => (applied ? buildAiChips(applied.state, labelOf) : []), [applied, labelOf]);
+    const chipTexts = useMemo(() => aiChipTextsOf(locale), [locale]);
+    const chips = useMemo(() => (applied ? buildAiChips(applied.state, labelOf, chipTexts) : []), [applied, labelOf, chipTexts]);
 
     const abortRequest = useCallback(() => {
         const controller = controllerRef.current;

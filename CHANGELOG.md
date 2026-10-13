@@ -5,6 +5,14 @@
 
 ---
 
+## [Unreleased — 3.10.0]
+
+### Added
+
+- **The AI assistant's change chips are translatable**: 11 `localeText` keys (`aiAssistantChipSearch`, `ChipNoFilters`, `ChipSort(field, direction)`, `ChipNoSorting`, `ChipGroup`, `ChipNoGrouping`, `ChipSummary(fn, field)`, `ChipNoSummaries`, `ChipPivot`, `ChipNoPivot`, `ChipVisibility(field, visible)`), English by default; filter operators in the chips use `filterPanelOperators`. `buildAiChips` takes the texts as an optional third argument.
+
+---
+
 ## [3.9.1] — 2026-10-13
 
 ### Fixed
