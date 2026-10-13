@@ -63,3 +63,5 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — CI green on `release/3.8.0` (run 38366056106). Released 3.8.0.
 - 2026-10-13 — 3.8.0 published. Branch `release/3.8.1`. UI fix first (user report, AI panel in dark mode): reset `.ogx button:not(.ogx-menu-item)` out-ranked component button classes; background/border moved under `:where()`, chips' 50% radius fixed, theme baseline regenerated (3 open/active backgrounds). Next: cleanup B10, B11, R1, R2, R3, R8.
 - 2026-10-13 — 3.8.1 batch done locally: B10, B11, R1, R2, R3, R8 (+ the button-reset UI fix). Unit 1953 pass.
+- 2026-10-13 — CI on `release/3.8.1` (run 38372542437): first attempt failed on the Firefox row drag-reorder browser test (drop never fired; passes 4/4 locally and in 3.8.0 CI); re-run of the failed job passed. Treated as a flaky Firefox drag on Linux.
+- 2026-10-13 — Released 3.8.1 (with `llms.txt` brought up to date).

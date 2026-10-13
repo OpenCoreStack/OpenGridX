@@ -5,7 +5,7 @@
 
 ---
 
-## [Unreleased — 3.8.1]
+## [3.8.1] — 2026-10-13
 
 ### Fixed
 
@@ -23,6 +23,7 @@
 
 ### Documentation
 
+- `llms.txt` updated to 3.8.1: corrected the row-limit note (Firefox's lower limit, the 3.5.1 height cap) and the RTL note (pinned columns work since 3.6), and added notes on replacing rows instead of mutating them, large-grid timings, styling buttons inside the grid and the quick filter's displayed text.
 - `docs/API_REFERENCE.md` covers every export of the package: the export option types (`CsvExportOptions`, `JsonExportOptions`, `ExcelExportOptions`, `ExcelAdvancedExportOptions`, `ExcelSheetDefinition`, `ExcelColumnStyle`), the theme part types and `DataGridThemeProviderProps`, and `GridAlignment`, `GridSortDirection`, `GridSortModel`, `GridPinnedPosition`.
 
 ---
