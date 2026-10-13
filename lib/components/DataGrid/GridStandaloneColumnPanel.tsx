@@ -4,6 +4,7 @@ import { ColumnVisibilityPanel } from '../ColumnVisibilityPanel/ColumnVisibility
 import type { GridColDef, GridRowModel, GridColumnGroupingModel } from '../../types';
 import { canReorderWithinColumnGroups } from '../../utils/columnGroups';
 import { getViewportWidth } from '../../utils/viewport';
+import { useGridLocale } from './gridLocaleContext';
 
 export interface GridStandaloneColumnPanelProps<R extends GridRowModel> {
     isOpen: boolean;
@@ -42,6 +43,7 @@ export function GridStandaloneColumnPanel<R extends GridRowModel>({
     onColumnOrderReset,
     columnGroupingModel,
 }: GridStandaloneColumnPanelProps<R>) {
+    const locale = useGridLocale();
     // Resolved from the DOM after mount, never during render, so the grid renders on the server.
     const [placement, setPlacement] = useState<PanelPlacement | null>(null);
 
@@ -97,7 +99,7 @@ export function GridStandaloneColumnPanel<R extends GridRowModel>({
                     zIndex: 1,
                     boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
                 }}
-                aria-label="Close"
+                aria-label={locale.columnsPanelClose}
             >×</button>
             <ColumnVisibilityPanel<R>
                 columns={columns}

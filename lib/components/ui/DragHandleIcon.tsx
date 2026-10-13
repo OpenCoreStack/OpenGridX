@@ -1,13 +1,15 @@
 import React from 'react';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 export type DragHandleIconProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 export const DragHandleIcon: React.FC<DragHandleIconProps> = ({ className = '', ...props }) => {
+    const locale = useGridLocale();
     return (
         <button
             type="button"
             className={`ogx-drag-handle ${className}`}
-            aria-label="Drag to reorder row"
+            aria-label={locale.rowReorderLabel}
             {...props}
         >
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">

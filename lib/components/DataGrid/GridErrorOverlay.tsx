@@ -1,4 +1,5 @@
 import { getDataSourceErrorMessage } from '../../utils/dataSource';
+import { useGridLocale } from './gridLocaleContext';
 
 interface GridErrorOverlayProps {
     error: unknown;
@@ -7,6 +8,7 @@ interface GridErrorOverlayProps {
 }
 
 export function GridErrorOverlay({ error, onRetry }: GridErrorOverlayProps) {
+    const locale = useGridLocale();
     if (!error) return null;
     const message = getDataSourceErrorMessage(error);
     return (
@@ -17,7 +19,7 @@ export function GridErrorOverlay({ error, onRetry }: GridErrorOverlayProps) {
                 <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <div className="ogx-error-overlay__title">
-                Oops! Something went wrong
+                {locale.errorOverlayTitle}
             </div>
             <div className="ogx-error-overlay__message">
                 {message}
@@ -28,7 +30,7 @@ export function GridErrorOverlay({ error, onRetry }: GridErrorOverlayProps) {
                     onClick={onRetry}
                     className="ogx-button ogx-button--primary"
                 >
-                    Retry
+                    {locale.errorOverlayRetry}
                 </button>
             )}
         </div>

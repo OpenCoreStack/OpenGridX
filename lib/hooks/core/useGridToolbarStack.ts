@@ -13,7 +13,7 @@ export type GridToolbarStackToolbarParams<R extends GridRowModel> = Omit<UseGrid
 export interface UseGridToolbarStackParams<R extends GridRowModel> {
     apiRef: MutableRefObject<GridApi>;
     containerRef: RefObject<HTMLDivElement | null>;
-    aiAssistant: Omit<UseGridAiAssistantParams, 'apiRef'>;
+    aiAssistant: Omit<UseGridAiAssistantParams, 'apiRef' | 'localeText'>;
     toolbar: GridToolbarStackToolbarParams<R>;
     localeText: GridLocaleText | undefined;
 }
@@ -30,7 +30,7 @@ export function useGridToolbarStack<R extends GridRowModel>(params: UseGridToolb
     useGridStylesheetWarning(containerRef);
 
     // The aiAssistant prompt panel (v3.5): applies validated replies through apiRef; apiRef.openAiAssistant.
-    const aiAssistantPanel = useGridAiAssistant({ apiRef, ...aiAssistant });
+    const aiAssistantPanel = useGridAiAssistant({ apiRef, localeText, ...aiAssistant });
 
     const toolbarProps = useGridToolbarProps<R>({
         ...toolbar,

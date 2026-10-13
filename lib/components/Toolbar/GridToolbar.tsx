@@ -12,6 +12,7 @@ import { ColumnVisibilityPanel } from '../ColumnVisibilityPanel/ColumnVisibility
 import { FilterPanel } from '../FilterPanel/FilterPanel';
 import { GridTooltip } from '../Tooltip/Tooltip';
 import { AiSparkleIcon } from '../AiAssistant/GridAiAssistantPanel';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 /** Props passed to a custom toolbar button renderer. */
 export interface ToolbarButtonRenderProps {
@@ -169,6 +170,7 @@ function AggregationPanel({
     onClose: () => void;
     activeCount: number;
 }) {
+    const locale = useGridLocale();
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<PanelPosition>({ top: 0, right: 0 });
     const [portalContainer, setPortalContainer] = useState<Element | null>(null);
@@ -214,22 +216,22 @@ function AggregationPanel({
             ref={panelRef}
             className="ogx-toolbar__panel"
             role="dialog"
-            aria-label="Summaries configuration"
+            aria-label={locale.toolbarSummariesPanelLabel}
             style={{ top: pos.top, right: pos.right, left: pos.left, width: 400, maxWidth: 'calc(100vw - 24px)' }}
         >
             <div className="ogx-toolbar__panel-header">
                 <span className="ogx-toolbar__panel-title">
                     <SigmaIcon />
-                    Summaries
+                    {locale.toolbarSummaries}
                 </span>
                 {activeCount > 0 && (
                     <button
                         type="button"
                         className="ogx-toolbar__clear-btn"
                         onClick={onClearAll}
-                        title="Clear all summaries"
+                        title={locale.toolbarSummariesClearAllTooltip}
                     >
-                        Clear all
+                        {locale.toolbarSummariesClearAll}
                     </button>
                 )}
             </div>
@@ -237,8 +239,8 @@ function AggregationPanel({
             <div className="ogx-toolbar__panel-body">
                 {aggregableColumns.length === 0 ? (
                     <p className="ogx-toolbar__empty">
-                        No aggregable columns.<br />
-                        Set <code>aggregable: true</code> on a column to enable.
+                        {locale.toolbarSummariesEmpty}<br />
+                        {`${locale.toolbarSummariesEmptyHintBefore} `}<code>aggregable: true</code>{` ${locale.toolbarSummariesEmptyHintAfter}`}
                     </p>
                 ) : (
                     aggregableColumns.map((col) => {
@@ -257,7 +259,7 @@ function AggregationPanel({
                                             onClick={() => onFunctionChange(col.field, fn)}
                                             aria-pressed={currentFn === fn}
                                         >
-                                            {fn}
+                                            {locale.toolbarAggregationFunction(fn)}
                                         </button>
                                     ))}
                                 </div>
@@ -295,6 +297,7 @@ function ColumnsPanelWrapper({
     onClose: () => void;
     showNonHideableColumns?: boolean;
 }) {
+    const locale = useGridLocale();
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<PanelPosition>({ top: 0, right: 0 });
     const [portalContainer, setPortalContainer] = useState<Element | null>(null);
@@ -340,7 +343,7 @@ function ColumnsPanelWrapper({
             ref={panelRef}
             className="ogx-toolbar__panel"
             role="dialog"
-            aria-label="Column visibility"
+            aria-label={locale.toolbarColumnsPanelLabel}
             style={{ top: pos.top, right: pos.right, left: pos.left, width: 280, padding: 0 }}
         >
             <ColumnVisibilityPanel
@@ -372,6 +375,7 @@ function FilterPanelWrapper({
     onFilterModelChange: (model: GridFilterModel) => void;
     onClose: () => void;
 }) {
+    const locale = useGridLocale();
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<PanelPosition>({ top: 0, right: 0 });
     // Stable ref for onClose — prevents the mousedown effect from
@@ -421,13 +425,13 @@ function FilterPanelWrapper({
             ref={panelRef}
             className="ogx-toolbar__panel ogx-toolbar__panel--filter"
             role="dialog"
-            aria-label="Advanced filters"
+            aria-label={locale.toolbarFiltersLabel}
             style={{ top: pos.top, right: pos.right, left: pos.left, width: 540, maxWidth: 'calc(100vw - 24px)' }}
         >
             <div className="ogx-toolbar__panel-header">
                 <span className="ogx-toolbar__panel-title">
                     <FilterIcon />
-                    Filters
+                    {locale.toolbarFilters}
                     {activeFilterCount > 0 && (
                         <span className="ogx-toolbar__panel-count">{activeFilterCount}</span>
                     )}
@@ -438,19 +442,19 @@ function FilterPanelWrapper({
                             type="button"
                             className="ogx-toolbar__clear-btn"
                             onClick={handleClearAll}
-                            title="Clear all filters"
+                            title={locale.toolbarFiltersClearAllTooltip}
                         >
-                            Clear all
+                            {locale.toolbarFiltersClearAll}
                         </button>
                     )}
                     <button
                         type="button"
                         className="ogx-toolbar__close-btn"
                         onClick={() => onCloseRef.current()}
-                        title="Close filters"
-                        aria-label="Close filters panel"
+                        title={locale.toolbarFiltersCloseTooltip}
+                        aria-label={locale.toolbarFiltersCloseLabel}
                     >
-                        Close
+                        {locale.toolbarFiltersClose}
                     </button>
                 </div>
             </div>
@@ -501,8 +505,10 @@ export function GridToolbar({
     showNonHideableColumns,
     onAiAssistantToggle,
     aiAssistantOpen = false,
-    aiAssistantLabel = 'Ask AI',
+    aiAssistantLabel: aiAssistantLabelProp,
 }: GridToolbarProps) {
+    const locale = useGridLocale();
+    const aiAssistantLabel = aiAssistantLabelProp ?? locale.aiAssistantButton;
     // At most one panel is open. Every way the Columns panel closes (its button, a custom
     // button, another panel opening, click-outside, Escape) reports onColumnsPanelClose, so the
     // grid can ask for it again with forceColumnsOpen.
@@ -646,7 +652,7 @@ export function GridToolbar({
     }, [columns, columnVisibilityModel, onColumnVisibilityModelChange]);
 
     return (
-        <div className={['ogx-toolbar', className].filter(Boolean).join(' ')} role="toolbar" aria-label="Grid toolbar" style={style}>
+        <div className={['ogx-toolbar', className].filter(Boolean).join(' ')} role="toolbar" aria-label={locale.toolbarLabel} style={style}>
             {/* Left slot — custom content */}
             {children && <div className="ogx-toolbar__left">{children}</div>}
 
@@ -681,7 +687,7 @@ export function GridToolbar({
                                 <GlobalSearch
                                     value={searchValue}
                                     onChange={handleSearchChange}
-                                    placeholder="Search..."
+                                    placeholder={locale.toolbarSearchPlaceholder}
                                 />
                             )
                         }
@@ -698,12 +704,12 @@ export function GridToolbar({
                                 activeCount: columns.length - visibleColumns.size,
                             })
                             : (
-                                <GridTooltip title="Columns">
+                                <GridTooltip title={locale.toolbarColumns}>
                                     <button
                                         type="button"
                                         ref={colsButtonRef}
                                         className={`ogx-toolbar__icon-btn${colsOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
-                                        aria-label="Manage columns"
+                                        aria-label={locale.toolbarColumnsLabel}
                                         aria-haspopup="dialog"
                                         aria-expanded={colsOpen}
                                         onClick={() => togglePanel('columns')}
@@ -740,19 +746,19 @@ export function GridToolbar({
                                 activeCount: activeFilterCount,
                             })
                             : (
-                                <GridTooltip title="Filters">
+                                <GridTooltip title={locale.toolbarFilters}>
                                     <button
                                         type="button"
                                         ref={filterButtonRef}
                                         className={`ogx-toolbar__icon-btn${filterOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
-                                        aria-label="Advanced filters"
+                                        aria-label={locale.toolbarFiltersLabel}
                                         aria-haspopup="dialog"
                                         aria-expanded={filterOpen}
                                         onClick={() => togglePanel('filters')}
                                     >
                                         <FilterIcon />
                                         {activeFilterCount > 0 && (
-                                            <span className="ogx-toolbar__dot" aria-label="Filters active" />
+                                            <span className="ogx-toolbar__dot" aria-label={locale.toolbarFiltersActive} />
                                         )}
                                     </button>
                                 </GridTooltip>
@@ -773,19 +779,19 @@ export function GridToolbar({
                 {/* Pivot button */}
                 {onPivotModelChange && (
                     <div className="ogx-toolbar__dropdown-wrapper" style={{ marginRight: 4 }}>
-                        <GridTooltip title="Pivot">
+                        <GridTooltip title={locale.toolbarPivot}>
                             <button
                                 type="button"
                                 ref={pivotButtonRef}
                                 className={`ogx-toolbar__icon-btn${pivotOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
-                                aria-label="Configure pivot"
+                                aria-label={locale.toolbarPivotLabel}
                                 aria-haspopup="dialog"
                                 aria-expanded={pivotOpen}
                                 onClick={() => togglePanel('pivot')}
                             >
                                 <PivotIcon />
                                 {pivotActive && (
-                                    <span className="ogx-toolbar__dot" aria-label="Pivot active" />
+                                    <span className="ogx-toolbar__dot" aria-label={locale.toolbarPivotActive} />
                                 )}
                             </button>
                         </GridTooltip>
@@ -812,19 +818,19 @@ export function GridToolbar({
                                 activeCount,
                             })
                             : (
-                                <GridTooltip title="Summaries">
+                                <GridTooltip title={locale.toolbarSummaries}>
                                     <button
                                         type="button"
                                         ref={aggButtonRef}
                                         className={`ogx-toolbar__icon-btn${aggOpen ? ' ogx-toolbar__icon-btn--active' : ''}`}
-                                        aria-label="Configure summaries"
+                                        aria-label={locale.toolbarSummariesLabel}
                                         aria-haspopup="dialog"
                                         aria-expanded={aggOpen}
                                         onClick={() => togglePanel('summaries')}
                                     >
                                         <SigmaIcon />
                                         {activeCount > 0 && (
-                                            <span className="ogx-toolbar__dot" aria-label={`${activeCount} active summaries`} />
+                                            <span className="ogx-toolbar__dot" aria-label={locale.toolbarSummariesActive(activeCount)} />
                                         )}
                                     </button>
                                 </GridTooltip>

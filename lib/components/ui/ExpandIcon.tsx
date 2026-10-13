@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 export interface ExpandIconProps {
     isExpanded: boolean;
@@ -10,6 +11,7 @@ export interface ExpandIconProps {
 }
 
 export function ExpandIcon({ isExpanded, onClick, variant = 'chevron', tabIndex }: ExpandIconProps) {
+    const locale = useGridLocale();
     return (
         <button
             className={`ogx-expand-icon ${isExpanded ? 'ogx-expand-icon--expanded' : ''}`}
@@ -18,7 +20,7 @@ export function ExpandIcon({ isExpanded, onClick, variant = 'chevron', tabIndex 
                     onClick(e);
                 }
             }}
-            aria-label={isExpanded ? 'Collapse row' : 'Expand row'}
+            aria-label={isExpanded ? locale.rowCollapseLabel : locale.rowExpandLabel}
             type="button"
             tabIndex={tabIndex}
         >

@@ -1,5 +1,6 @@
 import { getDataSourceErrorMessage } from '../../utils/dataSource';
 import type { GridFilterModel } from '../../types';
+import { useGridLocale } from './gridLocaleContext';
 
 interface GridLiveRegionProps {
     loading: boolean;
@@ -22,15 +23,16 @@ interface GridLiveRegionProps {
  * the size of the selected cell range; and the AI assistant's status.
  */
 export function GridLiveRegion({ loading, error, noRowsLabel, filteredRowCount, dataRowCount, filterModel, cellSelectionAnnouncement, aiAssistantAnnouncement }: GridLiveRegionProps) {
+    const locale = useGridLocale();
     return (
         <div className="ogx-aria-live-status" role="status" aria-live="polite">
-            {loading ? 'Loading data...' : ''}
-            {error ? `Error: ${getDataSourceErrorMessage(error)}` : ''}
+            {loading ? locale.liveRegionLoading : ''}
+            {error ? locale.liveRegionError(getDataSourceErrorMessage(error)) : ''}
             {!loading && !error && (
                 filteredRowCount === 0
                     ? noRowsLabel
                     : (filterModel && ((filterModel.quickFilterValues?.length || 0) > 0 || (filterModel.items?.length || 0) > 0))
-                        ? `${dataRowCount} ${dataRowCount === 1 ? 'row' : 'rows'} found`
+                        ? locale.liveRegionRowsFound(dataRowCount)
                         : ''
             )}
             {cellSelectionAnnouncement ? <span className="ogx-aria-live-status__cells"> {cellSelectionAnnouncement}</span> : null}

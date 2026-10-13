@@ -1,4 +1,5 @@
 import React from 'react';
+import { useGridLocale } from './gridLocaleContext';
 
 interface GridLoadingOverlayProps {
     /** `slots.loadingOverlay`, rendered centred over the rows on a dimmed backdrop. */
@@ -12,6 +13,7 @@ interface GridLoadingOverlayProps {
  * or the loading overlay in place of the rows, so this is not rendered.
  */
 export function GridLoadingOverlay({ overlay }: GridLoadingOverlayProps) {
+    const locale = useGridLocale();
     if (overlay) {
         return (
             <div className="ogx__loading-overlay ogx__loading-overlay--over-rows ogx__loading-overlay--custom">
@@ -21,7 +23,7 @@ export function GridLoadingOverlay({ overlay }: GridLoadingOverlayProps) {
     }
     return (
         <div className="ogx__loading-overlay ogx__loading-overlay--over-rows">
-            <div className="ogx__loading-bar" role="progressbar" aria-label="Loading data" />
+            <div className="ogx__loading-bar" role="progressbar" aria-label={locale.loadingLabel} />
         </div>
     );
 }

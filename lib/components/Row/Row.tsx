@@ -5,6 +5,7 @@ import { Checkbox } from '../ui/Checkbox';
 import { ExpandIcon } from '../ui/ExpandIcon';
 import { DragHandleIcon } from '../ui/DragHandleIcon';
 import { DetailPanel } from '../DetailPanel/DetailPanel';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 import type { GridRowModel, GridColDef, GridRowId, GridColumnPinning, GridRowPinning, GridRowParams, GridCellParams, GridDetailPanelHeight, GridRowMeta } from '../../types';
 import type { CellColSpanInfo, RowSpanningCaches } from '../../hooks/features/useGridSpanning';
 import { isColumnPinned, calculatePinnedPositions, getPinnedEdgeFields, isRowPinned } from '../../utils/pinning';
@@ -108,6 +109,7 @@ export interface RowProps<R extends GridRowModel = GridRowModel> {
 }
 
 function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
+    const locale = useGridLocale();
     const {
         row,
         skeleton = false,
@@ -297,7 +299,7 @@ function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                     <div
                         className={`ogx__cell ogx__cell--drag-handle ${focusedCellField === '__reorder_col__' ? 'ogx__cell--focused' : ''} ${(focusedCellField === '__reorder_col__' && isFocusVisible) ? 'ogx__cell--focus-visible' : ''}`}
                         role="gridcell"
-                        aria-label={onDragStart ? 'Drag to reorder row' : undefined}
+                        aria-label={onDragStart ? locale.rowReorderLabel : undefined}
                         aria-colindex={reorderColIndex}
                         data-field="__reorder_col__"
                         tabIndex={-1}
@@ -322,7 +324,7 @@ function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                             } ${focusedCellField === '__expand_col__' ? 'ogx__cell--focused' : ''} ${(focusedCellField === '__expand_col__' && isFocusVisible) ? 'ogx__cell--focus-visible' : ''
                             }`}
                         role="gridcell"
-                        aria-label={showDetailPanel ? (isDetailPanelExpanded ? 'Collapse row details' : 'Expand row details') : undefined}
+                        aria-label={showDetailPanel ? (isDetailPanelExpanded ? locale.rowDetailPanelCollapseLabel : locale.rowDetailPanelExpandLabel) : undefined}
                         aria-expanded={showDetailPanel ? isDetailPanelExpanded : undefined}
                         aria-controls={showDetailPanel && isDetailPanelExpanded ? detailPanelId : undefined}
                         aria-colindex={expandColIndex}
@@ -390,7 +392,7 @@ function RowImpl<R extends GridRowModel = GridRowModel>(props: RowProps<R>) {
                                 checked={isSelected}
                                 onChange={handleCheckboxChange}
                                 onClick={(e) => e.stopPropagation()}
-                                aria-label={isSelected ? `Deselect row ${id}` : `Select row ${id}`}
+                                aria-label={isSelected ? locale.rowDeselectLabel(id) : locale.rowSelectLabel(id)}
                                 tabIndex={-1}
                                 onMouseDown={(e) => e.preventDefault()}
                             />

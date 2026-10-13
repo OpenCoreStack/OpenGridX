@@ -4,6 +4,7 @@ import type { GridColDef } from '../../types';
 import type { GridPivotModel, GridPivotAggFn, GridPivotValueField } from '../../types';
 import { getViewportWidth } from '../../utils/viewport';
 import { getPanelPosition, type GridPanelPosition } from '../../utils/direction';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 const AGG_FNS: GridPivotAggFn[] = ['sum', 'avg', 'count', 'min', 'max'];
 
@@ -31,6 +32,7 @@ export interface PivotPanelProps {
 }
 
 export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: PivotPanelProps) {
+    const locale = useGridLocale();
     const panelRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<GridPanelPosition>({ top: 0, right: 0 });
     const [portalContainer, setPortalContainer] = useState<Element | null>(null);
@@ -128,18 +130,18 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
             ref={panelRef}
             className="ogx-pivot-panel"
             role="dialog"
-            aria-label="Pivot configuration"
+            aria-label={locale.pivotPanelLabel}
             style={{ top: pos.top, right: pos.right, left: pos.left }}
         >
             { }
             <div className="ogx-pivot-panel__header">
                 <span className="ogx-pivot-panel__title">
                     <PivotIcon />
-                    Pivot Mode
+                    {locale.pivotMode}
                 </span>
                 {totalActive > 0 && (
-                    <button type="button" className="ogx-pivot-panel__reset-btn" onClick={reset} title="Reset pivot">
-                        Reset
+                    <button type="button" className="ogx-pivot-panel__reset-btn" onClick={reset} title={locale.pivotResetTooltip}>
+                        {locale.pivotReset}
                     </button>
                 )}
             </div>
@@ -150,11 +152,11 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                 <div className="ogx-pivot-zone">
                     <span className="ogx-pivot-zone__label">
                         <span className="ogx-pivot-zone__dot ogx-pivot-zone__dot--row" />
-                        Row Fields
+                        {locale.pivotRowFields}
                     </span>
                     <div
                         className={`ogx-pivot-chips${model.rowFields.length === 0 ? ' ogx-pivot-chips--empty' : ''}`}
-                        data-placeholder="Add fields here — each becomes a row label"
+                        data-placeholder={locale.pivotRowFieldsPlaceholder}
                     >
                         {model.rowFields.map((f, i) => (
                             <span key={`${i}:${f}`} className="ogx-pivot-chip ogx-pivot-chip--row">
@@ -163,8 +165,8 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                                     type="button"
                                     className="ogx-pivot-chip__remove"
                                     onClick={() => removeRow(i)}
-                                    title={`Remove ${colLabel(f)}`}
-                                    aria-label={`Remove ${colLabel(f)} from Row Fields`}
+                                    title={locale.pivotRemoveTooltip(colLabel(f))}
+                                    aria-label={locale.pivotRemoveRowLabel(colLabel(f))}
                                 >×</button>
                             </span>
                         ))}
@@ -175,11 +177,11 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                 <div className="ogx-pivot-zone">
                     <span className="ogx-pivot-zone__label">
                         <span className="ogx-pivot-zone__dot ogx-pivot-zone__dot--col" />
-                        Column Fields
+                        {locale.pivotColumnFields}
                     </span>
                     <div
                         className={`ogx-pivot-chips${model.columnFields.length === 0 ? ' ogx-pivot-chips--empty' : ''}`}
-                        data-placeholder="Add fields here — unique values become column headers"
+                        data-placeholder={locale.pivotColumnFieldsPlaceholder}
                     >
                         {model.columnFields.map((f, i) => (
                             <span key={`${i}:${f}`} className="ogx-pivot-chip ogx-pivot-chip--col">
@@ -188,8 +190,8 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                                     type="button"
                                     className="ogx-pivot-chip__remove"
                                     onClick={() => removeCol(i)}
-                                    title={`Remove ${colLabel(f)}`}
-                                    aria-label={`Remove ${colLabel(f)} from Column Fields`}
+                                    title={locale.pivotRemoveTooltip(colLabel(f))}
+                                    aria-label={locale.pivotRemoveColumnLabel(colLabel(f))}
                                 >×</button>
                             </span>
                         ))}
@@ -200,11 +202,11 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                 <div className="ogx-pivot-zone">
                     <span className="ogx-pivot-zone__label">
                         <span className="ogx-pivot-zone__dot ogx-pivot-zone__dot--value" />
-                        Value Fields (aggregated)
+                        {locale.pivotValueFields}
                     </span>
                     <div
                         className={`ogx-pivot-chips${model.valueFields.length === 0 ? ' ogx-pivot-chips--empty' : ''}`}
-                        data-placeholder="Add numeric fields here — values are aggregated"
+                        data-placeholder={locale.pivotValueFieldsPlaceholder}
                     >
                         {model.valueFields.map((vf: GridPivotValueField, i) => {
                             const allowed = allowedFns(vf.field);
@@ -216,19 +218,19 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                                         className="ogx-pivot-chip__fn-select"
                                         value={vf.aggFn}
                                         onChange={(e) => changeValueFn(i, e.target.value as GridPivotAggFn)}
-                                        title="Aggregation function"
-                                        aria-label={`Aggregation function for ${colLabel(vf.field)}`}
+                                        title={locale.pivotAggregationTooltip}
+                                        aria-label={locale.pivotAggregationLabel(colLabel(vf.field))}
                                     >
                                         {fnOptions.map((fn) => (
-                                            <option key={fn} value={fn}>{fn.toUpperCase()}</option>
+                                            <option key={fn} value={fn}>{locale.pivotAggregationFunction(fn)}</option>
                                         ))}
                                     </select>
                                     <button
                                         type="button"
                                         className="ogx-pivot-chip__remove"
                                         onClick={() => removeValue(i)}
-                                        title={`Remove ${colLabel(vf.field)}`}
-                                        aria-label={`Remove ${colLabel(vf.field)} (${vf.aggFn.toUpperCase()}) from Value Fields`}
+                                        title={locale.pivotRemoveTooltip(colLabel(vf.field))}
+                                        aria-label={locale.pivotRemoveValueLabel(colLabel(vf.field), locale.pivotAggregationFunction(vf.aggFn))}
                                     >×</button>
                                 </span>
                             );
@@ -240,7 +242,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
 
                 { }
                 <div>
-                    <div className="ogx-pivot-panel__fields-label">Available Fields</div>
+                    <div className="ogx-pivot-panel__fields-label">{locale.pivotAvailableFields}</div>
                     <div className="ogx-pivot-fields">
                         {availableColumns.map((col) => {
                             const isNum = canBeValue(col);
@@ -253,13 +255,13 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                                     </span>
                                     <div className="ogx-pivot-field-actions">
                                         {isDimension && (
-                                            <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--row" onClick={() => addRow(col.field)} title="Add to Row Fields" aria-label={`Add ${label} to Row Fields`}>Row</button>
+                                            <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--row" onClick={() => addRow(col.field)} title={locale.pivotAddRowTooltip} aria-label={locale.pivotAddRowLabel(label)}>{locale.pivotAddRow}</button>
                                         )}
                                         {isDimension && (
-                                            <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--col" onClick={() => addCol(col.field)} title="Add to Column Fields" aria-label={`Add ${label} to Column Fields`}>Col</button>
+                                            <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--col" onClick={() => addCol(col.field)} title={locale.pivotAddColumnTooltip} aria-label={locale.pivotAddColumnLabel(label)}>{locale.pivotAddColumn}</button>
                                         )}
                                         {isNum && (
-                                            <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--value" onClick={() => addValue(col.field)} title="Add to Value Fields" aria-label={`Add ${label} to Value Fields`}>Val</button>
+                                            <button type="button" className="ogx-pivot-add-btn ogx-pivot-add-btn--value" onClick={() => addValue(col.field)} title={locale.pivotAddValueTooltip} aria-label={locale.pivotAddValueLabel(label)}>{locale.pivotAddValue}</button>
                                         )}
                                     </div>
                                 </div>
@@ -267,7 +269,7 @@ export function PivotPanel({ anchorRef, columns, model, onChange, onClose }: Piv
                         })}
                         {availableColumns.length === 0 && (
                             <span style={{ fontSize: 12, color: 'var(--ogx-color-gray-400, #94a3b8)' }}>
-                                All fields are in use.
+                                {locale.pivotAllFieldsInUse}
                             </span>
                         )}
                     </div>

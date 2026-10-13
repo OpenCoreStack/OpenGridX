@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useId } from 'react';
 import { Checkbox } from '../ui/Checkbox';
 import { Input } from '../ui/Input';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 import type { GridColDef, GridRowModel, GridValidRowModel } from '../../types';
 
 
@@ -48,6 +49,7 @@ export function ColumnVisibilityPanel<R extends GridValidRowModel = GridRowModel
     props: ColumnVisibilityPanelProps<R>
 ) {
     const { columns, visibleColumns, onVisibilityChange, onShowAll, onHideAll, onColumnReorder, onColumnOrderReset, showNonHideableColumns } = props;
+    const locale = useGridLocale();
     const [searchQuery, setSearchQuery] = useState('');
     // Each checkbox is named by a <label htmlFor> holding the column name. (Wrapping Checkbox,
     // which renders its own <label>, in another <label> nested labels and left the name to a
@@ -119,7 +121,7 @@ export function ColumnVisibilityPanel<R extends GridValidRowModel = GridRowModel
                     <Input
                         autoComplete="off"
                         inputClassName="ogx-column-visibility-panel__search-input"
-                        placeholder="Search"
+                        placeholder={locale.columnsPanelSearchPlaceholder}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -153,7 +155,7 @@ export function ColumnVisibilityPanel<R extends GridValidRowModel = GridRowModel
                                     className="ogx-column-visibility-panel__drag-handle-wrapper"
                                     draggable
                                     onDragStart={handleDragStart(col.field)}
-                                    title="Drag to reorder"
+                                    title={locale.columnsPanelDragToReorder}
                                 >
                                     <DragHandleIcon />
                                 </span>
@@ -185,7 +187,7 @@ export function ColumnVisibilityPanel<R extends GridValidRowModel = GridRowModel
                         onChange={handleToggleAll}
                     />
                     <label htmlFor={`${idBase}-all`} className="ogx-column-visibility-panel__label">
-                        Show/Hide All
+                        {locale.columnsPanelShowHideAll}
                     </label>
                 </div>
                 <button
@@ -193,7 +195,7 @@ export function ColumnVisibilityPanel<R extends GridValidRowModel = GridRowModel
                     className="ogx-column-visibility-panel__reset-btn"
                     onClick={() => { onShowAll(); onColumnOrderReset?.(); }}
                 >
-                    Reset
+                    {locale.columnsPanelReset}
                 </button>
             </div>
         </div>

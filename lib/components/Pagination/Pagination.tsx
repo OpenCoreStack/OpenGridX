@@ -3,6 +3,7 @@ import React, { useId } from 'react';
 import { Button } from '../ui/Button';
 import { normalizePageSize, getPageCount, clampPage } from '../../utils/pagination';
 import type { GridLocaleText } from '../../types';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 export interface PaginationProps {
     page: number;
@@ -18,6 +19,7 @@ export interface PaginationProps {
 
 export function Pagination(props: PaginationProps) {
     const pageSizeId = useId();
+    const locale = useGridLocale();
     const {
         page,
         pageSize,
@@ -43,15 +45,10 @@ export function Pagination(props: PaginationProps) {
 
     const firstRowIndex = currentPage * safePageSize;
     const lastRowIndex = Math.min(firstRowIndex + safePageSize, rowCount);
-    const displayedRows = rowCount === 0 ? 0 : `${firstRowIndex + 1}–${lastRowIndex}`;
-
-    const rowsPerPageLabel = localeText?.paginationRowsPerPage ?? 'Rows per page:';
-    const ofLabel = localeText?.paginationOf
-        ? localeText.paginationOf(rowCount === 0 ? 0 : firstRowIndex + 1, lastRowIndex, rowCount)
-        : `${displayedRows} of ${rowCount}`;
-    const pageLabel = localeText?.paginationPage
-        ? localeText.paginationPage(currentPage + 1, pageCount)
-        : `Page ${currentPage + 1} of ${pageCount}`;
+    // An explicit `localeText` prop (standalone use) wins over the grid's strings.
+    const rowsPerPageLabel = localeText?.paginationRowsPerPage ?? locale.paginationRowsPerPage;
+    const ofLabel = (localeText?.paginationOf ?? locale.paginationOf)(rowCount === 0 ? 0 : firstRowIndex + 1, lastRowIndex, rowCount);
+    const pageLabel = (localeText?.paginationPage ?? locale.paginationPage)(currentPage + 1, pageCount);
 
     const handleFirstPage = () => {
         onPageChange(0);
@@ -79,7 +76,7 @@ export function Pagination(props: PaginationProps) {
     const isLastPage = currentPage >= pageCount - 1;
 
     return (
-        <div className="ogx-pagination" role="navigation" aria-label="Pagination">
+        <div className="ogx-pagination" role="navigation" aria-label={locale.paginationLabel}>
             { }
             <div className="ogx-pagination__page-size">
                 <label htmlFor={pageSizeId} className="ogx-pagination__label">
@@ -112,8 +109,8 @@ export function Pagination(props: PaginationProps) {
                         size="small"
                         onClick={handleFirstPage}
                         disabled={isFirstPage}
-                        aria-label="Go to first page"
-                        title="First page"
+                        aria-label={locale.paginationFirstPageLabel}
+                        title={locale.paginationFirstPageTooltip}
                     >
                         <svg className="ogx-pagination__icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <path d="M18.41 16.59L13.82 12l4.59-4.59L17 6l-6 6 6 6zM6 6h2v12H6z" />
@@ -126,8 +123,8 @@ export function Pagination(props: PaginationProps) {
                     size="small"
                     onClick={handlePreviousPage}
                     disabled={isFirstPage}
-                    aria-label="Go to previous page"
-                    title="Previous page"
+                    aria-label={locale.paginationPreviousPageLabel}
+                    title={locale.paginationPreviousPageTooltip}
                 >
                     <svg className="ogx-pagination__icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
@@ -143,8 +140,8 @@ export function Pagination(props: PaginationProps) {
                     size="small"
                     onClick={handleNextPage}
                     disabled={isLastPage}
-                    aria-label="Go to next page"
-                    title="Next page"
+                    aria-label={locale.paginationNextPageLabel}
+                    title={locale.paginationNextPageTooltip}
                 >
                     <svg className="ogx-pagination__icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
@@ -157,8 +154,8 @@ export function Pagination(props: PaginationProps) {
                         size="small"
                         onClick={handleLastPage}
                         disabled={isLastPage}
-                        aria-label="Go to last page"
-                        title="Last page"
+                        aria-label={locale.paginationLastPageLabel}
+                        title={locale.paginationLastPageTooltip}
                     >
                         <svg className="ogx-pagination__icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <path d="M5.59 7.41L10.18 12l-4.59 4.59L7 18l6-6-6-6zM16 6h2v12h-2z" />

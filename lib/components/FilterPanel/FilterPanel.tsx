@@ -9,6 +9,7 @@ import type {
 import { filterValueToInputText, getOperatorsForType, NO_VALUE_OPERATORS } from '../../utils/filtering';
 import { filterValueFromInputText, getFilterValueOptions, isSameFilterValue, matchesFilterValueOption } from '../../utils/filtering/filterInput';
 import { Input } from '../ui/Input';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 export interface FilterPanelProps {
     filterModel: GridFilterModel;
@@ -69,6 +70,7 @@ const FilterRow: React.FC<{
     onChange: (item: GridFilterItem | null) => void;
 }> = ({ col, item, resetToken, onChange }) => {
     const filterId = useId();
+    const locale = useGridLocale();
     // Memoized so React Compiler treats the list as frozen and can keep the callbacks below memoized.
     const typeOperators = useMemo(() => getOperatorsForType(col.type), [col.type]);
     const defaultOperator = typeOperators[0];
@@ -153,7 +155,7 @@ const FilterRow: React.FC<{
     const showValue = !NO_VALUE_OPERATORS.has(currentOperator);
     const valueOptions = getFilterValueOptions(col);
     const valueClassName = `ogx-filter__value-input${isActive ? ' ogx-filter__value-input--active' : ''}`;
-    const valueLabel = `Filter value for ${label}`;
+    const valueLabel = locale.filterPanelValueLabel(label);
 
     let valueControl: React.ReactNode = null;
     if (showValue && col.type === 'boolean') {
@@ -169,9 +171,9 @@ const FilterRow: React.FC<{
                 }}
                 aria-label={valueLabel}
             >
-                <option value="">Any</option>
-                <option value="true">true</option>
-                <option value="false">false</option>
+                <option value="">{locale.filterPanelAny}</option>
+                <option value="true">{locale.filterPanelTrue}</option>
+                <option value="false">{locale.filterPanelFalse}</option>
             </select>
         );
     } else if (showValue && col.type === 'singleSelect' && valueOptions.length > 0 && currentOperator === 'isAnyOf') {
@@ -207,7 +209,7 @@ const FilterRow: React.FC<{
                 }}
                 aria-label={valueLabel}
             >
-                <option value="">Any</option>
+                <option value="">{locale.filterPanelAny}</option>
                 {valueOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
             </select>
         );
@@ -220,7 +222,7 @@ const FilterRow: React.FC<{
                 type={col.type === 'date' ? 'date' : 'text'}
                 value={draft ?? toInputText(item?.value, col)}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder={col.type === 'number' ? 'Number…' : 'Value…'}
+                placeholder={col.type === 'number' ? locale.filterPanelNumberPlaceholder : locale.filterPanelValuePlaceholder}
                 aria-label={valueLabel}
             />
         );
@@ -239,10 +241,10 @@ const FilterRow: React.FC<{
                     className={`ogx-filter__op-select${isActive ? ' ogx-filter__op-select--active' : ''}`}
                     value={currentOperator}
                     onChange={(e) => handleOperatorChange(e.target.value as GridFilterOperator)}
-                    aria-label={`Filter operator for ${label}`}
+                    aria-label={locale.filterPanelOperatorLabel(label)}
                 >
                     {operators.map(op => (
-                        <option key={op} value={op}>{op}</option>
+                        <option key={op} value={op}>{locale.filterPanelOperator(op)}</option>
                     ))}
                 </select>
 
@@ -254,8 +256,8 @@ const FilterRow: React.FC<{
                         type="button"
                         className="ogx-filter__row-clear"
                         onClick={handleClear}
-                        aria-label={`Clear filter for ${label}`}
-                        title="Clear"
+                        aria-label={locale.filterPanelClearLabel(label)}
+                        title={locale.filterPanelClearTooltip}
                     >
                         ×
                     </button>
@@ -268,6 +270,7 @@ const FilterRow: React.FC<{
 // ── Root panel ────────────────────────────────────────────────────────────────
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({ filterModel, columns, onFilterModelChange }) => {
+    const locale = useGridLocale();
     const items = useMemo<FilterEntry[]>(() => filterModel.items ?? [], [filterModel.items]);
     const logicOperator = filterModel.logicOperator ?? 'and';
 
@@ -313,14 +316,14 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ filterModel, columns, 
         <>
             {items.length > 1 && (
                 <div className="ogx-filter__logic-bar">
-                    <span className="ogx-filter__logic-label">Match:</span>
+                    <span className="ogx-filter__logic-label">{locale.filterPanelMatch}</span>
                     <button
                         type="button"
                         className={`ogx-filter__logic-pill${logicOperator === 'and' ? ' ogx-filter__logic-pill--active' : ''}`}
                         onClick={() => handleLogicChange('and')}
                         aria-pressed={logicOperator === 'and'}
                     >
-                        ALL (AND)
+                        {locale.filterPanelAnd}
                     </button>
                     <button
                         type="button"
@@ -328,21 +331,19 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ filterModel, columns, 
                         onClick={() => handleLogicChange('or')}
                         aria-pressed={logicOperator === 'or'}
                     >
-                        ANY (OR)
+                        {locale.filterPanelOr}
                     </button>
                 </div>
             )}
 
             {notShownCount > 0 && (
                 <div className="ogx-filter__hidden-note" role="note">
-                    {notShownCount === 1
-                        ? '1 more condition (a filter group or a second condition on a column) is applied and not shown here.'
-                        : `${notShownCount} more conditions (filter groups or further conditions on a column) are applied and not shown here.`}
+                    {locale.filterPanelHiddenConditions(notShownCount)}
                 </div>
             )}
 
             {filterableColumns.length === 0 ? (
-                <div className="ogx-filter__empty">No filterable columns.</div>
+                <div className="ogx-filter__empty">{locale.filterPanelNoColumns}</div>
             ) : (
                 filterableColumns.map(col => (
                     <FilterRow

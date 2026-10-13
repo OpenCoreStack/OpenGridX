@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { Input } from '../ui/Input';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 
 interface GlobalSearchProps {
@@ -32,7 +33,9 @@ function normalizeSearch(text: string): string {
     return text.trim().split(/\s+/).filter(Boolean).join(' ');
 }
 
-export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', debounceMs = 250 }: GlobalSearchProps) {
+export function GlobalSearch({ value = '', onChange, placeholder: placeholderProp, debounceMs = 250 }: GlobalSearchProps) {
+    const locale = useGridLocale();
+    const placeholder = placeholderProp ?? locale.toolbarSearchPlaceholder;
     const [isExpanded, setIsExpanded] = useState(() => value.length > 0);
     // Fully uncontrolled: localValue is the single source of truth.
     const [localValue, setLocalValue] = useState(value);
@@ -152,11 +155,11 @@ export function GlobalSearch({ value = '', onChange, placeholder = 'Search...', 
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 placeholder={placeholder}
-                aria-label="Global Search"
+                aria-label={locale.toolbarSearchLabel}
                 autoComplete="off"
             />
             {localValue && (
-                <button type="button" className="ogx-global-search__clear" onClick={handleClear} aria-label="Clear search">
+                <button type="button" className="ogx-global-search__clear" onClick={handleClear} aria-label={locale.toolbarSearchClear}>
                     <CloseIcon />
                 </button>
             )}

@@ -10,7 +10,9 @@ import type {
     GridAiValidationError,
     GridApi,
     GridColDef,
+    GridLocaleText,
 } from '../../types';
+import { resolveGridLocale, type ResolvedGridLocale } from '../../utils/gridLocale';
 import { attempt } from '../../utils/attempt';
 import { isGridAiValidated } from '../../utils/aiBrand';
 import {
@@ -32,6 +34,8 @@ export interface UseGridAiAssistantParams {
     columns: readonly GridColDef[];
     onApply?: (result: GridAiPromptResult) => void;
     onError?: (error: unknown) => void;
+    /** The grid's `localeText`, for the status line and the placeholder. */
+    localeText?: GridLocaleText;
 }
 
 export interface UseGridAiAssistantResult {
@@ -48,7 +52,6 @@ export interface UseGridAiAssistantResult {
     announcement: string;
 }
 
-const DEFAULT_PLACEHOLDER = 'Ask about this table…';
 const NO_SUGGESTIONS: string[] = [];
 const NO_ERRORS: GridAiValidationError[] = [];
 const NOT_VALIDATED = 'The reply was not validated';
@@ -69,13 +72,38 @@ function isAbortError(error: unknown): boolean {
     return typeof error === 'object' && error !== null && (error as { name?: unknown }).name === 'AbortError';
 }
 
-function errorText(error: unknown): string {
-    return error instanceof Error && error.message ? error.message : 'Unknown error';
-}
+/** What the status line says, turned into text with the grid's locale at render time. */
+type StatusLine =
+    | { kind: 'none' }
+    | { kind: 'thinking' }
+    | { kind: 'stopped' }
+    | { kind: 'undone' }
+    | { kind: 'removed' }
+    | { kind: 'applied'; count: number; ignored: number }
+    | { kind: 'notValidated' }
+    | { kind: 'failed'; error: unknown };
 
-function changesText(count: number, ignored: number): string {
-    const applied = count === 0 ? 'No changes' : `Applied ${count} ${count === 1 ? 'change' : 'changes'}`;
-    return ignored > 0 ? `${applied}, ${ignored} ignored` : applied;
+const NO_STATUS: StatusLine = { kind: 'none' };
+const THINKING: StatusLine = { kind: 'thinking' };
+const STOPPED: StatusLine = { kind: 'stopped' };
+const UNDONE: StatusLine = { kind: 'undone' };
+const REMOVED: StatusLine = { kind: 'removed' };
+const NOT_VALIDATED_STATUS: StatusLine = { kind: 'notValidated' };
+
+function statusLineText(line: StatusLine, locale: ResolvedGridLocale): string {
+    switch (line.kind) {
+        case 'none': return '';
+        case 'thinking': return locale.aiAssistantThinking;
+        case 'stopped': return locale.aiAssistantStopped;
+        case 'undone': return locale.aiAssistantUndone;
+        case 'removed': return locale.aiAssistantChangeRemoved;
+        case 'applied': return locale.aiAssistantApplied(line.count, line.ignored);
+        case 'notValidated': return locale.aiAssistantNotValidated;
+        case 'failed': {
+            const { error } = line;
+            return locale.aiAssistantFailed(error instanceof Error && error.message ? error.message : locale.aiAssistantUnknownError);
+        }
+    }
 }
 
 /** Calls a consumer callback; a throw is warned about (development) and otherwise ignored. */
@@ -92,11 +120,13 @@ function notify<T>(callback: ((value: T) => void) | undefined, value: T, name: s
  * `closeAiAssistant`.
  */
 export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiAssistantResult {
-    const { apiRef, options, columns } = params;
+    const { apiRef, options, columns, localeText } = params;
+    const locale = useMemo(() => resolveGridLocale(localeText), [localeText]);
     const enabled = Boolean(options);
     const [open, setOpen] = useState(false);
     const [status, setStatus] = useState<GridAiAssistantStatus>('idle');
-    const [statusText, setStatusText] = useState('');
+    const [statusLine, setStatusLine] = useState<StatusLine>(NO_STATUS);
+    const statusText = statusLineText(statusLine, locale);
     const [message, setMessage] = useState<string | null>(null);
     const [errors, setErrors] = useState<GridAiValidationError[]>(NO_ERRORS);
     const [applied, setApplied] = useState<Applied | null>(null);
@@ -135,7 +165,7 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
         if (controllerRef.current) {
             abortRequest();
             setStatus('stopped');
-            setStatusText('Stopped');
+            setStatusLine(STOPPED);
         }
         setOpen(false);
         const target = returnFocusRef.current;
@@ -148,9 +178,9 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
         else openPanel(trigger);
     }, [openPanel, closePanel]);
 
-    const fail = useCallback((text: string, error: unknown) => {
+    const fail = useCallback((line: StatusLine, error: unknown) => {
         setStatus('error');
-        setStatusText(text);
+        setStatusLine(line);
         setMessage(null);
         setErrors(NO_ERRORS);
         notify(latestRef.current.params.onError, error, 'onAiAssistantError');
@@ -163,7 +193,7 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
             if (process.env.NODE_ENV !== 'production') {
                 console.warn('[OpenGridX] aiAssistant: the onPrompt result was not applied because its state was not validated. Return the result of createGridAiPromptHandler, or pass the model reply through validateGridAiState (from @opencorestack/opengridx/ai) and return its state.');
             }
-            fail(NOT_VALIDATED, new Error(NOT_VALIDATED));
+            fail(NOT_VALIDATED_STATUS, new Error(NOT_VALIDATED));
             return;
         }
         const allowed = pickAllowedParts(result.state, current.options?.parts ?? AI_PARTS);
@@ -177,7 +207,7 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
         setMessage(typeof result.message === 'string' && result.message ? result.message : null);
         setHistory((list) => [...list, { prompt, applied: state }]);
         setStatus('applied');
-        setStatusText(changesText(buildAiChips(state, (f) => f).length, ignored.length));
+        setStatusLine({ kind: 'applied', count: buildAiChips(state, (f) => f).length, ignored: ignored.length });
         notify(current.onApply, result, 'onAiAssistantApply');
     }, [apiRef, fail]);
 
@@ -190,7 +220,7 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
         const controller = new AbortController();
         controllerRef.current = controller;
         setStatus('running');
-        setStatusText('Thinking…');
+        setStatusLine(THINKING);
         setMessage(null);
         setErrors(NO_ERRORS);
         const context = { currentState: apiRef.current.getGridAiState(), history: earlier, signal: controller.signal };
@@ -207,10 +237,10 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
                 controllerRef.current = null;
                 if (controller.signal.aborted || isAbortError(error)) {
                     setStatus('stopped');
-                    setStatusText('Stopped');
+                    setStatusLine(STOPPED);
                     return;
                 }
-                fail(`The assistant could not answer: ${errorText(error)}`, error);
+                fail({ kind: 'failed', error }, error);
             },
         );
     }, [apiRef, abortRequest, applyResult, fail]);
@@ -219,7 +249,7 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
         if (!controllerRef.current) return;
         abortRequest();
         setStatus('stopped');
-        setStatusText('Stopped');
+        setStatusLine(STOPPED);
     }, [abortRequest]);
 
     const undo = useCallback(() => {
@@ -230,7 +260,7 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
         setErrors(NO_ERRORS);
         setMessage(null);
         setStatus('idle');
-        setStatusText('Undone');
+        setStatusLine(UNDONE);
     }, [apiRef]);
 
     const removeChip = useCallback((id: string) => {
@@ -239,7 +269,7 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
         const state = removeAiChip(last.state, id);
         applyGridAiState(apiRef.current, effectiveState(state, last.previous));
         setApplied({ state, previous: last.previous });
-        setStatusText('Change removed');
+        setStatusLine(REMOVED);
     }, [apiRef]);
 
     useLayoutEffect(() => {
@@ -261,7 +291,7 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
             chips,
             history,
             suggestions: options.suggestions ?? NO_SUGGESTIONS,
-            placeholder: options.placeholder ?? DEFAULT_PLACEHOLDER,
+            placeholder: options.placeholder ?? locale.aiAssistantPlaceholder,
             voiceAvailable: options.voice !== false && hasSpeechRecognition(),
             canUndo: applied !== null,
             submit,
@@ -270,7 +300,7 @@ export function useGridAiAssistant(params: UseGridAiAssistantParams): UseGridAiA
             removeChip,
             close: closePanel,
         };
-    }, [isOpen, options, status, statusText, message, errors, chips, history, applied, submit, stop, undo, removeChip, closePanel]);
+    }, [isOpen, options, status, statusText, message, errors, chips, history, applied, submit, stop, undo, removeChip, closePanel, locale]);
 
     return {
         enabled,

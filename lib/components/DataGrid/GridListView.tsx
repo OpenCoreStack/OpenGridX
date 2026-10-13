@@ -4,6 +4,7 @@ import { Pagination } from '../Pagination/Pagination';
 import { ListViewRow } from '../ListView/ListViewRow';
 import { getPageCount, normalizePageSize } from '../../utils/pagination';
 import { useRowsScrollEndLatch } from '../../hooks/core/useRowsScrollEndLatch';
+import { useGridLocale } from './gridLocaleContext';
 import type {
     GridColDef,
     GridRowModel,
@@ -110,6 +111,7 @@ export function GridListView<R extends GridRowModel>({
     selectable = false,
     onToggleExpansion,
 }: GridListViewProps<R>) {
+    const locale = useGridLocale();
     const PaginationComponent = paginationSlot || Pagination;
 
     // Roving tab stop: the list is one Tab stop, on the last focused row (the first row until then,
@@ -192,15 +194,15 @@ export function GridListView<R extends GridRowModel>({
         <div
             className="ogx-list-view"
             role="grid"
-            aria-label={ariaLabel || 'Data grid list view'}
+            aria-label={ariaLabel || locale.listViewLabel}
             aria-rowcount={itemCount}
             aria-multiselectable={multiselectable}
         >
             <div className="ogx-list-view__toolbar">
                 <span>
-                    {itemCount} {itemCount === 1 ? 'item' : 'items'}
-                    {pagination ? ` · page ${currentPage + 1} of ${pageCount}` : ''}
-                    {selectedRowIds.size > 0 ? ` · ${selectedRowIds.size} selected` : ''}
+                    {locale.listViewItemCount(itemCount)}
+                    {pagination ? ` · ${locale.listViewPage(currentPage + 1, pageCount)}` : ''}
+                    {selectedRowIds.size > 0 ? ` · ${locale.listViewSelectedCount(selectedRowIds.size)}` : ''}
                 </span>
             </div>
 
@@ -209,7 +211,7 @@ export function GridListView<R extends GridRowModel>({
                 {allRenderableRows.length === 0 && loading ? (
                     // The grid's live region announces loading; the list shows no "No Data" meanwhile.
                     <div className="ogx-list-view__loading">
-                        {loadingOverlay ?? <div className="ogx__loading-bar" role="progressbar" aria-label="Loading data" />}
+                        {loadingOverlay ?? <div className="ogx__loading-bar" role="progressbar" aria-label={locale.loadingLabel} />}
                     </div>
                 ) : allRenderableRows.length === 0 && noRowsOverlay ? (
                     <div className="ogx-list-view__empty">{noRowsOverlay}</div>

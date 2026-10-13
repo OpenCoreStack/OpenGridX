@@ -1,6 +1,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Input } from '../ui/Input';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 export interface QuickFilterProps {
     value?: string;
@@ -13,9 +14,11 @@ export function QuickFilter(props: QuickFilterProps) {
     const {
         value = '',
         onChange,
-        placeholder = 'Search...',
+        placeholder: placeholderProp,
         debounceMs = 300
     } = props;
+    const locale = useGridLocale();
+    const placeholder = placeholderProp ?? locale.toolbarSearchPlaceholder;
 
     const [localValue, setLocalValue] = useState(value);
     const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
@@ -55,7 +58,7 @@ export function QuickFilter(props: QuickFilterProps) {
         <button
             className="ogx-quick-filter__clear"
             onClick={handleClear}
-            aria-label="Clear search"
+            aria-label={locale.toolbarSearchClear}
             type="button"
         >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">

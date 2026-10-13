@@ -1,4 +1,5 @@
 import React from 'react';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 // Must live at module scope (not inline) so React sees a stable component type.
 // Calling renderFn() here puts the throw one level BELOW CellErrorBoundary,
@@ -8,6 +9,21 @@ import React from 'react';
 function CellRenderTarget({ renderFn }: { renderFn: () => React.ReactNode }) {
     'use no memo';
     return <>{renderFn()}</>;
+}
+
+/** The cell content after `renderCell` threw: a warning sign labelled with the field. */
+function CellErrorMarker({ field, message }: { field: string; message: string | undefined }) {
+    const locale = useGridLocale();
+    return (
+        <div
+            className="ogx__cell-error"
+            role="img"
+            aria-label={locale.cellErrorLabel(field)}
+            title={message ?? locale.cellErrorTooltip}
+        >
+            ⚠
+        </div>
+    );
 }
 
 interface CellErrorBoundaryProps {
@@ -59,16 +75,7 @@ export class CellErrorBoundary extends React.Component<CellErrorBoundaryProps, C
 
     override render() {
         if (this.state.hasError) {
-            return (
-                <div
-                    className="ogx__cell-error"
-                    role="img"
-                    aria-label={`Error in cell: ${this.props.field}`}
-                    title={this.state.error?.message ?? 'Render error'}
-                >
-                    ⚠
-                </div>
-            );
+            return <CellErrorMarker field={this.props.field} message={this.state.error?.message} />;
         }
         return <CellRenderTarget renderFn={this.props.renderFn} />;
     }

@@ -3,6 +3,7 @@ import { formatAggregateForColumn, isAggregationAllowed } from '../../utils/aggr
 import type { GridColDef, GridAggregationModel, GridAggregationResult, GridColumnPinning } from '../../types';
 import { calculatePinnedPositions, getPinnedEdgeFields, isColumnPinned } from '../../utils/pinning';
 import { getRenderedColumnWidth } from '../../utils/columnWidth';
+import { useGridLocale } from './gridLocaleContext';
 
 const SYSTEM_COLUMN_WIDTH = 48;
 
@@ -41,6 +42,7 @@ export function GridAggregationFooter({
     pinnedColumns,
     loading = false,
 }: GridAggregationFooterProps) {
+    const locale = useGridLocale();
     // Same offsets as Row, so pinned totals sit exactly under their pinned body cells.
     const pinnedOffsets = useMemo(
         () => calculatePinnedPositions(
@@ -77,7 +79,7 @@ export function GridAggregationFooter({
         <div
             className={`ogx__aggregation-footer${loading ? ' ogx__aggregation-footer--loading' : ''}`}
             role="row"
-            aria-label="Aggregation totals"
+            aria-label={locale.aggregationFooterLabel}
             aria-live="polite"
             aria-busy={loading || undefined}
             style={{ minHeight: `${rowHeight}px` }}

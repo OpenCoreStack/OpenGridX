@@ -4,6 +4,7 @@ import { GridPinnedRows, type GridPinnedRowsProps } from './GridPinnedRows';
 import { GridVirtualRows, type GridVirtualRowsProps } from './GridVirtualRows';
 import { GridEmptyState } from './GridEmptyState';
 import { GridAggregationFooter } from './GridAggregationFooter';
+import { useGridLocale } from './gridLocaleContext';
 import type { GridAggregationModel, GridAggregationResult, GridColDef, GridColumnPinning, GridRowId, GridRowModel } from '../../types';
 import type { GridAriaRowLayout } from '../../utils/aria';
 import type { UseGridCellSelectionReturn } from '../../hooks/core/useGridCellSelection';
@@ -120,6 +121,7 @@ export interface GridViewportProps<R extends GridRowModel> {
  * empty state, the virtual centre rows and the aggregation footer.
  */
 export function GridViewport<R extends GridRowModel>(props: GridViewportProps<R>) {
+    const locale = useGridLocale();
     const {
         setViewportElement, handleScroll, ariaLabel, ariaRows, navigationColumnCount, rowSelectionEnabled,
         disableMultipleRowSelection, cellSelection, effectiveLoading, viewportTabIndex, setKeyboardMode,
@@ -165,7 +167,7 @@ export function GridViewport<R extends GridRowModel>(props: GridViewportProps<R>
             className="ogx__viewport"
             onScroll={handleScroll}
             role="grid"
-            aria-label={ariaLabel || 'Data grid'}
+            aria-label={ariaLabel || locale.gridLabel}
             aria-rowcount={ariaRows.rowCount}
             aria-colcount={navigationColumnCount}
             aria-multiselectable={(rowSelectionEnabled && !disableMultipleRowSelection) || cellSelection.enabled}

@@ -11,6 +11,7 @@ import { getHeaderLineClamp, shouldWrapHeaderText } from '../../utils/headerWrap
 import { getHeaderColumnStyle } from './headerColumnStyle';
 import { HeaderFilterRow } from '../HeaderFilter/HeaderFilterRow';
 import { isRtl, logicalArrowKey } from '../../utils/direction';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 
 function MenuIcon() {
@@ -93,6 +94,7 @@ export interface HeaderProps<R extends GridRowModel = GridRowModel> {
 }
 
 export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps<R>) {
+    const locale = useGridLocale();
     const {
         columns,
         allColumns,
@@ -348,11 +350,11 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                     <div
                         className={`ogx__header-cell ogx__header-cell--pinned ogx__header-cell--pinned-left ${isHeaderFocused('__reorder_col__') ? 'ogx__header-cell--focused' : ''}`}
                         role="columnheader"
-                        aria-label="Row reorder handle"
+                        aria-label={locale.headerRowReorderLabel}
                         aria-colindex={reorderColIndex}
                         data-field="__reorder_col__"
                         tabIndex={-1}
-                        title="Drag to reorder rows"
+                        title={locale.headerRowReorderTooltip}
                         style={{
                             minWidth: 48,
                             maxWidth: 48,
@@ -368,7 +370,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         className={`ogx__header-cell ogx__header-cell--expand ${pinExpandColumn ? 'ogx__header-cell--pinned ogx__header-cell--pinned-left' : ''
                             } ${isHeaderFocused('__expand_col__') ? 'ogx__header-cell--focused' : ''}`}
                         role="columnheader"
-                        aria-label="Expand row details"
+                        aria-label={locale.headerDetailPanelLabel}
                         aria-colindex={expandColIndex}
                         data-field="__expand_col__"
                         tabIndex={-1}
@@ -405,7 +407,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                                 checked={allSelected}
                                 indeterminate={someSelected}
                                 onChange={(e) => onSelectAll(e.target.checked)}
-                                aria-label={allSelected ? 'Deselect all rows' : 'Select all rows'}
+                                aria-label={allSelected ? locale.headerDeselectAllLabel : locale.headerSelectAllLabel}
                                 tabIndex={-1}
                                 onMouseDown={(e) => e.preventDefault()}
                             />
@@ -434,7 +436,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                         : sortPosition === 0 ? (sortDirection === 'asc' ? 'ascending' : 'descending')
                         : 'none';
                     const sortDescription = isSorted && sortModel.length > 1
-                        ? `Sorted ${sortDirection === 'asc' ? 'ascending' : 'descending'}, sort priority ${sortPosition + 1} of ${sortModel.length}`
+                        ? locale.headerSortDescription(sortDirection === 'asc' ? 'asc' : 'desc', sortPosition + 1, sortModel.length)
                         : undefined;
                     const isResizable = colDef.resizable !== false;
                     const pinnedPosition = isColumnPinned(colDef.field, pinnedColumns);
@@ -531,7 +533,7 @@ export function Header<R extends GridRowModel = GridRowModel>(props: HeaderProps
                                         type="button"
                                         className="ogx__menu-icon-btn"
                                         onClick={handleMenuOpen(colDef)}
-                                        aria-label={`Open column menu for ${colDef.headerName || colDef.field}`}
+                                        aria-label={locale.headerColumnMenuButtonLabel(colDef.headerName || colDef.field)}
                                         aria-haspopup="menu"
                                         tabIndex={-1}
                                     >

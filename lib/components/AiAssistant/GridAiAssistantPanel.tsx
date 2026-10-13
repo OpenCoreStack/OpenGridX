@@ -3,6 +3,7 @@ import type { GridAiAssistantPanelProps } from '../../types';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useSpeechInput } from './useSpeechInput';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 /** The sparkle of the Ask AI button and the panel title. */
 export function AiSparkleIcon() {
@@ -33,6 +34,7 @@ export function GridAiAssistantPanel(props: GridAiAssistantPanelProps) {
         status, statusText, message, errors, chips, history, suggestions, placeholder, voiceAvailable, canUndo,
         submit, stop, undo, removeChip, close,
     } = props;
+    const locale = useGridLocale();
     const [text, setText] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
     const speech = useSpeechInput(setText);
@@ -59,10 +61,10 @@ export function GridAiAssistantPanel(props: GridAiAssistantPanelProps) {
     };
 
     return (
-        <div className="ogx-ai-panel" role="dialog" aria-label="Ask AI">
+        <div className="ogx-ai-panel" role="dialog" aria-label={locale.aiAssistantTitle}>
             <div className="ogx-ai-panel__header">
-                <span className="ogx-ai-panel__title"><AiSparkleIcon />Ask AI</span>
-                <Button size="small" className="ogx-ai-panel__close" aria-label="Close" onClick={close}>×</Button>
+                <span className="ogx-ai-panel__title"><AiSparkleIcon />{locale.aiAssistantTitle}</span>
+                <Button size="small" className="ogx-ai-panel__close" aria-label={locale.aiAssistantClose} onClick={close}>×</Button>
             </div>
 
             <form className="ogx-ai-panel__form" onSubmit={handleSubmit}>
@@ -71,7 +73,7 @@ export function GridAiAssistantPanel(props: GridAiAssistantPanelProps) {
                     className="ogx-ai-panel__input"
                     value={text}
                     placeholder={placeholder}
-                    aria-label="Prompt"
+                    aria-label={locale.aiAssistantPromptLabel}
                     autoComplete="off"
                     onChange={(event) => setText(event.target.value)}
                 />
@@ -80,7 +82,7 @@ export function GridAiAssistantPanel(props: GridAiAssistantPanelProps) {
                         size="small"
                         variant="outlined"
                         className={`ogx-ai-panel__mic${speech.listening ? ' ogx-ai-panel__mic--on' : ''}`}
-                        aria-label={speech.listening ? 'Stop dictation' : 'Dictate a prompt'}
+                        aria-label={speech.listening ? locale.aiAssistantStopDictation : locale.aiAssistantStartDictation}
                         aria-pressed={speech.listening}
                         onClick={speech.toggle}
                     >
@@ -89,12 +91,12 @@ export function GridAiAssistantPanel(props: GridAiAssistantPanelProps) {
                 )}
                 {/* Separate keys: one reused <button> would turn into the submit button during the Stop click and submit again. */}
                 {running
-                    ? <Button key="stop" size="small" variant="outlined" onClick={thenFocusInput(stop)}>Stop</Button>
-                    : <Button key="ask" size="small" variant="contained" color="primary" type="submit" disabled={text.trim() === ''}>Ask</Button>}
+                    ? <Button key="stop" size="small" variant="outlined" onClick={thenFocusInput(stop)}>{locale.aiAssistantStop}</Button>
+                    : <Button key="ask" size="small" variant="contained" color="primary" type="submit" disabled={text.trim() === ''}>{locale.aiAssistantAsk}</Button>}
             </form>
 
             {suggestions.length > 0 && (
-                <div className="ogx-ai-panel__suggestions" aria-label="Suggestions" role="group">
+                <div className="ogx-ai-panel__suggestions" aria-label={locale.aiAssistantSuggestions} role="group">
                     {suggestions.map((suggestion) => (
                         <button key={suggestion} type="button" className="ogx-ai-panel__suggestion" disabled={running} onClick={() => send(suggestion)}>
                             {suggestion}
@@ -108,29 +110,29 @@ export function GridAiAssistantPanel(props: GridAiAssistantPanelProps) {
 
             {(chips.length > 0 || canUndo) && (
                 <div className="ogx-ai-panel__changes">
-                    <ul className="ogx-ai-panel__chips" aria-label="Applied changes">
+                    <ul className="ogx-ai-panel__chips" aria-label={locale.aiAssistantAppliedChanges}>
                         {chips.map((chip) => (
                             <li key={chip.id} className="ogx-ai-chip" data-part={chip.part}>
                                 <span className="ogx-ai-chip__label">{chip.label}</span>
-                                <button type="button" className="ogx-ai-chip__remove" aria-label={`Remove ${chip.label}`} onClick={thenFocusInput(() => removeChip(chip.id))}>×</button>
+                                <button type="button" className="ogx-ai-chip__remove" aria-label={locale.aiAssistantRemoveChange(chip.label)} onClick={thenFocusInput(() => removeChip(chip.id))}>×</button>
                             </li>
                         ))}
                     </ul>
-                    {canUndo && <Button size="small" variant="outlined" className="ogx-ai-panel__undo" onClick={thenFocusInput(undo)}>Undo</Button>}
+                    {canUndo && <Button size="small" variant="outlined" className="ogx-ai-panel__undo" onClick={thenFocusInput(undo)}>{locale.aiAssistantUndo}</Button>}
                 </div>
             )}
 
             {errors.length > 0 && (
-                <ul className="ogx-ai-panel__errors" aria-label="Ignored">
+                <ul className="ogx-ai-panel__errors" aria-label={locale.aiAssistantIgnored}>
                     {errors.map((error, i) => (
-                        <li key={`${error.path}:${i}`}>{error.path ? `Ignored: ${error.message}` : error.message}</li>
+                        <li key={`${error.path}:${i}`}>{error.path ? locale.aiAssistantIgnoredItem(error.message) : error.message}</li>
                     ))}
                 </ul>
             )}
 
             {history.length > 0 && (
                 <div className="ogx-ai-panel__history">
-                    <div className="ogx-ai-panel__history-title">Earlier</div>
+                    <div className="ogx-ai-panel__history-title">{locale.aiAssistantEarlier}</div>
                     <ul>
                         {history.map((entry, i) => (
                             <li key={`${i}:${entry.prompt}`}>

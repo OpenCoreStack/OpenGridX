@@ -243,7 +243,7 @@ Public CSS: `ogx__cell-fill-handle` (24 × 24 px hit area in the corner cell; th
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `localeText` | `GridLocaleText` | — | Override user-visible strings: the Pagination labels, the empty-state label (`noRowsLabel`, which wins over the `noRowsLabel` prop), the cell-range announcement, the Ask AI button (`aiAssistantButton`) and the header filter row (`headerFilter*`, v3.6). See [`GridLocaleText`](#gridlocaletext). |
+| `localeText` | `GridLocaleText` | — | Override user-visible strings: the Pagination labels, the empty-state label (`noRowsLabel`, which wins over the `noRowsLabel` prop), the cell-range announcement, the Ask AI button (`aiAssistantButton`), the header filter row (`headerFilter*`, v3.6) and, since v3.9, every other built-in string (toolbar, column menu, filter, columns, pivot and AI panels, rows, overlays, live region). See [`GridLocaleText`](#gridlocaletext). |
 
 #### Imperative Ref
 
@@ -906,7 +906,7 @@ interface GridPivotValueField {
 
 ### `GridLocaleText`
 
-Override user-visible strings in the Pagination component and the empty state. All fields are optional.
+Override the grid's user-visible strings (visible text, `aria-label`, `title`, placeholder). All fields are optional; each one left out keeps its English default. Strings that contain a value (a header, a row id, a count) are functions.
 
 ```typescript
 interface GridLocaleText {
@@ -931,8 +931,97 @@ interface GridLocaleText {
   headerFilterTrue?: string;                        // "Yes"
   headerFilterFalse?: string;                       // "No"
   headerFilterOperators?: Partial<Record<GridFilterOperator, string>>; // operator names
+
+  // ── v3.9: every other UI string (default English shown) ──
+  // Grid, list view, overlays, live region
+  gridLabel; listViewLabel;                          // "Data grid", "Data grid list view" (the aria-label prop wins)
+  listViewItemCount(n); listViewPage(p, pc); listViewSelectedCount(n); // "3 items", "page 1 of 2", "2 selected"
+  loadingLabel; liveRegionLoading;                   // "Loading data", "Loading data..."
+  liveRegionError(message); liveRegionRowsFound(n);  // "Error: …", "4 rows found"
+  errorOverlayTitle; errorOverlayRetry;              // "Oops! Something went wrong", "Retry"
+  aggregationFooterLabel;                            // "Aggregation totals"
+  cellErrorLabel(field); cellErrorTooltip;           // "Error in cell: name", "Render error"
+  // Header
+  headerRowReorderLabel; headerRowReorderTooltip; headerDetailPanelLabel;
+  headerSelectAllLabel; headerDeselectAllLabel;      // "Select all rows", "Deselect all rows"
+  headerSortDescription(direction, priority, total); // "Sorted ascending, sort priority 1 of 2"
+  headerColumnMenuButtonLabel(header);               // "Open column menu for Name"
+  headerColumnResizeLabel(field); headerFilterNoFilterLabel(header);
+  // Rows
+  rowSelectLabel(id); rowDeselectLabel(id);          // "Select row 1", "Deselect row 1"
+  rowReorderLabel; rowDetailPanelExpandLabel; rowDetailPanelCollapseLabel; rowExpandLabel; rowCollapseLabel;
+  // Column menu
+  columnMenuLabel(header); columnMenuSortAscending; columnMenuSortDescending; columnMenuUnsort;
+  columnMenuPinColumn; columnMenuPinLeft; columnMenuPinLeftLabel; columnMenuPinRight; columnMenuPinRightLabel;
+  columnMenuUnpin; columnMenuUnpinLabel; columnMenuHideColumn; columnMenuHideColumnLabel(header);
+  columnMenuManageColumns; columnMenuManageColumnsLabel;
+  // Columns panel
+  columnsPanelSearchPlaceholder; columnsPanelDragToReorder; columnsPanelShowHideAll; columnsPanelReset; columnsPanelClose;
+  // Filter panel
+  filterPanelValueLabel(header); filterPanelOperatorLabel(header); filterPanelClearLabel(header); filterPanelClearTooltip;
+  filterPanelAny; filterPanelTrue; filterPanelFalse; filterPanelNumberPlaceholder; filterPanelValuePlaceholder;
+  filterPanelMatch; filterPanelAnd; filterPanelOr; filterPanelHiddenConditions(n); filterPanelNoColumns;
+  filterPanelOperators;                              // Partial<Record<GridFilterOperator, string>>, default: the operator id
+  // Toolbar and search (toolbarSearchPlaceholder also for QuickFilter)
+  toolbarLabel; toolbarSearchPlaceholder; toolbarSearchLabel; toolbarSearchClear;
+  toolbarColumns; toolbarColumnsLabel; toolbarColumnsPanelLabel;
+  toolbarFilters; toolbarFiltersLabel; toolbarFiltersActive; toolbarFiltersClearAll; toolbarFiltersClearAllTooltip;
+  toolbarFiltersClose; toolbarFiltersCloseTooltip; toolbarFiltersCloseLabel;
+  toolbarPivot; toolbarPivotLabel; toolbarPivotActive;
+  toolbarSummaries; toolbarSummariesLabel; toolbarSummariesActive(n); toolbarSummariesPanelLabel;
+  toolbarSummariesClearAll; toolbarSummariesClearAllTooltip; toolbarSummariesEmpty;
+  toolbarSummariesEmptyHintBefore; toolbarSummariesEmptyHintAfter;
+  toolbarAggregationFunctions;                       // Partial<Record<string, string>>, default: the function id
+  // Pivot panel
+  pivotPanelLabel; pivotMode; pivotReset; pivotResetTooltip;
+  pivotRowFields; pivotColumnFields; pivotValueFields;
+  pivotRowFieldsPlaceholder; pivotColumnFieldsPlaceholder; pivotValueFieldsPlaceholder;
+  pivotRemoveTooltip(header); pivotRemoveRowLabel(header); pivotRemoveColumnLabel(header); pivotRemoveValueLabel(header, fn);
+  pivotAggregationTooltip; pivotAggregationLabel(header);
+  pivotAggregationFunctions;                         // Partial<Record<string, string>>, default: the id in upper case
+  pivotAvailableFields; pivotAllFieldsInUse; pivotAddRow; pivotAddColumn; pivotAddValue;
+  pivotAddRowTooltip; pivotAddColumnTooltip; pivotAddValueTooltip;
+  pivotAddRowLabel(header); pivotAddColumnLabel(header); pivotAddValueLabel(header);
+  // AI assistant panel (aiAssistant.placeholder wins over aiAssistantPlaceholder)
+  aiAssistantTitle; aiAssistantClose; aiAssistantPromptLabel; aiAssistantPlaceholder;
+  aiAssistantStartDictation; aiAssistantStopDictation; aiAssistantAsk; aiAssistantStop; aiAssistantSuggestions;
+  aiAssistantAppliedChanges; aiAssistantRemoveChange(label); aiAssistantUndo; aiAssistantIgnored; aiAssistantIgnoredItem(message);
+  aiAssistantEarlier; aiAssistantThinking; aiAssistantStopped; aiAssistantUndone; aiAssistantChangeRemoved;
+  aiAssistantApplied(applied, ignored); aiAssistantNotValidated; aiAssistantFailed(message); aiAssistantUnknownError;
+  // Pagination buttons
+  paginationLabel; paginationFirstPageLabel; paginationFirstPageTooltip; paginationPreviousPageLabel;
+  paginationPreviousPageTooltip; paginationNextPageLabel; paginationNextPageTooltip;
+  paginationLastPageLabel; paginationLastPageTooltip;
+  // Cell selection stats bar
+  cellSelectionStatsCount; cellSelectionStatsSum; cellSelectionStatsAverage;
 }
 ```
+
+Each key's English default and parameter types are documented on `GridLocaleText` in `lib/types/locale.ts` (shown by editors on hover).
+
+### Locale text for every UI string (v3.9)
+
+Since v3.9 every built-in string of the grid goes through `localeText`: the toolbar and its panels, the column menu, the filter, columns, pivot and AI assistant panels, the row and select-all checkboxes, the pagination buttons, the loading and error overlays, the aggregation footer and the live-region announcements. Pass only the keys you translate; the rest stay English.
+
+```tsx
+<DataGrid
+  rows={rows}
+  columns={columns}
+  slots={{ toolbar: GridToolbar }}
+  localeText={{
+    toolbarSearchPlaceholder: 'Rechercher…',
+    columnMenuSortAscending: 'Tri croissant',
+    columnMenuHideColumnLabel: (header) => `Masquer la colonne ${header}`,
+    filterPanelOperators: { contains: 'contient' },
+    rowSelectLabel: (id) => `Sélectionner la ligne ${id}`,
+  }}
+/>
+```
+
+- The strings reach portalled menus and panels through React context, so a custom toolbar slot that renders the built-in `GridToolbar` is translated too.
+- Components used outside a grid (`ColumnVisibilityPanel`, `GridToolbar`, `FilterPanel`, `Pagination`, `QuickFilter`) show English. Their own props (`placeholder`, `aiAssistantLabel`, `Pagination`'s `localeText`) still win.
+- Not covered: the grouping column's default header (`'Group'`, set `groupingColDef.headerName`), pivot's `'Grand Total'` row label, export file contents, the AI change chips' labels, and developer console warnings.
+- Pass a stable object (a module constant or `useMemo`): the grid resolves the strings once per `localeText` object.
 
 ### `GridRowMeta`
 

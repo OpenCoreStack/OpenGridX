@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { DataGrid, GridColDef, GridLocaleText } from '@opencorestack/opengridx';
+import { DataGrid, GridColDef, GridLocaleText, GridToolbar } from '@opencorestack/opengridx';
 import { DocsLayout } from '../../components/DocsLayout';
 import sourceCode from './LocaleTextDemo.tsx?raw';
 import './LocaleTextDemo.css';
@@ -69,6 +69,74 @@ const localeMap: Record<LocaleKey, GridLocaleText | undefined> = {
             '=': 'Égal à', '!=': 'Différent de', '>': 'Supérieur à', '>=': 'Supérieur ou égal à',
             '<': 'Inférieur à', '<=': 'Inférieur ou égal à', is: 'Est',
         },
+        // Every other UI string (v3.9): toolbar, column menu, filter and columns panels, rows, pagination buttons
+        gridLabel:                    'Grille de données',
+        toolbarLabel:                 'Barre d’outils de la grille',
+        toolbarSearchPlaceholder:     'Rechercher…',
+        toolbarSearchLabel:           'Recherche globale',
+        toolbarSearchClear:           'Effacer la recherche',
+        toolbarColumns:               'Colonnes',
+        toolbarColumnsLabel:          'Gérer les colonnes',
+        toolbarColumnsPanelLabel:     'Visibilité des colonnes',
+        toolbarFilters:               'Filtres',
+        toolbarFiltersLabel:          'Filtres avancés',
+        toolbarFiltersActive:         'Filtres actifs',
+        toolbarFiltersClearAll:       'Tout effacer',
+        toolbarFiltersClearAllTooltip: 'Effacer tous les filtres',
+        toolbarFiltersClose:          'Fermer',
+        toolbarFiltersCloseTooltip:   'Fermer les filtres',
+        toolbarFiltersCloseLabel:     'Fermer le panneau des filtres',
+        columnMenuLabel:              (h) => `Options de la colonne ${h}`,
+        columnMenuSortAscending:      'Tri croissant',
+        columnMenuSortDescending:     'Tri décroissant',
+        columnMenuUnsort:             'Annuler le tri',
+        columnMenuPinColumn:          'Épingler la colonne',
+        columnMenuPinLeft:            'Épingler à gauche',
+        columnMenuPinLeftLabel:       'Épingler à gauche',
+        columnMenuPinRight:           'Épingler à droite',
+        columnMenuPinRightLabel:      'Épingler à droite',
+        columnMenuUnpin:              'Désépingler',
+        columnMenuUnpinLabel:         'Désépingler la colonne',
+        columnMenuHideColumn:         'Masquer la colonne',
+        columnMenuHideColumnLabel:    (h) => `Masquer la colonne ${h}`,
+        columnMenuManageColumns:      'Gérer les colonnes',
+        columnMenuManageColumnsLabel: 'Gérer toutes les colonnes',
+        headerColumnMenuButtonLabel:  (h) => `Ouvrir le menu de la colonne ${h}`,
+        headerSelectAllLabel:         'Tout sélectionner',
+        headerDeselectAllLabel:       'Tout désélectionner',
+        columnsPanelSearchPlaceholder: 'Rechercher',
+        columnsPanelDragToReorder:    'Glisser pour réordonner',
+        columnsPanelShowHideAll:      'Tout afficher / masquer',
+        columnsPanelReset:            'Réinitialiser',
+        filterPanelValueLabel:        (h) => `Valeur du filtre pour ${h}`,
+        filterPanelOperatorLabel:     (h) => `Opérateur pour ${h}`,
+        filterPanelClearLabel:        (h) => `Effacer le filtre de ${h}`,
+        filterPanelClearTooltip:      'Effacer',
+        filterPanelAny:               'Tous',
+        filterPanelTrue:              'vrai',
+        filterPanelFalse:             'faux',
+        filterPanelNumberPlaceholder: 'Nombre…',
+        filterPanelValuePlaceholder:  'Valeur…',
+        filterPanelMatch:             'Correspondance :',
+        filterPanelAnd:               'TOUS (ET)',
+        filterPanelOr:                'UN (OU)',
+        filterPanelNoColumns:         'Aucune colonne filtrable.',
+        filterPanelOperators: {
+            contains: 'contient', equals: 'égal à', startsWith: 'commence par', endsWith: 'se termine par',
+            isEmpty: 'est vide', isNotEmpty: "n'est pas vide", isAnyOf: "est l'un de", is: 'est', not: "n'est pas",
+        },
+        rowSelectLabel:               (id) => `Sélectionner la ligne ${id}`,
+        rowDeselectLabel:             (id) => `Désélectionner la ligne ${id}`,
+        paginationLabel:              'Pagination',
+        paginationFirstPageLabel:     'Aller à la première page',
+        paginationFirstPageTooltip:   'Première page',
+        paginationPreviousPageLabel:  'Aller à la page précédente',
+        paginationPreviousPageTooltip: 'Page précédente',
+        paginationNextPageLabel:      'Aller à la page suivante',
+        paginationNextPageTooltip:    'Page suivante',
+        paginationLastPageLabel:      'Aller à la dernière page',
+        paginationLastPageTooltip:    'Dernière page',
+        liveRegionRowsFound:          (n) => `${n} ${n === 1 ? 'ligne trouvée' : 'lignes trouvées'}`,
     },
     Custom: {
         paginationRowsPerPage: 'Show:',
@@ -94,7 +162,7 @@ export default function LocaleTextDemo() {
     return (
         <DocsLayout
             title="Locale Text (i18n)"
-            description="The localeText prop overrides the pagination strings and the header filter row's labels (operator names, Any/Yes/No, aria-labels). Switch locale below — labels update instantly without remounting the grid. Use 'Clear rows' to see the noRowsLabel override."
+            description="The localeText prop overrides every built-in UI string: pagination, the header filter row and, since v3.9, the toolbar, column menu, filter and columns panels, pivot and AI panels, row checkboxes and aria-labels. Switch locale below — labels update instantly without remounting the grid. Open the toolbar's filters or a column menu to see the French strings; use 'Clear rows' to see the noRowsLabel override."
             sourceCode={sourceCode}
         >
             <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -130,6 +198,8 @@ export default function LocaleTextDemo() {
                 pageSizeOptions={[3, 5, 10]}
                 initialState={{ pagination: { paginationModel: { pageSize: 3, page: 0 } } }}
                 headerFilters
+                checkboxSelection
+                slots={{ toolbar: GridToolbar }}
                 height={400}
                 localeText={localeText}
             />

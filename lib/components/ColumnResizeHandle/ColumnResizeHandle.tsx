@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { clampResizeWidth } from './clampResizeWidth';
 import { isRtl, logicalArrowKey } from '../../utils/direction';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 
 export interface ColumnResizeHandleProps {
@@ -49,6 +50,7 @@ function suppressNextClick(): void {
 
 export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
     const { field, currentWidth, onResize, onAutosize, minWidth, maxWidth, edge = 'end' } = props;
+    const locale = useGridLocale();
     const [isDragging, setIsDragging] = useState(false);
     const activeRef = useRef<ActiveResize | null>(null);
 
@@ -164,7 +166,7 @@ export function ColumnResizeHandle(props: ColumnResizeHandleProps) {
             onKeyDown={handleKeyDown}
             role="separator"
             aria-orientation="vertical"
-            aria-label={`Resize ${field} column`}
+            aria-label={locale.headerColumnResizeLabel(field)}
             aria-valuenow={Math.round(currentWidth)}
             aria-valuemin={Math.round(Math.min(minWidth ?? 50, currentWidth))}
             aria-valuemax={maxWidth}

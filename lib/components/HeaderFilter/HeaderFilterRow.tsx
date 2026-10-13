@@ -6,6 +6,7 @@ import { resolveHeaderFilterLocale } from '../../utils/headerFilterLocale';
 import { getHeaderFilterState, hasHeaderFilter, setHeaderFilterItem } from '../../utils/headerFilters';
 import { getHeaderColumnStyle } from '../Header/headerColumnStyle';
 import { HeaderFilterCell } from './HeaderFilterCell';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 
 export interface HeaderFilterRowProps {
     /** The rendered columns of the column header row (render window with spacers), in render order. */
@@ -68,6 +69,7 @@ function SystemFilterCell({ field, ariaColIndex, sticky, left, focused }: {
  * through the root-level items it owns (`header:<field>`).
  */
 export function HeaderFilterRow(props: HeaderFilterRowProps) {
+    const gridLocale = useGridLocale();
     const {
         columns, columnWidths, pinnedColumns, pinnedPositions, pinnedEdges, rowReordering, hasDetailPanel,
         checkboxSelection, pinExpandColumn, pinCheckboxColumn, columnIndexMap, ariaRowIndex, filterModel,
@@ -137,7 +139,7 @@ export function HeaderFilterRow(props: HeaderFilterRowProps) {
                             className={`ogx__header-filter-cell ogx__header-filter-cell--empty ${className}`}
                             style={style}
                             role="columnheader"
-                            aria-label={`No filter for ${colDef.headerName || colDef.field}`}
+                            aria-label={gridLocale.headerFilterNoFilterLabel(colDef.headerName || colDef.field)}
                             aria-colindex={ariaColIndex}
                             data-field={colDef.field}
                             tabIndex={-1}

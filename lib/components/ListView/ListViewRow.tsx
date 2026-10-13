@@ -4,6 +4,7 @@ import { ExpandIcon } from '../ui/ExpandIcon';
 import { Checkbox } from '../ui/Checkbox';
 import { CellErrorBoundary } from '../Cell/CellErrorBoundary';
 import { isSyntheticRowId } from '../../utils/syntheticRows';
+import { useGridLocale } from '../DataGrid/gridLocaleContext';
 import type { GridColDef, GridRowModel, GridRowId, GridRowMeta, GridListViewColDef, GridRenderCellParams } from '../../types';
 
 export interface ListViewRowProps<R extends GridRowModel = GridRowModel> {
@@ -71,6 +72,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
         rowMeta,
     };
 
+    const locale = useGridLocale();
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         e.stopPropagation();
         onSelectionChange?.(id, e.target.checked);
@@ -96,7 +98,7 @@ export function ListViewRow<R extends GridRowModel = GridRowModel>({
                     {!isSyntheticRow && <Checkbox
                         checked={isSelected}
                         onChange={handleCheckboxChange}
-                        aria-label={`Select row ${id}`}
+                        aria-label={locale.rowSelectLabel(id)}
                         // Not a Tab stop of its own: the list is one Tab stop, Shift+Space selects the focused row.
                         tabIndex={-1}
                     />}
