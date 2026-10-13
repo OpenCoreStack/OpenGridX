@@ -5,6 +5,14 @@
 
 ---
 
+## [Unreleased — 3.10.1]
+
+### Internal
+
+- **Next.js fixture in the package smoke suite** (`e2e/fixtures/nextjs`, `e2e/nextjs.spec.ts`): a Next.js 16 App Router app built with `next build` (Turbopack) against the packed tarball, without the optional export peers and without `next.config` aliases. In Chromium, Firefox and WebKit the server-rendered HTML must contain the grid, the page must hydrate without console errors, sorting must work and `exportToExcelAdvanced` must reject with its install hint. The claims of `docs/features/nextjs.md` were checked once by hand before; CI now re-checks them on every run.
+
+---
+
 ## [3.10.0] — 2026-10-13
 
 ### Added

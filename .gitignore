@@ -42,6 +42,9 @@ __screenshots__/
 .pack/
 e2e/fixtures/*/node_modules
 e2e/fixtures/*/dist
+e2e/fixtures/*/.next
+e2e/fixtures/*/next-env.d.ts
+e2e/fixtures/*/tsconfig.tsbuildinfo
 
 # Benchmark app (npm run bench); bench/results/ is committed
 bench/app/node_modules

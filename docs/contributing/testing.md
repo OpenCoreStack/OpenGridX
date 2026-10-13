@@ -31,7 +31,7 @@ Vitest tests import `lib/` source directly, so they cannot catch packaging mista
 `npm run test:smoke` (`scripts/smoke.mjs`):
 
 1. `npm run build:lib`, then `npm pack` into `.pack/opencorestack-opengridx.tgz`.
-2. For each fixture in `e2e/fixtures/` (`react19`, `react18`, `nopeers`): `npm ci` from its committed lockfile (skipped while the lockfile is unchanged), then unpack the fresh tarball into its `node_modules`.
+2. For each fixture in `e2e/fixtures/` (`react19`, `react18`, `nopeers`, `nextjs`): `npm ci` from its committed lockfile (skipped while the lockfile is unchanged), then unpack the fresh tarball into its `node_modules`.
 3. Build each fixture: `tsc` in strict mode with `skipLibCheck: false` against the shipped types, then `vite build`. The build is itself a typing test. `nopeers` is a plain-JavaScript webpack 5 app that does **not** install the optional export peers (`exceljs`, `jspdf`, `jspdf-autotable`); its `webpack` build is the check that the peer imports stay optional (Vite builds without them either way, webpack and Turbopack do not unless each peer `import()` is inside a `try` block).
 4. `playwright test` (`e2e/playwright.config.ts`): Chromium, Firefox and WebKit against `vite preview` of each Vite fixture (ports 4319 and 4318) running `smoke.spec.ts`, and `nopeers` served by its `serve.mjs` (port 4321; 4320 is the benchmark) running `nopeers.spec.ts` (the grid renders, both exports reject with the install hint).
 

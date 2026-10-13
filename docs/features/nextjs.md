@@ -4,6 +4,8 @@ OpenGridX is a client component: it uses state, effects, context and the DOM. In
 
 Everything on this page was built with `next build`, served with `next start` and loaded in Chromium, Firefox and WebKit without console errors, on Next.js 16.4 (Turbopack; `next build --webpack` also builds) and 15.5 (webpack), React 19.3.
 
+Since v3.10.1 the package smoke suite builds and runs a Next.js 16 App Router fixture on every CI run (`e2e/fixtures/nextjs`: a Server Component passing rows to a `'use client'` grid, the stylesheet imported in the layout, no optional peers and no `next.config` aliases), so these claims are re-checked for each release.
+
 ## 1. Install and import the stylesheet
 
 ```bash
