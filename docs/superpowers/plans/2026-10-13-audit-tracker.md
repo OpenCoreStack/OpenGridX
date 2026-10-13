@@ -73,3 +73,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — 3.9.1 patch (PR flow): baseline exclusion, check:package, version badges, docs. Cherry-picked from release/3.10.0.
 - 2026-10-13 — AI change chips translatable (11 keys, branch `release/3.10.0`). P9 measured and deferred to a 4.0 feature-modules proposal (user agreed).
 - 2026-10-13 — Docs sweep (roadmap, performance, README, wiki home, rtl, pagination, architecture). Found and fixed: npm package shipped `lib/theme/__baseline__` (1.6 MB). Feature hold recorded (user).
+- 2026-10-13 — Backlog 1/6: demo syntax highlighting done. Insight follow-ups: `check:package` (no test artifacts in the tarball + DataGrid-only 92 KB gz budget) in CI and publish.

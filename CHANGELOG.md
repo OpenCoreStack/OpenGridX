@@ -19,6 +19,11 @@
 
 - Roadmap brought up to date (3.5.1 – 3.9.0 shipped; new features on hold until the backlog of fixes, refactors and performance work is closed; the 4.0 feature-modules proposal). `docs/performance.md`: edit, paste, fill, group toggle and select-all timings at 1M rows (3.8 – 3.9) and how to keep rows memoised. README: spreadsheet editing, Ask AI panel, `localeText`, RTL and Theme Builder in the feature list; bundle sizes re-measured (an app using only `DataGrid` ships 87 KB gzipped). `rtl.md` and `components/pagination.md` no longer say their labels cannot be translated. Architecture notes on the column-window memo and the locale context. The wiki home links the newer feature pages.
 
+### Internal
+
+- **`npm run check:package`**, run in CI and before publishing: fails when `npm pack` would ship a test artifact (the gap that let the theme baselines through) or when `DataGrid` alone, minified and gzipped, grows past its budget (92 KB; 85.5 KB now).
+- Demo: the source viewer on every example page is syntax-highlighted (`CodeBlock`, prism-react-renderer), and the integration tips under it are corrected (inline columns and handlers are fine since 3.0 / 3.9; replace rows instead of mutating them).
+
 ---
 
 ## [3.9.1] — 2026-10-13
