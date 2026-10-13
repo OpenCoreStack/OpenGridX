@@ -7,6 +7,10 @@
 
 ## [Unreleased — 3.10.1]
 
+### Performance
+
+- **Select all at 1,000,000 rows ~60–90 ms (3.10.0: ~130 ms), deselect all under 50 ms (~95 ms).** The check that drops selected ids of removed rows now skips a selection it already checked against the row store's current maps, and selections the grid built from it by adding rendered rows (checkbox, row click, select-all). Rows are removed only by replacing the rows, which gives the store new maps, so any replacement still triggers the full check; ids set through `apiRef.selectRows` are always checked. Deselecting all after selecting all returns the empty selection without deleting 1M ids one by one.
+
 ### Internal
 
 - **Next.js fixture in the package smoke suite** (`e2e/fixtures/nextjs`, `e2e/nextjs.spec.ts`): a Next.js 16 App Router app built with `next build` (Turbopack) against the packed tarball, without the optional export peers and without `next.config` aliases. In Chromium, Firefox and WebKit the server-rendered HTML must contain the grid, the page must hydrate without console errors, sorting must work and `exportToExcelAdvanced` must reject with its install hint. The claims of `docs/features/nextjs.md` were checked once by hand before; CI now re-checks them on every run.

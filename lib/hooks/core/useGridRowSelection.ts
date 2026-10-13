@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import type { GridRowId } from '../../types';
-import { isKnownToContainAll, markContainsAll, rememberSelectionSet } from '../../utils/selectionSets';
+import { isKnownToContainAll, markContainsAll, markDerivedFromLive, rememberSelectionSet, selectionSetOf } from '../../utils/selectionSets';
 
 // ── Pure selection transitions (shared by the UI handlers and the imperative API) ──────────
 
@@ -14,6 +14,9 @@ export function nextSelectionForRows(
     if (isSelected && single) {
         return ids.length > 0 ? [ids[ids.length - 1]] : Array.from(current);
     }
+    // Deselecting every id of a set built by selecting exactly these ids (deselect-all after
+    // select-all): nothing is left, so the 1M deletions are skipped.
+    if (!isSelected && current.size === ids.length && isKnownToContainAll(current, ids)) return [];
     const next = new Set(current);
     ids.forEach(id => (isSelected ? next.add(id) : next.delete(id)));
     const model = Array.from(next);
@@ -61,8 +64,11 @@ export interface UseGridRowSelectionReturn {
 export function useGridRowSelection(params: UseGridRowSelectionParams): UseGridRowSelectionReturn {
     const { selectedRowIds, onSelectionModelChange, disableMultipleRowSelection, selectableRowIds } = params;
 
+    // Every commit here adds only ids of rendered or selectable rows to the live selection, so the new
+    // set is live wherever the current one is (the live-selection check then skips it).
     const commit = useCallback((next: GridRowId[]) => {
         if (isSameSelection(selectedRowIds, next)) return;
+        markDerivedFromLive(selectionSetOf(next), selectedRowIds);
         onSelectionModelChange(next);
     }, [selectedRowIds, onSelectionModelChange]);
 

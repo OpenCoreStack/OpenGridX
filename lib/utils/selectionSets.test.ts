@@ -35,3 +35,39 @@ describe('selection sets', () => {
         expect(isKnownToContainAll(selectionSetOf(cleared), selectable)).toBe(false);
     });
 });
+
+describe('live-selection markers', () => {
+    it('trusts a set checked against the same maps, and sets derived from it', async () => {
+        const { markValidated, markDerivedFromLive, isKnownLive } = await import('./selectionSets');
+        const rows = new Map(); const meta = new Map();
+        const parent = new Set([1]);
+        markValidated(parent, rows, meta);
+        const child = new Set([1, 2]);
+        markDerivedFromLive(child, parent);
+        expect(isKnownLive(parent, rows, meta)).toBe(true);
+        expect(isKnownLive(child, rows, meta)).toBe(true);
+    });
+
+    it('does not trust it once the rows were replaced (new maps) or for unrelated sets', async () => {
+        const { markValidated, markDerivedFromLive, isKnownLive } = await import('./selectionSets');
+        const rows = new Map(); const meta = new Map();
+        const parent = new Set([1]);
+        markValidated(parent, rows, meta);
+        const child = new Set([1, 2]);
+        markDerivedFromLive(child, parent);
+        expect(isKnownLive(child, new Map(), meta)).toBe(false);
+        expect(isKnownLive(child, rows, new Map())).toBe(false);
+        expect(isKnownLive(new Set([1]), rows, meta)).toBe(false);
+    });
+});
+
+describe('deselect-all after select-all', () => {
+    it('returns an empty model without deleting id by id, and is exact otherwise', () => {
+        const selectable = [1, 2, 3];
+        const all = selectionSetOf(nextSelectionForRows(new Set<number>(), selectable, true, false));
+        expect(nextSelectionForRows(all, selectable, false, false)).toEqual([]);
+        // A set holding more than the selectable ids keeps the rest.
+        const more = selectionSetOf(nextSelectionForRows(new Set<number>([9]), selectable, true, false));
+        expect(nextSelectionForRows(more, selectable, false, false)).toEqual([9]);
+    });
+});

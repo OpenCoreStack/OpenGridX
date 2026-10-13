@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { GridRowId, GridRowMeta, GridRowModel } from '../../types';
+import { isKnownLive, markValidated } from '../../utils/selectionSets';
 
 export interface UseGridLiveRowSelectionParams {
     /** The selection model (controlled prop or internal state). */
@@ -36,8 +37,16 @@ export function useGridLiveRowSelection(params: UseGridLiveRowSelectionParams): 
     const { selectedRowIds, rowsLookup, rowMetaMap, enabled, onSelectionModelChange } = params;
 
     const liveRowIds = useMemo(() => {
-        if (!enabled || selectedRowIds.size === 0) return selectedRowIds;
-        // Check first, copy only when something is stale: select-all at 1M rows selects 1M ids.
+        if (!enabled) return selectedRowIds;
+        // An empty selection names no rows: trivially live, and the parent of the first selection.
+        if (selectedRowIds.size === 0) {
+            markValidated(selectedRowIds, rowsLookup, rowMetaMap);
+            return selectedRowIds;
+        }
+        // Already known to name only existing rows (checked against these maps, or built from such a
+        // set by the grid's own toggles): select-all at 1M rows would otherwise check 1M ids again.
+        if (isKnownLive(selectedRowIds, rowsLookup, rowMetaMap)) return selectedRowIds;
+        // Check first, copy only when something is stale.
         let stale = false;
         for (const id of selectedRowIds) {
             if (!rowsLookup.has(id) && !rowMetaMap.has(id)) {
@@ -45,11 +54,15 @@ export function useGridLiveRowSelection(params: UseGridLiveRowSelectionParams): 
                 break;
             }
         }
-        if (!stale) return selectedRowIds;
+        if (!stale) {
+            markValidated(selectedRowIds, rowsLookup, rowMetaMap);
+            return selectedRowIds;
+        }
         const live = new Set<GridRowId>();
         for (const id of selectedRowIds) {
             if (rowsLookup.has(id) || rowMetaMap.has(id)) live.add(id);
         }
+        markValidated(live, rowsLookup, rowMetaMap);
         return live;
     }, [enabled, selectedRowIds, rowsLookup, rowMetaMap]);
 
