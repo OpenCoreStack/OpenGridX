@@ -194,7 +194,7 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 - **RTL**: read/write horizontal scroll only through `getScrollStart` / `setScrollStart` (`lib/utils/direction.ts`; scroll state is the offset from the inline start, never negative); map arrows with `logicalArrowKey(key, isRtl(el))`; panels with `getPanelPosition`. `pinnedColumns.left` / `right` are logical (inline start / end): sticky offsets use `insetInlineStart` / `insetInlineEnd` (jsdom: `style.getPropertyValue('inset-inline-start')`), borders `border-inline-*`, box-shadow x-offsets need `:dir(rtl)` mirrors. The column menu pins by screen side. `useGridScrollSync` observes `dir` mutations
 - Testing RTL: Playwright's headless Chromium runs with `--hide-scrollbars`; with classic scrollbars and `scrollbar-gutter: stable`, RTL cannot reach `scrollLeft` 0 — compare against the scroll origin. Reproduce on macOS with `defaults write chrome-headless-shell AppleShowScrollBars Always`. The grid's `scrollbar-width` / `scrollbar-color` disable `::-webkit-scrollbar` in Chromium
 - Header filter strings are in `localeText` (`headerFilter*`, resolved in `lib/utils/headerFilterLocale.ts`)
-- Not in this release: the time-sliced pipeline (Option A of `docs/superpowers/specs/2026-10-12-nonblocking-pipeline-proposal.md`) is held for 3.7.0 until its overhead is within ~20 %
+- Not in this release: the time-sliced pipeline (Option A of `docs/superpowers/specs/2026-10-12-nonblocking-pipeline-proposal.md`) is held (backlog) until its overhead is within ~20 %
 
 ## v3.5.1 — significant changes
 

@@ -34,7 +34,7 @@ body:
     id: version
     attributes:
       label: OpenGridX version
-      placeholder: "3.7.0"
+      placeholder: "e.g. 3.9.0 (npm ls @opencorestack/opengridx)"
     validations:
       required: true
   - type: dropdown
