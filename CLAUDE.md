@@ -157,6 +157,11 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 
 ---
 
+## v3.10.0 — significant changes (unreleased)
+
+- **`npm run check:package`** (after `build:lib`; in `ci.yml` and `npm-publish.yml`): fails if `npm pack` would ship a test artifact (`*.test.*`, `__baseline__`, `__screenshots__`, `__snapshots__`, `__fixtures__`) and if `DataGrid` alone, minified with esbuild and gzipped, exceeds `DATAGRID_GZIP_BUDGET` (92 KB; 85.5 KB at 3.9.0). `files` in package.json works by exclusion: add a negation for any new kind of test folder under `lib/`. Raise the budget only in the commit that needs it
+- Demo code samples go through `demo/components/CodeBlock.tsx` (prism-react-renderer, demo-only devDependency); live output panels (JSON state, logs) stay plain `<pre>`
+
 ## v3.9.0 — significant changes
 
 - **Rows stay memoised.** Every prop passed to `Row` must keep its identity unless that row changed: handlers go through the latest-ref pattern (`useGridRowInteractions`: stable `handleRowClick` / `handleSelectionChange`), per-row state is passed only to the row it concerns (`editingCell`, `focusedCellField`, `cellRange`), and `useGridVirtualization` builds `virtualColumns` in its own memo over column inputs only. `DataGrid.rowMemo.test.tsx` counts `Row` renders through `isCellEditable` (`Cell` is memoised, so `renderCell` would not show them)
