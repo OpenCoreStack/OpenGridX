@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './DocsLayout.css';
+import { CodeBlock } from './CodeBlock';
 
 interface DocsLayoutProps {
     title: string;
@@ -58,9 +59,7 @@ export function DocsLayout({ title, description, children, sourceCode }: DocsLay
                     </div>
                     {showSource && (
                         <div className="docs-source-content">
-                            <pre className="docs-code-block">
-                                <code>{sourceCode}</code>
-                            </pre>
+                            <CodeBlock code={sourceCode} />
                         </div>
                     )}
                 </div>
@@ -75,23 +74,20 @@ export function DocsLayout({ title, description, children, sourceCode }: DocsLay
                 
                 <h3 id="dependencies">Dependencies & Imports</h3>
                 <div className="docs-source-content" style={{ marginTop: 12, marginBottom: 24 }}>
-                    <pre className="docs-code-block" style={{ background: '#1e1e1e', padding: '16px', borderRadius: '8px', color: '#d4d4d4', overflowX: 'auto' }}>
-                        <code>{`// Core imports should exclusively target the published package
+                    <CodeBlock code={`// Core imports should exclusively target the published package
 import { DataGrid, GridColDef } from '@opencorestack/opengridx';
-import '@opencorestack/opengridx/styles'; // Don't forget the base CSS styles`}</code>
-                    </pre>
+import '@opencorestack/opengridx/styles'; // Don't forget the base CSS styles`} />
                 </div>
 
                 <h3 id="best-practices">Integration Best Practices</h3>
                 <ul style={{ lineHeight: 1.6, color: '#4b5563', paddingLeft: 20 }}>
-                    <li><strong style={{ color: '#111827' }}>Memorization:</strong> Wrap complex data processing or extensive column arrays in <code>useMemo</code> hooks so React does not recreate large references constantly.</li>
-                    <li><strong style={{ color: '#111827' }}>Stable Methods:</strong> Supply stable functional references to event handlers like callbacks (e.g., <code>useCallback</code>) to prevent re-renders when rendering heavily customized cells.</li>
-                    <li><strong style={{ color: '#111827' }}>Performance:</strong> Try to declare <code>columns</code> completely outside the component if it lacks interactive state.</li>
+                    <li><strong style={{ color: '#111827' }}>Rows:</strong> change a row by passing a new object (<code>rows.map(r =&gt; r.id === id ? {'{ ...r, ...changes }'} : r)</code>), never by mutating it: the grid caches per row object.</li>
+                    <li><strong style={{ color: '#111827' }}>Columns and handlers:</strong> inline <code>columns</code> and handlers such as <code>onRowClick</code> are fine. Columns are compared shallowly (a new inline <code>valueGetter</code> function counts as a change), and rows receive the grid's own stable handlers.</li>
+                    <li><strong style={{ color: '#111827' }}>Height:</strong> give the grid a bounded height (a <code>height</code> prop or a sized parent) so it virtualizes. See <em>Performance</em> in the docs.</li>
                 </ul>
 
                 <div className="docs-source-content" style={{ marginTop: 16 }}>
-                    <pre className="docs-code-block" style={{ background: '#1e1e1e', padding: '16px', borderRadius: '8px', color: '#d4d4d4', overflowX: 'auto' }}>
-                        <code>{`// Minimal implementation boilerplate
+                    <CodeBlock code={`// Minimal implementation boilerplate
 export default function RobustGrid() {
     return (
         <DataGrid 
@@ -100,8 +96,7 @@ export default function RobustGrid() {
             // Insert your grid props here...
         />
     );
-}`}</code>
-                    </pre>
+}`} />
                 </div>
             </div>
         </div>
