@@ -67,7 +67,8 @@
     "prepublishOnly": "npm run build:lib",
     "wiki:build": "node scripts/build-wiki.mjs",
     "check:compiler": "node scripts/check-react-compiler.mjs",
-    "check:package": "node scripts/check-package.mjs"
+    "check:package": "node scripts/check-package.mjs",
+    "check:versions": "node scripts/check-versions.mjs"
   },
   "keywords": [
     "react",

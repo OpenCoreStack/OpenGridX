@@ -21,6 +21,8 @@
 
 ### Internal
 
+- **Guards that fail CI instead of relying on review:** `check:versions` (llms.txt, CLAUDE.md and CHANGELOG must name the `package.json` version), `check:compiler` (fails on any React Compiler result outside a short allowlist, so a refactor that stops it from optimizing a hook is caught), ESLint `no-explicit-any` turned on (it was off; the library had none, the demo's 9 are now typed) and a rule against new `as unknown as` casts in the library outside the documented boundary files.
+
 - **Refactors (no behaviour change):** `GridToolbar` split into its panels with a shared `useToolbarPanel` (861 → 492 lines); the exporters one file per format; the xlsx cell helpers in `excelCells`; the cell range drag in `useGridCellRangeDrag`; keydown handling in a plain, unit-tested `handleGridKeyDown` function. Type casts `as unknown as` 43 → 15: the row pipeline, data source and grouping are called with the row type, the row store is typed with it, and column widenings go through one documented helper. DOM, styles and behaviour unchanged (theme baseline and the full browser suite in three engines).
 
 - **`npm run check:package`**, run in CI and before publishing: fails when `npm pack` would ship a test artifact (the gap that let the theme baselines through) or when `DataGrid` alone, minified and gzipped, grows past its budget (92 KB; 85.5 KB now).

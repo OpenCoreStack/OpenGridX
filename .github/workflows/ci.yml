@@ -38,6 +38,12 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Versions agree (llms.txt, CLAUDE.md, CHANGELOG vs package.json)
+        run: npm run check:versions
+
+      - name: React Compiler baseline (no new CompileError or skip)
+        run: npm run check:compiler
+
       - name: Type-check (lib, tests, demo, e2e)
         run: npm run typecheck
 

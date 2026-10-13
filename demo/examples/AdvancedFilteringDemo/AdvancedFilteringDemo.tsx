@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { DataGrid, GridToolbar, GridColDef, GridRowModel, GridFilterModel, GridTooltip, exportToCsv, exportToExcel, exportToJson, printGrid } from '@opencorestack/opengridx';
+import type { GridApi, GridToolbarSlotProps } from '@opencorestack/opengridx';
 import { DocsLayout } from '../../components/DocsLayout';
 import './AdvancedFilteringDemo.css';
 
@@ -17,7 +18,7 @@ interface Employee extends GridRowModel {
 }
 
 interface ExportToolbarProps {
-    apiRef?: any;
+    apiRef?: React.RefObject<GridApi | null>;
     fallbackRows: Employee[];
     fallbackColumns: GridColDef<Employee>[];
 }
@@ -161,7 +162,7 @@ const columns: GridColDef<Employee>[] = [
     { field: 'active', headerName: 'Active', width: 90, type: 'boolean' },
 ];
 
-function ToolbarWithExport(props: any) {
+function ToolbarWithExport(props: GridToolbarSlotProps) {
     return (
         <GridToolbar
             {...props}

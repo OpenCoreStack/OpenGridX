@@ -76,3 +76,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — Backlog 1/6: demo syntax highlighting done. Insight follow-ups: `check:package` (no test artifacts in the tarball + DataGrid-only 92 KB gz budget) in CI and publish.
 - 2026-10-13 — R5 and R6 done (all engines green, compiler baseline). Next: R4 casts.
 - 2026-10-13 — R4 done (43 → 15 casts). All R items done.
+- 2026-10-13 — Insight follow-ups as CI guards: check:versions, check:compiler allowlist (verified it fails on a reintroduced PreserveManualMemo), ESLint no-explicit-any on (demo's 9 `any` typed), no `as unknown as` outside boundary files (verified with a probe).
