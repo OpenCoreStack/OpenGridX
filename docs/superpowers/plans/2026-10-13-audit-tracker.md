@@ -60,3 +60,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — P2 step 1: profiled 1M edit (reducer map copies 194 ms, `getRowIdOf` passes 127 ms, reorder index 109 ms, row array 60 ms). After: edit ~100 ms, fill ~370 ms. Unit tests pass; browser suite running.
 - 2026-10-13 — P2 done (`getRowIndex` cache): 1M edit ~35 ms, paste ~45 ms, fill ~50 ms. P5: group toggle done; select-all left at ~270 ms (array model API). P7 dropped (already per-row). B8/B9 documented. CHANGELOG 3.8.0 entry drafted. Browser suite running.
 - 2026-10-13 — Guardrails for the in-place store: doc comment on `GridInternalState.rows`, StrictMode paste/undo/redo test (`DataGrid.storeInPlace.test.tsx`), CLAUDE.md v3.8.0 rules. Browser suite 579/579.
+- 2026-10-13 — CI green on `release/3.8.0` (run 38366056106). Released 3.8.0.
