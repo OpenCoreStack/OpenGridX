@@ -198,9 +198,22 @@ let localDateFormat: Intl.DateTimeFormat | null = null;
  * `date.toLocaleDateString()` (the default locale's numeric date), with the formatter created
  * once: building a new one per call is several times slower on large grids.
  */
+// Intl formatting costs ~0.5 µs a call, which a whole-dataset pass (the quick filter's first search
+// reads every date cell) pays a million times. The default format shows only the calendar day, so
+// the text is memoized per local day; real columns hold far fewer distinct days than rows. Bounded.
+const localDateTextByDay = new Map<number, string>();
+const LOCAL_DATE_CACHE_LIMIT = 10_000;
+
 export function formatLocalDate(date: Date): string {
-    localDateFormat ??= new Intl.DateTimeFormat();
-    return localDateFormat.format(date);
+    const day = date.getFullYear() * 10000 + date.getMonth() * 100 + date.getDate();
+    let text = localDateTextByDay.get(day);
+    if (text === undefined) {
+        localDateFormat ??= new Intl.DateTimeFormat();
+        text = localDateFormat.format(date);
+        if (localDateTextByDay.size >= LOCAL_DATE_CACHE_LIMIT) localDateTextByDay.clear();
+        localDateTextByDay.set(day, text);
+    }
+    return text;
 }
 
 type ValueOption = string | number | { value: unknown; label: string };
