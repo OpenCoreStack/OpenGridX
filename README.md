@@ -184,6 +184,8 @@ This means that **Cursor**, **GitHub Copilot**, **Windsurf**, and other AI agent
 | `cellSelection` | `boolean` | Spreadsheet-style cell range selection; Ctrl/Cmd+C then copies the range (v3.3). |
 | `cellSelectionModel` / `onCellSelectionModelChange` | `GridCellSelectionModel` / `(model, { reason }) => void` | Controlled cell range. |
 | `showCellSelectionStats` | `boolean` | Status bar with count, sum and average of the range. |
+| `undoRedo` | `boolean \| GridUndoRedoOptions` | Undo / redo of edits, paste, range clear and fill (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y); `{ limit }` sets the history size (v3.4). |
+| `aiAssistant` | `GridAiAssistantOptions` | Ask AI panel in the toolbar; your `onPrompt` calls your model. Also `onAiAssistantApply` / `onAiAssistantError` (v3.5). See [AI toolkit](docs/features/ai-toolkit.md). |
 
 ### Sorting & Filtering
 
@@ -450,7 +452,7 @@ exportToExcelAdvanced(rows, columns, {
 });
 exportToJson(rows, columns, { fileName: 'data.json' });
 await exportToPdf(rows, columns, { fileName: 'data', title: 'Report Title' });
-printGrid(rows, columns, 'Report Title');
+await printGrid(rows, columns, 'Report Title');
 ```
 
 > **Optional peer dependencies:** `exportToExcelAdvanced` requires ExcelJS (`npm install exceljs`); `exportToPdf` requires `npm install jspdf jspdf-autotable`.
@@ -492,20 +494,20 @@ Built-in themes: `darkTheme`, `roseTheme`, `emeraldTheme`, `amberTheme`, `compac
 
 | Artifact | Size | Gzipped | Notes |
 | :--- | :--- | :--- | :--- |
-| **What an app ships for `DataGrid`** (your bundler minifies) | 271 KB | **87 KB** | Measured v3.9.0: esbuild, minified, React external, `DataGrid` only |
-| **Core ES Module** (`opengridx.es.js`, as published) | 493 KB | 130 KB | Unminified with readable names; use this — tree-shakeable |
-| **Core UMD** (`opengridx.umd.js`) | 357 KB | 112 KB | CommonJS / CDN compat |
+| **What an app ships for `DataGrid`** (your bundler minifies) | 271 KB | **87 KB** | Measured v3.10.1 (86.6 KB gzipped; CI fails above 92 KB): esbuild, minified, React external, `DataGrid` only |
+| **Core ES Module** (`opengridx.es.js`, as published) | 497 KB | 132 KB | Unminified with readable names; use this — tree-shakeable |
+| **Core UMD** (`opengridx.umd.js`) | 360 KB | 113 KB | CommonJS / CDN compat |
 | **Styles** (`opengridx.css`) | 81 KB | **12 KB** | `import '@opencorestack/opengridx/styles'` |
 | **AI toolkit** (`/ai`, optional import) | 20 KB | **7 KB** | Adds nothing unless imported |
 | **ExcelJS** (optional peer dep) | — | — | `npm install exceljs` |
 | **jsPDF** (optional peer dep) | — | — | `npm install jspdf jspdf-autotable` |
-| **npm package download** | — | **~2.5 MB** | Compressed tarball (includes `lib/` source, docs and source maps; 7.8 MB unpacked) |
+| **npm package download** | — | **~2.6 MB** | Compressed tarball (includes `lib/` source, docs and source maps; about 8 MB unpacked) |
 
 - **Tree-shaking Ready**: ES Module build — bundlers (Vite, Webpack) only include what you use.
 - **Zero UI Dependencies**: No MUI, Ant Design, or Radix. Pure React + vanilla CSS.
 - **Lazy Advanced Export**: ExcelJS and jsPDF are optional peer deps — not bundled, loaded only when you call `exportToExcelAdvanced` / `exportToPdf`.
 - **Efficient Rendering**: Row and column virtualization keeps the DOM small (needs a bounded grid height): about 19 rows at rest and under 90 while scrolling fast, at 10k or 1M rows.
-- **[Benchmarks](docs/performance.md#benchmarks)** (`npm run bench`, Apple M1, Chromium, production build): at 100k rows the grid mounts in 89 ms, sorts in 102–160 ms, filters in 28–33 ms and groups with a sum in 87 ms; at 1M rows mount takes 0.7 s and a sort 1.1–1.3 s. Scrolling missed no frames at any size in Chromium. Past the browser's height cap (645,277 rows at 52 px in Chromium and Safari, about 344,000 in Firefox) rows cannot be scrolled to; page or stream larger datasets.
+- **[Benchmarks](docs/performance.md#benchmarks)** (`npm run bench`, Apple M1, Chromium, production build): at 100k rows the grid mounts in 75 ms, sorts in 49–66 ms, filters in 16–20 ms and groups with a sum in 74 ms; at 1M rows mount takes 0.6 s and a sort about 0.47 s. Scrolling stayed under 1 % slow frames at every size in Chromium. At 1M rows a cell edit commits in about 35 ms, select-all takes 60–90 ms and grouping about 190 ms (v3.8–3.10). Past the browser's height cap (645,277 rows at 52 px in Chromium and Safari, about 344,000 in Firefox) rows cannot be scrolled to; page or stream larger datasets.
 
 ---
 
@@ -565,11 +567,11 @@ Most React grids gatekeep essential features like **Row Grouping**, **Excel Expo
 | Tree Data | ❌ | ✅ | ✅ | ✅ |
 | Master-Detail | ❌ | ✅ | ✅ | ✅ |
 | Excel Export | ❌ | ✅ | ❌ | ✅ |
-| Advanced Filtering | ❌ | ✅ | ❌ | ✅ |
+| Advanced Filtering | ❌ | ✅ | ✅ | ✅ |
 | Aggregation | ❌ | ✅ | ❌ | ✅ |
 | Pivot Mode | ❌ | ✅ | ❌ | ✅ |
-| Inline Cell Editing | ❌ | ✅ | ✅ | ✅ |
-| State Persistence | ❌ | ✅ | ❌ | ✅ |
+| Inline Cell Editing | ✅ | ✅ | ✅ | ✅ |
+| State Persistence | ✅ | ✅ | ❌ | ✅ |
 | **Price** | Free | **$$$** | Free (limited) | **Free** |
 
 ---
@@ -583,7 +585,7 @@ See [CONTRIBUTING.md](https://github.com/OpenCoreStack/OpenGridX/blob/main/CONTR
 ```bash
 npm test                # unit tests (jsdom)
 npm run test:browser    # real Chromium, Firefox and WebKit
-npm run test:smoke      # pack the library, install it into React 18/19 apps, run Playwright
+npm run test:smoke      # pack the library, install it into React 18/19, webpack and Next.js apps, run Playwright
 ```
 
 Which layer to use, and how the package smoke suite works: [docs/contributing/testing.md](https://github.com/OpenCoreStack/OpenGridX/blob/main/docs/contributing/testing.md).
