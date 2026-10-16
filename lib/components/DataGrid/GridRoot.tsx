@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { GridLocaleContext } from './gridLocaleContext';
 import { resolveGridLocale } from '../../utils/gridLocale';
 import { useShallowStableValue } from '../../hooks/core/useShallowStableValue';
+import { useGridLocaleTextWarning } from '../../hooks/core/useGridLocaleTextWarning';
 import { GridToolbarHostContext } from '../../hooks/core/gridToolbarHostContext';
 import { GridToolbarSlot } from './GridToolbarSlot';
 import { GridAiAssistantArea } from '../AiAssistant/GridAiAssistantArea';
@@ -99,6 +100,7 @@ export function GridRoot<R extends GridRowModel>(props: GridRootProps<R>) {
     const showLoadingOverRows = effectiveLoading && allRenderableRows.length > 0 && paginationMode !== 'infinite';
     const ToolbarSlot = slots?.toolbar;
     const stableLocaleText = useShallowStableValue(localeText);
+    useGridLocaleTextWarning(localeText);
     const locale = useMemo(() => resolveGridLocale(stableLocaleText), [stableLocaleText]);
 
     return (
