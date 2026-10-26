@@ -18,8 +18,8 @@ Release plan:
 | B5 | Med | Date paste into ISO date-time string lands on previous day west of UTC | `lib/utils/parsing.ts:150-151` | 3.7.1 | ✅ | zoned current → local time of day on pasted day, written as UTC; tested in 3 TZs |
 | B6 | Med | List view reads undeclared `--ogx-grid-cell-text`; selection colours bypass theme | `ListView.css:82` | 3.7.1 | ✅ | list view uses `--ogx-grid-row-*` vars; old `--ogx-selection-*` still win |
 | B7 | Low–Med | Duplicate row ids silently drop rows (no dev warning) | row store | later | ✅ | Already handled since 3.0: dev warning naming the ids (`buildRowsState`, tested in `DataGrid.state.test.tsx`); the audit overstated it. Warns once per page |
-| B8 | Low | Quick filter stale on in-place row mutation | quick-filter cache | later | ⏸ | Inherent to the per-row text cache; documented in `docs/features/filtering.md` |
-| B9 | Low | Quick filter stale when a formatter closure changes | quick-filter cache | later | ⏸ | Inherent to the cache; documented (pass new column definitions) |
+| B8 | Low | Quick filter stale on in-place row mutation | quick-filter cache | — | 🚫 | Won't fix (2026-10-16): the cache is keyed by row object; detecting mutation means re-reading every cell per keystroke (the 1.6–2 s cold search each time). Documented in `docs/features/filtering.md` |
+| B9 | Low | Quick filter stale when a formatter closure changes | quick-filter cache | — | 🚫 | Won't fix (2026-10-16), same reason as B8; documented (pass new column definitions) |
 | B10 | Low | `bigint` loses precision in sort | `lib/utils/sorting/index.ts:45` | later | ✅ | Exact re-ranking (`rankNumbersExactly`, `compareExact`) when a column has an unsafe bigint; generic path tie-breaks by `big` |
 | B11 | Low | Number filters accept `0x10`, `Infinity` | `lib/utils/values.ts:96-101` | later | ✅ | `toNumber` rejects radix prefixes and non-finite text; new `values.test.ts` |
 
@@ -81,3 +81,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — Time-sliced pipeline closed (user agreed): proposal status updated, branch archived as `archive/timesliced-pipeline-2026-10-12`, both agent worktrees removed. Backlog under the feature hold is now empty except R-items done; ready to lift the hold (ask user).
 - 2026-10-13 — Release 3.10.0 via PR.
 - 2026-10-13 — 3.10.1 work: Next.js smoke fixture; perf #5 select-all ~60–90 ms / deselect <50 ms (live-check markers), #2 grouping 540 → 190 ms (lazy leaf maps, index partition), #3 quick filter first search 2.7 → ~1.6–2 s (per-day date memo, shown-text lower-case cache). check:compiler caught a getter-in-hook regression during #2 (fixed before push).
+- 2026-10-16 — B8/B9 closed as won't fix (by design). Inline-function `localeText`: freezing the functions would bring back B9-style stale row labels, so added a dev-only warning instead (`useGridLocaleTextWarning`, in `GridRoot`). Branch `fix/localetext-functions`.
