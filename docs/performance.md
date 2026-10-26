@@ -180,7 +180,7 @@ Measured in Chromium on an Apple M1, 1,000,000 rows, from the event to the end o
 
 3.9.0 keeps rows memoised: selecting a row, starting or committing an edit, and vertical scrolling re-render only the rows they change (a click re-rendered every visible row, now one). React's own work per interaction is about 3–5 ms at 100k rows.
 
-To keep this, change rows by passing new row objects (never mutate them), keep `columns` and `localeText` shallowly stable (inline objects of plain values are fine; define function entries outside the render). Handlers such as `onRowClick` may be inline: the grid passes rows its own stable handlers.
+To keep this, change rows by passing new row objects (never mutate them), keep `columns` and `localeText` shallowly stable (inline objects of plain values are fine; define function entries outside the render; in development the grid warns when it sees the same function re-created render after render). Handlers such as `onRowClick` may be inline: the grid passes rows its own stable handlers.
 
 ### Method
 
