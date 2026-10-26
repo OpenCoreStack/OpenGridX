@@ -16,10 +16,13 @@ if (read('demo/public/llms.txt') !== llms) problems.push('demo/public/llms.txt d
 const claudeVersion = read('CLAUDE.md').match(/\*\*Current version:\*\* (\S+)/)?.[1];
 if (claudeVersion !== version) problems.push(`CLAUDE.md says "Current version: ${claudeVersion}"`);
 
+const contextVersion = read('opengridx-ai-context.md').match(/Current version: \*\*(\S+?)\*\*/)?.[1];
+if (contextVersion !== version) problems.push(`opengridx-ai-context.md says "Current version: ${contextVersion}"`);
+
 if (!read('CHANGELOG.md').includes(`## [${version}]`)) problems.push(`CHANGELOG.md has no "## [${version}]" entry`);
 
 if (problems.length > 0) {
     console.error(`check:versions: package.json is ${version}, but:\n  - ${problems.join('\n  - ')}`);
     process.exit(1);
 }
-console.log(`check:versions: ${version} everywhere (llms.txt, demo copy, CLAUDE.md, CHANGELOG)`);
+console.log(`check:versions: ${version} everywhere (llms.txt, demo copy, CLAUDE.md, opengridx-ai-context.md, CHANGELOG)`);
