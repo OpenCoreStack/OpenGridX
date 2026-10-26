@@ -50,3 +50,41 @@ export function getPanelPosition(anchor: HTMLElement | null, viewportWidth: numb
         ? { top: rect.bottom + 6, left: rect.left }
         : { top: rect.bottom + 6, right: viewportWidth - rect.right };
 }
+
+/** Gap kept between a point menu and the viewport edges, in pixels. */
+const POINT_MENU_MARGIN = 8;
+
+/** Clamps `value` so a box of `size` stays inside `[margin, viewport - margin]`; oversized boxes sit at the margin. */
+function clampToViewport(value: number, size: number, viewport: number): number {
+    return Math.max(POINT_MENU_MARGIN, Math.min(value, viewport - size - POINT_MENU_MARGIN));
+}
+
+/**
+ * Viewport position of a menu opened at the pointer `(x, y)`. Left-to-right it opens to the right
+ * of the pointer and flips to end at it when it would overflow; right-to-left it opens towards the
+ * inline start and stays at the pointer when that would overflow. Vertically it opens below the
+ * pointer and flips above it. The result is clamped to an 8 px margin on every side.
+ */
+export function getPointMenuPosition(
+    x: number,
+    y: number,
+    menu: { width: number; height: number },
+    viewport: { width: number; height: number },
+    rtl: boolean,
+): { top: number; left: number } {
+    let left = x;
+    if (rtl) {
+        if (x - menu.width < POINT_MENU_MARGIN) left = x;
+        else left = x - menu.width;
+    } else if (x + menu.width + POINT_MENU_MARGIN > viewport.width) {
+        left = x - menu.width;
+    }
+
+    let top = y;
+    if (y + menu.height + POINT_MENU_MARGIN > viewport.height) top = y - menu.height;
+
+    return {
+        top: clampToViewport(top, menu.height, viewport.height),
+        left: clampToViewport(left, menu.width, viewport.width),
+    };
+}
