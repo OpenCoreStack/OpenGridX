@@ -17,3 +17,4 @@ export type * from './props';
 export type * from './slots';
 export type * from './api';
 export type * from './ai';
+export type * from './contextMenu';

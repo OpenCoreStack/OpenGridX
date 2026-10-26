@@ -10,6 +10,7 @@ import type { GridRowGroupingModel, GridAggregationModel, GridPivotModel } from 
 import type { GridLocaleText } from './locale';
 import type { GridToolbarSlotProps, GridPaginationSlotProps, GridOverlaySlotProps, GridFooterSlotProps } from './slots';
 import type { GridApi } from './api';
+import type { GridContextMenuParams, GridContextMenuEntry } from './contextMenu';
 import type { GridAiPromptResult, GridAiAssistantOptions, GridAiAssistantPanelProps } from './ai';
 
 /**
@@ -392,6 +393,21 @@ export interface DataGridProps<R extends GridValidRowModel = GridRowModel> {
   onAiAssistantApply?: (result: GridAiPromptResult) => void;
   /** Fired when `onPrompt` fails or returns a result that was not validated. @since v3.5 */
   onAiAssistantError?: (error: unknown) => void;
+
+  /**
+   * Shows a context menu (Copy, Copy with headers, Undo, Redo) on right-click or Shift+F10 / the Menu
+   * key over a body cell. @since v3.11
+   */
+  contextMenu?: boolean;
+  /**
+   * Builds the menu for the cell it opens on, given the built-in items. Return an empty list to show
+   * no menu (the browser menu is then not suppressed either). Does nothing without `contextMenu`.
+   * @since v3.11
+   */
+  getContextMenuItems?: (
+    params: GridContextMenuParams<R>,
+    defaultItems: readonly GridContextMenuEntry[],
+  ) => readonly GridContextMenuEntry[];
 }
 
 /**

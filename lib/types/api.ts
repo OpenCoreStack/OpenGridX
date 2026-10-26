@@ -163,6 +163,10 @@ export interface GridApi<R extends GridValidRowModel = GridRowModel> {
   openAiAssistant: () => void;
   /** Closes the `aiAssistant` panel. @since v3.5 */
   closeAiAssistant: () => void;
+  /** Opens the context menu on a cell (does nothing without `contextMenu`). @since v3.11 */
+  openContextMenu: (id: GridRowId, field: string) => void;
+  /** Closes the context menu. @since v3.11 */
+  closeContextMenu: () => void;
 }
 
 // ── AI toolkit (v3.4 state types; v3.5 assistant) ──────────────────────────────────────────────────
