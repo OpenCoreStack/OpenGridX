@@ -118,7 +118,7 @@ export interface UseGridCellSelectionReturn {
     /** The three keyboard handlers for useGridKeyboardNavigation (stable), undefined while off. */
     keyboard: GridKeyboardCellSelection | undefined;
     /** The text Ctrl/Cmd+C copies: the range, else the focused cell; null when there is nothing. */
-    getCopyText: () => string | null;
+    getCopyText: (options?: { includeHeaders?: boolean }) => string | null;
     getSelectedCells: () => GridSelectedCell[];
     /** Live-region text, debounced. Empty when nothing is to be said. */
     announcement: string;
@@ -335,7 +335,7 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
         return single;
     }, [currentRange]);
 
-    const getCopyText = useCallback((): string | null => {
+    const getCopyText = useCallback((options?: { includeHeaders?: boolean }): string | null => {
         const rect = getTargetRect();
         if (!rect) return null;
         const { rangeColumns: cols, forEachCell: visit } = latestRef.current;
@@ -354,7 +354,7 @@ export function useGridCellSelection<R extends GridRowModel>(params: UseGridCell
                 return origin !== null && (origin.rowId !== id || origin.field !== col.field);
             }
             : undefined;
-        return buildRangeTsv(rows as GridRowModel[], columns, isCovered);
+        return buildRangeTsv(rows as GridRowModel[], columns, isCovered, options);
     }, [getTargetRect]);
 
     const getSelectedCells = useCallback((): GridSelectedCell[] => {
