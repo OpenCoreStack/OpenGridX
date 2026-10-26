@@ -1,9 +1,10 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import type { GridColDef, GridRowModel, GridSortDirection, GridColumnPinning } from '../../types';
 import { getViewportWidth, getViewportHeight } from '../../utils/viewport';
 import { isRtl } from '../../utils/direction';
 import { useGridLocale } from '../DataGrid/gridLocaleContext';
+import { useMenuKeyboard } from '../ui/useMenuKeyboard';
 
 
 interface ColumnMenuProps {
@@ -119,41 +120,9 @@ function UnpinIcon() {
     );
 }
 
-const menuItemsOf = (menu: HTMLElement | null): HTMLElement[] =>
-    menu ? Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]')) : [];
-
 export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedColumns, onManageColumns, onClose, anchorEl }: ColumnMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const locale = useGridLocale();
-
-    // Closes the menu; when it was left from the keyboard or by choosing an item, focus goes back
-    // to the header cell that owns it (WAI-ARIA menu button pattern).
-    const close = React.useCallback((restoreFocus: boolean) => {
-        if (restoreFocus) {
-            const headerCell = anchorEl?.closest<HTMLElement>('[role="columnheader"]') ?? anchorEl;
-            headerCell?.focus({ preventScroll: true });
-        }
-        onClose();
-    }, [anchorEl, onClose]);
-
-    const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-        const items = menuItemsOf(menuRef.current);
-        const current = items.indexOf(event.target as HTMLElement);
-        let next = -1;
-        if (event.key === 'ArrowDown') next = current + 1 >= items.length ? 0 : current + 1;
-        else if (event.key === 'ArrowUp') next = current <= 0 ? items.length - 1 : current - 1;
-        else if (event.key === 'Home') next = 0;
-        else if (event.key === 'End') next = items.length - 1;
-        else if (event.key === 'Tab') {
-            event.preventDefault();
-            close(true);
-            return;
-        } else {
-            return;
-        }
-        event.preventDefault();
-        items[next]?.focus();
-    };
 
     const [style, setStyle] = useState<React.CSSProperties>({ position: 'fixed', zIndex: 1300, top: 0, left: 0, visibility: 'hidden' });
 
@@ -180,35 +149,16 @@ export function ColumnMenu({ colDef, sortModel, onSort, onHide, onPin, pinnedCol
         setStyle({ position: 'fixed', zIndex: 1300, top, left, visibility: 'visible' });
     }, [anchorEl]);
 
-    // Move focus into the menu once it is positioned (a visibility:hidden element cannot take focus).
     const isPositioned = style.visibility === 'visible';
-    React.useLayoutEffect(() => {
-        if (isPositioned) menuItemsOf(menuRef.current)[0]?.focus({ preventScroll: true });
-    }, [isPositioned]);
-
-
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (
-                menuRef.current && !menuRef.current.contains(event.target as Node) &&
-                anchorEl && !anchorEl.contains(event.target as Node)
-            ) onClose();
-        }
-        function handleKey(e: KeyboardEvent) {
-            if (e.key === 'Escape') close(true);
-        }
-        document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('keydown', handleKey);
-        // Close menu on any scroll or resize so it doesn't float detached from its anchor
-        window.addEventListener('scroll', onClose, true);
-        window.addEventListener('resize', onClose);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-            document.removeEventListener('keydown', handleKey);
-            window.removeEventListener('scroll', onClose, true);
-            window.removeEventListener('resize', onClose);
-        };
-    }, [anchorEl, onClose, close]);
+    // Closing from the keyboard or by choosing an item returns focus to the header cell that owns
+    // the menu (WAI-ARIA menu button pattern).
+    const { close, handleMenuKeyDown } = useMenuKeyboard({
+        menuRef,
+        isPositioned,
+        onClose,
+        getRestoreTarget: () => anchorEl?.closest<HTMLElement>('[role="columnheader"]') ?? anchorEl,
+        ignoreTarget: anchorEl,
+    });
 
     const handleSort = (direction: GridSortDirection) => { onSort?.(colDef.field, direction); close(true); };
     // `hideable: false` / `pinnable: false` mean the column cannot be hidden / pinned from the UI,
