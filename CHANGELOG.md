@@ -5,6 +5,12 @@
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Dev warning for re-created `localeText` functions.** A `localeText` whose function entries (`paginationOf`, `rowSelectLabel`, …) are written inline is a new object on every render, and every rendered row reads the locale, so each parent render re-rendered all of them. The grid now warns once in development, naming the entries, after three renders in a row re-create the same function. Behaviour is unchanged: the functions are not frozen, so one that reads new state (a language switch) still updates the rows.
+
 ## [3.10.1] — 2026-10-13
 
 ### Fixed
