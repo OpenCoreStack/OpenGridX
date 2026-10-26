@@ -35,7 +35,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: Install Chromium for browser tests
+      - name: Install Playwright browsers
+        # A stalled download otherwise holds the publish job until GitHub's 6-hour default.
+        timeout-minutes: 10
         run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Browser tests
