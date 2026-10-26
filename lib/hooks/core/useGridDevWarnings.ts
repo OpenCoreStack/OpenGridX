@@ -24,6 +24,8 @@ export interface UseGridDevWarningsParams {
     listViewWithoutColumn?: boolean;
     /** Number of items the list view renders (0 when the list view is not shown). It does not virtualize. */
     listViewRowCount?: number;
+    /** `getContextMenuItems` is set without `contextMenu`, so it is never called. */
+    contextMenuItemsWithoutMenu?: boolean;
 }
 
 // Below this many rows, rendering everything is harmless, so an unbounded container is not worth a warning.
@@ -39,13 +41,20 @@ export const LIST_VIEW_WARN_THRESHOLD = 2000;
 export const MAX_SCROLLABLE_HEIGHT = 17_800_000;
 
 export function useGridDevWarnings(params: UseGridDevWarningsParams): void {
-    const { paginationRequested, isRowGrouping, autoHeight, viewportHeight, renderedRowCount, totalRowCount, pinnedRowsIgnored = false, scrollHeight = 0, maxContentHeight, reachableRowCount, unpinnedRowCount, listViewWithoutColumn = false, listViewRowCount = 0 } = params;
+    const { paginationRequested, isRowGrouping, autoHeight, viewportHeight, renderedRowCount, totalRowCount, pinnedRowsIgnored = false, scrollHeight = 0, maxContentHeight, reachableRowCount, unpinnedRowCount, listViewWithoutColumn = false, listViewRowCount = 0, contextMenuItemsWithoutMenu = false } = params;
+    const warnedContextMenuRef = useRef(false);
     const warnedPaginationRef = useRef(false);
     const warnedUnboundedRef = useRef(false);
     const warnedPinnedRowsRef = useRef(false);
     const warnedHeightRef = useRef(false);
     const warnedListViewRef = useRef(false);
     const warnedListViewSizeRef = useRef(false);
+
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'production' || warnedContextMenuRef.current || !contextMenuItemsWithoutMenu) return;
+        warnedContextMenuRef.current = true;
+        console.warn('[OpenGridX] `getContextMenuItems` has no effect without `contextMenu`: set `contextMenu` to show the cell menu.');
+    }, [contextMenuItemsWithoutMenu]);
 
     useEffect(() => {
         if (process.env.NODE_ENV === 'production' || warnedListViewSizeRef.current || listViewRowCount <= LIST_VIEW_WARN_THRESHOLD) return;

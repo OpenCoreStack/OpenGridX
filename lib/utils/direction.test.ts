@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPanelPosition, getScrollStart, isRtl, logicalArrowKey, setScrollStart } from './direction';
+import { getPanelPosition, getPointMenuPosition, getScrollStart, isRtl, logicalArrowKey, setScrollStart } from './direction';
 
 describe('direction utils', () => {
     it('swaps ArrowLeft and ArrowRight only for right-to-left', () => {
@@ -41,5 +41,25 @@ describe('direction utils', () => {
         button.style.direction = 'rtl';
         expect(getPanelPosition(button, 1000)).toEqual({ top: 46, left: 100 });
         button.remove();
+    });
+
+    it('places a point menu at the pointer, flipping towards the end when it would overflow', () => {
+        const menu = { width: 200, height: 300 };
+        const viewport = { width: 1000, height: 800 };
+        expect(getPointMenuPosition(100, 100, menu, viewport, false)).toEqual({ left: 100, top: 100 });
+        expect(getPointMenuPosition(900, 100, menu, viewport, false)).toEqual({ left: 700, top: 100 });
+        expect(getPointMenuPosition(100, 700, menu, viewport, false)).toEqual({ left: 100, top: 400 });
+    });
+
+    it('opens a right-to-left point menu towards the inline start, keeping it on screen', () => {
+        const menu = { width: 200, height: 300 };
+        const viewport = { width: 1000, height: 800 };
+        expect(getPointMenuPosition(500, 100, menu, viewport, true)).toEqual({ left: 300, top: 100 });
+        expect(getPointMenuPosition(100, 100, menu, viewport, true)).toEqual({ left: 100, top: 100 });
+    });
+
+    it('uses the 8 px margin when a point menu is taller than the viewport', () => {
+        const position = getPointMenuPosition(100, 100, { width: 200, height: 900 }, { width: 1000, height: 800 }, false);
+        expect(position.top).toBe(8);
     });
 });

@@ -70,4 +70,35 @@ describe('handleGridKeyDown', () => {
         handleGridKeyDown(keyEvent('ArrowDown', { nativeEvent: { isComposing: true } as KeyboardEvent }), ctx);
         expect(ctx.setFocusedCell).not.toHaveBeenCalled();
     });
+
+    describe('context menu keys', () => {
+        it.each([
+            ['Shift+F10', keyEvent('F10', { shiftKey: true })],
+            ['ContextMenu', keyEvent('ContextMenu')],
+        ])('%s on a body cell opens the menu there', (_, event) => {
+            const openContextMenuAt = vi.fn();
+            handleGridKeyDown(event, context({ openContextMenuAt }));
+            expect(openContextMenuAt).toHaveBeenCalledWith({ id: 1, field: 'name' });
+            expect(event.preventDefault).toHaveBeenCalled();
+        });
+
+        it.each([
+            ['header', { id: null, field: 'name' }],
+            ['header filter', { id: null, field: 'name', headerFilter: true }],
+        ] as const)('does nothing on a %s cell', (_, focusedCell) => {
+            const openContextMenuAt = vi.fn();
+            const event = keyEvent('ContextMenu');
+            handleGridKeyDown(event, context({ openContextMenuAt, focusedCell, headerFilters: true }));
+            expect(openContextMenuAt).not.toHaveBeenCalled();
+            expect(event.preventDefault).not.toHaveBeenCalled();
+        });
+
+        it('does nothing without openContextMenuAt (contextMenu off)', () => {
+            const event = keyEvent('F10', { shiftKey: true });
+            const ctx = context();
+            handleGridKeyDown(event, ctx);
+            expect(event.preventDefault).not.toHaveBeenCalled();
+            expect(ctx.setFocusedCell).not.toHaveBeenCalled();
+        });
+    });
 });

@@ -1,0 +1,25 @@
+/* Layered on .ogx-column-menu / .ogx-menu-item, which supply the shared menu tokens. */
+.ogx-context-menu {
+    min-width: 200px;
+}
+.ogx-context-menu__label {
+    flex: 1 1 auto;
+}
+.ogx-context-menu__shortcut {
+    flex: 0 0 auto;
+    margin-inline-start: 24px;
+    color: var(--ogx-overlay-section-label-text, var(--ogx-color-gray-400, #94a3b8));
+    font-size: 11px;
+}
+.ogx-context-menu__item--danger,
+.ogx-context-menu__item--danger .ogx-menu-item__icon {
+    color: var(--ogx-overlay-item-danger-text, #dc2626);
+}
+.ogx-context-menu__item--disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.ogx-context-menu__item--disabled:hover {
+    background: transparent;
+    color: var(--ogx-overlay-text, #334155);
+}

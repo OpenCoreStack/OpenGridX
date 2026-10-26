@@ -75,13 +75,14 @@ function formatCopyValue(row: GridRowModel, col: GridColDef): string {
 
 /**
  * A cell range as Excel and Google Sheets copy it: tabs between columns, line breaks between rows and
- * no header line. `rows` are the data rows of the range (synthetic rows already left out); a position
+ * no header line (one is added first with `options.includeHeaders`, `headerName ?? field` per column). `rows` are the data rows of the range (synthetic rows already left out); a position
  * for which `isCovered` returns true (covered by a span whose origin sits elsewhere) is left empty.
  */
 export function buildRangeTsv(
   rows: readonly GridRowModel[],
   columns: readonly GridColDef[],
   isCovered?: (row: GridRowModel, col: GridColDef) => boolean,
+  options?: { includeHeaders?: boolean },
 ): string {
   const lines: string[] = new Array(rows.length);
   for (let r = 0; r < rows.length; r++) {
@@ -93,7 +94,20 @@ export function buildRangeTsv(
     }
     lines[r] = cells.join('\t');
   }
+  if (options?.includeHeaders) {
+    lines.unshift(columns.map(copyHeaderText).join('\t'));
+  }
   return lines.join('\n');
+}
+
+function copyHeaderText(col: GridColDef): string {
+  return escapeTsvField(col.headerName ?? col.field);
+}
+
+/** One cell as copied text, with its column header on a line above when `includeHeaders`. */
+export function buildCellCopyText(row: GridRowModel, col: GridColDef, includeHeaders: boolean): string {
+  const value = escapeTsvField(formatCopyValue(row, col));
+  return includeHeaders ? `${copyHeaderText(col)}\n${value}` : value;
 }
 
 /**

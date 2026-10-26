@@ -54,6 +54,7 @@ const PdfExportDemo = lazy(() => import('./examples/PdfExportDemo/PdfExportDemo'
 const MultiSortDemo = lazy(() => import('./examples/MultiSortDemo/MultiSortDemo'));
 const HeaderWrapDemo = lazy(() => import('./examples/HeaderWrapDemo/HeaderWrapDemo'));
 const HeaderFiltersDemo = lazy(() => import('./examples/HeaderFiltersDemo/HeaderFiltersDemo'));
+const ContextMenuDemo = lazy(() => import('./examples/ContextMenuDemo/ContextMenuDemo'));
 const RtlDemo = lazy(() => import('./examples/RtlDemo/RtlDemo'));
 
 // Sidebar order: categories and pages most developers look for first come first. Paths never change
@@ -103,6 +104,7 @@ const examplesConfig = [
     // Selection & spreadsheet
     { path: '/cell-selection', name: 'Cell Range Selection', component: CellSelectionDemo, category: 'Selection & spreadsheet' },
     { path: '/fill-handle', name: 'Fill Handle', component: FillHandleDemo, category: 'Selection & spreadsheet' },
+    { path: '/context-menu', name: 'Context Menu', component: ContextMenuDemo, category: 'Selection & spreadsheet' },
 
     // Layout
     { path: '/col-grouping', name: 'Column Grouping', component: ColumnGroupingExample, category: 'Layout' },

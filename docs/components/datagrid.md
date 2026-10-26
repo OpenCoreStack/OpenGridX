@@ -57,6 +57,8 @@ function MyGrid() {
 
 | Prop | Type | Description |
 | :--- | :--- | :--- |
+| `contextMenu` | `boolean` | v3.11. Right-click / Shift+F10 menu over body cells: Copy, Copy with headers, Undo / Redo (with `undoRedo`). Off by default. See [Context Menu](../features/context-menu.md). |
+| `getContextMenuItems` | `(params: GridContextMenuParams<R>, defaultItems) => GridContextMenuEntry[]` | v3.11. Builds the menu's items; an empty list shows no menu. Needs `contextMenu`. |
 | `onRowClick` | `(params: GridRowParams) => void` | Fired when clicking a row body (not for synthetic group rows, which toggle instead). |
 | `onRowDoubleClick` | `(params: GridRowParams) => void` | Fired when double-clicking a row. |
 | `onCellClick` | `(params: GridCellParams) => void` | Fired when clicking a specific cell. |

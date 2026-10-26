@@ -24,6 +24,7 @@
 @import '../components/FilterPanel/FilterPanel.css';
 @import '../components/Toolbar/GlobalSearch.css';
 @import '../components/Header/ColumnMenu.css';
+@import '../components/ContextMenu/ContextMenu.css';
 @import '../components/ListView/ListView.css';
 @import '../components/ColumnGroupHeader/ColumnGroupHeader.css';
 @import '../components/Tooltip/Tooltip.css';

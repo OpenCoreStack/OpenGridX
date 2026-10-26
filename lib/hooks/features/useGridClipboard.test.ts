@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useGridClipboard } from './useGridClipboard';
+import { useGridClipboard, buildRangeTsv, buildCellCopyText, escapeTsvField } from './useGridClipboard';
 import type { GridColDef, GridRowId, GridRowModel } from '../../types';
 
 type Params = Parameters<typeof useGridClipboard>[0];
@@ -535,5 +535,28 @@ describe('useGridClipboard — keyboard shortcut', () => {
         rerender(makeParams({ getSelectedRowIds: () => new Set<GridRowId>([3]) }));
         expect(result.current.copySelectedRows).toBe(first);
         expect(addSpy.mock.calls.filter(call => call[0] === 'keydown')).toHaveLength(1);
+    });
+});
+
+describe('copy text helpers', () => {
+    const cols: GridColDef[] = [{ field: 'a', headerName: 'A' }, { field: 'b' }];
+    const rows: GridRowModel[] = [{ id: 1, a: 1, b: 'x' }];
+
+    it('buildRangeTsv includes one header line when includeHeaders', () => {
+        expect(buildRangeTsv(rows, cols, undefined, { includeHeaders: true })).toBe('A\tb\n1\tx');
+    });
+
+    it('buildRangeTsv default output unchanged', () => {
+        expect(buildRangeTsv(rows, cols)).toBe('1\tx');
+    });
+
+    it('buildCellCopyText copies one cell, with an optional header', () => {
+        expect(buildCellCopyText(rows[0], cols[0], false)).toBe('1');
+        expect(buildCellCopyText(rows[0], cols[0], true)).toBe('A\n1');
+    });
+
+    it('buildCellCopyText escapes like escapeTsvField', () => {
+        const row: GridRowModel = { id: 1, a: 'p\tq', b: '' };
+        expect(buildCellCopyText(row, cols[0], false)).toBe(escapeTsvField('p\tq'));
     });
 });

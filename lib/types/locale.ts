@@ -414,4 +414,16 @@ export interface GridLocaleText {
     cellSelectionStatsSum?: string;
     /** Default: `"Average"` @since v3.9 */
     cellSelectionStatsAverage?: string;
+
+    // ── Context menu (v3.11) ──────────────────────────────────────────────────
+    /** Default: `"Copy"` @since v3.11 */
+    contextMenuCopy?: string;
+    /** Default: `"Copy with headers"` @since v3.11 */
+    contextMenuCopyWithHeaders?: string;
+    /** Default: `"Undo"` @since v3.11 */
+    contextMenuUndo?: string;
+    /** Default: `"Redo"` @since v3.11 */
+    contextMenuRedo?: string;
+    /** Accessible name of the menu. Default: `"Cell actions"` @since v3.11 */
+    contextMenuLabel?: string;
 }

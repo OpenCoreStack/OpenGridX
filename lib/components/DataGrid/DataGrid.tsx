@@ -24,6 +24,7 @@ import { useGridEditPipeline } from '../../hooks/core/useGridEditPipeline';
 import { useGridSpanning } from '../../hooks/features/useGridSpanning';
 import { useColumnGroupReorderGuard } from '../../hooks/features/useColumnGroupReorderGuard';
 import { useGridDataSource } from '../../hooks/features/useGridDataSource';
+import { useGridContextMenu } from '../../hooks/features/useGridContextMenu';
 import { useServerTreeChildren } from '../../hooks/features/useServerTreeChildren';
 import { useAggregation, useServerAggregationResults } from '../../hooks/features/useAggregation';
 import { useGridPivot } from '../../hooks/features/useGridPivot';
@@ -45,6 +46,7 @@ import { getPaginationRowCount } from '../../utils/pagination';
 import { useGridToolbarStack } from '../../hooks/core/useGridToolbarStack';
 import { DEFAULT_HEADER_FILTER_HEIGHT } from '../../utils/headerFilters';
 import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridColDef } from '../../types';
+import type { FocusedCell } from '../../utils/focus';
 import { untypedColumns } from '../../utils/untypedColumns';
 
 /**
@@ -463,6 +465,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const { handleSort, handleSortAdd } = useGridSortHandlers({ sortModel, onSortModelChange: handleSortModelChange });
 
     const rowSelectionEnabled = checkboxSelection || !disableRowSelectionOnClick;
+    // Filled by useGridContextMenu (step 37a) for Shift+F10 / the ContextMenu key.
+    const openContextMenuAtRef = useRef<((cell: FocusedCell) => void) | null>(null);
     const {
         focusedCell, setFocusedCell, viewportTabIndex, ensureGridFocus, handleFocus, handleBlur, handleKeyDown,
         handleMouseDownCapture,
@@ -487,6 +491,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowHeight: effectiveRowHeight,
         cellSelection: cellSelection.keyboard,
         headerFilters: showHeaderFilters,
+        openContextMenuAtRef,
     });
 
     const { handleCellClick, handleHeaderClick } = useGridPointerFocusHandlers<R>({
@@ -516,6 +521,22 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         onColumnVisibilityModelChange: handleColumnVisibilityModelChange,
         pinnedColumns,
         onPinnedColumnsChange: handlePinnedColumnsChange,
+    });
+
+    // Step 37a: the cell context menu (contextMenu), opened by a right-click on a body cell.
+    const contextMenu = useGridContextMenu<R>({
+        enabled: Boolean(props.contextMenu) && !listView,
+        getContextMenuItems: props.getContextMenuItems,
+        undoRedo: Boolean(props.undoRedo),
+        apiRef, containerRef, viewportRef, allRenderableRows,
+        getRowId: getRowIdOf,
+        navigationColumns, renderedDataColumns,
+        pinnedTopRowCount: pinnedTopRows.length,
+        rowMetaMap,
+        getSpanOrigin: spanning.getSpanOrigin,
+        selection: cellSelection,
+        setFocusedCell, localeText,
+        openAtRef: openContextMenuAtRef,
     });
 
     // Steps 38–41: aria row bases, the span-widened row window, the rows and the columns to render.
@@ -551,6 +572,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         unpinnedRowCount: virtualization.cumulativeHeights.length,
         listViewWithoutColumn: listViewRequested && !listViewColumn,
         listViewRowCount: listView && listViewColumn ? allRenderableRows.length : 0,
+        contextMenuItemsWithoutMenu: Boolean(props.getContextMenuItems) && !props.contextMenu,
     });
 
     // Header drag-reorder keeps a column inside its column group (and ungrouped columns outside groups).
@@ -615,6 +637,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         toggleExpansion: activeHierarchyHandlers?.toggleExpansion, showCellSelectionStats, apiRef: gridData.apiRef,
         hasAggregation, isHierarchyEnabled, dataSourceError: state.dataSource.error, filteredRowCount: filteredRows.length,
         onRetry: dataSource ? dataSourceHandlers.fetchRows : undefined,
+        contextMenu: contextMenu.menu, closeContextMenu: contextMenu.close,
     };
 
     return <GridRoot<R> {...rootProps} />;

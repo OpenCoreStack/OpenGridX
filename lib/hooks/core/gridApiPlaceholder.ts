@@ -53,5 +53,8 @@ export function createGridApiPlaceholder<R extends GridValidRowModel = GridRowMo
         getGridAiState: () => ({}),
         openAiAssistant: noop,
         closeAiAssistant: noop,
+        // Replaced by useGridContextMenu (step 37a).
+        openContextMenu: noop,
+        closeContextMenu: noop,
     };
 }

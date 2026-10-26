@@ -14,6 +14,8 @@ import { GridPaginationArea } from './GridPaginationArea';
 import { GridLiveRegion } from './GridLiveRegion';
 import { GridLoadingOverlay } from './GridLoadingOverlay';
 import { GridErrorOverlay } from './GridErrorOverlay';
+import { GridContextMenu } from '../ContextMenu/GridContextMenu';
+import type { GridContextMenuState } from '../../hooks/features/useGridContextMenu';
 import { pickPaginationLocaleText } from '../../utils/pagination';
 import type { DataGridProps, GridApi, GridColDef, GridRowModel } from '../../types';
 import type { UseGridAiAssistantResult } from '../../hooks/features/useGridAiAssistant';
@@ -65,6 +67,9 @@ export interface GridRootProps<R extends GridRowModel> extends Omit<GridViewport
     filteredRowCount: number;
     /** Retries a failed dataSource load; undefined without a dataSource. */
     onRetry: (() => void) | undefined;
+    /** The open cell context menu, or null. */
+    contextMenu: GridContextMenuState | null;
+    closeContextMenu: () => void;
 }
 
 /**
@@ -80,7 +85,7 @@ export function GridRoot<R extends GridRowModel>(props: GridRootProps<R>) {
         pagination, effectivePaginationModel, currentPage, pageSizeOptions, columnsByField,
         paginationRowCount, handlePaginationModelChange,
         onRowsScrollEnd, toggleExpansion, showCellSelectionStats, apiRef, hasAggregation, isHierarchyEnabled,
-        dataSourceError, filteredRowCount, onRetry,
+        dataSourceError, filteredRowCount, onRetry, contextMenu, closeContextMenu,
         ...viewport
     } = props;
     const {
@@ -242,6 +247,17 @@ export function GridRoot<R extends GridRowModel>(props: GridRootProps<R>) {
             )}
 
             <GridErrorOverlay error={dataSourceError} onRetry={onRetry} />
+
+            {contextMenu && (
+                <GridContextMenu
+                    entries={contextMenu.entries}
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    anchorCell={contextMenu.anchorCell}
+                    onClose={closeContextMenu}
+                    label={locale.contextMenuLabel}
+                />
+            )}
         </div>
         </GridLocaleContext.Provider>
     );

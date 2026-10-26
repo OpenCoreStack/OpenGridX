@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.10.1
+- **Current version:** 3.11.0
 
 ---
 
@@ -156,6 +156,14 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.11.0 — significant changes
+
+- **Context menu** (`contextMenu`, `getContextMenuItems`; guide `docs/features/context-menu.md`). Hook step 37a `useGridContextMenu`: a native `contextmenu` listener on the grid root; the row comes from `data-rowindex`, which already indexes [top-pinned, page rows, bottom-pinned], so there is no pinned offset. `openAt` reaches keyboard navigation (Shift+F10 / Menu key) through a ref created before `useGridKeyboardNavigation`
+- `useMenuKeyboard` (`lib/components/ui`) is shared by `ColumnMenu` and `GridContextMenu`; its Escape handler is document-level
+- A right press (or Apple Ctrl+left) inside the cell range is `preventDefault`-ed on mousedown in the capture phase, so focus does not collapse the range. Menu state is cleared during render when its row leaves the rendered rows (no effect)
+- Copy goes through `buildCellCopyText` / `getCopyText({ includeHeaders })` (header line `headerName ?? field`); synthetic rows are skipped
+- Browser tests right-click with `userEvent.click(el, { button: 'right' })` (`pointer({ keys: '[MouseRight]' })` does not exist in Vitest's Playwright provider)
 
 ## v3.10.0 — significant changes
 

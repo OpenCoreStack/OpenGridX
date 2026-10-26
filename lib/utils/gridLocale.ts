@@ -223,6 +223,11 @@ export const GRID_LOCALE_EN: GridLocaleScalars = {
     cellSelectionStatsCount: 'Count',
     cellSelectionStatsSum: 'Sum',
     cellSelectionStatsAverage: 'Average',
+    contextMenuCopy: 'Copy',
+    contextMenuCopyWithHeaders: 'Copy with headers',
+    contextMenuUndo: 'Undo',
+    contextMenuRedo: 'Redo',
+    contextMenuLabel: 'Cell actions',
 };
 
 const SCALAR_KEYS = Object.keys(GRID_LOCALE_EN) as GridLocaleScalarKey[];
