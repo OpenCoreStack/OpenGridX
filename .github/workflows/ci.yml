@@ -63,6 +63,8 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+        # A stalled download otherwise holds the job until its 40-minute timeout (seen on PR #15).
+        timeout-minutes: 10
         run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Install Playwright system dependencies

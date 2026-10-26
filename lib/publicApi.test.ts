@@ -146,6 +146,25 @@ function readEntryExports(program: ts.Program, file: string = LIB_INDEX): Set<st
  */
 const AI_TYPE_NAME = /^Grid(?:Ai|Agent)[A-Z]/;
 
+const TYPES_DIR = path.join(ROOT, 'lib', 'types');
+
+/** Types declared in lib/types that are internal on purpose: store shapes, not part of any public signature. */
+const INTERNAL_TYPES = new Set([
+    'GridInternalState',
+    'GridPinnedColumns', // store shape of pinned columns; the prop is GridColumnPinning
+    'GridPinnedRows', // store shape of pinned rows; the prop is GridRowPinning
+]);
+
+/** Every name a domain file under lib/types exports, with the file that declares it. */
+function declaredTypeNames(program: ts.Program): Map<string, string> {
+    const found = new Map<string, string>();
+    for (const file of fs.readdirSync(TYPES_DIR)) {
+        if (!file.endsWith('.ts') || file === 'index.ts' || file.includes('.test.')) continue;
+        for (const name of readEntryExports(program, path.join(TYPES_DIR, file))) found.set(name, `lib/types/${file}`);
+    }
+    return found;
+}
+
 const readDoc = (file: string) => fs.readFileSync(file, 'utf8');
 const componentDocs = fs.readdirSync(COMPONENT_DOCS_DIR)
     .filter((f) => f.endsWith('.md'))
@@ -222,6 +241,17 @@ describe('public API matches the reference docs', () => {
             .filter(([name]) => !(AI_TYPE_NAME.test(name) ? aiExports : rootExports).has(name))
             .map(([name, file]) => `${name} (${file})`);
         expect(missing).toEqual([]);
+    });
+
+    it('exports every type declared in lib/types from its entry point, unless it is internal', () => {
+        const declared = declaredTypeNames(program);
+        expect(declared.size).toBeGreaterThan(50);
+        const missing = [...declared]
+            .filter(([name]) => !INTERNAL_TYPES.has(name))
+            .filter(([name]) => !(AI_TYPE_NAME.test(name) ? aiExports : rootExports).has(name))
+            .map(([name, file]) => `${name} (${file})`);
+        expect(missing).toEqual([]);
+        expect([...INTERNAL_TYPES].filter((name) => !declared.has(name))).toEqual([]);
     });
 
     it('exports every name the docs import from the ai entry point, and the root does not', () => {
