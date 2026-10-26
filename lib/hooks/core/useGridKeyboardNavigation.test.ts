@@ -69,6 +69,7 @@ const BASE_PARAMS = {
     pageSize: 100,
     virtualization: MOCK_VIRTUALIZATION,
     viewportRef: { current: null } as React.RefObject<HTMLDivElement | null>,
+    openContextMenuAtRef: { current: null },
 };
 
 describe('useGridKeyboardNavigation — arrow keys', () => {

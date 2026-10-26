@@ -46,6 +46,7 @@ import { getPaginationRowCount } from '../../utils/pagination';
 import { useGridToolbarStack } from '../../hooks/core/useGridToolbarStack';
 import { DEFAULT_HEADER_FILTER_HEIGHT } from '../../utils/headerFilters';
 import type { DataGridProps, DataGridUntypedColumnsProps, GridValidRowModel, GridRowModel, GridColDef } from '../../types';
+import type { FocusedCell } from '../../utils/focus';
 import { untypedColumns } from '../../utils/untypedColumns';
 
 /**
@@ -464,6 +465,8 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
     const { handleSort, handleSortAdd } = useGridSortHandlers({ sortModel, onSortModelChange: handleSortModelChange });
 
     const rowSelectionEnabled = checkboxSelection || !disableRowSelectionOnClick;
+    // Filled by useGridContextMenu (step 37a) for Shift+F10 / the ContextMenu key.
+    const openContextMenuAtRef = useRef<((cell: FocusedCell) => void) | null>(null);
     const {
         focusedCell, setFocusedCell, viewportTabIndex, ensureGridFocus, handleFocus, handleBlur, handleKeyDown,
         handleMouseDownCapture,
@@ -488,6 +491,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         rowHeight: effectiveRowHeight,
         cellSelection: cellSelection.keyboard,
         headerFilters: showHeaderFilters,
+        openContextMenuAtRef,
     });
 
     const { handleCellClick, handleHeaderClick } = useGridPointerFocusHandlers<R>({
@@ -532,6 +536,7 @@ export function DataGrid<R extends GridRowModel = GridRowModel>(props: DataGridP
         getSpanOrigin: spanning.getSpanOrigin,
         selection: cellSelection,
         setFocusedCell, localeText,
+        openAtRef: openContextMenuAtRef,
     });
 
     // Steps 38–41: aria row bases, the span-widened row window, the rows and the columns to render.

@@ -38,13 +38,15 @@ export interface GridKeyDownContext<R extends GridRowModel> extends Pick<UseGrid
     getDefaultFocus: () => FocusedCell | null;
     scrollCellIntoView: (rowIndex: number, field: string) => void;
     setFocusedCell: React.Dispatch<React.SetStateAction<FocusedCell | null>>;
+    /** Opens the cell context menu (`contextMenu`); absent while it is off. */
+    openContextMenuAt?: ((cell: FocusedCell) => void) | null;
 }
 
 /** Keys that move focus between cells. */
 export const NAVIGATION_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown']);
 
 export function handleGridKeyDown<R extends GridRowModel>(event: React.KeyboardEvent, context: GridKeyDownContext<R>): void {
-    const { focusedCell, focusedRowIndex, allRenderableRows, navigationColumns, editingHandlers, selectedRowIds, handleSelectionChange, handleDetailPanelToggle, setKeyboardMode, sortModel, handleSort, handleSortAdd, multiSort, isCellEditable, pagination, pageSize, rowMetaMap, onRowActivate, toggleRowExpansion, handleSelectAll, rowSelectionEnabled, multipleRowSelectionEnabled, getDefaultFocus, scrollCellIntoView, getSpanOrigin, getRowId, cellSelection, headerFilters, setFocusedCell } = context;
+    const { focusedCell, focusedRowIndex, allRenderableRows, navigationColumns, editingHandlers, selectedRowIds, handleSelectionChange, handleDetailPanelToggle, setKeyboardMode, sortModel, handleSort, handleSortAdd, multiSort, isCellEditable, pagination, pageSize, rowMetaMap, onRowActivate, toggleRowExpansion, handleSelectAll, rowSelectionEnabled, multipleRowSelectionEnabled, getDefaultFocus, scrollCellIntoView, getSpanOrigin, getRowId, cellSelection, headerFilters, setFocusedCell, openContextMenuAt } = context;
         const viewport = event.currentTarget as HTMLElement;
         const targetKind = classifyKeyTarget(event.target, viewport);
         if (targetKind === 'foreign') return;
@@ -81,6 +83,13 @@ export function handleGridKeyDown<R extends GridRowModel>(event: React.KeyboardE
         }
 
         const { id, field } = focusedCell;
+        // Shift+F10 / the ContextMenu key: the cell context menu on a body cell.
+        if (key === 'ContextMenu' || (key === 'F10' && event.shiftKey)) {
+            if (id === null || !openContextMenuAt || isEditing) return;
+            event.preventDefault();
+            openContextMenuAt({ id, field });
+            return;
+        }
         const onHeaderFilter = id === null && Boolean(focusedCell.headerFilter);
         const rowIndex = id !== null ? focusedRowIndex : onHeaderFilter ? -1 : headerRow;
         const colIndex = navigationColumns.findIndex(c => c.field === field);

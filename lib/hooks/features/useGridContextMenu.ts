@@ -39,6 +39,8 @@ export interface UseGridContextMenuParams<R extends GridRowModel> {
     selection: UseGridCellSelectionReturn;
     setFocusedCell: React.Dispatch<React.SetStateAction<FocusedCell | null>>;
     localeText?: GridLocaleText;
+    /** Filled with `openAt` while enabled: keyboard navigation runs earlier and reads it at key time. */
+    openAtRef: MutableRefObject<((cell: FocusedCell) => void) | null>;
 }
 
 export interface GridContextMenuState {
@@ -59,6 +61,18 @@ export interface UseGridContextMenuResult {
 
 
 const SYSTEM_FIELDS = new Set([CHECKBOX_FIELD, EXPAND_FIELD, REORDER_FIELD]);
+/** Apple platforms: Ctrl+click opens the context menu (elsewhere it is a selection gesture). */
+const APPLE = typeof navigator !== 'undefined' && /Mac|iP/.test(navigator.platform);
+
+/** Whether a cell (`rowIndex` into the visible rows) lies inside the current cell range. */
+function isInRange<R extends GridRowModel>(p: UseGridContextMenuParams<R>, field: string, rowIndex: number): boolean {
+    const { selection } = p;
+    if (!selection.enabled || !isRangeColumnField(field)) return false;
+    const { resolved } = selection.getCurrentRange();
+    const colIndex = p.navigationColumns.filter(c => isRangeColumnField(c.field)).findIndex(c => c.field === field);
+    return resolved !== null && rowIndex >= resolved.top && rowIndex <= resolved.bottom
+        && colIndex >= resolved.left && colIndex <= resolved.right;
+}
 
 /**
  * Step 37a of `DataGrid`: the cell context menu (`contextMenu`). A native `contextmenu` listener on the
@@ -67,7 +81,7 @@ const SYSTEM_FIELDS = new Set([CHECKBOX_FIELD, EXPAND_FIELD, REORDER_FIELD]);
  * Installs `apiRef.openContextMenu` / `closeContextMenu`.
  */
 export function useGridContextMenu<R extends GridRowModel>(params: UseGridContextMenuParams<R>): UseGridContextMenuResult {
-    const { enabled, apiRef, containerRef, allRenderableRows, getRowId } = params;
+    const { enabled, apiRef, containerRef, allRenderableRows, getRowId, openAtRef } = params;
     const latestRef = useRef(params);
     useLayoutEffect(() => {
         latestRef.current = params;
@@ -84,16 +98,10 @@ export function useGridContextMenu<R extends GridRowModel>(params: UseGridContex
         if (!row || !colDef) return false;
 
         const { selection } = p;
-        let inRange = false;
-        if (selection.enabled && isRangeColumnField(field)) {
-            const { resolved } = selection.getCurrentRange();
-            const colIndex = p.navigationColumns.filter(c => isRangeColumnField(c.field)).findIndex(c => c.field === field);
-            inRange = resolved !== null && rowIndex >= resolved.top && rowIndex <= resolved.bottom
-                && colIndex >= resolved.left && colIndex <= resolved.right;
-            if (!inRange) {
-                const cell = { id, field };
-                selection.setModel([{ anchor: cell, head: cell }], 'pointer');
-            }
+        const inRange = isInRange(p, field, rowIndex);
+        if (selection.enabled && isRangeColumnField(field) && !inRange) {
+            const cell = { id, field };
+            selection.setModel([{ anchor: cell, head: cell }], 'pointer');
         }
         // Focus moved inside a range would collapse it (useGridCellSelectionApi): it stays where it is.
         if (!inRange) p.setFocusedCell({ id, field, rowIndex });
@@ -193,15 +201,29 @@ export function useGridContextMenu<R extends GridRowModel>(params: UseGridContex
                 ? cell : findFocusTarget(viewport, resolved, resolved.rowIndex);
             if (open(resolved.id, resolved.field, resolved.rowIndex, event.clientX, event.clientY, anchor ?? cell)) event.preventDefault();
         };
+        // A menu press (right button, or Ctrl+click on Apple platforms) inside the range must not move
+        // focus there or start a range drag: either collapses the range before contextmenu arrives.
+        // Mousedown targets are Elements.
+        const onMouseDown = (event: MouseEvent) => {
+            const menuPress = event.button === 2 || (APPLE && event.button === 0 && event.ctrlKey);
+            const cell = menuPress ? (event.target as Element).closest<HTMLElement>('.ogx__cell') : null;
+            const row = cell && cell.closest<HTMLElement>('[data-rowindex]');
+            if (row && isInRange(latestRef.current, cell.dataset.field as string, Number(row.dataset.rowindex))) event.preventDefault();
+        };
         root.addEventListener('contextmenu', onContextMenu);
-        return () => root.removeEventListener('contextmenu', onContextMenu);
+        root.addEventListener('mousedown', onMouseDown, true);
+        return () => {
+            root.removeEventListener('contextmenu', onContextMenu);
+            root.removeEventListener('mousedown', onMouseDown, true);
+        };
     }, [containerRef, enabled, open, resolveCell]);
 
     useLayoutEffect(() => {
         const api = apiRef.current;
         api.openContextMenu = (id, field) => openAt({ id, field });
         api.closeContextMenu = close;
-    }, [apiRef, openAt, close]);
+        openAtRef.current = enabled ? openAt : null;
+    }, [apiRef, openAt, close, openAtRef, enabled]);
 
     // The menu closes when its row leaves the visible row list or the feature is turned off.
     // Cleared during render (state derived from props), so the same row coming back does not reopen it.

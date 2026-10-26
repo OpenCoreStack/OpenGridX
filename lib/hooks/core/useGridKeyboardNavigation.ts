@@ -117,6 +117,11 @@ export interface UseGridKeyboardNavigationParams<R extends GridRowModel> {
      * moves to its filter cell, and ArrowDown there into the first row.
      */
     headerFilters?: boolean;
+    /**
+     * The context menu's `openAt` (`contextMenu`), filled after render by `useGridContextMenu`, which
+     * runs later: Shift+F10 / the ContextMenu key read it at event time. `null` while the menu is off.
+     */
+    openContextMenuAtRef: React.RefObject<((cell: FocusedCell) => void) | null>;
 }
 
 export interface GridKeyboardCellSelection {
@@ -207,6 +212,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         getSpanOrigin,
         cellSelection,
         headerFilters = false,
+        openContextMenuAtRef,
     } = params;
 
     const [storedFocus, setFocusedCell] = useState<FocusedCell | null>(null);
@@ -398,6 +404,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
             cellSelection,
             headerFilters,
             setFocusedCell,
+            openContextMenuAt: openContextMenuAtRef.current,
         });
     }, [
         focusedCell,
@@ -428,6 +435,7 @@ export function useGridKeyboardNavigation<R extends GridRowModel>(
         getRowId,
         cellSelection,
         headerFilters,
+        openContextMenuAtRef,
     ]);
 
     return {

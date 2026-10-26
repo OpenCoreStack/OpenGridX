@@ -67,4 +67,64 @@ describe('row memoisation', () => {
         expect(renders.get(0) ?? 0).toBe(0);
         expect(renders.get(4) ?? 0).toBe(0);
     });
+
+    describe('context menu', () => {
+        function setupMenu() {
+            const renders = new Map<number, number>();
+            const isCellEditable = ({ row }: { row: Row }) => {
+                renders.set(row.id, (renders.get(row.id) ?? 0) + 1);
+                return true;
+            };
+            const columns: GridColDef<Row>[] = [{ field: 'name', editable: true }];
+            let bump = () => {};
+            function Parent() {
+                const [n, setN] = useState(0);
+                bump = () => setN(n + 1);
+                return (
+                    <div data-n={n}>
+                        <DataGrid<Row> rows={ROWS} columns={columns} height={400} isCellEditable={isCellEditable} contextMenu />
+                    </div>
+                );
+            }
+            const { container } = render(<Parent />);
+            const cell = (index: number) => container.querySelectorAll<HTMLElement>('.ogx__rows .ogx__row [data-field="name"]')[index];
+            const total = () => [...renders.values()].reduce((a, b) => a + b, 0);
+            const closeMenu = () => {
+                const menu = document.querySelector('[role="menu"]');
+                expect(menu).not.toBeNull();
+                act(() => { fireEvent.keyDown(document, { key: 'Escape' }); });
+                expect(document.querySelector('[role="menu"]')).toBeNull();
+            };
+            return { renders, cell, total, closeMenu, bump: () => bump() };
+        }
+
+        it('opening and closing the menu on the focused cell renders no row', () => {
+            const { renders, cell, total, closeMenu } = setupMenu();
+            act(() => { fireEvent.click(cell(1)); });
+            renders.clear();
+            act(() => { fireEvent.contextMenu(cell(1)); });
+            closeMenu();
+            expect(total()).toBe(0);
+        });
+
+        it('right-clicking a cell in another row renders at most the old and new focused rows', () => {
+            const { renders, cell, total, closeMenu } = setupMenu();
+            act(() => { fireEvent.click(cell(1)); });
+            renders.clear();
+            act(() => { fireEvent.contextMenu(cell(3)); });
+            expect(total()).toBeLessThanOrEqual(2);
+            expect(renders.get(0) ?? 0).toBe(0);
+            expect(renders.get(4) ?? 0).toBe(0);
+            renders.clear();
+            closeMenu();
+            expect(total()).toBe(0);
+        });
+
+        it('with the menu closed, a grid re-render renders no row', () => {
+            const { renders, total, bump } = setupMenu();
+            renders.clear();
+            act(() => { bump(); });
+            expect(total()).toBe(0);
+        });
+    });
 });
