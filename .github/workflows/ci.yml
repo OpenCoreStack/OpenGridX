@@ -63,13 +63,18 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        # The Ubuntu mirror behind --with-deps sometimes stalls (PRs #15, #16, #17): give each
-        # attempt 6 minutes and retry on a fresh connection; the step timeout is a backstop.
+        # The Ubuntu mirror behind --with-deps sometimes stalls (PRs #15, #16, #17). apt retries
+        # stalled downloads and waits for the dpkg lock; each attempt gets 6 minutes, and the
+        # root apt-get that timeout cannot reach is stopped before the next one.
         timeout-minutes: 20
         run: |
+          printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nDPkg::Lock::Timeout "120";\n' \
+            | sudo tee /etc/apt/apt.conf.d/80-ci-retries > /dev/null
           for attempt in 1 2 3; do
             timeout 6m npx playwright install --with-deps chromium firefox webkit && exit 0
             echo "Playwright install attempt $attempt stalled or failed, retrying"
+            sudo pkill -9 -x apt-get || true
+            sudo dpkg --configure -a || true
           done
           exit 1
 
