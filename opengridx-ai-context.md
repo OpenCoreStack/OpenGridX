@@ -8,7 +8,7 @@ that uses the `@opencorestack/opengridx` library. Read it in full before writing
 ## What this library is
 
 `@opencorestack/opengridx` is a zero-dependency, high-performance React DataGrid component.
-Current version: **3.10.1**. It is a full custom implementation — not a wrapper around MUI or any
+Current version: **3.11.0**. It is a full custom implementation — not a wrapper around MUI or any
 other library.
 
 ---
@@ -261,6 +261,22 @@ With `cellSelection`, Ctrl/Cmd+V pastes TSV into **editable** cells only (parsed
 after `processRowUpdate` succeeded and replays it through `processRowUpdate`, so the app persists undo
 like any edit; cells changed since are skipped with reason `'changed'`. Opt out with
 `disableClipboardPaste` / `disableRangeClear`. Guides: `docs/features/clipboard.md`, `docs/features/undo-redo.md`.
+
+### Context menu (3.11.0+)
+
+```tsx
+<DataGrid rows={rows} columns={columns} cellSelection undoRedo contextMenu
+  getContextMenuItems={(params, defaultItems) => [
+    ...defaultItems, 'divider',
+    { id: 'delete', label: 'Delete row', danger: true, onClick: () => removeRow(params.id) },
+  ]} />
+```
+
+Right-click, Shift+F10 / the Menu key or macOS Ctrl+click on a body cell opens Copy, Copy with headers and, with `undoRedo`,
+Undo / Redo. Inside the cell range Copy writes the range (like Ctrl+C) and the range stays; elsewhere it copies the clicked
+cell. An empty list from `getContextMenuItems` shows no menu (the browser menu shows); a throw falls back to the defaults.
+`apiRef.openContextMenu(id, field)` / `closeContextMenu()`, `localeText.contextMenu*`. No header menu, touch long-press or
+Paste item. Guide: `docs/features/context-menu.md`.
 
 ### Fill handle (3.5.0+)
 

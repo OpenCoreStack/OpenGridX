@@ -7,9 +7,17 @@
 
 ## [Unreleased]
 
+## [3.11.0] — 2026-10-26
+
 ### Added
 
+- **Context menu** (`contextMenu`). Right-click, Shift+F10 / the Menu key on a focused cell, or macOS Ctrl+click opens a menu of cell actions: Copy, Copy with headers, and Undo / Redo with `undoRedo` (disabled when there is nothing to undo or redo). Inside the current cell range, Copy writes the range (the same text as Ctrl/Cmd+C) and the range and focus stay; elsewhere it copies the clicked cell and focus moves there. `getContextMenuItems(params, defaultItems)` returns the entries (items and `'divider'`); an empty list shows no menu and leaves the browser's own menu. Headers, the header filter row, the footer, detail panels, editors, checkbox / expand / reorder cells and nested grids keep the browser menu. The menu closes on a choice, Escape (focus returns to the cell), an outside press, grid scroll, window resize and when its row leaves the rendered rows. New public types `GridContextMenuParams`, `GridContextMenuItem`, `GridContextMenuEntry`; `apiRef.openContextMenu(id, field)` and `closeContextMenu()`; `localeText` keys `contextMenuCopy`, `contextMenuCopyWithHeaders`, `contextMenuUndo`, `contextMenuRedo`, `contextMenuLabel`. Not covered: the header menu, touch long-press, Paste and Export built-ins. Guide: `docs/features/context-menu.md`; demo page **Context Menu**.
+
 - **Dev warning for re-created `localeText` functions.** A `localeText` whose function entries (`paginationOf`, `rowSelectLabel`, …) are written inline is a new object on every render, and every rendered row reads the locale, so each parent render re-rendered all of them. The grid now warns once in development, naming the entries, after three renders in a row re-create the same function. Behaviour is unchanged: the functions are not frozen, so one that reads new state (a language switch) still updates the rows.
+
+### Changed
+
+- `ColumnMenu` and the context menu share one keyboard handler (`useMenuKeyboard`). Internal; the column menu's behaviour is unchanged.
 
 ## [3.10.1] — 2026-10-13
 

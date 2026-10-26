@@ -82,3 +82,4 @@ Baselines (Chromium, M1, 1M rows): edit 508 ms · paste/undo/redo ~790 ms · fil
 - 2026-10-13 — Release 3.10.0 via PR.
 - 2026-10-13 — 3.10.1 work: Next.js smoke fixture; perf #5 select-all ~60–90 ms / deselect <50 ms (live-check markers), #2 grouping 540 → 190 ms (lazy leaf maps, index partition), #3 quick filter first search 2.7 → ~1.6–2 s (per-day date memo, shown-text lower-case cache). check:compiler caught a getter-in-hook regression during #2 (fixed before push).
 - 2026-10-16 — B8/B9 closed as won't fix (by design). Inline-function `localeText`: freezing the functions would bring back B9-style stale row labels, so added a dev-only warning instead (`useGridLocaleTextWarning`, in `GridRoot`). Branch `fix/localetext-functions`.
+- 2026-10-26 — Context menu (3.11.0) on `feat/context-menu`: `contextMenu` + `getContextMenuItems`, guide, demo page and release notes written; version bumped to 3.11.0. Awaiting the release PR.

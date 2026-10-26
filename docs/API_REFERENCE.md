@@ -113,6 +113,31 @@ interface GridHistoryChangeParams { canUndo: boolean; canRedo: boolean; size: nu
 interface GridUndoRedoOptions { limit?: number }
 ```
 
+#### Context Menu (v3.11)
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `contextMenu` | `boolean` | `false` | Shows a menu on right-click, Shift+F10 / the Menu key or macOS Ctrl+click over a body cell: Copy, Copy with headers, and Undo / Redo with `undoRedo`. Headers, the header filter row, the footer, detail panels, editors, checkbox / expand / reorder cells and nested grids keep the browser menu. See [Context Menu](features/context-menu.md). |
+| `getContextMenuItems` | `(params: GridContextMenuParams<R>, defaultItems: readonly GridContextMenuEntry[]) => readonly GridContextMenuEntry[]` | — | Builds the menu for the cell it opens on from the built-in items. An empty list shows no menu (the browser menu shows). A throw falls back to the built-in items with one dev warning. Does nothing without `contextMenu` (dev warning). |
+
+```ts
+interface GridContextMenuParams<R> {
+  id: GridRowId; field: string; row: R; colDef: GridColDef<R>;
+  value: unknown;                       // read through valueGetter
+  rowMeta: GridRowMeta | undefined;
+  cellRange: GridCellSelectionModel | null;
+  api: GridApi<R>;
+}
+interface GridContextMenuItem {
+  id: string;                           // built-ins: 'copy', 'copyWithHeaders', 'undo', 'redo'
+  label: string; onClick?: () => void; disabled?: boolean;
+  shortcut?: string; icon?: React.ReactNode; danger?: boolean;
+}
+type GridContextMenuEntry = GridContextMenuItem | 'divider';
+```
+
+Public CSS: `ogx-context-menu`, `ogx-context-menu__item` (`--danger`, `--disabled`), `ogx-context-menu__shortcut`. Locale keys: `contextMenuCopy`, `contextMenuCopyWithHeaders`, `contextMenuUndo`, `contextMenuRedo`, `contextMenuLabel`.
+
 #### Fill Handle (v3.5)
 
 | Prop | Type | Default | Description |
@@ -419,6 +444,8 @@ Access these methods via the `apiRef` prop.
 | `setPivotModel(model)` | `void` | Replace the pivot model. Fires `onPivotModelChange` (v3.5). |
 | `getGridAiState()` | `GridAiState` | The current `filterModel`, `sortModel`, `rowGroupingModel`, `aggregationModel`, `pivotModel` and `columnVisibilityModel`, as the AI toolkit reads them. Like the other getters it sees a setter's value in the same tick (v3.5). |
 | `openAiAssistant()` / `closeAiAssistant()` | `void` | Open or close the `aiAssistant` panel; `openAiAssistant` does nothing without `aiAssistant` (v3.5). |
+| `openContextMenu(id, field)` | `void` | Open the context menu on a cell; does nothing without `contextMenu` (v3.11). |
+| `closeContextMenu()` | `void` | Close the context menu (v3.11). |
 | `copySelectedRows()` | `Promise<void>` | Copy every selected row that passes the filter (other pages, collapsed groups and pinned rows included) as TSV, with the visible columns in screen order. Resolves without writing when no selected row is found; rejects when the clipboard write fails. |
 
 ---
@@ -998,6 +1025,7 @@ interface GridLocaleText {
   paginationLastPageLabel; paginationLastPageTooltip;
   // Cell selection stats bar
   cellSelectionStatsCount; cellSelectionStatsSum; cellSelectionStatsAverage;
+  contextMenuCopy; contextMenuCopyWithHeaders; contextMenuUndo; contextMenuRedo; contextMenuLabel; // v3.11
 }
 ```
 

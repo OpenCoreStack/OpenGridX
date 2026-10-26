@@ -124,7 +124,7 @@ to add later but hard to remove.
 - Rows stay memoised: `DataGrid.rowMemo.test.tsx` gets a case that opening/closing the menu renders no `Row`.
 - Browser tests (all three engines) for: right-click opens at the pointer and stays on screen near edges, RTL,
   keyboard open/close and focus return, inside/outside-range behaviour. WebKit: right-click via
-  `userEvent.pointer({ keys: '[MouseRight]' })`.
+  `userEvent.click(el, { button: 'right' })` (`pointer({ keys: '[MouseRight]' })` does not exist in Vitest's Playwright provider).
 - Docs: `docs/features/context-menu.md` (+ wiki `SECTIONS`), API reference, CHANGELOG, a demo page with an Export
   consumer item, `llms.txt`.
 
