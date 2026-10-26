@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import type { GridContextMenuEntry, GridContextMenuItem } from '../../types';
 import { getViewportWidth, getViewportHeight } from '../../utils/viewport';
@@ -6,7 +6,6 @@ import { getPointMenuPosition, isRtl } from '../../utils/direction';
 import { attempt } from '../../utils/attempt';
 import { warnCallbackFailure } from '../../utils/values';
 import { useMenuKeyboard } from '../ui/useMenuKeyboard';
-import { cleanContextMenuEntries } from './menuEntries';
 
 export interface GridContextMenuProps {
     entries: readonly GridContextMenuEntry[];
@@ -26,7 +25,6 @@ const HIDDEN_STYLE: React.CSSProperties = { position: 'fixed', zIndex: 1300, top
 export function GridContextMenu({ entries, x, y, anchorCell, onClose, label }: GridContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [style, setStyle] = useState<React.CSSProperties>(HIDDEN_STYLE);
-    const cleaned = useMemo(() => cleanContextMenuEntries(entries), [entries]);
 
     React.useLayoutEffect(() => {
         const menu = menuRef.current;
@@ -59,7 +57,7 @@ export function GridContextMenu({ entries, x, y, anchorCell, onClose, label }: G
 
     return ReactDOM.createPortal(
         <div ref={menuRef} className="ogx-column-menu ogx-context-menu" style={style} role="menu" aria-label={label} onKeyDown={handleMenuKeyDown}>
-            {cleaned.map((entry, index) => {
+            {entries.map((entry, index) => {
                 if (entry === 'divider') {
                     return <div key={`divider-${index}`} className="ogx-menu-divider" role="separator" />;
                 }

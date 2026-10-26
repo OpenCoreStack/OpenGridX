@@ -216,4 +216,38 @@ describe('DataGrid context menu (browser)', () => {
         container.querySelector<HTMLElement>('.ogx__viewport')!.scrollTop = 200;
         await expect.poll(() => menuEl()).toBeNull();
     });
+
+    it('openContextMenu on a row far below the viewport scrolls to it and opens anchored there', async () => {
+        const { container } = await renderGrid(<Grid rows={makeRows(2000)} />);
+        act(() => { apiOut.current!.openContextMenu(1500, 'group'); });
+        const menu = await openMenu();
+        const rect = menu.getBoundingClientRect();
+        expect(rect.left).toBeGreaterThanOrEqual(0);
+        expect(rect.top).toBeGreaterThanOrEqual(0);
+        expect(rect.right).toBeLessThanOrEqual(window.innerWidth);
+        expect(rect.bottom).toBeLessThanOrEqual(window.innerHeight);
+        // Still open after the scroll has settled: the scroll event did not close it.
+        await settle();
+        expect(menuEl()).not.toBeNull();
+        await expect.poll(() => menu.contains(document.activeElement)).toBe(true);
+        await userEvent.keyboard('{Escape}');
+        await expect.poll(() => menuEl()).toBeNull();
+        await expect.poll(() => document.activeElement?.closest('[role="row"]')?.getAttribute('data-rowindex')).toBe('1499');
+        expect((document.activeElement as HTMLElement).dataset.field).toBe('group');
+        expect(container.contains(document.activeElement)).toBe(true);
+    });
+
+    it('Shift+F10 on a focused cell scrolled out of view opens the menu and it stays open', async () => {
+        const { container } = await renderGrid(<Grid />);
+        await userEvent.click(cellAt(container, 1, 'name')!);
+        await settle();
+        container.querySelector<HTMLElement>('.ogx__viewport')!.scrollTop = 600;
+        await settle();
+        await userEvent.keyboard('{Shift>}{F10}{/Shift}');
+        await openMenu();
+        await settle();
+        expect(menuEl()).not.toBeNull();
+        await userEvent.keyboard('{Escape}');
+        await expect.poll(() => document.activeElement === cellAt(container, 1, 'name')).toBe(true);
+    });
 });

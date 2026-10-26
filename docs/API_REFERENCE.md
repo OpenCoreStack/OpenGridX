@@ -444,7 +444,7 @@ Access these methods via the `apiRef` prop.
 | `setPivotModel(model)` | `void` | Replace the pivot model. Fires `onPivotModelChange` (v3.5). |
 | `getGridAiState()` | `GridAiState` | The current `filterModel`, `sortModel`, `rowGroupingModel`, `aggregationModel`, `pivotModel` and `columnVisibilityModel`, as the AI toolkit reads them. Like the other getters it sees a setter's value in the same tick (v3.5). |
 | `openAiAssistant()` / `closeAiAssistant()` | `void` | Open or close the `aiAssistant` panel; `openAiAssistant` does nothing without `aiAssistant` (v3.5). |
-| `openContextMenu(id, field)` | `void` | Open the context menu on a cell; does nothing without `contextMenu` (v3.11). |
+| `openContextMenu(id, field)` | `void` | Scroll a cell into view and open the context menu on it on a later animation frame. Does nothing without `contextMenu`, and the menu does not open if the cell is not rendered within a few frames or its row moved in the meantime; tests should wait for `role="menu"` (v3.11). |
 | `closeContextMenu()` | `void` | Close the context menu (v3.11). |
 | `copySelectedRows()` | `Promise<void>` | Copy every selected row that passes the filter (other pages, collapsed groups and pinned rows included) as TSV, with the visible columns in screen order. Resolves without writing when no selected row is found; rejects when the clipboard write fails. |
 

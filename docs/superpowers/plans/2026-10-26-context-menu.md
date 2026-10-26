@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Opt-in: nothing changes (DOM, behaviour, look) when `contextMenu` is not set.
-- DataGrid gzip growth ≤ +2.1 KB (raised from 2 KB on 2026-10-26: the range-keeping fixes for right press and Apple Ctrl+click found in Task 6b); `DATAGRID_GZIP_BUDGET` (92 KB) is not raised.
+- DataGrid gzip growth ≤ +2.15 KB (raised from 2 KB on 2026-10-26: the range-keeping fixes for right press and Apple Ctrl+click found in Task 6b; raised to 2.15 KB on 2026-10-26 for the row-identity check in the delayed openContextMenu); `DATAGRID_GZIP_BUDGET` (92 KB) is not raised.
 - No `any`, no `eslint-disable`, no `@ts-ignore`, no new `as unknown as`. React Compiler rules from CLAUDE.md v3.3.0; `npm run check:compiler` output unchanged.
 - No row re-renders on menu open/close (v3.9.0 rule); handlers reaching rows keep identity.
 - Consumer callbacks (`getContextMenuItems`, item `onClick`) are contained: a throw falls back (to `defaultItems` / no-op) with one dev warning.
@@ -167,7 +167,7 @@ Behaviour to implement (spec "Copy semantics", "Public API"):
 - [ ] **Step 3: Run** `npx vitest run --project unit lib/hooks/core/gridKeyDown.test.ts lib/components/DataGrid/DataGrid.rowMemo.test.tsx` → FAIL; implement; → PASS.
 - [ ] **Step 4: Failing browser tests** (`DataGrid.contextMenu.browser.test.tsx`, import `lib/styles/opengridx.css`; right-click with `userEvent.click(el, { button: 'right' })`): menu opens at the pointer; near right/bottom edge stays inside `window.innerWidth/innerHeight`; `dir="rtl"` opens towards inline start; Shift+F10 opens on the focused cell, Escape closes and focus returns to the cell; right-click inside a range keeps it, outside collapses it; right-click on a top-pinned row, a centre row after scrolling and a grouped child row reports the right `id`; grid scroll closes the menu; release the mouse over the page in `afterEach` (`commands.pointerUp()`).
 - [ ] **Step 5: Run** `npx vitest run --project browser lib/components/DataGrid/DataGrid.contextMenu.browser.test.tsx` in all three engines → PASS.
-- [ ] **Step 6:** `npm run lint && npm run typecheck && npm run build && npm run build:lib && npm run check:package && npm run check:compiler` → all pass; note the gzip delta (≤ 2.1 KB).
+- [ ] **Step 6:** `npm run lint && npm run typecheck && npm run build && npm run build:lib && npm run check:package && npm run check:compiler` → all pass; note the gzip delta (≤ 2.15 KB; raised from 2.1 KB on 2026-10-26 for the row-identity check in the delayed openContextMenu).
 - [ ] **Step 7: Commit** `feat(context-menu): Shift+F10 opening and browser coverage`
 
 ### Task 7: Docs, demo, release prep

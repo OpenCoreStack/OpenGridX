@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, fireEvent, act } from '@testing-library/react';
+import { render, fireEvent, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { DataGrid } from './DataGrid';
 import { useGridApiRef } from '../../hooks/core/useGridApiRef';
@@ -193,10 +193,25 @@ describe('DataGrid contextMenu', () => {
         expect(writeText).toHaveBeenLastCalledWith('Dan');
     });
 
-    it('openContextMenu and closeContextMenu through apiRef', () => {
+    it('only dividers: no menu and the browser menu is kept', () => {
+        const { container } = renderGrid({ contextMenu: true, getContextMenuItems: () => ['divider', 'divider'] });
+        expect(rightClick(cellAt(container, 0, 'name'))).toBe(false);
+        expect(menu()).toBeNull();
+    });
+
+    it('openContextMenu does not open when the row moves before the next frame', async () => {
+        const { api, rerenderGrid } = renderGrid({ contextMenu: true });
+        act(() => { api().openContextMenu(3, 'name'); });
+        // Same rows, rotated, before the frame that opens the menu: index 2 is now another row.
+        rerenderGrid({ contextMenu: true, rows: [...ROWS.slice(3), ...ROWS.slice(0, 3)] });
+        await act(() => new Promise(r => setTimeout(r, 300)));
+        expect(menu()).toBeNull();
+    });
+
+    it('openContextMenu and closeContextMenu through apiRef', async () => {
         const { api } = renderGrid({ contextMenu: true });
         act(() => { api().openContextMenu(3, 'name'); });
-        expect(menu()).not.toBeNull();
+        await waitFor(() => expect(menu()).not.toBeNull());
         act(() => { api().closeContextMenu(); });
         expect(menu()).toBeNull();
     });

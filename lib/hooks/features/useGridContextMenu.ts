@@ -14,6 +14,7 @@ import { isRtl } from '../../utils/direction';
 import { resolveGridLocale } from '../../utils/gridLocale';
 import { untypedColumn } from '../../utils/untypedColumns';
 import { buildCellCopyText, writeToClipboard } from './useGridClipboard';
+import { cleanContextMenuEntries } from '../../components/ContextMenu/menuEntries';
 
 export interface UseGridContextMenuParams<R extends GridRowModel> {
     /** The `contextMenu` prop: without it no listener is attached. */
@@ -64,6 +65,13 @@ const SYSTEM_FIELDS = new Set([CHECKBOX_FIELD, EXPAND_FIELD, REORDER_FIELD]);
 /** Apple platforms: Ctrl+click opens the context menu (elsewhere it is a selection gesture). */
 const APPLE = typeof navigator !== 'undefined' && /Mac|iP/.test(navigator.platform);
 
+/** Calls `run` on each of the next `tries` animation frames until it returns something truthy. */
+function whenRendered(run: () => unknown, tries: number): void {
+    requestAnimationFrame(() => {
+        if (!run() && tries > 1) whenRendered(run, tries - 1);
+    });
+}
+
 /** Whether a cell (`rowIndex` into the visible rows) lies inside the current cell range. */
 function isInRange<R extends GridRowModel>(p: UseGridContextMenuParams<R>, field: string, rowIndex: number): boolean {
     const { selection } = p;
@@ -95,7 +103,8 @@ export function useGridContextMenu<R extends GridRowModel>(params: UseGridContex
         const p = latestRef.current;
         const row = p.allRenderableRows[rowIndex];
         const colDef = p.navigationColumns.find(c => c.field === field);
-        if (!row || !colDef) return false;
+        // A delayed open (openAt) whose row moved in the meantime opens nothing.
+        if (!row || !colDef || p.getRowId(row) !== id) return false;
 
         const { selection } = p;
         const inRange = isInRange(p, field, rowIndex);
@@ -143,6 +152,8 @@ export function useGridContextMenu<R extends GridRowModel>(params: UseGridContex
                 warnCallbackFailure('getContextMenuItems', 'getContextMenuItems threw; the default items are shown', result.error);
             }
         }
+        // Cleaned here so a list of only dividers opens nothing and keeps the browser menu.
+        entries = cleanContextMenuEntries(entries);
         if (entries.length === 0) return false;
         setMenu({ id, x, y, entries, anchorCell });
         return true;
@@ -169,11 +180,17 @@ export function useGridContextMenu<R extends GridRowModel>(params: UseGridContex
             rowIndex: centerIndex >= 0 && centerIndex < centerCount ? centerIndex : undefined,
             colIndex: p.renderedDataColumns.findIndex(c => c.field === field),
         });
-        const viewport = p.viewportRef.current;
-        const el = viewport ? findFocusTarget(viewport, { id, field }, rowIndex) : null;
-        const rect = el ? el.getBoundingClientRect() : null;
-        const x = rect ? (isRtl(el) ? rect.right : rect.left) : 0;
-        open(id, field, rowIndex, x, rect ? rect.bottom : 0, el);
+        // Opened from a later frame: the scrolled-to row is rendered by then, and the scroll event has
+        // fired before the menu's close-on-scroll listener attaches. Gives up if the cell never appears.
+        whenRendered(() => {
+            const viewport = latestRef.current.viewportRef.current;
+            const el = viewport && findFocusTarget(viewport, target, rowIndex);
+            if (el) {
+                const rect = el.getBoundingClientRect();
+                open(id, field, rowIndex, isRtl(el) ? rect.right : rect.left, rect.bottom, el);
+            }
+            return el;
+        }, 10);
     }, [open, resolveCell]);
 
     // Right-click on a body cell of this grid.

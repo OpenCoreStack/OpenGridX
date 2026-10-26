@@ -57,11 +57,6 @@ describe('GridContextMenu', () => {
         expect(() => fireEvent.click(item)).not.toThrow();
         expect(warn).toHaveBeenCalledTimes(1);
     });
-
-    it('drops leading, trailing and double dividers when rendering', () => {
-        setup(['divider', { id: 'a', label: 'A' }, 'divider', 'divider', { id: 'b', label: 'B' }, 'divider']);
-        expect(screen.getAllByRole('separator')).toHaveLength(1);
-    });
 });
 
 describe('cleanContextMenuEntries', () => {

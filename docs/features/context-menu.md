@@ -37,7 +37,7 @@ Called each time the menu opens, with the built-in items, and returns the entrie
 
 - **`params`** (`GridContextMenuParams<R>`): `id`, `field`, `row`, `colDef`, `value` (read through `valueGetter`), `rowMeta`, `cellRange` (the current range, `null` without `cellSelection` or with no range) and `api` (the grid API).
 - **Item** (`GridContextMenuItem`): `id` (stable key), `label`, `onClick`, `disabled`, `shortcut` (display only, e.g. `'Ctrl+C'`), `icon` and `danger` (styling only).
-- **An empty list shows no menu**, and the browser's own menu is then not suppressed either. Use it to switch the menu off for some cells (a synthetic row, a column).
+- **Leading, trailing and consecutive dividers are dropped.** A list with no items (empty, or only dividers) shows no menu, and the browser's own menu is then not suppressed either. Use it to switch the menu off for some cells (a synthetic row, a column).
 - **A throwing callback** (or a throwing `onClick`) is contained: the grid falls back to the built-in items (or does nothing for the click) and warns once in development.
 - Setting `getContextMenuItems` without `contextMenu` does nothing; in development it warns once.
 
@@ -56,11 +56,11 @@ Opens on:
 
 - right-click on a body cell;
 - **Shift+F10** or the **Menu** key on a focused body cell (the menu appears at the cell);
-- **Ctrl+click** on macOS.
+- **Ctrl+click** on Apple platforms (macOS, iPadOS).
 
 Keeps the browser menu: column headers, the header filter row, the footer, detail panels, open cell editors, the checkbox, expand and reorder cells, and nested grids.
 
-Closes on: choosing an item, **Escape** (focus returns to the cell), a press outside, grid scroll, window resize, and the row leaving the rendered rows (a filter, a sort, new rows). Arrow keys, Home, End and Enter move through and activate the items.
+Closes on: choosing an item, **Escape** or **Tab** (focus returns to the cell), a press outside, grid scroll, window resize, and the row leaving the rendered rows (a filter, a sort, new rows). Arrow keys, Home, End and Enter move through and activate the items.
 
 The menu opens towards the inline end of the pointer and flips to stay inside the window; in a `dir="rtl"` grid it opens towards the inline start.
 
@@ -70,6 +70,8 @@ The menu opens towards the inline end of the pointer and flips to stay inside th
 apiRef.current.openContextMenu(id, field); // does nothing without `contextMenu`; v3.11
 apiRef.current.closeContextMenu();
 ```
+
+`openContextMenu` scrolls the cell into view and opens the menu on a later animation frame. If the cell is not rendered within a few frames, or its row moved in the meantime (a sort, a filter, new rows), no menu opens. Tests should wait for `role="menu"` rather than expect it at once.
 
 ## Locale text
 
@@ -85,7 +87,12 @@ Labels you add in `getContextMenuItems` are yours to translate.
 
 ## Styling
 
-Public classes: `ogx-context-menu`, `ogx-context-menu__item`, `ogx-context-menu__item--danger`, `ogx-context-menu__item--disabled` and `ogx-context-menu__shortcut`. The menu shares the column menu's theme tokens (`overlays.*` theme keys), so a theme that styles one styles both.
+Public classes: `ogx-context-menu`, `ogx-context-menu__item`, `ogx-context-menu__item--danger`, `ogx-context-menu__item--disabled` and `ogx-context-menu__shortcut`. The menu also carries the column menu's `ogx-column-menu` / `ogx-menu-item` classes and shares its theme tokens (`overlays.*` theme keys), so a theme or CSS aimed at `.ogx-column-menu` styles both.
+
+## Known issues
+
+- On Windows the ContextMenu (Menu) key may also fire the browser's `contextmenu` event on key-up; the grid's menu may then re-open at the same cell.
+- Calling `closeContextMenu()` before a pending `openContextMenu` has opened does not cancel it.
 
 ## Not covered in v1
 
