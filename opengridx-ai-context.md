@@ -8,7 +8,7 @@ that uses the `@opencorestack/opengridx` library. Read it in full before writing
 ## What this library is
 
 `@opencorestack/opengridx` is a zero-dependency, high-performance React DataGrid component.
-Current version: **3.7.0**. It is a full custom implementation — not a wrapper around MUI or any
+Current version: **3.10.1**. It is a full custom implementation — not a wrapper around MUI or any
 other library.
 
 ---
@@ -331,6 +331,41 @@ apiRef.current.autosizeColumn('name');
 apiRef.current.autosizeColumns(); // all columns
 ```
 
+### Translating the UI: `localeText` (3.9.0+)
+
+```tsx
+// Every built-in string is an optional key (about 200); leave one out and the English default is used.
+// Some keys are functions of their arguments.
+<DataGrid
+  localeText={{
+    toolbarSearchPlaceholder: 'Rechercher…',
+    columnMenuSortAscending: 'Trier par ordre croissant',
+    aiAssistantChipSort: (field, direction) => `Tri : ${field} (${direction})`, // 3.10.0+
+  }}
+/>
+```
+
+Look up key names in the `GridLocaleText` type rather than guessing them. An inline object of strings is fine:
+the grid compares it shallowly. Function keys get a new identity on every render, so when you use them, keep
+the object stable (a module constant or `useMemo`).
+
+### Theme keys added in 3.9.0
+
+`grid.checkboxCheckedBackground`, `grid.checkboxCheckmark`, `grid.expandIconColor`, `grid.expandIconHoverColor`,
+`overlays.itemIndicatorColor`, `overlays.itemSelectedIcon`, `overlays.iconColor`, `overlays.sectionLabelText`,
+`overlays.dividerColor`. Each one defaults to the look of earlier versions. The demo's Theme Builder edits them.
+
+### Large datasets (3.8.0–3.10.1)
+
+Edits, paste, fill, undo, select-all and row grouping are fast at 1M rows, with no API change; numbers are in
+`docs/performance.md`. To keep them fast:
+- **Keep handler props stable** (`useCallback`), as well as `slotProps` and function-valued `localeText` keys. Rows are memoised,
+  so a prop that changes identity on every render re-renders every visible row.
+- **Commit edits through `processRowUpdate`** and return the updated row. The grid then patches only that row
+  instead of re-processing all of them.
+- **Sorting takes about 0.4–0.5 s at 1M rows, and the first quick-filter search about 1.6–2 s.** For larger or
+  slower data, use server-side sorting and filtering.
+
 ---
 
 ## v2 → v3 migration (if this project was on v2)
@@ -428,9 +463,11 @@ const hasChildren = params.rowMeta?.hasChildren;
 - **Import the stylesheet** — `import '@opencorestack/opengridx/styles'` once in the app root.
 - **Next.js App Router: column functions stay in the client file** — render the grid from a `'use client'`
   component and pass server-fetched rows as props; `valueFormatter` / `renderCell` cannot be passed from a
-  Server Component. Install or alias `exceljs` / `jspdf` / `jspdf-autotable` or `next build` fails. See `docs/features/nextjs.md`.
-- **Don't pin columns in right-to-left grids** — `dir="rtl"` works for unpinned grids (3.6+), but pinned
-  columns use physical sticky offsets and scroll away. See `docs/features/rtl.md`.
+  Server Component. The optional peers `exceljs` / `jspdf` / `jspdf-autotable` are needed only for
+  `exportToExcelAdvanced` / `exportToPdf`; without them `next build` still succeeds (3.6+, no `next.config` alias).
+  See `docs/features/nextjs.md`.
+- **Right-to-left grids** — `dir="rtl"` works, including pinned columns (3.6+): `pinnedColumns.left` / `right`
+  mean inline start / end, so in RTL `left` pins to the right edge. See `docs/features/rtl.md`.
 - **Controlled props need their callback** — `paginationModel` without `onPaginationModelChange` (or `sortModel`
   without `onSortModelChange`) freezes that state. Leave both out to let the grid own it.
 - **Give the grid a bounded height** — without a `height` prop the grid fills its container (3.0.1+); in a flex layout wrap it in `<div style={{ flex: 1, minHeight: 0 }}>`.
