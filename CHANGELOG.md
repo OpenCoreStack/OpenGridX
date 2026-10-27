@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+- README: an animated preview and feature screenshots under the banner. The images are kept out of the npm package (`files` excludes `docs/assets/screenshots` and `docs/assets/demo-animated.svg`); the npm page loads them from GitHub.
+
 ## [3.11.1] — 2026-10-27
 
 No library changes; this release moves publishing to npm trusted publishing.

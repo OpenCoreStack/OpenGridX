@@ -2,6 +2,24 @@
 
 ![OpenGridX Hero Banner](docs/assets/banner.png)
 
+<p align="center">
+  <img src="docs/assets/demo-animated.svg" alt="OpenGridX sorting by revenue, selecting a cell range and showing its sum" width="840">
+</p>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/screenshots/cell-selection.png" alt="Cell range selection with count, sum and average"><br><sub><b>Cell range selection</b> with live count / sum / average</sub></td>
+    <td width="50%"><img src="docs/assets/screenshots/pivot.png" alt="Pivot mode with quarters as columns and a grand total row"><br><sub><b>Pivot mode</b> with grand totals</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/screenshots/header-filters.png" alt="Header filter row under the column headers"><br><sub><b>Header filters</b> per column type</sub></td>
+    <td><img src="docs/assets/screenshots/master-detail.png" alt="Master-detail row expanded to show a detail panel"><br><sub><b>Master-detail</b> panels</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/assets/screenshots/context-menu.png" alt="Right-click context menu with copy, undo, export and delete" width="60%"><br><sub><b>Context menu</b> with built-in and custom actions</sub></td>
+  </tr>
+</table>
+
 **OpenGridX** is a premium, high-performance React DataGrid engine designed to break the "Pay-to-Play" model in the React ecosystem. It provides a pure-custom, zero-dependency alternative to enterprise grids like **MUI X DataGrid Pro** and **AG Grid**, offering advanced features for free.
 
 👉 **[Live Demo & Docs](https://opencorestack.github.io/OpenGridX/)** — Interactive showcase with full API documentation

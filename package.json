@@ -32,6 +32,8 @@
     "!lib/**/__baseline__",
     "docs/architecture",
     "docs/assets",
+    "!docs/assets/screenshots",
+    "!docs/assets/demo-animated.svg",
     "docs/components",
     "docs/customization",
     "docs/features",
