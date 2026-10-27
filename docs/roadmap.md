@@ -95,7 +95,8 @@ This document tracks the current status of features in `OpenGridX` and outlines 
 | **3.9.1** ✅ | shipped 13 Oct | **npm package no longer ships 1.6 MB of test baselines** | `check:package` guard in CI; version badges read `package.json`; docs brought up to date |
 | **3.10.0** ✅ | shipped 13 Oct | **Backlog cleared**: refactors (R4–R6), CI guards, select-all ~2× faster | AI change chips translatable; demo syntax highlighting |
 | **3.10.1** ✅ | shipped 13 Oct | **1M-row performance**: select-all ~60–90 ms, grouping ~190 ms, quick filter first search ~1.6–2 s | Next.js smoke fixture; RTL operator symbols not mirrored |
-| **3.11.0** | 26 Oct | **Context menu** (`contextMenu`, `getContextMenuItems`): Copy, Copy with headers, Undo / Redo, custom items | Menu keyboard handling shared with the column menu |
+| **3.11.0** ✅ | shipped 26 Oct | **Context menu** (`contextMenu`, `getContextMenuItems`): Copy, Copy with headers, Undo / Redo, custom items | Menu keyboard handling shared with the column menu |
+| **3.11.1** | 27 Oct | Publishing through npm trusted publishing (provenance); CI install retries | No library changes |
 | Freeze | 19 Dec – 5 Jan | Bug fixes only | — |
 
 ### Now: backlog first (feature hold since 13 Oct; backlog cleared in 3.10)

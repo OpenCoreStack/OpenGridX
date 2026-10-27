@@ -14,7 +14,7 @@ This file is auto-loaded by Claude Code and other AI coding assistants. It provi
 - **Build:** `npm run build:lib` produces the published `dist/opengridx.es.js` / `dist/opengridx.umd.js`. `npm run build` type-checks the lib and builds the **demo site**.
 - **Published:** yes — on npm as `@opencorestack/opengridx` with external consumers. Treat public types and behaviour changes as semver-relevant.
 - **Lint:** `npm run lint` (ESLint). Must pass before every commit.
-- **Current version:** 3.11.0
+- **Current version:** 3.11.1
 
 ---
 
@@ -157,6 +157,11 @@ The GitHub wiki is generated from `docs/` + `wiki/` by `scripts/build-wiki.mjs` 
 - Never add `Co-Authored-By` AI attribution to commit messages
 
 ---
+
+## v3.11.1 — significant changes
+
+- **npm publishing uses trusted publishing (OIDC)**: `npm-publish.yml` has `id-token: write`, installs npm 11 (Node 22 ships npm 10; OIDC needs ≥ 11.5.1) and publishes without a token. npm trusts exactly `OpenCoreStack/OpenGridX` + `npm-publish.yml`, so renaming the workflow file needs the same change in the package's npm settings. The package disallows token publishing; a local publish needs 2FA
+- The Playwright install steps (`ci.yml`, `npm-publish.yml`) retry 3 × 6 min. apt is configured to retry and wait for the dpkg lock, and the root `apt-get` that `timeout` cannot reach is killed between attempts
 
 ## v3.11.0 — significant changes
 

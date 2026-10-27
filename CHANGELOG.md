@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+## [3.11.1] — 2026-10-27
+
+No library changes; this release moves publishing to npm trusted publishing.
+
+### Changed
+
+- **Releases are published through npm trusted publishing** (OIDC from the `npm-publish.yml` GitHub Actions workflow) instead of a stored npm token, and carry npm provenance: the package page links each version to the commit and workflow run that built it.
+- CI retries a stalled Playwright browser install instead of failing the job, in both the CI and publish workflows.
+
 ## [3.11.0] — 2026-10-26
 
 ### Added
