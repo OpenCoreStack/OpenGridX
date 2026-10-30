@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="400" viewBox="0 0 840 400" role="img" aria-labelledby="t d">
+  <title id="t">OpenGridX in action</title>
+  <desc id="d">A data grid sorts by revenue, selects a cell range and shows its sum, then resets.</desc>
+  <style>
+    :root { --bg:#ffffff; --panel:#f8fafc; --line:#e2e8f0; --text:#1e293b; --muted:#64748b; --accent:#3b82f6; --accent-bg:rgba(59,130,246,.12); --up:#059669; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#0f172a; --panel:#1e293b; --line:#334155; --text:#e2e8f0; --muted:#94a3b8; --accent:#60a5fa; --accent-bg:rgba(96,165,250,.18); --up:#34d399; }
+    }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size:14px; fill:var(--text); }
+    .muted { fill:var(--muted); }
+    .head { font-weight:600; }
+    .num { text-anchor:end; font-variant-numeric: tabular-nums; }
+    .bg { fill:var(--bg); stroke:var(--line); }
+    .panel { fill:var(--panel); }
+    .line { stroke:var(--line); }
+    .row { animation: 12s ease-in-out infinite; }
+    .r0 { animation-name: r0; } .r1 { animation-name: r1; } .r2 { animation-name: r2; } .r3 { animation-name: r3; } .r4 { animation-name: r4; }
+    /* sorted desc by revenue: r1, r3, r0, r4, r2 */
+    @keyframes r0 { 0%,14% { transform:translateY(0) }   22%,82% { transform:translateY(96px) }  90%,100% { transform:translateY(0) } }
+    @keyframes r1 { 0%,14% { transform:translateY(0) }   22%,82% { transform:translateY(-48px) } 90%,100% { transform:translateY(0) } }
+    @keyframes r2 { 0%,14% { transform:translateY(0) }   22%,82% { transform:translateY(96px) }  90%,100% { transform:translateY(0) } }
+    @keyframes r3 { 0%,14% { transform:translateY(0) }   22%,82% { transform:translateY(-96px) } 90%,100% { transform:translateY(0) } }
+    @keyframes r4 { 0%,14% { transform:translateY(0) }   22%,82% { transform:translateY(-48px) } 90%,100% { transform:translateY(0) } }
+    .sort { animation: sort 12s infinite; opacity:0; }
+    @keyframes sort { 0%,10% { opacity:0 } 14%,86% { opacity:1 } 90%,100% { opacity:0 } }
+    .cursor { animation: cursor 12s ease-in-out infinite; }
+    @keyframes cursor {
+      0%    { transform:translate(700px,300px) }
+      10%   { transform:translate(560px,78px) }
+      14%   { transform:translate(560px,78px) scale(.85) }
+      16%   { transform:translate(560px,78px) }
+      30%   { transform:translate(560px,130px) }
+      48%   { transform:translate(630px,226px) }
+      82%   { transform:translate(630px,226px) }
+      100%  { transform:translate(700px,300px) }
+    }
+    .range { animation: range 12s ease-in-out infinite; opacity:0; }
+    @keyframes range {
+      0%,30%  { opacity:0; width:130px; height:48px }
+      31%     { opacity:1; width:130px; height:48px }
+      48%,82% { opacity:1; width:130px; height:144px }
+      86%,100%{ opacity:0; width:130px; height:144px }
+    }
+    .stats { animation: stats 12s infinite; opacity:0; }
+    @keyframes stats { 0%,48% { opacity:0 } 52%,84% { opacity:1 } 88%,100% { opacity:0 } }
+    .hint { animation: hint 12s infinite; }
+    @keyframes hint { 0%,46% { opacity:1 } 50%,86% { opacity:0 } 90%,100% { opacity:1 } }
+  </style>
+
+  <rect class="bg" x="0.5" y="0.5" width="839" height="399" rx="12"/>
+
+  <!-- toolbar -->
+  <rect class="panel" x="1" y="1" width="838" height="47" rx="11"/>
+  <line class="line" x1="0" y1="48" x2="840" y2="48"/>
+  <circle cx="24" cy="24" r="5" fill="#f87171"/><circle cx="42" cy="24" r="5" fill="#fbbf24"/><circle cx="60" cy="24" r="5" fill="#34d399"/>
+  <text x="84" y="29" class="head">Sales pipeline</text>
+  <text x="816" y="29" class="muted num" style="font-size:12px">1,000,000 rows · virtualized</text>
+
+  <!-- header -->
+  <rect class="panel" x="1" y="49" width="838" height="47"/>
+  <line class="line" x1="0" y1="96" x2="840" y2="96"/>
+  <text x="24" y="78" class="head">Account</text>
+  <text x="250" y="78" class="head">Region</text>
+  <text x="400" y="78" class="head">Stage</text>
+  <text x="640" y="78" class="head num">Revenue</text>
+  <path class="sort" d="M652 70 l5 6 l5 -6 z" fill="var(--accent)"/>
+  <text x="810" y="78" class="head num">Δ</text>
+
+  <!-- body (clip keeps moving rows inside) -->
+  <clipPath id="body"><rect x="0" y="97" width="840" height="240"/></clipPath>
+  <g clip-path="url(#body)">
+    <g class="row r0"><text x="24" y="126">Northwind</text><text x="250" y="126" class="muted">EMEA</text><text x="400" y="126">Proposal</text><text x="640" y="126" class="num">$42,300</text><text x="810" y="126" class="num" fill="var(--up)" style="fill:var(--up)">+4%</text><line class="line" x1="0" y1="144" x2="840" y2="144"/></g>
+    <g class="row r1"><text x="24" y="174">Globex</text><text x="250" y="174" class="muted">NA</text><text x="400" y="174">Won</text><text x="640" y="174" class="num">$87,950</text><text x="810" y="174" class="num" style="fill:var(--up)">+12%</text><line class="line" x1="0" y1="192" x2="840" y2="192"/></g>
+    <g class="row r2"><text x="24" y="222">Initech</text><text x="250" y="222" class="muted">APAC</text><text x="400" y="222">Lead</text><text x="640" y="222" class="num">$15,400</text><text x="810" y="222" class="num muted">0%</text><line class="line" x1="0" y1="240" x2="840" y2="240"/></g>
+    <g class="row r3"><text x="24" y="270">Umbrella</text><text x="250" y="270" class="muted">EMEA</text><text x="400" y="270">Negotiation</text><text x="640" y="270" class="num">$63,120</text><text x="810" y="270" class="num" style="fill:var(--up)">+7%</text><line class="line" x1="0" y1="288" x2="840" y2="288"/></g>
+    <g class="row r4"><text x="24" y="318">Hooli</text><text x="250" y="318" class="muted">NA</text><text x="400" y="318">Proposal</text><text x="640" y="318" class="num">$29,780</text><text x="810" y="318" class="num" style="fill:var(--up)">+2%</text><line class="line" x1="0" y1="336" x2="840" y2="336"/></g>
+
+    <rect class="range" x="530" y="97" width="130" height="48" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="2" rx="2"/>
+  </g>
+
+  <!-- footer -->
+  <line class="line" x1="0" y1="352" x2="840" y2="352"/>
+  <text x="24" y="381" class="muted hint" style="font-size:13px">Click to sort · drag to select · right-click for actions</text>
+  <g class="stats">
+    <text x="816" y="381" class="num" style="font-size:13px"><tspan class="muted">Count</tspan> 3&#160;&#160;&#160;<tspan class="muted">Sum</tspan> $193,370&#160;&#160;&#160;<tspan class="muted">Avg</tspan> $64,457</text>
+  </g>
+
+  <!-- pointer -->
+  <g class="cursor">
+    <path d="M0 0 L0 18 L5 13 L9 22 L12 21 L8 12 L15 12 Z" fill="#111827" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+  </g>
+</svg>
